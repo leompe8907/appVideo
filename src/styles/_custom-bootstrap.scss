@@ -1,0 +1,47 @@
+/**
+ * Configuración personalizada de Bootstrap
+ * Solo importamos lo necesario para optimizar el bundle
+ */
+
+// 1. Sobrescribir variables de Bootstrap
+$primary: #667eea;
+$secondary: #764ba2;
+$success: #28a745;
+$danger: #dc3545;
+$warning: #ffc107;
+$info: #17a2b8;
+
+$border-radius: 8px;
+$border-radius-sm: 4px;
+$border-radius-lg: 12px;
+
+$font-family-sans-serif: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+// 2. Importar funciones y variables de Bootstrap
+@import 'bootstrap/scss/functions';
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+@import 'bootstrap/scss/maps';
+@import 'bootstrap/scss/mixins';
+@import 'bootstrap/scss/utilities';
+
+// 3. Importar componentes necesarios (optimizado para TVs)
+@import 'bootstrap/scss/root';
+@import 'bootstrap/scss/reboot';
+@import 'bootstrap/scss/type';
+@import 'bootstrap/scss/containers';
+@import 'bootstrap/scss/grid';
+@import 'bootstrap/scss/buttons';
+@import 'bootstrap/scss/forms';
+@import 'bootstrap/scss/card';
+@import 'bootstrap/scss/alert';
+@import 'bootstrap/scss/badge';
+@import 'bootstrap/scss/nav';
+@import 'bootstrap/scss/navbar';
+@import 'bootstrap/scss/modal';
+@import 'bootstrap/scss/spinners';
+
+// 4. Helpers
+@import 'bootstrap/scss/helpers';
+@import 'bootstrap/scss/utilities/api';
+

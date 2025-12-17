@@ -30,8 +30,8 @@ export function getActiveBrandConfig() {
   }
 
   // 3. Fallback a la primera marca disponible
-  const config = getBrandConfig("telecable");
-  console.warn("[Brand] Usando fallback: telecable");
+  const config = getBrandConfig("bromteck");
+  console.warn("[Brand] Usando fallback: bromteck");
   return enrichConfigWithAssets(config);
 }
 
@@ -46,9 +46,12 @@ function enrichConfigWithAssets(config) {
     assets: {
       logo: getBrandAsset(config.brand, 'logo.png'),
       logoWhite: getBrandAsset(config.brand, 'logo-white.png'),
-      background: getBrandAsset(config.brand, 'background.jpg'),
+      logoTop: getBrandAsset(config.brand, 'logo-top.png'),
+      logoBlack: getBrandAsset(config.brand, 'logo_black.png'),
+      background: getBrandAsset(config.brand, 'background.png'),
       favicon: getBrandAsset(config.brand, 'favicon.ico'),
-      splash: getBrandAsset(config.brand, 'splash.jpg'),
+      splash: getBrandAsset(config.brand, 'splash.png'),
+      placeholder: getBrandAsset(config.brand, 'placeholder_220x160.png'),
       // Helper para obtener cualquier asset custom
       get: (path) => getBrandAsset(config.brand, path),
     }

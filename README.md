@@ -131,3 +131,32 @@ npm run build:all
 - Minificación agresiva
 - Code splitting de vendors
 - Drop console en producción
+
+## 🎛️ Sistema de Configuración
+
+Configuración organizada en 3 secciones:
+
+### 🎨 UI (Colores, Temas, Posiciones)
+```jsx
+import { getUIConfig } from './utils/config'
+const color = getUIConfig(brandConfig, 'primaryColor', '#000')
+```
+
+### ⚙️ Limits (Números, Restricciones)
+```jsx
+import { getLimit } from './utils/config'
+const maxProfiles = getLimit(brandConfig, 'maxProfiles', 5)
+```
+
+### 🎛️ Features (Banderas Booleanas)
+```jsx
+import { isFeatureEnabled } from './utils/features'
+{isFeatureEnabled(brandConfig, 'miniPlayer') && <MiniPlayer />}
+```
+
+**Documentación completa:**
+- [`CONFIG.md`](./CONFIG.md) - UI y Límites
+- [`FEATURES.md`](./FEATURES.md) - Sistema de Features
+- [`PANACCESS.md`](./PANACCESS.md) - Conexión con Panaccess
+- [`STYLES.md`](./STYLES.md) - Sistema SCSS + Bootstrap
+- [`ROUTING.md`](./ROUTING.md) - React Router DOM

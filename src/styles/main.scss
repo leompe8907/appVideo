@@ -1,0 +1,20 @@
+/**
+ * Archivo principal SCSS
+ * Importa todos los estilos en el orden correcto
+ */
+
+// 1. Variables y configuración
+@import 'variables';
+@import 'mixins';
+
+// 2. Bootstrap personalizado
+@import 'custom-bootstrap';
+
+// 3. Estilos globales
+@import 'global';
+
+// 4. Componentes
+@import 'components/login';
+@import 'components/layout';
+@import 'components/pages';
+

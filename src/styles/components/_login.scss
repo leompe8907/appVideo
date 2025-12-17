@@ -1,0 +1,155 @@
+/**
+ * Estilos del componente Login
+ */
+
+.panaccess-login {
+  @include flex-center;
+  min-height: 100vh;
+  padding: $spacing-xl;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-card {
+  @include card($spacing-xxl, $border-radius-xl);
+  max-width: 400px;
+  width: 100%;
+  box-shadow: $shadow-lg;
+
+  h2 {
+    margin: 0 0 $spacing-sm;
+    color: #333;
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  @include mobile {
+    padding: $spacing-xl $spacing-lg;
+
+    h2 {
+      font-size: 1.5rem;
+    }
+  }
+}
+
+.brand-name {
+  text-align: center;
+  color: $primary-color;
+  font-weight: 600;
+  margin-bottom: $spacing-xl;
+  font-size: $font-size-lg;
+}
+
+.form-group {
+  margin-bottom: $spacing-lg;
+
+  label {
+    display: block;
+    margin-bottom: $spacing-sm;
+    color: #555;
+    font-weight: 500;
+    font-size: $font-size-sm;
+  }
+
+  input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: $border-radius-md;
+    font-size: $font-size-base;
+    transition: border-color $transition-normal;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+    }
+
+    &:disabled {
+      background: #f5f5f5;
+      cursor: not-allowed;
+    }
+
+    @include focus-state;
+  }
+
+  .password-wrapper {
+    position: relative;
+
+    input {
+      padding-right: 3rem;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.25rem;
+      padding: 0.25rem;
+      line-height: 1;
+      
+      &:hover {
+        opacity: 0.7;
+      }
+
+      &:focus {
+        outline: 2px solid $primary-color;
+        outline-offset: 2px;
+        border-radius: $border-radius-sm;
+      }
+    }
+  }
+}
+
+.error-message {
+  padding: $spacing-md;
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: $border-radius-md;
+  color: $error-color;
+  margin-bottom: $spacing-md;
+  font-size: $font-size-sm;
+}
+
+.login-button {
+  @include button-base;
+  width: 100%;
+  padding: $spacing-md;
+  background: $primary-color;
+  color: white;
+  font-size: $font-size-base;
+  font-weight: 600;
+
+  &:hover:not(:disabled) {
+    background: $secondary-color;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  &:disabled {
+    background: #ccc;
+    transform: none;
+  }
+
+  @include focus-state;
+}
+
+.login-info {
+  margin-top: $spacing-xl;
+  padding-top: $spacing-lg;
+  border-top: 1px solid #e0e0e0;
+
+  p {
+    margin: $spacing-sm 0;
+    font-size: $font-size-sm;
+    color: #666;
+  }
+
+  strong {
+    color: #333;
+  }
+}
+

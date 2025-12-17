@@ -1,0 +1,152 @@
+/**
+ * Estilos del Layout principal
+ */
+
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+// Header
+.main-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: $spacing-lg $spacing-xl;
+  box-shadow: $shadow-md;
+
+  .header-content {
+    @include flex(row, space-between, center);
+    gap: $spacing-lg;
+  }
+
+  .brand-section {
+    @include flex(row, flex-start, center);
+    gap: $spacing-md;
+
+    .brand-logo {
+      max-width: 120px;
+      max-height: 60px;
+      object-fit: contain;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.75rem;
+      color: white;
+
+      @include mobile {
+        font-size: 1.25rem;
+      }
+    }
+  }
+
+  .logout-btn {
+    @include button-base;
+    @include focus-state;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  @include mobile {
+    padding: $spacing-md;
+
+    .header-content {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+}
+
+// Navegación
+.main-nav {
+  background: white;
+  border-bottom: 1px solid #dee2e6;
+  position: sticky;
+  top: 0;
+  z-index: $z-header;
+
+  .nav-tabs {
+    border-bottom: none;
+    margin-bottom: 0;
+
+    .nav-link {
+      color: #495057;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: $spacing-md $spacing-lg;
+      transition: all $transition-normal;
+
+      &:hover {
+        border-color: transparent;
+        background: #f8f9fa;
+      }
+
+      &.active {
+        color: $primary-color;
+        border-bottom-color: $primary-color;
+        background: transparent;
+        font-weight: 600;
+      }
+
+      @include focus-state;
+    }
+  }
+
+  @include mobile {
+    .nav-tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      @include custom-scrollbar;
+
+      .nav-link {
+        padding: $spacing-sm $spacing-md;
+        white-space: nowrap;
+        font-size: $font-size-sm;
+      }
+    }
+  }
+}
+
+// Contenido principal
+.main-content {
+  flex: 1;
+  padding: $spacing-xl 0;
+  background: #f8f9fa;
+
+  @include mobile {
+    padding: $spacing-md 0;
+  }
+}
+
+// Footer
+.main-footer {
+  background: #2c3e50;
+  color: white;
+  padding: $spacing-lg;
+  text-align: center;
+  margin-top: auto;
+
+  p {
+    margin: $spacing-xs 0;
+    font-size: $font-size-sm;
+
+    &:last-child {
+      opacity: 0.7;
+    }
+  }
+}
+
+// Loading
+.loading {
+  @include flex-center;
+  min-height: 100vh;
+  font-size: $font-size-lg;
+  color: $primary-color;
+}
+
