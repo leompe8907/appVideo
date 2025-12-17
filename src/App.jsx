@@ -1,12 +1,17 @@
 /**
  * Componente App principal
- * Ahora solo renderiza el Router
+ * Envuelve la app con BrandProvider para compartir configuración
  */
 
-import { AppRouter } from './routes/AppRouter'
+import { BrandProvider } from './contexts/BrandContext';
+import { AppRouter } from './routes/AppRouter';
 
 function App() {
-  return <AppRouter />
+  return (
+    <BrandProvider>
+      <AppRouter />
+    </BrandProvider>
+  );
 }
 
-export default App
+export default App;

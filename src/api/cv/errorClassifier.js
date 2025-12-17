@@ -1,7 +1,3 @@
-/**
- * Sistema de clasificación de errores para Panaccess
- */
-
 export const ERROR_TYPES = {
   NETWORK: 'NETWORK_ERROR',
   TIMEOUT: 'TIMEOUT_ERROR',

@@ -1,42 +1,35 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getActiveBrandConfig } from '../config/brandConfig';
-import { applyTheme } from '../utils/config';
+import { useBrand } from '../contexts/BrandContext';
 import panaccessService from '../services/panaccessService';
 import CryptoJS from 'crypto-js';
 import getUdid from '../api/cv/udid';
 import '../styles/components/_splash.scss';
 
-
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
 
 export function SplashPage() {
   const navigate = useNavigate();
-  const [brandConfig, setBrandConfig] = useState(null);
+  const { currentBrand, splashDuration, isLoading, getImage, appName } = useBrand();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+    // Esperar a que el brand se cargue
+    if (isLoading) return;
+    
+    if (!currentBrand) {
+      // Esperar tiempo mínimo y redirigir a login
+      setTimeout(() => navigate('/login'), 3000);
+      return;
+    }
+
     const initializeAndLogin = async () => {
       try {
-        // 1. Cargar configuración de marca
-        const config = getActiveBrandConfig();
-        setBrandConfig(config);
-
-        if (!config) {
-          // Esperar tiempo mínimo y redirigir a login
-          setTimeout(() => navigate('/login'), 3000);
-          return;
+        // El BrandContext ya inicializó panaccessService, pero verificamos
+        // Si no está inicializado, lo inicializamos
+        if (!panaccessService.client) {
+          await panaccessService.initialize(currentBrand);
         }
-        
-        // Obtener duración del splash desde la configuración (puede estar en ui o en raíz)
-        const splashDuration = config.ui?.splashDuration || config.splashDuration || 3000;
-
-        // Aplicar tema
-        applyTheme(config);
-        document.title = `${config.appName} - Cargando...`;
-
-        // 2. Inicializar servicio
-        await panaccessService.initialize(config);
 
         // 3. Verificar si hay sesión activa
         const savedSessionId = localStorage.getItem('cvSessionId') || localStorage.getItem('sessionId');
@@ -67,18 +60,58 @@ export function SplashPage() {
 
         // 5. Desencriptar credenciales
         let username, password;
+        let decryptionSuccess = false;
+        
+        // Intentar desencriptar con SECRET_KEY (clave actual)
         try {
-          username = CryptoJS.AES.decrypt(encryptedUsername, SECRET_KEY).toString(CryptoJS.enc.Utf8);
-          password = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY).toString(CryptoJS.enc.Utf8);
+          const decryptedUsername = CryptoJS.AES.decrypt(encryptedUsername, SECRET_KEY);
+          const decryptedPassword = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY);
+          
+          username = decryptedUsername.toString(CryptoJS.enc.Utf8);
+          password = decryptedPassword.toString(CryptoJS.enc.Utf8);
+          
+          // Verificar que la desencriptación fue exitosa
+          if (username && password && username.length > 0 && password.length > 0) {
+            decryptionSuccess = true;
+          }
         } catch (error) {
-          console.error('[Splash] Error desencriptando:', error);
-          // Esperar tiempo del splash y redirigir a login
-          setTimeout(() => navigate('/login'), splashDuration);
-          return;
+          console.warn('[Splash] Error desencriptando con SECRET_KEY:', error.message);
         }
-
-        if (!username || !password) {
-          // Credenciales inválidas, esperar tiempo del splash y redirigir a login
+        
+        // Si falló, intentar con token del brand (para credenciales viejas)
+        if (!decryptionSuccess && currentBrand?.token) {
+          try {
+            const decryptedUsername = CryptoJS.AES.decrypt(encryptedUsername, currentBrand.token);
+            const decryptedPassword = CryptoJS.AES.decrypt(encryptedPassword, currentBrand.token);
+            
+            username = decryptedUsername.toString(CryptoJS.enc.Utf8);
+            password = decryptedPassword.toString(CryptoJS.enc.Utf8);
+            
+            if (username && password && username.length > 0 && password.length > 0) {
+              decryptionSuccess = true;
+              console.info('[Splash] Credenciales desencriptadas con token del brand (migración automática)');
+              // Re-encriptar con SECRET_KEY para futuras sesiones
+              const newEncryptedUsername = CryptoJS.AES.encrypt(username, SECRET_KEY).toString();
+              const newEncryptedPassword = CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
+              localStorage.setItem('username', newEncryptedUsername);
+              localStorage.setItem('password', newEncryptedPassword);
+            }
+          } catch (error) {
+            console.warn('[Splash] Error desencriptando con token del brand:', error.message);
+          }
+        }
+        
+        // Si ambas fallaron, limpiar y redirigir
+        if (!decryptionSuccess) {
+          console.error('[Splash] No se pudieron desencriptar las credenciales. Limpiando...');
+          
+          // Limpiar credenciales inválidas
+          localStorage.removeItem('username');
+          localStorage.removeItem('password');
+          localStorage.removeItem('cvSessionId');
+          localStorage.removeItem('sessionId');
+          
+          // Esperar tiempo del splash y redirigir a login
           setTimeout(() => navigate('/login'), splashDuration);
           return;
         }
@@ -91,7 +124,7 @@ export function SplashPage() {
         }
 
         const sessionId = await panaccessService.login('clientLogin', {
-          apiToken: config.token,
+          apiToken: currentBrand.token,
           clientId: username,
           pwd: password,
           udid: udid,
@@ -114,18 +147,16 @@ export function SplashPage() {
         localStorage.removeItem('cvSessionId');
         localStorage.removeItem('sessionId');
         
-        // Obtener duración del splash (puede estar en ui o en raíz)
-        const splashDuration = brandConfig?.ui?.splashDuration || brandConfig?.splashDuration || 3000;
-        
         // Esperar tiempo del splash y redirigir a login
         setTimeout(() => navigate('/login'), splashDuration);
       }
     };
 
     initializeAndLogin();
-  }, [navigate]);
+  }, [navigate, currentBrand, isLoading, splashDuration]);
 
-  if (!brandConfig) {
+  // Mostrar loading mientras carga el brand
+  if (isLoading || !currentBrand) {
     return (
       <div className="splash-page">
         <div className="splash-content">
@@ -135,13 +166,16 @@ export function SplashPage() {
     );
   }
 
+  // Obtener imagen de splash (puede ser .png, .gif, .webp, .jpg según configuración)
+  const splashImage = currentBrand.assets?.splash || getImage('splash.png') || getImage('splash.gif');
+
   return (
     <div className="splash-page">
       <div className="splash-content">
-        {brandConfig.assets?.splash && (
+        {splashImage && (
           <img 
-            src={brandConfig.assets.splash} 
-            alt={`${brandConfig.appName} Splash`}
+            src={splashImage} 
+            alt={`${appName} Splash`}
             className="splash-image"
           />
         )}

@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getActiveBrandConfig } from '../config/brandConfig';
-import { applyTheme } from '../utils/config';
+import { useBrand } from '../contexts/BrandContext';
 import panaccessService from '../services/panaccessService';
 import getUdid from '../api/cv/udid';
 import CryptoJS from 'crypto-js';
@@ -11,32 +10,19 @@ const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [brandConfig, setBrandConfig] = useState(null);
+  const { currentBrand, token, drm, appName, isLoading } = useBrand();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    const config = getActiveBrandConfig();
-    setBrandConfig(config);
-    
-    if (config) {
-      applyTheme(config);
-      document.title = `${config.appName} - Login`;
-      
-      // Inicializar servicio con la config de la marca
-      panaccessService.initialize(config);
-    }
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (isLoading) return;
+    if (isSubmitting || !currentBrand) return;
     
-    setIsLoading(true);
+    setIsSubmitting(true);
     setError('');
 
     try {
@@ -48,7 +34,7 @@ export function LoginPage() {
       }
 
       const sessionId = await panaccessService.login("clientLogin", {
-        apiToken: brandConfig.token,
+        apiToken: token,
         clientId: username,
         pwd: password,
         udid: udid,
@@ -69,13 +55,13 @@ export function LoginPage() {
 
       // Delay para mostrar loading
       setTimeout(() => {
-        setIsLoading(false);
+        setIsSubmitting(false);
         navigate('/home');
       }, 1000);
 
     } catch (err) {
       setTimeout(() => {
-        setIsLoading(false);
+        setIsSubmitting(false);
         
         // Clasificar error
         const errorInfo = err.errorInfo || classifyError(err);
@@ -104,7 +90,7 @@ export function LoginPage() {
     }
   };
 
-  if (!brandConfig) {
+  if (isLoading || !currentBrand) {
     return <div className="loading">Cargando configuración...</div>;
   }
 
@@ -112,7 +98,7 @@ export function LoginPage() {
     <div className="panaccess-login">
       <div className="login-card">
         <h2>Iniciar Sesión</h2>
-        <p className="brand-name">{brandConfig.appName}</p>
+        <p className="brand-name">{appName}</p>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -123,7 +109,7 @@ export function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Tu usuario"
-              disabled={isLoading}
+              disabled={isSubmitting}
               required
               autoComplete="username"
             />
@@ -138,7 +124,7 @@ export function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Tu contraseña"
-                disabled={isLoading}
+                disabled={isSubmitting}
                 required
                 autoComplete="current-password"
               />
@@ -162,16 +148,16 @@ export function LoginPage() {
 
           <button 
             type="submit" 
-            disabled={isLoading}
+            disabled={isSubmitting}
             className="login-button"
           >
-            {isLoading ? 'Conectando...' : 'Entrar'}
+            {isSubmitting ? 'Conectando...' : 'Entrar'}
           </button>
         </form>
 
         <div className="login-info">
-          <p><strong>DRM:</strong> {brandConfig.drm}</p>
-          <p><strong>Token:</strong> {brandConfig.token?.substring(0, 8)}...</p>
+          <p><strong>DRM:</strong> {drm}</p>
+          <p><strong>Token:</strong> {token?.substring(0, 8)}...</p>
         </div>
       </div>
     </div>

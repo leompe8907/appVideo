@@ -1,38 +1,19 @@
 /**
  * Layout principal con navegación
  */
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { getActiveBrandConfig } from '../config/brandConfig';
-import { getUIConfig, applyTheme } from '../utils/config';
+import { useBrand } from '../contexts/BrandContext';
 import { useAuthValidator } from '../hooks/useAuthValidator';
 import panaccessService from '../services/panaccessService';
 
 export function MainLayout() {
-  const [brandConfig, setBrandConfig] = useState(null);
+  const { currentBrand, getImage, getUIConfig, appName, isLoading } = useBrand();
   const [logoError, setLogoError] = useState(false);
   const navigate = useNavigate();
 
   // Validar sesión automáticamente
   useAuthValidator();
-
-  useEffect(() => {
-    const config = getActiveBrandConfig();
-    setBrandConfig(config);
-    document.title = config?.appName || 'OTT App';
-    
-    // Cambiar favicon
-    const favicon = document.querySelector('link[rel="icon"]');
-    if (favicon && config?.assets?.favicon) {
-      favicon.href = config.assets.favicon;
-    }
-
-    // Aplicar tema
-    if (config) {
-      applyTheme(config);
-    }
-  }, []);
 
   const handleLogout = () => {
     // Cerrar sesión con el servicio
@@ -49,28 +30,31 @@ export function MainLayout() {
     navigate('/');
   };
 
-  if (!brandConfig) {
+  if (isLoading || !currentBrand) {
     return <div className="loading">Cargando...</div>;
   }
+
+  const primaryColor = getUIConfig('primaryColor', '#3333FF');
+  const logoPath = getImage('logo.png');
 
   return (
     <div className="main-layout">
       {/* Header */}
-      <header className="main-header" style={{ borderBottom: `4px solid ${getUIConfig(brandConfig, 'primaryColor')}` }}>
+      <header className="main-header" style={{ borderBottom: `4px solid ${primaryColor}` }}>
         <div className="container-fluid">
           <div className="header-content">
             {/* Logo y título */}
             <div className="brand-section">
-              {!logoError && (
+              {!logoError && logoPath && (
                 <img 
-                  src={brandConfig.assets.logo} 
-                  alt={`${brandConfig.appName} logo`}
+                  src={logoPath} 
+                  alt={`${appName} logo`}
                   className="brand-logo"
                   onError={() => setLogoError(true)}
                 />
               )}
-              <h1 style={{ color: getUIConfig(brandConfig, 'primaryColor') }}>
-                {brandConfig.appName}
+              <h1 style={{ color: primaryColor }}>
+                {appName}
               </h1>
             </div>
 
@@ -126,8 +110,8 @@ export function MainLayout() {
       <footer className="main-footer">
         <div className="container-fluid">
           <p>
-            {brandConfig.appName} v{brandConfig.version || '1.0.0'}
-            {brandConfig.developedBy && ` - ${brandConfig.developedBy}`}
+            {appName} v{currentBrand.version || '1.0.0'}
+            {currentBrand.developedBy && ` - ${currentBrand.developedBy}`}
           </p>
           <p>Cambia de cliente: ?brand=bromteck, ?brand=intv, ?brand=gigmax</p>
         </div>

@@ -2,19 +2,19 @@
  * Página Home / Dashboard
  */
 
-import { getActiveBrandConfig } from '../config/brandConfig';
+import { useBrand } from '../contexts/BrandContext';
 
 export function HomePage() {
-  const brandConfig = getActiveBrandConfig();
+  const { drm, token, appName } = useBrand();
 
   return (
     <div className="home-page">
       <section className="welcome-section">
         <h2>Conexión Panaccess Activa</h2>
-        <p>Estás conectado al sistema OTT de <strong>{brandConfig.appName}</strong></p>
+        <p>Estás conectado al sistema OTT de <strong>{appName}</strong></p>
         <div className="connection-info">
-          <p><strong>DRM:</strong> {brandConfig.drm}</p>
-          <p><strong>Token:</strong> {brandConfig.token.substring(0, 10)}...</p>
+          <p><strong>DRM:</strong> {drm}</p>
+          <p><strong>Token:</strong> {token.substring(0, 10)}...</p>
         </div>
         <p className="next-steps">Próximos pasos: Implementar listado de canales, EPG, reproductor...</p>
       </section>

@@ -3,16 +3,21 @@
  */
 
 import { useState } from 'react';
-import { getActiveBrandConfig } from '../config/brandConfig';
-import { isFeatureEnabled, getEnabledFeatures, FeatureFlag } from '../utils/features';
-import { getUIConfig, getLimit, getAllUIConfig, getAllLimits } from '../utils/config';
+import { useBrand } from '../contexts/BrandContext';
+import { getEnabledFeatures } from '../utils/features';
+import { getAllUIConfig, getAllLimits } from '../utils/config';
 
 export function SettingsPage() {
   const [showConfig, setShowConfig] = useState(false);
-  const brandConfig = getActiveBrandConfig();
-  const enabledFeatures = getEnabledFeatures(brandConfig);
-  const uiConfig = getAllUIConfig(brandConfig);
-  const limits = getAllLimits(brandConfig);
+  const { currentBrand, brand, appName, drm, getImage } = useBrand();
+  
+  if (!currentBrand) {
+    return <div className="loading">Cargando...</div>;
+  }
+  
+  const enabledFeatures = getEnabledFeatures(currentBrand);
+  const uiConfig = getAllUIConfig(currentBrand);
+  const limits = getAllLimits(currentBrand);
 
   return (
     <div className="settings-page">
@@ -32,12 +37,12 @@ export function SettingsPage() {
         <div className="card">
           <div className="card-body">
             <ul className="list-unstyled">
-              <li><strong>Brand:</strong> {brandConfig.brand}</li>
-              <li><strong>App:</strong> {brandConfig.appName}</li>
-              <li><strong>Versión:</strong> {brandConfig.version || 'N/A'}</li>
-              <li><strong>DRM:</strong> {brandConfig.drm}</li>
-              {brandConfig.developedBy && (
-                <li><strong>Desarrollado por:</strong> {brandConfig.developedBy}</li>
+              <li><strong>Brand:</strong> {brand}</li>
+              <li><strong>App:</strong> {appName}</li>
+              <li><strong>Versión:</strong> {currentBrand.version || 'N/A'}</li>
+              <li><strong>DRM:</strong> {drm}</li>
+              {currentBrand.developedBy && (
+                <li><strong>Desarrollado por:</strong> {currentBrand.developedBy}</li>
               )}
             </ul>
           </div>
@@ -96,7 +101,7 @@ export function SettingsPage() {
             <div className="card">
               <div className="card-body">
                 <div className="features-grid">
-                  {Object.entries(brandConfig.features).map(([name, enabled]) => (
+                  {Object.entries(currentBrand.features || {}).map(([name, enabled]) => (
                     <span 
                       key={name} 
                       className={`feature-badge ${enabled ? 'enabled' : 'disabled'}`}
@@ -114,8 +119,8 @@ export function SettingsPage() {
             <h2>📁 Rutas de Assets</h2>
             <div className="card">
               <div className="card-body">
-                <code>{brandConfig.assets.logo}</code>
-                <p className="mt-2">Coloca tus imágenes en: <strong>/public/{brandConfig.brand}/</strong></p>
+                <code>{getImage('logo.png')}</code>
+                <p className="mt-2">Coloca tus imágenes en: <strong>/public/{brand}/</strong></p>
               </div>
             </div>
           </section>
