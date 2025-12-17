@@ -1,0 +1,44 @@
+/**
+ * Estilos básicos del Splash Screen
+ */
+
+.splash-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: #000;
+  z-index: 9999;
+}
+
+.splash-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; // Ajusta la imagen completa sin recortar
+  display: block;
+  background: #000; // Fondo negro si la imagen no llena toda la pantalla
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+

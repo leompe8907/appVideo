@@ -4,6 +4,7 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from '../layouts/MainLayout';
+import { SplashPage } from '../pages/SplashPage';
 import { LoginPage } from '../pages/LoginPage';
 import { HomePage } from '../pages/HomePage';
 import { ChannelsPage } from '../pages/ChannelsPage';
@@ -13,7 +14,7 @@ import { SettingsPage } from '../pages/SettingsPage';
 
 // Componente para rutas protegidas
 function ProtectedRoute({ children }) {
-  const isAuthenticated = !!localStorage.getItem('cvSessionId');
+  const isAuthenticated = !!localStorage.getItem('cvSessionId') || !!localStorage.getItem('sessionId');
   
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -26,8 +27,11 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Ruta pública: Splash (primera página) */}
+        <Route path="/" element={<SplashPage />} />
+        
         {/* Ruta pública: Login */}
-        <Route path="/" element={<LoginPage />} />
+        <Route path="/login" element={<LoginPage />} />
 
         {/* Rutas protegidas con layout */}
         <Route

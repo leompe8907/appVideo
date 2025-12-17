@@ -1,0 +1,152 @@
+/**
+ * Página de Splash Screen - Versión básica
+ */
+
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getActiveBrandConfig } from '../config/brandConfig';
+import { applyTheme } from '../utils/config';
+import panaccessService from '../services/panaccessService';
+import CryptoJS from 'crypto-js';
+import getUdid from '../api/cv/udid';
+
+import '../styles/components/_splash.scss';
+
+const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
+const SPLASH_DURATION = 30000000; // 3 segundos
+
+export function SplashPage() {
+  const navigate = useNavigate();
+  const [brandConfig, setBrandConfig] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const initializeAndLogin = async () => {
+      try {
+        // 1. Cargar configuración de marca
+        const config = getActiveBrandConfig();
+        setBrandConfig(config);
+
+        if (!config) {
+          // Esperar tiempo mínimo y redirigir a login
+          setTimeout(() => navigate('/login'), SPLASH_DURATION);
+          return;
+        }
+
+        // Aplicar tema
+        applyTheme(config);
+        document.title = `${config.appName} - Cargando...`;
+
+        // 2. Inicializar servicio
+        await panaccessService.initialize(config);
+
+        // 3. Verificar si hay sesión activa
+        const savedSessionId = localStorage.getItem('cvSessionId') || localStorage.getItem('sessionId');
+        if (savedSessionId) {
+          try {
+            const isValid = await panaccessService.validateSession();
+            if (isValid) {
+              setIsAuthenticated(true);
+              // Esperar tiempo mínimo y redirigir a home
+              setTimeout(() => navigate('/home'), SPLASH_DURATION);
+              return;
+            }
+          } catch (error) {
+            console.warn('[Splash] Sesión inválida:', error);
+            // Continuar con auto-login
+          }
+        }
+
+        // 4. Intentar auto-login con credenciales guardadas
+        const encryptedUsername = localStorage.getItem('username');
+        const encryptedPassword = localStorage.getItem('password');
+
+        if (!encryptedUsername || !encryptedPassword) {
+          // No hay credenciales, esperar tiempo mínimo y redirigir a login
+          setTimeout(() => navigate('/login'), SPLASH_DURATION);
+          return;
+        }
+
+        // 5. Desencriptar credenciales
+        let username, password;
+        try {
+          username = CryptoJS.AES.decrypt(encryptedUsername, SECRET_KEY).toString(CryptoJS.enc.Utf8);
+          password = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY).toString(CryptoJS.enc.Utf8);
+        } catch (error) {
+          console.error('[Splash] Error desencriptando:', error);
+          // Esperar tiempo mínimo y redirigir a login
+          setTimeout(() => navigate('/login'), SPLASH_DURATION);
+          return;
+        }
+
+        if (!username || !password) {
+          // Credenciales inválidas, esperar tiempo mínimo y redirigir a login
+          setTimeout(() => navigate('/login'), SPLASH_DURATION);
+          return;
+        }
+
+        // 6. Hacer login automático
+        let udid = localStorage.getItem('udid');
+        if (!udid) {
+          udid = getUdid();
+          localStorage.setItem('udid', udid);
+        }
+
+        const sessionId = await panaccessService.login('clientLogin', {
+          apiToken: config.token,
+          clientId: username,
+          pwd: password,
+          udid: udid,
+        });
+
+        if (sessionId) {
+          localStorage.setItem('sessionId', sessionId);
+          localStorage.setItem('udid', udid);
+          setIsAuthenticated(true);
+          // Esperar tiempo mínimo y redirigir a home
+          setTimeout(() => navigate('/home'), SPLASH_DURATION);
+        } else {
+          throw new Error('No se recibió sessionId');
+        }
+
+      } catch (error) {
+        console.error('[Splash] Error en auto-login:', error);
+        
+        // Limpiar credenciales inválidas
+        localStorage.removeItem('cvSessionId');
+        localStorage.removeItem('sessionId');
+        
+        // Esperar tiempo mínimo y redirigir a login
+        setTimeout(() => navigate('/login'), SPLASH_DURATION);
+      }
+    };
+
+    initializeAndLogin();
+  }, [navigate]);
+
+  if (!brandConfig) {
+    return (
+      <div className="splash-page">
+        <div className="splash-content">
+          <div className="spinner"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="splash-page">
+      <div className="splash-content">
+        {brandConfig.assets?.splash && (
+          <img 
+            src={brandConfig.assets.splash} 
+            alt={`${brandConfig.appName} Splash`}
+            className="splash-image"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default SplashPage;
