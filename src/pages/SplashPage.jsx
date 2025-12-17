@@ -1,7 +1,3 @@
-/**
- * Página de Splash Screen - Versión básica
- */
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getActiveBrandConfig } from '../config/brandConfig';
@@ -9,11 +5,10 @@ import { applyTheme } from '../utils/config';
 import panaccessService from '../services/panaccessService';
 import CryptoJS from 'crypto-js';
 import getUdid from '../api/cv/udid';
-
 import '../styles/components/_splash.scss';
 
+
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
-const SPLASH_DURATION = 30000000; // 3 segundos
 
 export function SplashPage() {
   const navigate = useNavigate();
@@ -29,9 +24,12 @@ export function SplashPage() {
 
         if (!config) {
           // Esperar tiempo mínimo y redirigir a login
-          setTimeout(() => navigate('/login'), SPLASH_DURATION);
+          setTimeout(() => navigate('/login'), 3000);
           return;
         }
+        
+        // Obtener duración del splash desde la configuración (puede estar en ui o en raíz)
+        const splashDuration = config.ui?.splashDuration || config.splashDuration || 3000;
 
         // Aplicar tema
         applyTheme(config);
@@ -47,8 +45,8 @@ export function SplashPage() {
             const isValid = await panaccessService.validateSession();
             if (isValid) {
               setIsAuthenticated(true);
-              // Esperar tiempo mínimo y redirigir a home
-              setTimeout(() => navigate('/home'), SPLASH_DURATION);
+              // Esperar tiempo del splash y redirigir a home
+              setTimeout(() => navigate('/home'), splashDuration);
               return;
             }
           } catch (error) {
@@ -62,8 +60,8 @@ export function SplashPage() {
         const encryptedPassword = localStorage.getItem('password');
 
         if (!encryptedUsername || !encryptedPassword) {
-          // No hay credenciales, esperar tiempo mínimo y redirigir a login
-          setTimeout(() => navigate('/login'), SPLASH_DURATION);
+          // No hay credenciales, esperar tiempo del splash y redirigir a login
+          setTimeout(() => navigate('/login'), splashDuration);
           return;
         }
 
@@ -74,14 +72,14 @@ export function SplashPage() {
           password = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY).toString(CryptoJS.enc.Utf8);
         } catch (error) {
           console.error('[Splash] Error desencriptando:', error);
-          // Esperar tiempo mínimo y redirigir a login
-          setTimeout(() => navigate('/login'), SPLASH_DURATION);
+          // Esperar tiempo del splash y redirigir a login
+          setTimeout(() => navigate('/login'), splashDuration);
           return;
         }
 
         if (!username || !password) {
-          // Credenciales inválidas, esperar tiempo mínimo y redirigir a login
-          setTimeout(() => navigate('/login'), SPLASH_DURATION);
+          // Credenciales inválidas, esperar tiempo del splash y redirigir a login
+          setTimeout(() => navigate('/login'), splashDuration);
           return;
         }
 
@@ -103,8 +101,8 @@ export function SplashPage() {
           localStorage.setItem('sessionId', sessionId);
           localStorage.setItem('udid', udid);
           setIsAuthenticated(true);
-          // Esperar tiempo mínimo y redirigir a home
-          setTimeout(() => navigate('/home'), SPLASH_DURATION);
+          // Esperar tiempo del splash y redirigir a home
+          setTimeout(() => navigate('/home'), splashDuration);
         } else {
           throw new Error('No se recibió sessionId');
         }
@@ -116,8 +114,11 @@ export function SplashPage() {
         localStorage.removeItem('cvSessionId');
         localStorage.removeItem('sessionId');
         
-        // Esperar tiempo mínimo y redirigir a login
-        setTimeout(() => navigate('/login'), SPLASH_DURATION);
+        // Obtener duración del splash (puede estar en ui o en raíz)
+        const splashDuration = brandConfig?.ui?.splashDuration || brandConfig?.splashDuration || 3000;
+        
+        // Esperar tiempo del splash y redirigir a login
+        setTimeout(() => navigate('/login'), splashDuration);
       }
     };
 

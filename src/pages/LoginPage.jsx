@@ -7,7 +7,7 @@ import getUdid from '../api/cv/udid';
 import CryptoJS from 'crypto-js';
 import { classifyError, ERROR_TYPES } from '../api/cv/errorClassifier';
 
-// const SECRET_KEY = brandConfig.token;
+const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -55,8 +55,9 @@ export function LoginPage() {
       });
 
       // Encriptar credenciales para guardar (para auto-login futuro)
-      const encryptedUsername = CryptoJS.AES.encrypt(username, brandConfig.token).toString();
-      const encryptedPassword = CryptoJS.AES.encrypt(password, brandConfig.token).toString();
+      // Usar SECRET_KEY para encriptación local, NO brandConfig.token
+      const encryptedUsername = CryptoJS.AES.encrypt(username, SECRET_KEY).toString();
+      const encryptedPassword = CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
 
       // Guardar credenciales encriptadas
       localStorage.setItem('username', encryptedUsername);

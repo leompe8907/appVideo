@@ -1,6 +1,7 @@
 import { getBrandConfig } from "./brands";
 import { DEFAULT_BRAND } from "./defaultBrand";
 import { getBrandAsset } from "../utils/assetLoader";
+import { getSplashPath } from "../utils/splashLoader";
 
 /**
  * Obtiene la configuración activa de la marca
@@ -41,6 +42,10 @@ export function getActiveBrandConfig() {
 function enrichConfigWithAssets(config) {
   if (!config) return null;
   
+  // Determinar ruta de splash según splashAnimado (puede estar en ui o en raíz)
+  const splashAnimado = config.ui?.splashAnimado === true || config.splashAnimado === true;
+  const splashPath = getSplashPath(config.brand, splashAnimado);
+  
   return {
     ...config,
     assets: {
@@ -50,7 +55,7 @@ function enrichConfigWithAssets(config) {
       logoBlack: getBrandAsset(config.brand, 'logo_black.png'),
       background: getBrandAsset(config.brand, 'background.png'),
       favicon: getBrandAsset(config.brand, 'favicon.ico'),
-      splash: getBrandAsset(config.brand, 'splash.png'),
+      splash: splashPath,
       placeholder: getBrandAsset(config.brand, 'placeholder_220x160.png'),
       // Helper para obtener cualquier asset custom
       get: (path) => getBrandAsset(config.brand, path),

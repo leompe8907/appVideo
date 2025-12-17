@@ -6,6 +6,8 @@ export const BRANDS = [
     token: 'gQposTlrMIOYQVdYBNYC',
     developedBy: "Network Broadcast",
     version: "1.0.2",
+    splashDuration: 3000, // Duración en milisegundos
+    splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
     
     // Configuración de UI/Tema
     ui: {
@@ -17,7 +19,7 @@ export const BRANDS = [
       theme: "dark",
       fontFamily: "Arial, sans-serif",
     },
-    
+        
     // Límites y restricciones
     limits: {
       maxProfiles: 5,
@@ -48,6 +50,8 @@ export const BRANDS = [
     token: "CQSepFFsoFNgyLNDYOpz",
     developedBy: "inTV&#174,",
     version: "2.0.2",
+    splashDuration: 3000, // Duración en milisegundos
+    splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
     
     // Configuración de UI/Tema
     ui: {
@@ -90,6 +94,8 @@ export const BRANDS = [
     token: "NLdLsrJkgIgnxMIDurSI",
     developedBy: "Gigmax",
     version: "2.0.3",
+    splashDuration: 3000, // Duración en milisegundos
+    splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
     
     // Configuración de UI/Tema
     ui: {
