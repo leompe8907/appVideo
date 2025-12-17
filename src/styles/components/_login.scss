@@ -9,11 +9,12 @@
 
 .panaccess-login {
   min-height: 100vh;
+  max-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: $spacing-xxl;
+  padding: clamp(1rem, 2vw, 2rem);
   background: #0a0a0a;
   background-size: cover;
   background-position: center;
@@ -38,11 +39,14 @@
     position: relative;
     z-index: 1;
     text-align: center;
-    margin-bottom: $spacing-xxl;
+    margin-bottom: clamp(1rem, 2vw, 2.5rem);
+    flex-shrink: 0;
 
     .brand-logo {
-      max-width: 300px;
-      max-height: 150px;
+      max-width: clamp(150px, 12vw, 350px);
+      max-height: clamp(80px, 6vw, 180px);
+      width: auto;
+      height: auto;
       object-fit: contain;
       filter: drop-shadow(0 4px 30px rgba(255, 255, 255, 0.3));
       animation: logoFloat 3s ease-in-out infinite;
@@ -55,25 +59,26 @@
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: $border-radius-xl;
-    padding: $spacing-xxl;
-    max-width: 420px;
+    border-radius: clamp(12px, 1.5vw, 24px);
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+    max-width: clamp(320px, 22vw, 500px);
     width: 100%;
+    flex-shrink: 0;
     box-shadow: 
       0 8px 32px rgba(0, 0, 0, 0.3),
       inset 0 1px 0 rgba(255, 255, 255, 0.1);
 
     h2 {
-      font-size: 1.5rem;
+      font-size: clamp(1.25rem, 1.8vw, 1.75rem);
       font-weight: 600;
       color: white;
-      margin: 0 0 $spacing-xl;
+      margin: 0 0 clamp(1rem, 2vw, 1.5rem);
       text-align: center;
       letter-spacing: 0.5px;
     }
 
     .form-group {
-      margin-bottom: $spacing-lg;
+      margin-bottom: clamp(0.75rem, 1.5vw, 1.25rem);
 
       label {
         display: block;
@@ -90,9 +95,9 @@
         background: rgba(255, 255, 255, 0.1);
         border: 1px solid rgba(255, 255, 255, 0.2);
         color: white;
-        padding: 1rem;
-        border-radius: $border-radius-md;
-        font-size: $font-size-base;
+        padding: clamp(0.625rem, 1.2vw, 1rem);
+        border-radius: clamp(6px, 0.8vw, 12px);
+        font-size: clamp(0.875rem, 1.1vw, 1rem);
         transition: all $transition-normal;
         box-sizing: border-box;
 
@@ -174,8 +179,9 @@
       font-weight: 600;
       letter-spacing: 1px;
       text-transform: uppercase;
-      padding: 1rem;
-      margin-top: $spacing-lg;
+      padding: clamp(0.75rem, 1.2vw, 1rem);
+      font-size: clamp(0.875rem, 1.1vw, 1rem);
+      margin-top: clamp(0.75rem, 1.5vw, 1.25rem);
       transition: all $transition-normal;
 
       &:hover:not(:disabled) {
@@ -207,23 +213,46 @@
     }
   }
 
+  // Ajustes para notebooks y pantallas medianas
+  @include desktop {
+    padding: clamp(1rem, 2vw, 1.5rem);
+    
+    .login-brand-section {
+      margin-bottom: clamp(0.75rem, 1.5vw, 1.5rem);
+      
+      .brand-logo {
+        max-width: clamp(120px, 10vw, 250px);
+        max-height: clamp(60px, 5vw, 120px);
+      }
+    }
+    
+    .login-card {
+      padding: clamp(1.25rem, 2.5vw, 2rem);
+      max-width: clamp(300px, 25vw, 450px);
+    }
+  }
+
   @include mobile {
-    padding: $spacing-xl;
+    padding: $spacing-md;
+    min-height: 100vh;
+    max-height: none; // Permitir scroll en móvil si es necesario
 
     .login-brand-section {
-      margin-bottom: $spacing-xl;
+      margin-bottom: $spacing-lg;
 
       .brand-logo {
-        max-width: 200px;
-        max-height: 100px;
+        max-width: 150px;
+        max-height: 80px;
       }
     }
 
     .login-card {
-      padding: $spacing-xl;
+      padding: $spacing-lg;
+      max-width: 100%;
 
       h2 {
         font-size: 1.25rem;
+        margin-bottom: $spacing-md;
       }
     }
   }

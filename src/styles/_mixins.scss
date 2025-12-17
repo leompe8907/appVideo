@@ -32,29 +32,69 @@
   overflow: hidden;
 }
 
-// Responsive
+// Responsive - Mobile First
 @mixin mobile {
-  @media (max-width: $breakpoint-mobile) {
+  @media (max-width: #{$breakpoint-tablet - 1px}) {
     @content;
   }
 }
 
 @mixin tablet {
-  @media (min-width: $breakpoint-tablet) {
+  @media (min-width: $breakpoint-tablet) and (max-width: #{$breakpoint-desktop - 1px}) {
     @content;
   }
 }
 
 @mixin desktop {
-  @media (min-width: $breakpoint-desktop) {
+  @media (min-width: $breakpoint-desktop) and (max-width: #{$breakpoint-fullhd - 1px}) {
     @content;
   }
 }
 
-@mixin tv {
-  @media (min-width: $breakpoint-tv) {
+@mixin hd {
+  @media (min-width: $breakpoint-hd) and (max-width: #{$breakpoint-fullhd - 1px}) {
     @content;
   }
+}
+
+@mixin fullhd {
+  @media (min-width: $breakpoint-fullhd) and (max-width: #{$breakpoint-ultrahd - 1px}) {
+    @content;
+  }
+}
+
+@mixin ultrahd {
+  @media (min-width: $breakpoint-ultrahd) and (max-width: #{$breakpoint-4k - 1px}) {
+    @content;
+  }
+}
+
+@mixin tv-4k {
+  @media (min-width: $breakpoint-4k) and (max-width: #{$breakpoint-8k - 1px}) {
+    @content;
+  }
+}
+
+@mixin tv-8k {
+  @media (min-width: $breakpoint-8k) {
+    @content;
+  }
+}
+
+// Helper para TVs (Full HD y superior)
+@mixin tv {
+  @media (min-width: $breakpoint-fullhd) {
+    @content;
+  }
+}
+
+// Helper para escalado automático basado en viewport
+@mixin responsive-scale($base-size) {
+  font-size: clamp(
+    #{$base-size * 0.5},
+    #{$base-size * 100vw / $base-width},
+    #{$base-size * 2}
+  );
 }
 
 // Aspecto ratio (para TVs)

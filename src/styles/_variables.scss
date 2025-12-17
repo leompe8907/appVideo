@@ -42,7 +42,15 @@ $transition-slow: 0.3s ease;
 $breakpoint-mobile: 480px;
 $breakpoint-tablet: 768px;
 $breakpoint-desktop: 1024px;
-$breakpoint-tv: 1920px;
+$breakpoint-hd: 1280px;        // HD (720p)
+$breakpoint-fullhd: 1920px;    // Full HD (1080p)
+$breakpoint-ultrahd: 2560px;   // Ultra HD / QHD
+$breakpoint-4k: 3840px;        // 4K UHD
+$breakpoint-8k: 7680px;        // 8K UHD
+
+// Base para escalado (Full HD)
+$base-width: 1920px;
+$base-height: 1080px;
 
 // Tipografía
 $font-family: var(--font-family, system-ui, -apple-system, sans-serif);

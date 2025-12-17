@@ -1,0 +1,92 @@
+/**
+ * Estilos responsive globales
+ * Sistema de escalado automático para múltiples resoluciones
+ */
+
+// Variables para escalado
+$base-font-size: 16px;
+$base-spacing: 1rem;
+
+// Función para escalar tamaños basado en viewport
+@function scale($size, $base: 1920) {
+  @return calc(#{$size} * (100vw / #{$base}));
+}
+
+// Función para clamp (tamaño mínimo, preferido, máximo)
+@function responsive-size($min, $preferred, $max) {
+  @return clamp(#{$min}, #{$preferred}, #{$max});
+}
+
+// Clase base para escalado automático
+.responsive-container {
+  // Escalar desde Full HD (1920px) como base
+  font-size: clamp(12px, 1vw, 24px);
+  
+  // Para pantallas muy grandes (4K+), limitar el crecimiento
+  @include tv-4k {
+    font-size: clamp(16px, 0.8vw, 32px);
+  }
+  
+  @include tv-8k {
+    font-size: clamp(20px, 0.6vw, 40px);
+  }
+}
+
+// Utilidades para padding y margin responsive
+.responsive-padding {
+  padding: clamp(1rem, 2vw, 3rem);
+}
+
+.responsive-margin {
+  margin: clamp(0.5rem, 1vw, 2rem);
+}
+
+// Ajustes específicos por resolución
+@include mobile {
+  html {
+    font-size: 14px;
+  }
+}
+
+@include tablet {
+  html {
+    font-size: 15px;
+  }
+}
+
+@include desktop {
+  html {
+    font-size: 16px;
+  }
+}
+
+@include hd {
+  html {
+    font-size: 16px;
+  }
+}
+
+@include fullhd {
+  html {
+    font-size: 16px; // Base
+  }
+}
+
+@include ultrahd {
+  html {
+    font-size: 18px; // Ligeramente más grande
+  }
+}
+
+@include tv-4k {
+  html {
+    font-size: 20px; // Más grande para 4K
+  }
+}
+
+@include tv-8k {
+  html {
+    font-size: 24px; // Aún más grande para 8K
+  }
+}
+

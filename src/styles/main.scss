@@ -10,7 +10,10 @@
 // 2. Bootstrap personalizado
 @import 'custom-bootstrap';
 
-// 3. Estilos globales
+// 3. Estilos responsive
+@import 'responsive';
+
+// 4. Estilos globales
 @import 'global';
 
 // 4. Componentes
