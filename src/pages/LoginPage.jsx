@@ -7,7 +7,7 @@ import getUdid from '../api/cv/udid';
 import CryptoJS from 'crypto-js';
 import { classifyError, ERROR_TYPES } from '../api/cv/errorClassifier';
 
-const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
+// const SECRET_KEY = brandConfig.token;
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -21,7 +21,6 @@ export function LoginPage() {
   useEffect(() => {
     const config = getActiveBrandConfig();
     setBrandConfig(config);
-    console.log(SECRET_KEY)
     
     if (config) {
       applyTheme(config);
@@ -49,15 +48,15 @@ export function LoginPage() {
       }
 
       const sessionId = await panaccessService.login("clientLogin", {
-        apiToken: SECRET_KEY,
+        apiToken: brandConfig.token,
         clientId: username,
         pwd: password,
         udid: udid,
       });
 
       // Encriptar credenciales para guardar (para auto-login futuro)
-      const encryptedUsername = CryptoJS.AES.encrypt(username, SECRET_KEY).toString();
-      const encryptedPassword = CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
+      const encryptedUsername = CryptoJS.AES.encrypt(username, brandConfig.token).toString();
+      const encryptedPassword = CryptoJS.AES.encrypt(password, brandConfig.token).toString();
 
       // Guardar credenciales encriptadas
       localStorage.setItem('username', encryptedUsername);

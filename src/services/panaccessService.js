@@ -44,11 +44,26 @@ class PanaccessService {
     if (!this.client) {
       throw new Error('Servicio no inicializado. Llama a initialize() primero.');
     }
+    
     try {
       console.log("Llamando a la API (login):", method, parameters);
-      const result = await CV.call(method, parameters);
-      console.log("Respuesta de la API (login):", result);
-      return result; // Retorna solo el resultado
+      
+      // Para clientLogin, usar init() del cliente
+      if (method === 'clientLogin' && parameters.clientId && parameters.pwd) {
+        // El apiToken ya está en la configuración del cliente
+        // Solo necesitamos username y password
+        await this.client.init(parameters.clientId, parameters.pwd);
+        
+        // El sessionId ya está guardado en el cliente después de init()
+        const sessionId = this.client.sessionId;
+        console.log("Respuesta de la API (login):", sessionId);
+        return sessionId;
+      } else {
+        // Para otros métodos, usar call directamente
+        const result = await this.client.call(method, parameters);
+        console.log("Respuesta de la API (login):", result);
+        return result;
+      }
     } catch (error) {
       console.error(`Error en la llamada de login (${method}):`, error);
       throw error;

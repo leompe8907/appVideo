@@ -182,8 +182,8 @@ export class CVClient {
     try {
       const result = await this.call('clientLogin', {
         apiToken: this.apiToken,
-        username: this.username,
-        password: this.password,
+        clientId: this.username,  // El API espera 'clientId', no 'username'
+        pwd: this.password,        // El API espera 'pwd', no 'password'
         udid: getUdid(),
       });
 
