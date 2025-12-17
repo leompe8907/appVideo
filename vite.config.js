@@ -8,6 +8,22 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     
+    // Configuración de CSS/SCSS
+    css: {
+      preprocessorOptions: {
+        scss: {
+          // Configuración para Sass
+          // Nota: Los warnings de Bootstrap (node_modules) no se pueden eliminar
+          // porque Bootstrap usa sintaxis antigua. Nuestros archivos ya usan @use
+          api: 'modern-compiler',
+          // Suprimir warnings de dependencias (Bootstrap)
+          quietDeps: true,
+          // Suprimir warnings específicos de deprecación
+          silenceDeprecations: ['import', 'global-builtin', 'if-function', 'color-functions'],
+        },
+      },
+    },
+    
     // Configuración para builds por cliente
     build: {
       outDir: brand ? `dist/${brand}` : 'dist',

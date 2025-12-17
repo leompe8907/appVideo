@@ -2,6 +2,9 @@
  * Estilos del Layout principal
  */
 
+@use '../variables' as *;
+@use '../mixins' as *;
+
 .main-layout {
   display: flex;
   flex-direction: column;

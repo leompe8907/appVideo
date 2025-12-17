@@ -1,19 +1,53 @@
 /**
- * Layout principal con navegación
+ * Layout principal con navegación tipo Netflix
+ * Compatible con control remoto y mouse
  */
 import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
 import { useAuthValidator } from '../hooks/useAuthValidator';
+import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import panaccessService from '../services/panaccessService';
+import '../styles/components/_layout-netflix.scss';
 
 export function MainLayout() {
   const { currentBrand, getImage, getUIConfig, appName, isLoading } = useBrand();
   const [logoError, setLogoError] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Validar sesión automáticamente
   useAuthValidator();
+
+  // Items de navegación
+  const navItems = [
+    { path: '/home', label: 'Inicio', icon: '🏠' },
+    { path: '/channels', label: 'Canales', icon: '📺' },
+    { path: '/vod', label: 'VOD', icon: '🎬' },
+    { path: '/epg', label: 'EPG', icon: '📅' },
+    { path: '/settings', label: 'Configuración', icon: '⚙️' },
+  ];
+
+  // Encontrar índice inicial basado en la ruta actual
+  const initialIndex = navItems.findIndex(item => item.path === location.pathname);
+  const currentIndex = initialIndex >= 0 ? initialIndex : 0;
+
+  // Navegación con teclado
+  const handleNavSelect = (item) => {
+    if (item && item.path) {
+      navigate(item.path);
+    }
+  };
+
+  const {
+    focusedIndex,
+    containerRef,
+    itemRefs,
+  } = useKeyboardNavigation(navItems, handleNavSelect, {
+    loop: true,
+    initialIndex: currentIndex,
+    orientation: 'horizontal',
+  });
 
   const handleLogout = () => {
     // Cerrar sesión con el servicio
@@ -38,7 +72,7 @@ export function MainLayout() {
   const logoPath = getImage('logo.png');
 
   return (
-    <div className="main-layout">
+    <div className="main-layout main-layout-netflix">
       {/* Header */}
       <header className="main-header" style={{ borderBottom: `4px solid ${primaryColor}` }}>
         <div className="container-fluid">
@@ -59,43 +93,47 @@ export function MainLayout() {
             </div>
 
             {/* Botón logout */}
-            <button onClick={handleLogout} className="btn btn-outline-light logout-btn">
+            <button 
+              onClick={handleLogout} 
+              className="btn btn-outline-light logout-btn"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleLogout();
+                }
+              }}
+            >
               Cerrar Sesión
             </button>
           </div>
         </div>
       </header>
 
-      {/* Navegación */}
-      <nav className="main-nav">
-        <div className="container-fluid">
-          <ul className="nav nav-tabs">
-            <li className="nav-item">
-              <NavLink to="/home" className="nav-link">
-                🏠 Inicio
+      {/* Navegación tipo Netflix */}
+      <nav className="main-nav-netflix" ref={containerRef}>
+        <div className="nav-container">
+          {navItems.map((item, index) => {
+            const isActive = location.pathname === item.path;
+            const isFocused = focusedIndex === index;
+
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                ref={(el) => (itemRefs.current[index] = el)}
+                className={`nav-item-netflix ${isActive ? 'active' : ''} ${isFocused ? 'focused' : ''}`}
+                onMouseEnter={() => {
+                  // Al hacer hover, actualizar focus visualmente
+                  if (itemRefs.current[index]) {
+                    itemRefs.current[index].focus();
+                  }
+                }}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-label">{item.label}</span>
               </NavLink>
-            </li>
-            <li className="nav-item">
-              <NavLink to="/channels" className="nav-link">
-                📺 Canales
-              </NavLink>
-            </li>
-            <li className="nav-item">
-              <NavLink to="/vod" className="nav-link">
-                🎬 VOD
-              </NavLink>
-            </li>
-            <li className="nav-item">
-              <NavLink to="/epg" className="nav-link">
-                📅 EPG
-              </NavLink>
-            </li>
-            <li className="nav-item">
-              <NavLink to="/settings" className="nav-link">
-                ⚙️ Configuración
-              </NavLink>
-            </li>
-          </ul>
+            );
+          })}
         </div>
       </nav>
 

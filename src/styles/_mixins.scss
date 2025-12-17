@@ -2,6 +2,8 @@
  * Mixins SCSS reutilizables
  */
 
+@use 'variables' as *;
+
 // Flexbox centrado
 @mixin flex-center {
   display: flex;

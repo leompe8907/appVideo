@@ -1,23 +1,18 @@
 /**
  * Archivo principal SCSS
- * Importa todos los estilos en el orden correcto
+ * IMPORTANTE: @use debe ir ANTES de @import
  */
 
-// 1. Variables y configuración
-@import 'variables';
-@import 'mixins';
+// 1. TODOS los @use primero (antes de cualquier @import)
+@use 'variables' as *;
+@use 'mixins' as *;
+@use 'responsive' as *;
+@use 'global' as *;
+@use 'components/login' as *;
+@use 'components/layout' as *;
+@use 'components/layout-netflix' as *;
+@use 'components/pages' as *;
 
-// 2. Bootstrap personalizado
+// 2. Bootstrap personalizado (usa @import porque Bootstrap lo requiere)
 @import 'custom-bootstrap';
-
-// 3. Estilos responsive
-@import 'responsive';
-
-// 4. Estilos globales
-@import 'global';
-
-// 4. Componentes
-@import 'components/login';
-@import 'components/layout';
-@import 'components/pages';
 

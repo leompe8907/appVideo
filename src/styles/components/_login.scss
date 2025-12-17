@@ -3,9 +3,9 @@
  * Diseño Minimal Full Screen - Optimizado para TV
  */
 
-// Importar dependencias necesarias cuando se importa directamente
-@import '../variables';
-@import '../mixins';
+// Importar dependencias necesarias
+@use '../variables' as *;
+@use '../mixins' as *;
 
 .panaccess-login {
   min-height: 100vh;

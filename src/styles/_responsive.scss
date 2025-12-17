@@ -3,6 +3,9 @@
  * Sistema de escalado automático para múltiples resoluciones
  */
 
+@use 'variables' as *;
+@use 'mixins' as *;
+
 // Variables para escalado
 $base-font-size: 16px;
 $base-spacing: 1rem;

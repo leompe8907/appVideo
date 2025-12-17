@@ -2,6 +2,9 @@
  * Estilos de páginas
  */
 
+@use '../variables' as *;
+@use '../mixins' as *;
+
 // Home Page
 .home-page {
   .welcome-section {
