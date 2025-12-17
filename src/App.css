@@ -1,0 +1,116 @@
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 3rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+}
+
+header .brand-logo {
+  max-width: 200px;
+  max-height: 80px;
+  margin-bottom: 1rem;
+  object-fit: contain;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 2.5rem;
+}
+
+header p {
+  margin: 0.5rem 0 0;
+  opacity: 0.9;
+}
+
+.brand-info {
+  background: #f5f5f5;
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.brand-info h2 {
+  margin-top: 0;
+  color: #333;
+}
+
+.brand-info ul {
+  list-style: none;
+  padding: 0;
+}
+
+.brand-info li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #ddd;
+  color: #555;
+}
+
+.brand-info li:last-child {
+  border-bottom: none;
+}
+
+.brand-info strong {
+  color: #333;
+  margin-right: 0.5rem;
+}
+
+footer {
+  text-align: center;
+  padding: 2rem;
+  background: #2c3e50;
+  color: white;
+  border-radius: 8px;
+  margin-top: 2rem;
+}
+
+footer p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+footer p:last-child {
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+
+.assets-info {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #667eea;
+}
+
+.assets-info h3 {
+  margin-top: 0;
+  color: #667eea;
+}
+
+.assets-info code {
+  display: block;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+  color: #e83e8c;
+  font-family: 'Courier New', monospace;
+  margin: 0.5rem 0;
+}
+
+.assets-info p {
+  margin: 1rem 0 0;
+  color: #666;
+}
+
+.assets-info strong {
+  color: #333;
+  font-family: monospace;
+}

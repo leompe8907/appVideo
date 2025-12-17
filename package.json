@@ -1,0 +1,35 @@
+{
+  "name": "app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:brand": "vite",
+    "build": "vite build",
+    "build:all": "node scripts/buildAll.js",
+    "build:telecable": "cross-env VITE_BRAND=telecable VITE_DEFAULT_BRAND=telecable vite build",
+    "build:bromteck": "cross-env VITE_BRAND=bromteck VITE_DEFAULT_BRAND=bromteck vite build",
+    "build:intv": "cross-env VITE_BRAND=intv VITE_DEFAULT_BRAND=intv vite build",
+    "build:gigmax": "cross-env VITE_BRAND=gigmax VITE_DEFAULT_BRAND=gigmax vite build",
+    "preview": "vite preview",
+    "preview:brand": "vite preview --outDir dist",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react-swc": "^4.2.2",
+    "cross-env": "^7.0.3",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "vite": "^7.2.4"
+  }
+}
