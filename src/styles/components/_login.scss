@@ -1,155 +1,230 @@
 /**
  * Estilos del componente Login
+ * Diseño Minimal Full Screen - Optimizado para TV
  */
 
+// Importar dependencias necesarias cuando se importa directamente
+@import '../variables';
+@import '../mixins';
+
 .panaccess-login {
-  @include flex-center;
   min-height: 100vh;
-  padding: $spacing-xl;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xxl;
+  background: #0a0a0a;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  overflow: hidden;
 
-.login-card {
-  @include card($spacing-xxl, $border-radius-xl);
-  max-width: 400px;
-  width: 100%;
-  box-shadow: $shadow-lg;
-
-  h2 {
-    margin: 0 0 $spacing-sm;
-    color: #333;
-    font-size: 2rem;
-    text-align: center;
+  // Overlay oscuro para mejorar legibilidad del formulario
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    z-index: 0;
   }
 
-  @include mobile {
-    padding: $spacing-xl $spacing-lg;
+  .login-brand-section {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    margin-bottom: $spacing-xxl;
+
+    .brand-logo {
+      max-width: 300px;
+      max-height: 150px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 30px rgba(255, 255, 255, 0.3));
+      animation: logoFloat 3s ease-in-out infinite;
+    }
+  }
+
+  .login-card {
+    position: relative;
+    z-index: 1;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: $border-radius-xl;
+    padding: $spacing-xxl;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
 
     h2 {
       font-size: 1.5rem;
-    }
-  }
-}
-
-.brand-name {
-  text-align: center;
-  color: $primary-color;
-  font-weight: 600;
-  margin-bottom: $spacing-xl;
-  font-size: $font-size-lg;
-}
-
-.form-group {
-  margin-bottom: $spacing-lg;
-
-  label {
-    display: block;
-    margin-bottom: $spacing-sm;
-    color: #555;
-    font-weight: 500;
-    font-size: $font-size-sm;
-  }
-
-  input {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #e0e0e0;
-    border-radius: $border-radius-md;
-    font-size: $font-size-base;
-    transition: border-color $transition-normal;
-    box-sizing: border-box;
-
-    &:focus {
-      outline: none;
-      border-color: $primary-color;
+      font-weight: 600;
+      color: white;
+      margin: 0 0 $spacing-xl;
+      text-align: center;
+      letter-spacing: 0.5px;
     }
 
-    &:disabled {
-      background: #f5f5f5;
-      cursor: not-allowed;
+    .form-group {
+      margin-bottom: $spacing-lg;
+
+      label {
+        display: block;
+        margin-bottom: $spacing-sm;
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 500;
+        font-size: $font-size-sm;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      input {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 1rem;
+        border-radius: $border-radius-md;
+        font-size: $font-size-base;
+        transition: all $transition-normal;
+        box-sizing: border-box;
+
+        &::placeholder {
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        &:focus {
+          outline: none;
+          background: rgba(255, 255, 255, 0.15);
+          border-color: var(--primary-color, #667eea);
+          box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.2);
+        }
+
+        &:disabled {
+          background: rgba(255, 255, 255, 0.05);
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        @include focus-state;
+      }
+
+      .password-wrapper {
+        position: relative;
+
+        input {
+          padding-right: 3rem;
+        }
+
+        .password-toggle {
+          position: absolute;
+          right: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 1.25rem;
+          padding: 0.25rem;
+          line-height: 1;
+          color: rgba(255, 255, 255, 0.7);
+          
+          &:hover {
+            opacity: 0.7;
+            color: white;
+          }
+
+          &:focus {
+            outline: 2px solid var(--primary-color, #667eea);
+            outline-offset: 2px;
+            border-radius: $border-radius-sm;
+          }
+        }
+      }
     }
 
-    @include focus-state;
-  }
-
-  .password-wrapper {
-    position: relative;
-
-    input {
-      padding-right: 3rem;
+    .error-message {
+      padding: $spacing-md;
+      background: rgba(220, 53, 69, 0.2);
+      border: 1px solid rgba(220, 53, 69, 0.4);
+      border-radius: $border-radius-md;
+      color: #ff6b7a;
+      margin-bottom: $spacing-md;
+      font-size: $font-size-sm;
+      backdrop-filter: blur(10px);
     }
 
-    .password-toggle {
-      position: absolute;
-      right: 0.75rem;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
+    .login-button {
+      @include button-base;
+      width: 100%;
+      background: linear-gradient(
+        135deg,
+        var(--primary-color, #667eea) 0%,
+        var(--secondary-color, #764ba2) 100%
+      );
       border: none;
-      cursor: pointer;
-      font-size: 1.25rem;
-      padding: 0.25rem;
-      line-height: 1;
-      
-      &:hover {
-        opacity: 0.7;
+      color: white;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 1rem;
+      margin-top: $spacing-lg;
+      transition: all $transition-normal;
+
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 
+          0 8px 20px rgba(var(--primary-color-rgb, 102, 126, 234), 0.4),
+          0 0 30px rgba(var(--primary-color-rgb, 102, 126, 234), 0.2);
+      }
+
+      &:disabled {
+        background: rgba(255, 255, 255, 0.1);
+        transform: none;
+        opacity: 0.5;
       }
 
       &:focus {
-        outline: 2px solid $primary-color;
+        outline: 2px solid var(--primary-color, #667eea);
         outline-offset: 2px;
-        border-radius: $border-radius-sm;
+      }
+    }
+  }
+
+  @keyframes logoFloat {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  @include mobile {
+    padding: $spacing-xl;
+
+    .login-brand-section {
+      margin-bottom: $spacing-xl;
+
+      .brand-logo {
+        max-width: 200px;
+        max-height: 100px;
+      }
+    }
+
+    .login-card {
+      padding: $spacing-xl;
+
+      h2 {
+        font-size: 1.25rem;
       }
     }
   }
 }
-
-.error-message {
-  padding: $spacing-md;
-  background: #fee;
-  border: 1px solid #fcc;
-  border-radius: $border-radius-md;
-  color: $error-color;
-  margin-bottom: $spacing-md;
-  font-size: $font-size-sm;
-}
-
-.login-button {
-  @include button-base;
-  width: 100%;
-  padding: $spacing-md;
-  background: $primary-color;
-  color: white;
-  font-size: $font-size-base;
-  font-weight: 600;
-
-  &:hover:not(:disabled) {
-    background: $secondary-color;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  }
-
-  &:disabled {
-    background: #ccc;
-    transform: none;
-  }
-
-  @include focus-state;
-}
-
-.login-info {
-  margin-top: $spacing-xl;
-  padding-top: $spacing-lg;
-  border-top: 1px solid #e0e0e0;
-
-  p {
-    margin: $spacing-sm 0;
-    font-size: $font-size-sm;
-    color: #666;
-  }
-
-  strong {
-    color: #333;
-  }
-}
-

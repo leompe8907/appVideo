@@ -5,12 +5,13 @@ import panaccessService from '../services/panaccessService';
 import getUdid from '../api/cv/udid';
 import CryptoJS from 'crypto-js';
 import { classifyError, ERROR_TYPES } from '../api/cv/errorClassifier';
+import '../styles/components/_login.scss';
 
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { currentBrand, token, drm, appName, isLoading } = useBrand();
+  const { currentBrand, token, appName, isLoading, getImage } = useBrand();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -94,11 +95,24 @@ export function LoginPage() {
     return <div className="loading">Cargando configuración...</div>;
   }
 
+  const logoPath = getImage('logo.png');
+  const backgroundPath = currentBrand.assets?.background || getImage('background.png');
+
   return (
-    <div className="panaccess-login">
+    <div 
+      className="panaccess-login"
+      style={backgroundPath ? {
+        backgroundImage: `url(${backgroundPath})`
+      } : {}}
+    >
+      <div className="login-brand-section">
+        {logoPath && (
+          <img src={logoPath} alt={appName} className="brand-logo" />
+        )}
+      </div>
+
       <div className="login-card">
         <h2>Iniciar Sesión</h2>
-        <p className="brand-name">{appName}</p>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -154,11 +168,6 @@ export function LoginPage() {
             {isSubmitting ? 'Conectando...' : 'Entrar'}
           </button>
         </form>
-
-        <div className="login-info">
-          <p><strong>DRM:</strong> {drm}</p>
-          <p><strong>Token:</strong> {token?.substring(0, 8)}...</p>
-        </div>
       </div>
     </div>
   );
