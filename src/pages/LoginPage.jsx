@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
+import { Focusable } from '../components/Focusable';
+import { useLoginNavigation, LOGIN_FOCUS_KEYS } from '../hooks/navigation/useLoginNavigation';
 import panaccessService from '../services/panaccessService';
 import getUdid from '../api/cv/udid';
 import CryptoJS from 'crypto-js';
@@ -12,6 +14,7 @@ const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change
 export function LoginPage() {
   const navigate = useNavigate();
   const { currentBrand, token, appName, isLoading, getImage } = useBrand();
+  const { isTV } = useLoginNavigation(); // Auto-focus en username al montar
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -117,46 +120,51 @@ export function LoginPage() {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="username">Usuario</label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Tu usuario"
-              disabled={isSubmitting}
-              required
-              autoComplete="username"
-            />
+            <Focusable focusKey={LOGIN_FOCUS_KEYS.USERNAME}>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Tu usuario"
+                disabled={isSubmitting}
+                required
+                autoComplete="username"
+                tabIndex={isTV ? -1 : 0}
+              />
+            </Focusable>
           </div>
 
           <div className="form-group">
             <label htmlFor="password">Contraseña</label>
             <div className="password-wrapper">
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Tu contraseña"
-                disabled={isSubmitting}
-                required
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setShowPassword(!showPassword);
-                  }
-                }}
-                tabIndex={0}
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              <Focusable focusKey={LOGIN_FOCUS_KEYS.PASSWORD}>
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Tu contraseña"
+                  disabled={isSubmitting}
+                  required
+                  autoComplete="current-password"
+                  tabIndex={isTV ? -1 : 0}
+                />
+              </Focusable>
+              <Focusable 
+                focusKey={LOGIN_FOCUS_KEYS.PASSWORD_TOGGLE}
+                onEnterPress={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
-              </button>
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={isTV ? -1 : 0}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </Focusable>
             </div>
           </div>
 
@@ -166,13 +174,23 @@ export function LoginPage() {
             </div>
           )}
 
-          <button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="login-button"
+          <Focusable 
+            focusKey={LOGIN_FOCUS_KEYS.SUBMIT}
+            onEnterPress={() => {
+              if (!isSubmitting) {
+                document.querySelector('form')?.requestSubmit();
+              }
+            }}
           >
-            {isSubmitting ? 'Conectando...' : 'Entrar'}
-          </button>
+            <button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="login-button"
+              tabIndex={isTV ? -1 : 0}
+            >
+              {isSubmitting ? 'Conectando...' : 'Entrar'}
+            </button>
+          </Focusable>
         </form>
       </div>
     </div>

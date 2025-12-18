@@ -5,10 +5,10 @@ import { getSplashPath } from "../utils/splashLoader";
 
 /**
  * Obtiene la configuración activa de la marca
- * Prioridad: URL param > Default Brand > Primera marca
+ * Prioridad: URL param > localStorage > Default Brand > Primera marca
  */
 export function getActiveBrandConfig() {
-  // 1. Intentar obtener del query param ?brand=xxx
+  // 1. Intentar obtener del query param ?brand=xxx (máxima prioridad)
   const urlParams = new URLSearchParams(window.location.search);
   const brandFromUrl = urlParams.get("brand");
   
@@ -16,23 +16,42 @@ export function getActiveBrandConfig() {
     const config = getBrandConfig(brandFromUrl);
     if (config) {
       console.log(`[Brand] Cargado desde URL: ${brandFromUrl}`);
+      // Guardar en localStorage para persistencia
+      localStorage.setItem('brand', brandFromUrl);
       return enrichConfigWithAssets(config);
     }
     console.warn(`[Brand] No encontrado en URL: ${brandFromUrl}`);
   }
 
-  // 2. Usar marca por defecto del build
+  // 2. Intentar obtener del localStorage (persistencia entre sesiones)
+  const brandFromStorage = localStorage.getItem('brand');
+  if (brandFromStorage) {
+    const config = getBrandConfig(brandFromStorage);
+    if (config) {
+      console.log(`[Brand] Cargado desde localStorage: ${brandFromStorage}`);
+      return enrichConfigWithAssets(config);
+    }
+    // Si el brand en localStorage no existe, limpiarlo
+    console.warn(`[Brand] Brand en localStorage inválido: ${brandFromStorage}`);
+    localStorage.removeItem('brand');
+  }
+
+  // 3. Usar marca por defecto del build
   if (DEFAULT_BRAND) {
     const config = getBrandConfig(DEFAULT_BRAND);
     if (config) {
       console.log(`[Brand] Cargado por defecto: ${DEFAULT_BRAND}`);
+      // Guardar en localStorage para persistencia
+      localStorage.setItem('brand', DEFAULT_BRAND);
       return enrichConfigWithAssets(config);
     }
   }
 
-  // 3. Fallback a la primera marca disponible
+  // 4. Fallback a la primera marca disponible
   const config = getBrandConfig("bromteck");
   console.warn("[Brand] Usando fallback: bromteck");
+  // Guardar en localStorage para persistencia
+  localStorage.setItem('brand', 'bromteck');
   return enrichConfigWithAssets(config);
 }
 

@@ -10,7 +10,6 @@
 @use 'global' as *;
 @use 'components/login' as *;
 @use 'components/layout' as *;
-@use 'components/layout-netflix' as *;
 @use 'components/pages' as *;
 
 // 2. Bootstrap personalizado (usa @import porque Bootstrap lo requiere)

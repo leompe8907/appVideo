@@ -87,6 +87,11 @@ export const BrandProvider = ({ children }) => {
       setCurrentBrand(brandConfig);
       setError(null);
       setIsLoading(false);
+      
+      // Guardar brand en localStorage para persistencia
+      if (brandConfig?.brand) {
+        localStorage.setItem('brand', brandConfig.brand);
+      }
     } catch (err) {
       console.error('[BrandContext] Error cargando brand config:', err);
       setError(err.message);
@@ -100,6 +105,9 @@ export const BrandProvider = ({ children }) => {
    * @param {boolean} reload - Si true, recarga la página (por defecto: false)
    */
   const changeBrand = (brandId, reload = false) => {
+    // Guardar en localStorage antes de cambiar
+    localStorage.setItem('brand', brandId);
+    
     if (reload) {
       // Recargar página para aplicar cambios completamente
       window.location.href = `${window.location.pathname}?brand=${brandId}`;

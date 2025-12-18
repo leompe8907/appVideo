@@ -102,3 +102,30 @@ button {
   }
 }
 
+/* ==============================================
+   TV Navigation - Focusable styles
+   ============================================== */
+
+// Clase aplicada cuando el dispositivo es TV
+html.device-tv {
+  // Deshabilitar cursor en TV
+  cursor: none;
+  
+  // Los elementos focusables no deben mostrar outline nativo
+  *:focus {
+    outline: none !important;
+  }
+}
+
+// Estilos base para elementos focusables (TV)
+.focusable {
+  // Transición suave para el foco
+  transition: outline 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  
+  // Estado enfocado por defecto (si no hay estilos específicos)
+  &.focused {
+    outline: 3px solid var(--primary-color, #667eea);
+    outline-offset: 2px;
+  }
+}
+
