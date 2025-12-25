@@ -90,18 +90,6 @@
         letter-spacing: 0.5px;
       }
 
-      // Estilos para focusable container en TV
-      .focusable {
-        border-radius: clamp(6px, 0.8vw, 12px);
-        
-        &.focused input {
-          background: rgba(255, 255, 255, 0.2);
-          border-color: var(--primary-color, #667eea);
-          box-shadow: 
-            0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.4),
-            0 0 20px rgba(var(--primary-color-rgb, 102, 126, 234), 0.3);
-        }
-      }
 
       input {
         width: 100%;
@@ -140,47 +128,15 @@
         align-items: center;
         width: 100%;
 
-        // En TV: el .focusable wrapper debe ocupar el espacio disponible
-        > .focusable:first-child {
-          flex: 1;
-          min-width: 0; // Permite que el flex se contraiga
-        }
-
-        // En PC: el input directamente debe ocupar el espacio (sin wrapper .focusable)
-        > input:first-child {
+        input {
           flex: 1;
           min-width: 0;
-        }
-
-        // El input siempre debe ocupar todo el ancho disponible
-        input {
           width: 100%;
           padding-right: 3rem;
           box-sizing: border-box;
         }
 
-        // Si el input está dentro de un focusable (TV), también debe ocupar todo
-        > .focusable:first-child input {
-          width: 100%;
-        }
-
-        // Focusable del toggle (solo en TV)
-        > .focusable:last-child {
-          position: absolute;
-          right: 0.5rem;
-          top: 50%;
-          transform: translateY(-50%);
-          border-radius: 50%;
-          z-index: 1;
-          
-          &.focused .password-toggle {
-            color: var(--primary-color, #667eea);
-            transform: scale(1.1);
-          }
-        }
-
-        // Toggle button directo (en PC, cuando no hay Focusable wrapper)
-        > .password-toggle {
+        .password-toggle {
           position: absolute;
           right: 0.75rem;
           top: 50%;
@@ -221,19 +177,6 @@
       margin-bottom: $spacing-md;
       font-size: $font-size-sm;
       backdrop-filter: blur(10px);
-    }
-
-    // Focusable wrapper para el botón
-    > .focusable {
-      margin-top: clamp(0.75rem, 1.5vw, 1.25rem);
-      border-radius: clamp(6px, 0.8vw, 12px);
-      
-      &.focused .login-button {
-        transform: translateY(-2px) scale(1.02);
-        box-shadow: 
-          0 8px 25px rgba(var(--primary-color-rgb, 102, 126, 234), 0.5),
-          0 0 40px rgba(var(--primary-color-rgb, 102, 126, 234), 0.3);
-      }
     }
 
     .login-button {

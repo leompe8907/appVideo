@@ -6,7 +6,6 @@
 import { useEffect } from 'react';
 import { BrandProvider } from './contexts/BrandContext';
 import { DeviceProvider } from './contexts/DeviceContext';
-import { TVNavigationProvider } from './contexts/TVNavigationContext';
 import { AppRouter } from './routes/AppRouter';
 import { useViewport } from './hooks/useViewport';
 
@@ -44,11 +43,9 @@ function AppContent() {
 function App() {
   return (
     <DeviceProvider>
-      <TVNavigationProvider>
-        <BrandProvider>
-          <AppContent />
-        </BrandProvider>
-      </TVNavigationProvider>
+      <BrandProvider>
+        <AppContent />
+      </BrandProvider>
     </DeviceProvider>
   );
 }
