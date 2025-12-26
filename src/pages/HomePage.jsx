@@ -1,5 +1,7 @@
 /**
- * Página Home / Dashboard con navegación espacial
+ * Página Home / Dashboard
+ * - TV: Navegación con Norigin (D-pad)
+ * - PC: Navegación nativa (Tab, Click)
  */
 
 import { useNavigate } from 'react-router-dom';
@@ -8,22 +10,27 @@ import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 
 /**
- * Card de navegación focusable
+ * Card de navegación
  */
-function NavCard({ icon, label, path }) {
+function NavCard({ icon, label, path, isTV }) {
   const navigate = useNavigate();
   
   const { ref, focused } = useFocusable({
-    onEnterPress: () => navigate(path),
+    onEnterPress: () => {
+      if (isTV) navigate(path);
+    },
   });
 
   return (
     <div
       ref={ref}
-      className={`nav-card ${focused ? 'focused' : ''}`}
+      className={`nav-card ${isTV && focused ? 'focused' : ''}`}
       onClick={() => navigate(path)}
       role="button"
-      tabIndex={-1}
+      tabIndex={isTV ? -1 : 0}
+      onKeyDown={(e) => {
+        if (!isTV && e.key === 'Enter') navigate(path);
+      }}
     >
       <span className="icon">{icon}</span>
       <span className="label">{label}</span>
@@ -34,6 +41,8 @@ function NavCard({ icon, label, path }) {
 export function HomePage() {
   const { appName, currentBrand } = useBrand();
   const { isTV, deviceType } = useDevice();
+
+  console.log(`🖥️ [HOME] Modo: ${isTV ? 'TV' : 'PC'}`);
 
   // Contenedor principal
   const { ref, focusKey } = useFocusable({
@@ -52,9 +61,9 @@ export function HomePage() {
         </header>
 
         <nav className="home-nav">
-          <NavCard icon="📺" label="Canales" path="/channels" />
-          <NavCard icon="🎬" label="VOD" path="/vod" />
-          <NavCard icon="📅" label="EPG" path="/epg" />
+          <NavCard icon="📺" label="Canales" path="/channels" isTV={isTV} />
+          <NavCard icon="🎬" label="VOD" path="/vod" isTV={isTV} />
+          <NavCard icon="📅" label="EPG" path="/epg" isTV={isTV} />
         </nav>
 
         <footer className="home-footer">

@@ -1,12 +1,14 @@
 /**
- * Página de Login con navegación espacial para TV
- * Versión simplificada
+ * Página de Login
+ * - TV: Navegación con Norigin (D-pad)
+ * - PC: Navegación nativa (Tab, Click)
  */
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFocusable, FocusContext, setFocus } from '@noriginmedia/norigin-spatial-navigation';
 import { useBrand } from '../contexts/BrandContext';
+import { useDevice } from '../contexts/DeviceContext';
 import panaccessService from '../services/panaccessService';
 import getUdid from '../api/cv/udid';
 import CryptoJS from 'crypto-js';
@@ -15,7 +17,7 @@ import '../styles/components/_login.scss';
 
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
 
-// Focus keys
+// Focus keys para TV
 const USERNAME_FOCUS_KEY = 'login-username';
 const PASSWORD_FOCUS_KEY = 'login-password';
 const TOGGLE_FOCUS_KEY = 'login-toggle';
@@ -24,31 +26,36 @@ const SUBMIT_FOCUS_KEY = 'login-submit';
 export function LoginPage() {
   const navigate = useNavigate();
   const { currentBrand, token, appName, isLoading, getImage } = useBrand();
+  const { isTV } = useDevice();
+  
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Container
+  console.log(`🖥️ [DEVICE] Modo: ${isTV ? 'TV' : 'PC'}`);
+
+  // ============================================
+  // NORIGIN HOOKS - Solo se usan visualmente en TV
+  // ============================================
+  
   const { ref: containerRef, focusKey } = useFocusable({
     focusable: false,
     isFocusBoundary: true,
   });
 
-  // Username input
   const { ref: usernameRef, focused: usernameFocused } = useFocusable({
     focusKey: USERNAME_FOCUS_KEY,
-    onFocus: () => console.log('🎯 [FOCUS] Username input recibió FOCUS'),
-    onBlur: () => console.log('💨 [BLUR] Username input perdió FOCUS'),
     onEnterPress: () => {
-      console.log('⏎ [ENTER] Username - abriendo teclado');
-      usernameRef.current?.focus();
+      if (isTV) {
+        console.log('⏎ [TV] Username - abriendo teclado');
+        usernameRef.current?.focus();
+      }
     },
     onArrowPress: (direction) => {
-      console.log(`⬆⬇⬅➡ [ARROW] Username - dirección: ${direction}`);
+      if (!isTV) return true;
       if (direction === 'down') {
-        console.log('  → Navegando a Password');
         setFocus(PASSWORD_FOCUS_KEY);
         return false;
       }
@@ -56,29 +63,25 @@ export function LoginPage() {
     },
   });
 
-  // Password input
   const { ref: passwordRef, focused: passwordFocused } = useFocusable({
     focusKey: PASSWORD_FOCUS_KEY,
-    onFocus: () => console.log('🎯 [FOCUS] Password input recibió FOCUS'),
-    onBlur: () => console.log('💨 [BLUR] Password input perdió FOCUS'),
     onEnterPress: () => {
-      console.log('⏎ [ENTER] Password - abriendo teclado');
-      passwordRef.current?.focus();
+      if (isTV) {
+        console.log('⏎ [TV] Password - abriendo teclado');
+        passwordRef.current?.focus();
+      }
     },
     onArrowPress: (direction) => {
-      console.log(`⬆⬇⬅➡ [ARROW] Password - dirección: ${direction}`);
+      if (!isTV) return true;
       if (direction === 'down') {
-        console.log('  → Navegando a Submit');
         setFocus(SUBMIT_FOCUS_KEY);
         return false;
       }
       if (direction === 'up') {
-        console.log('  → Navegando a Username');
         setFocus(USERNAME_FOCUS_KEY);
         return false;
       }
       if (direction === 'right') {
-        console.log('  → Navegando a Toggle');
         setFocus(TOGGLE_FOCUS_KEY);
         return false;
       }
@@ -86,29 +89,25 @@ export function LoginPage() {
     },
   });
 
-  // Toggle button
   const { ref: toggleRef, focused: toggleFocused } = useFocusable({
     focusKey: TOGGLE_FOCUS_KEY,
-    onFocus: () => console.log('🎯 [FOCUS] Toggle button recibió FOCUS'),
-    onBlur: () => console.log('💨 [BLUR] Toggle button perdió FOCUS'),
     onEnterPress: () => {
-      console.log('⏎ [ENTER] Toggle - cambiando visibilidad password');
-      setShowPassword(!showPassword);
+      if (isTV) {
+        console.log('⏎ [TV] Toggle - cambiando visibilidad');
+        setShowPassword(!showPassword);
+      }
     },
     onArrowPress: (direction) => {
-      console.log(`⬆⬇⬅➡ [ARROW] Toggle - dirección: ${direction}`);
+      if (!isTV) return true;
       if (direction === 'down') {
-        console.log('  → Navegando a Submit');
         setFocus(SUBMIT_FOCUS_KEY);
         return false;
       }
       if (direction === 'up') {
-        console.log('  → Navegando a Username');
         setFocus(USERNAME_FOCUS_KEY);
         return false;
       }
       if (direction === 'left') {
-        console.log('  → Navegando a Password');
         setFocus(PASSWORD_FOCUS_KEY);
         return false;
       }
@@ -116,21 +115,17 @@ export function LoginPage() {
     },
   });
 
-  // Submit button
   const { ref: submitRef, focused: submitFocused } = useFocusable({
     focusKey: SUBMIT_FOCUS_KEY,
-    onFocus: () => console.log('🎯 [FOCUS] Submit button recibió FOCUS'),
-    onBlur: () => console.log('💨 [BLUR] Submit button perdió FOCUS'),
     onEnterPress: () => {
-      console.log('⏎ [ENTER] Submit - enviando formulario');
-      if (!isSubmitting) {
+      if (isTV && !isSubmitting) {
+        console.log('⏎ [TV] Submit - enviando formulario');
         handleSubmit();
       }
     },
     onArrowPress: (direction) => {
-      console.log(`⬆⬇⬅➡ [ARROW] Submit - dirección: ${direction}`);
+      if (!isTV) return true;
       if (direction === 'up') {
-        console.log('  → Navegando a Password');
         setFocus(PASSWORD_FOCUS_KEY);
         return false;
       }
@@ -138,90 +133,72 @@ export function LoginPage() {
     },
   });
 
-  // Focus inicial
+  // ============================================
+  // EFECTOS - Solo para TV
+  // ============================================
+
+  // Focus inicial - SOLO EN TV
   useEffect(() => {
+    if (!isTV) return;
+    
     const timer = setTimeout(() => {
       setFocus(USERNAME_FOCUS_KEY);
-      console.log('[Login] Focus inicial en username');
+      console.log('🎯 [TV] Focus inicial en username');
     }, 300);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isTV]);
 
-  // Log del estado de focus actual
+  // Handler global Enter - SOLO EN TV
   useEffect(() => {
-    const focusedElement = usernameFocused ? 'USERNAME' : 
-                          passwordFocused ? 'PASSWORD' : 
-                          toggleFocused ? 'TOGGLE' : 
-                          submitFocused ? 'SUBMIT' : 'NINGUNO';
-    console.log(`📍 [ESTADO] Elemento con focus Norigin: ${focusedElement}`);
-  }, [usernameFocused, passwordFocused, toggleFocused, submitFocused]);
+    if (!isTV) return;
 
-  // Handler global para Enter (backup)
-  useEffect(() => {
     const handleKeyDown = (e) => {
       const key = e.key || e.keyCode;
       const isEnter = key === 'Enter' || key === 13 || key === 65385;
       
       if (!isEnter) return;
 
-      console.log('⏎ [KEYDOWN] Enter detectado via handler global');
-      console.log('  Estados focused:', { 
-        username: usernameFocused, 
-        password: passwordFocused, 
-        toggle: toggleFocused, 
-        submit: submitFocused 
-      });
-
       if (usernameFocused) {
-        console.log('  → Ejecutando: abrir teclado username');
         e.preventDefault();
         usernameRef.current?.focus();
       } else if (passwordFocused) {
-        console.log('  → Ejecutando: abrir teclado password');
         e.preventDefault();
         passwordRef.current?.focus();
       } else if (toggleFocused) {
-        console.log('  → Ejecutando: toggle password visibility');
         e.preventDefault();
         setShowPassword(prev => !prev);
       } else if (submitFocused && !isSubmitting) {
-        console.log('  → Ejecutando: submit formulario');
         e.preventDefault();
         handleSubmit();
-      } else {
-        console.log('  → Ningún elemento focused, no se ejecuta acción');
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [usernameFocused, passwordFocused, toggleFocused, submitFocused, isSubmitting, showPassword]);
+  }, [isTV, usernameFocused, passwordFocused, toggleFocused, submitFocused, isSubmitting]);
 
-  // Focus handlers (teclado se abre)
-  const handleUsernameFocus = () => {
-    console.log('⌨️ [TECLADO ABIERTO] Username input - teclado virtual ABIERTO');
-    console.log('  → document.activeElement:', document.activeElement?.id || document.activeElement?.tagName);
-  };
+  // ============================================
+  // HANDLERS DE INPUTS
+  // ============================================
 
-  const handlePasswordFocus = () => {
-    console.log('⌨️ [TECLADO ABIERTO] Password input - teclado virtual ABIERTO');
-    console.log('  → document.activeElement:', document.activeElement?.id || document.activeElement?.tagName);
-  };
-
-  // Blur handlers (teclado se cierra)
+  // Blur handlers - SOLO EN TV (re-enfocar Norigin cuando se cierra el teclado)
   const handleUsernameBlur = () => {
-    console.log('🚫 [TECLADO CERRADO] Username input - teclado virtual CERRADO');
-    console.log('  → document.activeElement:', document.activeElement?.id || document.activeElement?.tagName);
-    console.log('  → Re-enfocando Norigin en Username');
-    setTimeout(() => setFocus(USERNAME_FOCUS_KEY), 100);
+    if (isTV) {
+      console.log('🚫 [TV] Username blur - re-enfocando Norigin');
+      setTimeout(() => setFocus(USERNAME_FOCUS_KEY), 100);
+    }
   };
 
   const handlePasswordBlur = () => {
-    console.log('🚫 [TECLADO CERRADO] Password input - teclado virtual CERRADO');
-    console.log('  → document.activeElement:', document.activeElement?.id || document.activeElement?.tagName);
-    console.log('  → Re-enfocando Norigin en Password');
-    setTimeout(() => setFocus(PASSWORD_FOCUS_KEY), 100);
+    if (isTV) {
+      console.log('🚫 [TV] Password blur - re-enfocando Norigin');
+      setTimeout(() => setFocus(PASSWORD_FOCUS_KEY), 100);
+    }
   };
+
+  // ============================================
+  // SUBMIT
+  // ============================================
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -283,6 +260,10 @@ export function LoginPage() {
     }
   };
 
+  // ============================================
+  // RENDER
+  // ============================================
+
   if (isLoading || !currentBrand) {
     return <div className="loading">Cargando...</div>;
   }
@@ -316,8 +297,7 @@ export function LoginPage() {
                 placeholder="Tu usuario"
                 disabled={isSubmitting}
                 autoComplete="username"
-                className={usernameFocused ? 'focused' : ''}
-                onFocus={handleUsernameFocus}
+                className={isTV && usernameFocused ? 'focused' : ''}
                 onBlur={handleUsernameBlur}
                 required
               />
@@ -336,15 +316,14 @@ export function LoginPage() {
                   placeholder="Tu contraseña"
                   disabled={isSubmitting}
                   autoComplete="current-password"
-                  className={passwordFocused ? 'focused' : ''}
-                  onFocus={handlePasswordFocus}
+                  className={isTV && passwordFocused ? 'focused' : ''}
                   onBlur={handlePasswordBlur}
                   required
                 />
                 <button
                   ref={toggleRef}
                   type="button"
-                  className={`password-toggle ${toggleFocused ? 'focused' : ''}`}
+                  className={`password-toggle ${isTV && toggleFocused ? 'focused' : ''}`}
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? '🙈' : '👁️'}
@@ -358,7 +337,7 @@ export function LoginPage() {
               ref={submitRef}
               type="submit" 
               disabled={isSubmitting}
-              className={`login-button ${submitFocused ? 'focused' : ''}`}
+              className={`login-button ${isTV && submitFocused ? 'focused' : ''}`}
             >
               {isSubmitting ? 'Conectando...' : 'Entrar'}
             </button>
