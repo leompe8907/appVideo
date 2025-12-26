@@ -130,6 +130,32 @@
   color: white;
   padding: $spacing-xl;
 
+  .back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-md $spacing-lg;
+    margin-bottom: $spacing-lg;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: $border-radius-md;
+    color: white;
+    font-size: $font-size-base;
+    cursor: pointer;
+    transition: all $transition-normal;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    &.focused {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: $primary-color;
+      box-shadow: 0 0 0 3px rgba($primary-color, 0.4);
+      transform: scale(1.05);
+    }
+  }
+
   h1 {
     margin-bottom: $spacing-lg;
   }

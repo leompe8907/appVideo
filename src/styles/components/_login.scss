@@ -106,11 +106,17 @@
           color: rgba(255, 255, 255, 0.4);
         }
 
+        // Focus nativo (teclado abierto) - sin estilos visuales de focus
         &:focus {
           outline: none;
+          // No agregar borde ni sombra aquí - solo usar .focused de Norigin
+        }
+
+        // Focus de Norigin (navegación D-pad) - ESTE es el que muestra el borde
+        &.focused {
           background: rgba(255, 255, 255, 0.15);
           border-color: var(--primary-color, #667eea);
-          box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.2);
+          box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.3);
         }
 
         &:disabled {
@@ -118,8 +124,6 @@
           cursor: not-allowed;
           opacity: 0.6;
         }
-
-        @include focus-state;
       }
 
       // Layout horizontal: [Input] [Toggle]
@@ -154,19 +158,17 @@
             color: white;
           }
 
+          // Focus nativo - sin estilos
           &:focus {
             outline: none;
-            background: rgba(255, 255, 255, 0.2);
-            border-color: var(--primary-color, #667eea);
-            box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.3);
-            color: white;
           }
 
-          // Estilo cuando tiene focus via D-pad/teclado
+          // Focus de Norigin - ESTE muestra el borde
           &.focused {
             background: rgba(255, 255, 255, 0.25);
             border-color: var(--primary-color, #667eea);
             box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.4);
+            color: white;
             transform: scale(1.05);
           }
         }
@@ -214,9 +216,17 @@
         opacity: 0.5;
       }
 
+      // Focus nativo - sin estilos
       &:focus {
-        outline: 2px solid var(--primary-color, #667eea);
-        outline-offset: 2px;
+        outline: none;
+      }
+
+      // Focus de Norigin
+      &.focused {
+        transform: translateY(-2px);
+        box-shadow: 
+          0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.5),
+          0 8px 20px rgba(var(--primary-color-rgb, 102, 126, 234), 0.4);
       }
     }
   }

@@ -102,4 +102,52 @@ button {
   }
 }
 
+/* ===========================================
+   NAVEGACIÓN ESPACIAL - Estilos de Focus
+   Norigin aplica clase .focused a elementos
+   =========================================== */
+
+// Estilo base para cualquier elemento focusable
+[data-focusable="true"] {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+// Clase .focused aplicada por Norigin
+.focused {
+  outline: none !important;
+  border-color: var(--primary-color, #667eea) !important;
+  box-shadow: 
+    0 0 0 3px rgba(102, 126, 234, 0.4),
+    0 4px 20px rgba(102, 126, 234, 0.3) !important;
+  transform: scale(1.02);
+  z-index: 10;
+}
+
+// Focus en inputs
+input.focused,
+textarea.focused {
+  background: rgba(255, 255, 255, 0.15) !important;
+  transform: scale(1); // Inputs no escalan, solo resaltan
+}
+
+// Focus en botones
+button.focused {
+  transform: scale(1.05);
+}
+
+// Focus en cards/links navegables
+a.focused,
+.nav-card.focused,
+.focusable-card.focused {
+  transform: scale(1.08);
+  box-shadow: 
+    0 0 0 3px rgba(102, 126, 234, 0.5),
+    0 8px 30px rgba(102, 126, 234, 0.4) !important;
+}
+
+// Ocultar outline nativo cuando Norigin está activo
+.device-tv *:focus {
+  outline: none;
+}
+
 
