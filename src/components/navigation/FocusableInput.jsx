@@ -38,10 +38,19 @@ export const FocusableInput = forwardRef(function FocusableInput(
         // En TV, cuando se presiona Enter en un input, abrir el teclado virtual
         // haciendo que el input reciba focus nativo del DOM
         if (isTV && inputElementRef.current) {
-          // Hacer que el input reciba focus nativo para abrir el teclado virtual
-          inputElementRef.current.focus();
-          // También intentar hacer click para asegurar que se active
-          inputElementRef.current.click();
+          // Forzar blur primero para asegurar que el input pueda recibir focus de nuevo
+          // Esto resuelve el problema cuando el teclado se cierra pero el input mantiene focus virtual
+          inputElementRef.current.blur();
+          
+          // Pequeño delay para asegurar que el blur se complete
+          setTimeout(() => {
+            if (inputElementRef.current) {
+              // Hacer que el input reciba focus nativo para abrir el teclado virtual
+              inputElementRef.current.focus();
+              // También intentar hacer click para asegurar que se active
+              inputElementRef.current.click();
+            }
+          }, 50);
         }
       }
     },
