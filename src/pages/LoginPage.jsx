@@ -191,6 +191,12 @@ export function LoginPage() {
             disabled={isSubmitting}
             className="login-button"
             focusKey="login-submit"
+            onEnterPress={() => {
+              // En TV, ejecutar el submit del formulario cuando se presiona Enter
+              if (isTV) {
+                handleSubmit();
+              }
+            }}
           >
             {isSubmitting ? 'Conectando...' : 'Entrar'}
           </FocusableButton>

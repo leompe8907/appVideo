@@ -36,9 +36,17 @@ export function FocusableButton({
     
     if (onEnterPress) {
       onEnterPress();
-    } else if (onClick) {
-      // Si no hay onEnterPress pero sí onClick, ejecutar onClick
-      onClick();
+    } else {
+      // Si es tipo submit, ejecutar el submit del formulario
+      if (type === 'submit' && ref?.current) {
+        const form = ref.current.closest('form');
+        if (form) {
+          form.requestSubmit();
+        }
+      } else if (onClick) {
+        // Si no hay onEnterPress pero sí onClick, ejecutar onClick
+        onClick();
+      }
     }
   };
 
@@ -49,11 +57,13 @@ export function FocusableButton({
     isFocusable: !disabled, // No focusable si está deshabilitado
   });
 
-  // Handler para click (solo en PC)
+  // Handler para click
   const handleClick = (e) => {
-    if (!isTV && onClick && !disabled) {
+    if (onClick && !disabled) {
       onClick(e);
     }
+    // En TV, si es tipo submit, el formulario se enviará automáticamente
+    // pero también ejecutamos onClick por si acaso
   };
 
   // Handler para teclado nativo (solo en PC)

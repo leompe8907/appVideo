@@ -3,7 +3,7 @@
  * Input navegable que funciona con controles remotos de TV y mouse/teclado de PC
  */
 
-import { forwardRef } from 'react';
+import { forwardRef, useRef, useEffect } from 'react';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { useDevice } from '../../contexts/DeviceContext';
 
@@ -25,23 +25,34 @@ export const FocusableInput = forwardRef(function FocusableInput(
   externalRef
 ) {
   const { isTV } = useDevice();
-
-  // Handler para cuando se presiona Enter (solo si no hay onEnterPress personalizado)
-  const handleEnterPress = () => {
-    if (onEnterPress) {
-      onEnterPress();
-    }
-    // Si no hay callback, el comportamiento por defecto es mantener el focus en el input
-  };
+  
+  // Ref para acceder al elemento del input
+  const inputElementRef = useRef(null);
 
   // Usar el hook de navegación espacial
   const { ref: spatialRef, focused } = useSpatialNavigation({
-    onEnterPress: handleEnterPress,
+    onEnterPress: () => {
+      if (onEnterPress) {
+        onEnterPress();
+      } else {
+        // En TV, cuando se presiona Enter en un input, abrir el teclado virtual
+        // haciendo que el input reciba focus nativo del DOM
+        if (isTV && inputElementRef.current) {
+          // Hacer que el input reciba focus nativo para abrir el teclado virtual
+          inputElementRef.current.focus();
+          // También intentar hacer click para asegurar que se active
+          inputElementRef.current.click();
+        }
+      }
+    },
     focusKey: focusKey || inputProps.id || `input-${inputProps.name || 'default'}`,
   });
 
   // Combinar refs: el ref externo (si existe) y el ref de navegación espacial
   const combinedRef = (node) => {
+    // Guardar referencia al elemento para poder accederlo
+    inputElementRef.current = node;
+    
     // Asignar al ref externo si existe
     if (externalRef) {
       if (typeof externalRef === 'function') {
