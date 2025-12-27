@@ -6,6 +6,7 @@
 import { useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useViewport } from './hooks/useViewport';
+import { SpatialNavigationProvider } from './components/navigation/SpatialNavigationProvider';
 
 // Lazy loading de páginas
 const SplashPage = lazy(() => import('./pages/SplashPage'));
@@ -56,39 +57,35 @@ function App() {
     if (viewport.is8K) root.classList.add('tv-8k');
   }, [viewport]);
 
-  // TODO: Inicializar FocusManager aquí cuando se implemente
-  // useEffect(() => {
-  //   focusManager.init();
-  //   return () => focusManager.destroy();
-  // }, []);
-
   return (
-    <div className="App">
-      <Suspense fallback={<Loading />}>
-        <Routes>
-          {/* Rutas públicas */}
-          <Route path="/" element={<SplashPage />} />
-          <Route path="/login" element={<LoginPage />} />
+    <SpatialNavigationProvider>
+      <div className="App">
+        <Suspense fallback={<Loading />}>
+          <Routes>
+            {/* Rutas públicas */}
+            <Route path="/" element={<SplashPage />} />
+            <Route path="/login" element={<LoginPage />} />
 
-          {/* Rutas protegidas */}
-          <Route path="/home" element={
-            <ProtectedRoute><HomePage /></ProtectedRoute>
-          } />
-          <Route path="/channels" element={
-            <ProtectedRoute><ChannelsPage /></ProtectedRoute>
-          } />
-          <Route path="/vod" element={
-            <ProtectedRoute><VodPage /></ProtectedRoute>
-          } />
-          <Route path="/epg" element={
-            <ProtectedRoute><EpgPage /></ProtectedRoute>
-          } />
+            {/* Rutas protegidas */}
+            <Route path="/home" element={
+              <ProtectedRoute><HomePage /></ProtectedRoute>
+            } />
+            <Route path="/channels" element={
+              <ProtectedRoute><ChannelsPage /></ProtectedRoute>
+            } />
+            <Route path="/vod" element={
+              <ProtectedRoute><VodPage /></ProtectedRoute>
+            } />
+            <Route path="/epg" element={
+              <ProtectedRoute><EpgPage /></ProtectedRoute>
+            } />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-    </div>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </div>
+    </SpatialNavigationProvider>
   );
 }
 

@@ -2,10 +2,13 @@
  * Página de Login
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
+import { FocusableInput } from '../components/navigation/FocusableInput';
+import { FocusableButton } from '../components/navigation/FocusableButton';
+import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 import panaccessService from '../services/panaccessService';
 import getUdid from '../api/cv/udid';
 import CryptoJS from 'crypto-js';
@@ -26,6 +29,30 @@ export function LoginPage() {
   const [error, setError] = useState('');
 
   console.log(`🖥️ [DEVICE] Modo: ${isTV ? 'TV' : 'PC'}`);
+
+  // Establecer focus inicial en TV al cargar la página
+  useEffect(() => {
+    if (isTV) {
+      // Pequeño delay para asegurar que todos los componentes estén montados y registrados
+      const timer = setTimeout(() => {
+        // Usar la API de la librería para establecer focus en el primer input
+        const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
+        
+        if (setFocus && typeof setFocus === 'function') {
+          // Establecer focus en el primer input usando su focusKey
+          setFocus('login-username');
+        } else {
+          // Si no hay setFocus, intentar usar focus nativo del DOM
+          const usernameInput = document.getElementById('username');
+          if (usernameInput) {
+            usernameInput.focus();
+          }
+        }
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isTV]);
 
   // ============================================
   // SUBMIT
@@ -118,7 +145,7 @@ export function LoginPage() {
           {/* Username */}
           <div className="form-group">
             <label htmlFor="username">Usuario</label>
-            <input
+            <FocusableInput
               id="username"
               type="text"
               value={username}
@@ -127,6 +154,7 @@ export function LoginPage() {
               disabled={isSubmitting}
               autoComplete="username"
               required
+              focusKey="login-username"
             />
           </div>
 
@@ -134,7 +162,7 @@ export function LoginPage() {
           <div className="form-group">
             <label htmlFor="password">Contraseña</label>
             <div className="password-row">
-              <input
+              <FocusableInput
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
@@ -143,26 +171,29 @@ export function LoginPage() {
                 disabled={isSubmitting}
                 autoComplete="current-password"
                 required
+                focusKey="login-password"
               />
-              <button
+              <FocusableButton
                 type="button"
                 className="password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
+                focusKey="login-password-toggle"
               >
                 {showPassword ? '🙈' : '👁️'}
-              </button>
+              </FocusableButton>
             </div>
           </div>
 
           {error && <div className="error-message">{error}</div>}
 
-          <button 
+          <FocusableButton 
             type="submit" 
             disabled={isSubmitting}
             className="login-button"
+            focusKey="login-submit"
           >
             {isSubmitting ? 'Conectando...' : 'Entrar'}
-          </button>
+          </FocusableButton>
         </form>
       </div>
     </div>
