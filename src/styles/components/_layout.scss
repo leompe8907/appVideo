@@ -74,7 +74,7 @@
         outline: none;
       }
 
-      // Estilo cuando tiene focus (navegación por teclado/D-pad)
+      // Estilo cuando tiene focus
       &.focused {
         background: rgba(255, 255, 255, 0.25);
         transform: scale(1.1);

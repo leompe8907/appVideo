@@ -103,8 +103,7 @@ button {
 }
 
 /* ===========================================
-   NAVEGACIÓN ESPACIAL - Estilos de Focus
-   Norigin aplica clase .focused a elementos
+   Estilos de Focus
    =========================================== */
 
 // Estilo base para cualquier elemento focusable
@@ -112,7 +111,7 @@ button {
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
-// Clase .focused aplicada por Norigin
+// Clase .focused para elementos con focus
 .focused {
   outline: none !important;
   border-color: var(--primary-color, #667eea) !important;
@@ -145,7 +144,7 @@ a.focused,
     0 8px 30px rgba(102, 126, 234, 0.4) !important;
 }
 
-// Ocultar outline nativo cuando Norigin está activo
+// Ocultar outline nativo en dispositivos TV
 .device-tv *:focus {
   outline: none;
 }

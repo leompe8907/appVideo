@@ -109,10 +109,9 @@
         // Focus nativo (teclado abierto) - sin estilos visuales de focus
         &:focus {
           outline: none;
-          // No agregar borde ni sombra aquí - solo usar .focused de Norigin
         }
 
-        // Focus de Norigin (navegación D-pad) - ESTE es el que muestra el borde
+        // Estado de focus
         &.focused {
           background: rgba(255, 255, 255, 0.15);
           border-color: var(--primary-color, #667eea);
@@ -158,12 +157,11 @@
             color: white;
           }
 
-          // Focus nativo - sin estilos
           &:focus {
             outline: none;
           }
 
-          // Focus de Norigin - ESTE muestra el borde
+          // Estado de focus
           &.focused {
             background: rgba(255, 255, 255, 0.25);
             border-color: var(--primary-color, #667eea);
@@ -216,12 +214,11 @@
         opacity: 0.5;
       }
 
-      // Focus nativo - sin estilos
       &:focus {
         outline: none;
       }
 
-      // Focus de Norigin
+      // Estado de focus
       &.focused {
         transform: translateY(-2px);
         box-shadow: 

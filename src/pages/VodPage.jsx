@@ -3,18 +3,13 @@
  */
 
 import { useNavigate } from 'react-router-dom';
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
 
 function BackButton() {
   const navigate = useNavigate();
-  const { ref, focused } = useFocusable({
-    onEnterPress: () => navigate('/home'),
-  });
 
   return (
     <button
-      ref={ref}
-      className={`back-button ${focused ? 'focused' : ''}`}
+      className="back-button"
       onClick={() => navigate('/home')}
     >
       ← Volver
@@ -23,18 +18,12 @@ function BackButton() {
 }
 
 export function VodPage() {
-  const { ref, focusKey } = useFocusable({
-    focusable: false,
-  });
-
   return (
-    <FocusContext.Provider value={focusKey}>
-      <div ref={ref} className="vod-page">
-        <BackButton />
-        <h1>Video On Demand</h1>
-        <p>Próximamente: Catálogo de contenido VOD...</p>
-      </div>
-    </FocusContext.Provider>
+    <div className="vod-page">
+      <BackButton />
+      <h1>Video On Demand</h1>
+      <p>Próximamente: Catálogo de contenido VOD...</p>
+    </div>
   );
 }
 
