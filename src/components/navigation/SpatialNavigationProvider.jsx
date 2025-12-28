@@ -28,12 +28,24 @@ export function SpatialNavigationProvider({ children }) {
       const setKeys = SpatialNavigation.setKeyMap || SpatialNavigation.setKeys || SpatialNavigation.default?.setKeyMap;
 
       if (initNav && typeof initNav === 'function') {
+        // Banderas para controlar el debug
+        // Variables de entorno disponibles:
+        // - VITE_SPATIAL_NAV_DEBUG: activa logs en consola (default: solo en DEV)
+        // - VITE_SPATIAL_NAV_VISUAL_DEBUG: activa debug visual (marcos rojos) (default: false)
+        const enableDebug = import.meta.env.VITE_SPATIAL_NAV_DEBUG === 'false' 
+          || (import.meta.env.DEV && import.meta.env.VITE_SPATIAL_NAV_DEBUG !== 'false');
+        const enableVisualDebug = import.meta.env.VITE_SPATIAL_NAV_VISUAL_DEBUG === 'false';
+        
         // Inicializar navegación espacial
         initNav({
-          // Activar debug solo en desarrollo
-          debug: import.meta.env.DEV,
-          // Visual debug muestra líneas de conexión entre elementos (solo en desarrollo)
-          visualDebug: import.meta.env.DEV,
+          // Debug en consola (logs)
+          // Por defecto: activado en desarrollo, desactivado en producción
+          // Se puede forzar con: VITE_SPATIAL_NAV_DEBUG=true o VITE_SPATIAL_NAV_DEBUG=false
+          debug: enableDebug,
+          // Visual debug (marcos y textos rojos en pantalla)
+          // Por defecto: DESACTIVADO (solo se activa explícitamente)
+          // Se activa con: VITE_SPATIAL_NAV_VISUAL_DEBUG=true
+          visualDebug: enableVisualDebug,
         });
 
         // Configurar mapeo de teclas del control remoto si está disponible
