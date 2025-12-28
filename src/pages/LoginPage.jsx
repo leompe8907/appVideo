@@ -8,6 +8,7 @@ import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { FocusableInput } from '../components/navigation/FocusableInput';
 import { FocusableButton } from '../components/navigation/FocusableButton';
+import { getInitialRoute } from '../utils/navigation';
 import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 import panaccessService from '../services/panaccessService';
 import getUdid from '../api/cv/udid';
@@ -88,7 +89,9 @@ export function LoginPage() {
 
       setTimeout(() => {
         setIsSubmitting(false);
-        navigate('/home');
+        // Navegar según la configuración del brand (profile o smartcard)
+        const initialRoute = getInitialRoute(currentBrand);
+        navigate(initialRoute);
       }, 1000);
 
     } catch (err) {

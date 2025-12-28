@@ -12,6 +12,8 @@ import { SpatialNavigationProvider } from './components/navigation/SpatialNaviga
 const SplashPage = lazy(() => import('./pages/SplashPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const HomePage = lazy(() => import('./pages/HomePage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
 const ChannelsPage = lazy(() => import('./pages/ChannelsPage'));
 const VodPage = lazy(() => import('./pages/VodPage'));
 const EpgPage = lazy(() => import('./pages/EpgPage'));
@@ -69,6 +71,12 @@ function App() {
             {/* Rutas protegidas */}
             <Route path="/home" element={
               <ProtectedRoute><HomePage /></ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute><ProfilePage /></ProtectedRoute>
+            } />
+            <Route path="/smartcard" element={
+              <ProtectedRoute><SmartCardPage /></ProtectedRoute>
             } />
             <Route path="/channels" element={
               <ProtectedRoute><ChannelsPage /></ProtectedRoute>

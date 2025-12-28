@@ -43,6 +43,11 @@ export const BRANDS = [
       recommendations: true,
     },
     
+    // Configuración de flujo de navegación inicial
+    // Si profile es true → redirige a /profile después del login
+    // Si profile es false → redirige a /smartcard después del login
+    profile: false,
+    
     // Configuración de debug para navegación espacial
     debug: {
       spatialNav: false,        // Logs en consola (default: solo en DEV)
@@ -93,6 +98,11 @@ export const BRANDS = [
       recommendations: true,
     },
     
+    // Configuración de flujo de navegación inicial
+    // Si profile es true → redirige a /profile después del login
+    // Si profile es false → redirige a /smartcard después del login
+    profile: false,
+    
     // Configuración de debug para navegación espacial
     debug: {
       spatialNav: false,        // Logs en consola (default: solo en DEV)
@@ -142,6 +152,11 @@ export const BRANDS = [
       watchlist: true,
       recommendations: true,
     },
+    
+    // Configuración de flujo de navegación inicial
+    // Si profile es true → redirige a /profile después del login
+    // Si profile es false → redirige a /smartcard después del login
+    profile: false,
     
     // Configuración de debug para navegación espacial
     debug: {
