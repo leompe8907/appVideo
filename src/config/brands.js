@@ -42,6 +42,12 @@ export const BRANDS = [
       watchlist: true,
       recommendations: true,
     },
+    
+    // Configuración de debug para navegación espacial
+    debug: {
+      spatialNav: false,        // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false,  // Debug visual (marcos rojos) (default: false)
+    },
   },
   {
     brand: "intv",
@@ -86,6 +92,12 @@ export const BRANDS = [
       watchlist: true,
       recommendations: true,
     },
+    
+    // Configuración de debug para navegación espacial
+    debug: {
+      spatialNav: false,        // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false,  // Debug visual (marcos rojos) (default: false)
+    },
   },
   {
     brand: "gigmax",
@@ -129,6 +141,12 @@ export const BRANDS = [
       parentalControl: false,
       watchlist: true,
       recommendations: true,
+    },
+    
+    // Configuración de debug para navegación espacial
+    debug: {
+      spatialNav: false,        // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false,  // Debug visual (marcos rojos) (default: false)
     },
   },
 ];

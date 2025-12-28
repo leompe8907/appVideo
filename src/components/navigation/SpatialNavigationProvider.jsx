@@ -6,6 +6,7 @@
 import { useEffect } from 'react';
 import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 import { useDevice } from '../../contexts/DeviceContext';
+import { useBrand } from '../../contexts/BrandContext';
 
 /**
  * Provider que inicializa la navegación espacial para controles remotos de TV
@@ -14,6 +15,7 @@ import { useDevice } from '../../contexts/DeviceContext';
  */
 export function SpatialNavigationProvider({ children }) {
   const { isTV } = useDevice();
+  const { currentBrand } = useBrand();
 
   useEffect(() => {
     // Solo inicializar en dispositivos TV
@@ -29,22 +31,47 @@ export function SpatialNavigationProvider({ children }) {
 
       if (initNav && typeof initNav === 'function') {
         // Banderas para controlar el debug
-        // Variables de entorno disponibles:
-        // - VITE_SPATIAL_NAV_DEBUG: activa logs en consola (default: solo en DEV)
-        // - VITE_SPATIAL_NAV_VISUAL_DEBUG: activa debug visual (marcos rojos) (default: false)
-        const enableDebug = import.meta.env.VITE_SPATIAL_NAV_DEBUG === 'false' 
-          || (import.meta.env.DEV && import.meta.env.VITE_SPATIAL_NAV_DEBUG !== 'false');
-        const enableVisualDebug = import.meta.env.VITE_SPATIAL_NAV_VISUAL_DEBUG === 'false';
+        // Prioridad: 1. Variable de entorno > 2. Configuración del brand > 3. Default
+        
+        // Debug en consola (logs)
+        // Variable de entorno tiene máxima prioridad
+        const envDebug = import.meta.env.VITE_SPATIAL_NAV_DEBUG;
+        const brandDebug = currentBrand?.debug?.spatialNav;
+        
+        let enableDebug;
+        if (envDebug === 'true' || envDebug === 'false') {
+          // Variable de entorno tiene prioridad
+          enableDebug = envDebug === 'true';
+        } else if (brandDebug !== undefined) {
+          // Usar configuración del brand
+          enableDebug = brandDebug;
+        } else {
+          // Default: solo en desarrollo
+          enableDebug = import.meta.env.DEV;
+        }
+        
+        // Debug visual (marcos rojos)
+        // Variable de entorno tiene máxima prioridad
+        const envVisualDebug = import.meta.env.VITE_SPATIAL_NAV_VISUAL_DEBUG;
+        const brandVisualDebug = currentBrand?.debug?.spatialNavVisual;
+        
+        let enableVisualDebug;
+        if (envVisualDebug === 'true' || envVisualDebug === 'false') {
+          // Variable de entorno tiene prioridad
+          enableVisualDebug = envVisualDebug === 'true';
+        } else if (brandVisualDebug !== undefined) {
+          // Usar configuración del brand
+          enableVisualDebug = brandVisualDebug;
+        } else {
+          // Default: desactivado
+          enableVisualDebug = false;
+        }
         
         // Inicializar navegación espacial
         initNav({
           // Debug en consola (logs)
-          // Por defecto: activado en desarrollo, desactivado en producción
-          // Se puede forzar con: VITE_SPATIAL_NAV_DEBUG=true o VITE_SPATIAL_NAV_DEBUG=false
           debug: enableDebug,
           // Visual debug (marcos y textos rojos en pantalla)
-          // Por defecto: DESACTIVADO (solo se activa explícitamente)
-          // Se activa con: VITE_SPATIAL_NAV_VISUAL_DEBUG=true
           visualDebug: enableVisualDebug,
         });
 
@@ -94,7 +121,7 @@ export function SpatialNavigationProvider({ children }) {
         console.log('🎮 [SpatialNavigation] Desmontado');
       }
     };
-  }, [isTV]);
+  }, [isTV, currentBrand]);
 
   // Renderizar children sin wrapper adicional
   // La librería funciona globalmente una vez inicializada
