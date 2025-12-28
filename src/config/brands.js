@@ -42,6 +42,17 @@ export const BRANDS = [
       watchlist: true,
       recommendations: true,
     },
+    
+    // Configuración de flujo de navegación inicial
+    // Si profile es true → redirige a /profile después del login
+    // Si profile es false → redirige a /smartcard después del login
+    profile: false,
+    
+    // Configuración de debug para navegación espacial
+    debug: {
+      spatialNav: false,        // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false,  // Debug visual (marcos rojos) (default: false)
+    },
   },
   {
     brand: "intv",
@@ -86,6 +97,17 @@ export const BRANDS = [
       watchlist: true,
       recommendations: true,
     },
+    
+    // Configuración de flujo de navegación inicial
+    // Si profile es true → redirige a /profile después del login
+    // Si profile es false → redirige a /smartcard después del login
+    profile: false,
+    
+    // Configuración de debug para navegación espacial
+    debug: {
+      spatialNav: false,        // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false,  // Debug visual (marcos rojos) (default: false)
+    },
   },
   {
     brand: "gigmax",
@@ -129,6 +151,17 @@ export const BRANDS = [
       parentalControl: false,
       watchlist: true,
       recommendations: true,
+    },
+    
+    // Configuración de flujo de navegación inicial
+    // Si profile es true → redirige a /profile después del login
+    // Si profile es false → redirige a /smartcard después del login
+    profile: false,
+    
+    // Configuración de debug para navegación espacial
+    debug: {
+      spatialNav: false,        // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false,  // Debug visual (marcos rojos) (default: false)
     },
   },
 ];

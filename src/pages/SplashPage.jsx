@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
+import { getInitialRoute } from '../utils/navigation';
 import panaccessService from '../services/panaccessService';
 import CryptoJS from 'crypto-js';
 import getUdid from '../api/cv/udid';
@@ -38,8 +39,9 @@ export function SplashPage() {
             const isValid = await panaccessService.validateSession();
             if (isValid) {
               setIsAuthenticated(true);
-              // Esperar tiempo del splash y redirigir a home
-              setTimeout(() => navigate('/home'), splashDuration);
+              // Esperar tiempo del splash y redirigir según configuración del brand
+              const initialRoute = getInitialRoute(currentBrand);
+              setTimeout(() => navigate(initialRoute), splashDuration);
               return;
             }
           } catch (error) {
@@ -134,8 +136,9 @@ export function SplashPage() {
           localStorage.setItem('sessionId', sessionId);
           localStorage.setItem('udid', udid);
           setIsAuthenticated(true);
-          // Esperar tiempo del splash y redirigir a home
-          setTimeout(() => navigate('/home'), splashDuration);
+          // Esperar tiempo del splash y redirigir según configuración del brand
+          const initialRoute = getInitialRoute(currentBrand);
+          setTimeout(() => navigate(initialRoute), splashDuration);
         } else {
           throw new Error('No se recibió sessionId');
         }

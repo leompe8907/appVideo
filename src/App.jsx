@@ -1,30 +1,52 @@
 /**
  * Componente App principal
- * Envuelve la app con BrandProvider para compartir configuración
+ * Viewport + Routing
  */
 
-import { useEffect } from 'react';
-import { BrandProvider } from './contexts/BrandContext';
-import { DeviceProvider } from './contexts/DeviceContext';
-import { AppRouter } from './routes/AppRouter';
+import { useEffect, Suspense, lazy } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useViewport } from './hooks/useViewport';
+import { SpatialNavigationProvider } from './components/navigation/SpatialNavigationProvider';
 
-// Componente interno para aplicar viewport
-function AppContent() {
+// Lazy loading de páginas
+const SplashPage = lazy(() => import('./pages/SplashPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const HomePage = lazy(() => import('./pages/HomePage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
+const ChannelsPage = lazy(() => import('./pages/ChannelsPage'));
+const VodPage = lazy(() => import('./pages/VodPage'));
+const EpgPage = lazy(() => import('./pages/EpgPage'));
+
+// Loading component
+function Loading() {
+  return <div className="loading">Cargando...</div>;
+}
+
+/**
+ * Ruta protegida - redirige a splash si no hay sesión
+ */
+function ProtectedRoute({ children }) {
+  const isAuthenticated = !!localStorage.getItem('cvSessionId') || !!localStorage.getItem('sessionId');
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
+}
+
+function App() {
   const viewport = useViewport();
 
+  // Aplicar clases de viewport al root
   useEffect(() => {
-    // Aplicar escala al root si es necesario
     const root = document.documentElement;
     
-    // Para pantallas muy grandes, aplicar escala CSS
-    if (viewport.scale > 1.5) {
-      root.style.setProperty('--viewport-scale', viewport.scale);
-    } else {
-      root.style.setProperty('--viewport-scale', '1');
-    }
+    // Escala CSS para pantallas grandes
+    root.style.setProperty('--viewport-scale', viewport.scale > 1.5 ? viewport.scale : '1');
 
-    // Agregar clases según breakpoint
+    // Clases según breakpoint
     root.classList.remove('mobile', 'tablet', 'desktop', 'hd', 'fullhd', 'ultrahd', 'tv-4k', 'tv-8k');
     
     if (viewport.isMobile) root.classList.add('mobile');
@@ -37,16 +59,41 @@ function AppContent() {
     if (viewport.is8K) root.classList.add('tv-8k');
   }, [viewport]);
 
-  return <AppRouter />;
-}
-
-function App() {
   return (
-    <DeviceProvider>
-      <BrandProvider>
-        <AppContent />
-      </BrandProvider>
-    </DeviceProvider>
+    <SpatialNavigationProvider>
+      <div className="App">
+        <Suspense fallback={<Loading />}>
+          <Routes>
+            {/* Rutas públicas */}
+            <Route path="/" element={<SplashPage />} />
+            <Route path="/login" element={<LoginPage />} />
+
+            {/* Rutas protegidas */}
+            <Route path="/home" element={
+              <ProtectedRoute><HomePage /></ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute><ProfilePage /></ProtectedRoute>
+            } />
+            <Route path="/smartcard" element={
+              <ProtectedRoute><SmartCardPage /></ProtectedRoute>
+            } />
+            <Route path="/channels" element={
+              <ProtectedRoute><ChannelsPage /></ProtectedRoute>
+            } />
+            <Route path="/vod" element={
+              <ProtectedRoute><VodPage /></ProtectedRoute>
+            } />
+            <Route path="/epg" element={
+              <ProtectedRoute><EpgPage /></ProtectedRoute>
+            } />
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </div>
+    </SpatialNavigationProvider>
   );
 }
 

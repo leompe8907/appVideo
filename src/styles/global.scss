@@ -102,4 +102,107 @@ button {
   }
 }
 
+/* ===========================================
+   Estilos de Focus
+   =========================================== */
+
+// Estilo base para cualquier elemento focusable
+[data-focusable="true"] {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+// Clase .focused para elementos con focus
+.focused {
+  outline: none !important;
+  border-color: var(--primary-color, #667eea) !important;
+  box-shadow: 
+    0 0 0 3px rgba(102, 126, 234, 0.4),
+    0 4px 20px rgba(102, 126, 234, 0.3) !important;
+  transform: scale(1.02);
+  z-index: 10;
+  transition: all 0.2s ease !important;
+}
+
+// Estilos mejorados para TV (más visibles)
+.device-tv {
+  .focused {
+    // En TV, el focus debe ser muy visible
+    border-width: 3px !important;
+    border-color: var(--primary-color, #667eea) !important;
+    box-shadow: 
+      0 0 0 4px rgba(102, 126, 234, 0.6),
+      0 0 0 8px rgba(102, 126, 234, 0.3),
+      0 6px 30px rgba(102, 126, 234, 0.5) !important;
+    transform: scale(1.05);
+    z-index: 100;
+  }
+}
+
+// Focus en inputs
+input.focused,
+textarea.focused {
+  background: rgba(255, 255, 255, 0.15) !important;
+  transform: scale(1); // Inputs no escalan, solo resaltan
+  transition: all 0.2s ease !important;
+}
+
+// Focus en inputs en TV
+.device-tv {
+  input.focused,
+  textarea.focused {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-width: 3px !important;
+    box-shadow: 
+      0 0 0 4px rgba(102, 126, 234, 0.6),
+      0 0 0 8px rgba(102, 126, 234, 0.3),
+      0 4px 20px rgba(102, 126, 234, 0.4) !important;
+  }
+}
+
+// Focus en botones
+button.focused {
+  transform: scale(1.05);
+  transition: all 0.2s ease !important;
+}
+
+// Focus en botones en TV
+.device-tv {
+  button.focused {
+    transform: scale(1.08);
+    box-shadow: 
+      0 0 0 4px rgba(102, 126, 234, 0.6),
+      0 0 0 8px rgba(102, 126, 234, 0.3),
+      0 8px 30px rgba(102, 126, 234, 0.5) !important;
+  }
+}
+
+// Focus en cards/links navegables
+a.focused,
+.nav-card.focused,
+.focusable-card.focused {
+  transform: scale(1.08);
+  box-shadow: 
+    0 0 0 3px rgba(102, 126, 234, 0.5),
+    0 8px 30px rgba(102, 126, 234, 0.4) !important;
+  transition: all 0.2s ease !important;
+}
+
+// Focus en cards en TV
+.device-tv {
+  a.focused,
+  .nav-card.focused,
+  .focusable-card.focused {
+    transform: scale(1.12);
+    box-shadow: 
+      0 0 0 4px rgba(102, 126, 234, 0.7),
+      0 0 0 8px rgba(102, 126, 234, 0.4),
+      0 12px 40px rgba(102, 126, 234, 0.6) !important;
+  }
+}
+
+// Ocultar outline nativo en dispositivos TV
+.device-tv *:focus {
+  outline: none;
+}
+
 
