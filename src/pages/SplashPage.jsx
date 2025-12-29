@@ -32,8 +32,8 @@ export function SplashPage() {
           await panaccessService.initialize(currentBrand);
         }
 
-        // 3. Verificar si hay sesión activa
-        const savedSessionId = localStorage.getItem('cvSessionId') || localStorage.getItem('sessionId');
+        // 3. Verificar si hay sesión activa (unificado a sessionId)
+        const savedSessionId = localStorage.getItem('sessionId');
         if (savedSessionId) {
           try {
             const isValid = await panaccessService.validateSession();
@@ -110,7 +110,6 @@ export function SplashPage() {
           // Limpiar credenciales inválidas
           localStorage.removeItem('username');
           localStorage.removeItem('password');
-          localStorage.removeItem('cvSessionId');
           localStorage.removeItem('sessionId');
           
           // Esperar tiempo del splash y redirigir a login
@@ -147,7 +146,6 @@ export function SplashPage() {
         console.error('[Splash] Error en auto-login:', error);
         
         // Limpiar credenciales inválidas
-        localStorage.removeItem('cvSessionId');
         localStorage.removeItem('sessionId');
         
         // Esperar tiempo del splash y redirigir a login

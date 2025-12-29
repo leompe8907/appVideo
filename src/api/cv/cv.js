@@ -1,8 +1,3 @@
-/**
- * Cliente para API de Panaccess
- * Integrado con sistema multi-cliente
- */
-
 import CryptoJS from 'crypto-js';
 import getUdid from './udid';
 import { createTimeoutPromise, classifyError } from './errorClassifier';
@@ -34,10 +29,12 @@ export class CVClient {
       this.password = password;
     }
 
-    // Intentar recuperar sesión guardada
-    const savedSession = localStorage.getItem('cvSessionId');
+    // Intentar recuperar sesión guardada (buscar en ambas claves por compatibilidad)
+    const savedSession = localStorage.getItem('sessionId');
     if (savedSession) {
       this.sessionId = savedSession;
+      // Guardar en sessionId para unificar
+      localStorage.setItem('sessionId', savedSession);
       console.log('[CV] Sesión recuperada del storage');
       
       // Validar sesión
@@ -188,7 +185,7 @@ export class CVClient {
       });
 
       this.sessionId = result;
-      localStorage.setItem('cvSessionId', this.sessionId);
+      localStorage.setItem('sessionId', this.sessionId);
       return result;
     } catch (error) {
       throw new Error('Login failed: ' + error.message);
@@ -212,7 +209,7 @@ export class CVClient {
    * Cierra sesión
    */
   logout() {
-    localStorage.removeItem('cvSessionId');
+    localStorage.removeItem('sessionId');
     this.sessionId = null;
     console.log('[CV] Sesión cerrada');
   }

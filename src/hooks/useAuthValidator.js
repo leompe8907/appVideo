@@ -1,7 +1,3 @@
-/**
- * Hook para validar sesión automáticamente
- */
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CryptoJS from 'crypto-js';
@@ -15,7 +11,7 @@ export function useAuthValidator() {
   useEffect(() => {
     const validateSession = async () => {
       try {
-        const sessionId = localStorage.getItem('cvSessionId');
+        const sessionId = localStorage.getItem('sessionId');
 
         // Si no existe sessionId, redirigir a login
         if (!sessionId) {
@@ -59,7 +55,7 @@ export function useAuthValidator() {
       } catch (error) {
         console.error('[AuthValidator] Error en validación:', error);
         // Limpiar storage y redirigir a login
-        localStorage.removeItem('cvSessionId');
+        localStorage.removeItem('sessionId');
         localStorage.removeItem('encrypted_username');
         localStorage.removeItem('encrypted_password');
         navigate('/');

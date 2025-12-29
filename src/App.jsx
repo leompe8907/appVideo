@@ -1,8 +1,3 @@
-/**
- * Componente App principal
- * Viewport + Routing
- */
-
 import { useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useViewport } from './hooks/useViewport';
@@ -11,13 +6,8 @@ import { SpatialNavigationProvider } from './components/navigation/SpatialNaviga
 // Lazy loading de páginas
 const SplashPage = lazy(() => import('./pages/SplashPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
-const HomePage = lazy(() => import('./pages/HomePage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
-const ChannelsPage = lazy(() => import('./pages/ChannelsPage'));
-const VodPage = lazy(() => import('./pages/VodPage'));
-const EpgPage = lazy(() => import('./pages/EpgPage'));
-
 // Loading component
 function Loading() {
   return <div className="loading">Cargando...</div>;
@@ -27,7 +17,7 @@ function Loading() {
  * Ruta protegida - redirige a splash si no hay sesión
  */
 function ProtectedRoute({ children }) {
-  const isAuthenticated = !!localStorage.getItem('cvSessionId') || !!localStorage.getItem('sessionId');
+  const isAuthenticated = !!localStorage.getItem('sessionId');
   
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -68,24 +58,11 @@ function App() {
             <Route path="/" element={<SplashPage />} />
             <Route path="/login" element={<LoginPage />} />
 
-            {/* Rutas protegidas */}
-            <Route path="/home" element={
-              <ProtectedRoute><HomePage /></ProtectedRoute>
-            } />
             <Route path="/profile" element={
               <ProtectedRoute><ProfilePage /></ProtectedRoute>
             } />
             <Route path="/smartcard" element={
               <ProtectedRoute><SmartCardPage /></ProtectedRoute>
-            } />
-            <Route path="/channels" element={
-              <ProtectedRoute><ChannelsPage /></ProtectedRoute>
-            } />
-            <Route path="/vod" element={
-              <ProtectedRoute><VodPage /></ProtectedRoute>
-            } />
-            <Route path="/epg" element={
-              <ProtectedRoute><EpgPage /></ProtectedRoute>
             } />
 
             {/* Fallback */}

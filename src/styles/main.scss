@@ -11,6 +11,7 @@
 @use 'components/login' as *;
 @use 'components/layout' as *;
 @use 'components/pages' as *;
+@use 'pages/smartcard' as *;
 
 // 2. Bootstrap personalizado (usa @import porque Bootstrap lo requiere)
 @import 'custom-bootstrap';
