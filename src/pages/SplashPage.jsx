@@ -118,20 +118,22 @@ export function SplashPage() {
         }
 
         // 6. Hacer login automático
-        // El cliente CVClient ya maneja udid automáticamente
+        let udid = localStorage.getItem('udid');
+        if (!udid) {
+          udid = getUdid();
+          localStorage.setItem('udid', udid);
+        }
+
         const sessionId = await panaccessService.login('clientLogin', {
+          apiToken: currentBrand.token,
           clientId: username,
-          pwd: password
+          pwd: password,
+          udid: udid,
         });
 
         if (sessionId) {
-          // El sessionId ya está guardado en localStorage por el cliente
-          // Solo guardar udid si no existe
-          let udid = localStorage.getItem('udid');
-          if (!udid) {
-            udid = getUdid();
-            localStorage.setItem('udid', udid);
-          }
+          localStorage.setItem('sessionId', sessionId);
+          localStorage.setItem('udid', udid);
           setIsAuthenticated(true);
           // Esperar tiempo del splash y redirigir según configuración del brand
           const initialRoute = getInitialRoute(currentBrand);

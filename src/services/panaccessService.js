@@ -3,7 +3,7 @@
  * Patrón Singleton - Una sola instancia global
  */
 
-import { createCVClient } from '../api/cv/cv';
+import { CVClient } from '../api/cv/cv';
 import { retryOperation } from '../api/cv/errorClassifier';
 
 class PanaccessService {
@@ -22,7 +22,12 @@ class PanaccessService {
       }
 
       this.brandConfig = brandConfig;
-      this.client = createCVClient(brandConfig);
+      this.client = new CVClient({
+        baseUrl: brandConfig.drm,
+        apiToken: brandConfig.token,
+        mode: 'json',
+        fetchTimeout: 30000,
+      });
 
       console.log('[PanaccessService] Inicializado correctamente');
     } catch (error) {
@@ -119,17 +124,10 @@ class PanaccessService {
   /**
    * Cierra sesión
    */
-  async logout() {
+  logout() {
     if (this.client) {
-      try {
-        await this.client.logout();
-        console.log('[PanaccessService] Sesión cerrada');
-      } catch (error) {
-        console.error('[PanaccessService] Error al cerrar sesión:', error);
-        // Limpiar cliente localmente aunque falle el logout remoto
-        this.client.sessionId = null;
-        localStorage.removeItem('sessionId');
-      }
+      this.client.logout();
+      console.log('[PanaccessService] Sesión cerrada');
     }
   }
 
@@ -145,97 +143,6 @@ class PanaccessService {
    */
   getClient() {
     return this.client;
-  }
-
-  /**
-   * Métodos helper para funciones comunes del API
-   */
-  
-  async getClientConfig() {
-    if (!this.client) {
-      throw new Error('Servicio no inicializado');
-    }
-    return await this.client.getClientConfig();
-  }
-
-  async getStreamingLicenses() {
-    if (!this.client) {
-      throw new Error('Servicio no inicializado');
-    }
-    if (!this.client.isAuthenticated()) {
-      throw new Error('No hay sesión activa. Inicia sesión primero.');
-    }
-    return await this.client.getStreamingLicenses();
-  }
-
-  async activateStreamingLicense(license, pin, failIfInUse = false) {
-    if (!this.client) {
-      throw new Error('Servicio no inicializado');
-    }
-    if (!this.client.isAuthenticated()) {
-      throw new Error('No hay sesión activa. Inicia sesión primero.');
-    }
-    return await this.client.activateStreamingLicense(license, pin, failIfInUse);
-  }
-
-  async getBouquets() {
-    if (!this.client) {
-      throw new Error('Servicio no inicializado');
-    }
-    if (!this.client.isAuthenticated()) {
-      throw new Error('No hay sesión activa. Inicia sesión primero.');
-    }
-    return await this.client.getBouquets();
-  }
-
-  async getAvailableStreams() {
-    if (!this.client) {
-      throw new Error('Servicio no inicializado');
-    }
-    if (!this.client.isAuthenticated()) {
-      throw new Error('No hay sesión activa. Inicia sesión primero.');
-    }
-    return await this.client.getAvailableStreams();
-  }
-
-  async getCatchupGroups() {
-    if (!this.client) {
-      throw new Error('Servicio no inicializado');
-    }
-    if (!this.client.isAuthenticated()) {
-      throw new Error('No hay sesión activa. Inicia sesión primero.');
-    }
-    return await this.client.getCatchupGroups();
-  }
-
-  async getCatchupEvents(epgStreamId) {
-    if (!this.client) {
-      throw new Error('Servicio no inicializado');
-    }
-    if (!this.client.isAuthenticated()) {
-      throw new Error('No hay sesión activa. Inicia sesión primero.');
-    }
-    return await this.client.getCatchupEvents(epgStreamId);
-  }
-
-  async getVOD() {
-    if (!this.client) {
-      throw new Error('Servicio no inicializado');
-    }
-    if (!this.client.isAuthenticated()) {
-      throw new Error('No hay sesión activa. Inicia sesión primero.');
-    }
-    return await this.client.getVOD();
-  }
-
-  async getVODContent(offset = 0, limit = 100) {
-    if (!this.client) {
-      throw new Error('Servicio no inicializado');
-    }
-    if (!this.client.isAuthenticated()) {
-      throw new Error('No hay sesión activa. Inicia sesión primero.');
-    }
-    return await this.client.getVODContent(offset, limit);
   }
 }
 

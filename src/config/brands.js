@@ -53,14 +53,6 @@ export const BRANDS = [
       spatialNav: false,        // Logs en consola (default: solo en DEV)
       spatialNavVisual: false,  // Debug visual (marcos rojos) (default: false)
     },
-    
-    // Configuración de activación automática de licencias
-    licenseActivation: {
-      automaticActivation: false,  // Activar licencia automáticamente después del login
-      activationRecursive: false, // Intentar con siguiente licencia si falla
-      activationFailIfInUse: true, // Fallar si la licencia está en uso
-      maxAutoActivateLicense: 5,   // Máximo número de intentos de activación automática
-    },
   },
   {
     brand: "intv",
@@ -116,14 +108,6 @@ export const BRANDS = [
       spatialNav: false,        // Logs en consola (default: solo en DEV)
       spatialNavVisual: false,  // Debug visual (marcos rojos) (default: false)
     },
-    
-    // Configuración de activación automática de licencias
-    licenseActivation: {
-      automaticActivation: false,  // Activar licencia automáticamente después del login
-      activationRecursive: false, // Intentar con siguiente licencia si falla
-      activationFailIfInUse: true, // Fallar si la licencia está en uso
-      maxAutoActivateLicense: 5,   // Máximo número de intentos de activación automática
-    },
   },
   {
     brand: "gigmax",
@@ -178,14 +162,6 @@ export const BRANDS = [
     debug: {
       spatialNav: false,        // Logs en consola (default: solo en DEV)
       spatialNavVisual: false,  // Debug visual (marcos rojos) (default: false)
-    },
-    
-    // Configuración de activación automática de licencias
-    licenseActivation: {
-      automaticActivation: false,  // Activar licencia automáticamente después del login
-      activationRecursive: false, // Intentar con siguiente licencia si falla
-      activationFailIfInUse: true, // Fallar si la licencia está en uso
-      maxAutoActivateLicense: 5,   // Máximo número de intentos de activación automática
     },
   },
 ];

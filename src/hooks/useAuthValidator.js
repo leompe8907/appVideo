@@ -29,9 +29,8 @@ export function useAuthValidator() {
         }
 
         // Si la validación falla, intentar login automático con credenciales guardadas
-        // Usar las claves unificadas: 'username' y 'password'
-        const encryptedUsername = localStorage.getItem('username') || localStorage.getItem('encrypted_username');
-        const encryptedPassword = localStorage.getItem('password') || localStorage.getItem('encrypted_password');
+        const encryptedUsername = localStorage.getItem('encrypted_username');
+        const encryptedPassword = localStorage.getItem('encrypted_password');
 
         if (!encryptedUsername || !encryptedPassword) {
           console.log('[AuthValidator] No hay credenciales guardadas. Redirigiendo a Login...');
@@ -50,18 +49,13 @@ export function useAuthValidator() {
         }
 
         console.log('[AuthValidator] Intentando login automático...');
-        await panaccessService.login('clientLogin', {
-          clientId: username,
-          pwd: password
-        });
+        await panaccessService.login(username, password);
         console.log('[AuthValidator] Login automático exitoso');
 
       } catch (error) {
         console.error('[AuthValidator] Error en validación:', error);
         // Limpiar storage y redirigir a login
         localStorage.removeItem('sessionId');
-        localStorage.removeItem('username');
-        localStorage.removeItem('password');
         localStorage.removeItem('encrypted_username');
         localStorage.removeItem('encrypted_password');
         navigate('/');
