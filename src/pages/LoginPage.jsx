@@ -67,16 +67,10 @@ export function LoginPage() {
     setError('');
 
     try {
-      let udid = localStorage.getItem("udid");
-      if (!udid) {
-        udid = getUdid();
-      }
-
+      // El cliente CVClient ya maneja udid automáticamente
       const sessionId = await panaccessService.login("clientLogin", {
-        apiToken: token,
         clientId: username,
-        pwd: password,
-        udid: udid,
+        pwd: password
       });
 
       const encryptedUsername = CryptoJS.AES.encrypt(username, SECRET_KEY).toString();
@@ -84,8 +78,13 @@ export function LoginPage() {
 
       localStorage.setItem('username', encryptedUsername);
       localStorage.setItem('password', encryptedPassword);
-      localStorage.setItem('sessionId', sessionId);
-      localStorage.setItem('udid', udid);
+      // El sessionId ya está guardado en localStorage por el cliente
+      // Solo guardar udid si no existe
+      let udid = localStorage.getItem("udid");
+      if (!udid) {
+        udid = getUdid();
+        localStorage.setItem('udid', udid);
+      }
 
       setTimeout(() => {
         setIsSubmitting(false);
