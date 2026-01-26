@@ -124,7 +124,7 @@ export function SplashPage() {
           localStorage.setItem('udid', udid);
         }
 
-        const sessionId = await panaccessService.login('clientLogin', {
+        const sessionId = await panaccessService.callLoginApi('clientLogin', {
           apiToken: currentBrand.token,
           clientId: username,
           pwd: password,

@@ -80,6 +80,13 @@ class PanaccessService {
       throw new Error('Servicio no inicializado');
     }
 
+    // Restaurar sessionId del localStorage si el cliente no está autenticado
+    const sessionIdFromStorage = localStorage.getItem("sessionId");
+    if (!this.client.isAuthenticated() && sessionIdFromStorage) {
+      this.client.sessionId = sessionIdFromStorage;
+      console.log('[PanaccessService] SessionId restaurado desde localStorage');
+    }
+
     if (!this.client.isAuthenticated()) {
       throw new Error('No hay sesión activa. Inicia sesión primero.');
     }
@@ -121,6 +128,26 @@ class PanaccessService {
       console.error(`Error en la llamada (${method}):`, error);
       throw error;
     }
+  }
+
+  /**
+   * Obtiene el cliente CV
+   */
+  getClient() {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    return this.client;
+  }
+
+  /**
+   * Valida si la sesión actual es válida
+   */
+  async validateSession() {
+    if (!this.client) {
+      return false;
+    }
+    return await this.client.validateSession();
   }
 
   /**

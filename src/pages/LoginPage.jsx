@@ -68,7 +68,12 @@ export function LoginPage() {
         udid = getUdid();
       }
 
-      const sessionId = await panaccessService.login("clientLogin", {
+      // Asegurar que el servicio esté inicializado
+      if (!panaccessService.client) {
+        await panaccessService.initialize(currentBrand);
+      }
+
+      const sessionId = await panaccessService.callLoginApi("clientLogin", {
         apiToken: token,
         clientId: username,
         pwd: password,

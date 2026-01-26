@@ -94,7 +94,7 @@ export function SmartCardPage() {
         }
 
         // Llamar a getStreamingLicenses
-        const response = await panaccessService.callAuthenticated('getStreamingLicenses', {
+        const response = await panaccessService.callAuthenticatedApi('getStreamingLicenses', {
           sessionId: sessionId,
           udid: udid,
           withPins: true
@@ -243,7 +243,7 @@ export function SmartCardPage() {
       });
 
       // Llamar a setStreamingLicense
-      const response = await panaccessService.callAuthenticated('setStreamingLicense', {
+      const response = await panaccessService.callAuthenticatedApi('setStreamingLicense', {
         sessionId: sessionId,
         udid: udid,
         licenseKey: licenseKey,
