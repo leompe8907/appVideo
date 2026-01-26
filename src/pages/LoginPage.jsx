@@ -1,7 +1,3 @@
-/**
- * Página de Login
- */
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';

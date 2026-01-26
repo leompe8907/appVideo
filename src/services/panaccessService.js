@@ -3,7 +3,7 @@
  * Patrón Singleton - Una sola instancia global
  */
 
-import { CVClient } from '../api/cv/cv';
+import { createCVClient } from '../api/cv/cv';
 import { retryOperation } from '../api/cv/errorClassifier';
 
 class PanaccessService {
@@ -22,12 +22,7 @@ class PanaccessService {
       }
 
       this.brandConfig = brandConfig;
-      this.client = new CVClient({
-        baseUrl: brandConfig.drm,
-        apiToken: brandConfig.token,
-        mode: 'json',
-        fetchTimeout: 30000,
-      });
+      this.client = createCVClient(brandConfig);
 
       console.log('[PanaccessService] Inicializado correctamente');
     } catch (error) {
@@ -37,10 +32,9 @@ class PanaccessService {
   }
 
   /**
-   * Login - Sin retry automático por seguridad
-   * La contraseña NO se encripta aquí, CV.js lo hace internamente
+   * Función exclusiva para login (sin retry automático por seguridad)
    */
-  async login(method, parameters = {}) {
+  async callLoginApi(method, parameters = {}) {
     if (!this.client) {
       throw new Error('Servicio no inicializado. Llama a initialize() primero.');
     }
@@ -51,8 +45,14 @@ class PanaccessService {
       // Para clientLogin, usar init() del cliente
       if (method === 'clientLogin' && parameters.clientId && parameters.pwd) {
         // El apiToken ya está en la configuración del cliente
-        // Solo necesitamos username y password
-        await this.client.init(parameters.clientId, parameters.pwd);
+        await this.client.init({
+          baseUrl: this.brandConfig.drm,
+          apiToken: parameters.apiToken || this.brandConfig.token,
+          username: parameters.clientId,
+          password: parameters.pwd,
+          mode: 'json',
+          fetchTimeout: 30000,
+        });
         
         // El sessionId ya está guardado en el cliente después de init()
         const sessionId = this.client.sessionId;
@@ -71,9 +71,9 @@ class PanaccessService {
   }
 
   /**
-   * Llamadas autenticadas - Con retry automático
+   * Función para todas las demás llamadas autenticadas (con retry automático)
    */
-  async callAuthenticated(funcName, parameters = {}, options = {}) {
+  async callAuthenticatedApi(method, parameters = {}, options = {}) {
     const { enableRetry = true, maxRetries = 3 } = options;
 
     if (!this.client) {
@@ -85,39 +85,41 @@ class PanaccessService {
     }
 
     const apiCall = async () => {
-      console.log(`[PanaccessService] Llamando ${funcName}:`, parameters);
-      const result = await this.client.call(funcName, parameters);
-      console.log(`[PanaccessService] Respuesta ${funcName}:`, result);
+      const sessionId = localStorage.getItem("sessionId");
+      const udid = localStorage.getItem("udid");
+
+      if (!sessionId) {
+        const error = new Error("Falta el sessionId.");
+        error.errorInfo = { type: 'VALIDATION_ERROR', canRetry: false };
+        throw error;
+      }
+
+      parameters = {
+        ...parameters,
+        sessionId,
+      };
+
+      // Agregar udid si está disponible
+      if (udid) {
+        parameters.udid = udid;
+      }
+
+      console.log("Llamando a la API (autenticada):", method, parameters);
+      const result = await this.client.call(method, parameters);
+      console.log("Respuesta de la API (autenticada):", result);
       return result;
     };
 
     try {
       if (enableRetry) {
+        // Usar retry automático para errores recuperables
         return await retryOperation(apiCall, { maxRetries });
       } else {
         return await apiCall();
       }
     } catch (error) {
-      console.error(`[PanaccessService] Error en ${funcName}:`, error);
+      console.error(`Error en la llamada (${method}):`, error);
       throw error;
-    }
-  }
-
-  /**
-   * Valida si la sesión actual es válida
-   */
-  async validateSession() {
-    try {
-      if (!this.client || !this.client.isAuthenticated()) {
-        return false;
-      }
-
-      // Intentar una llamada simple para validar
-      await this.callAuthenticated('getClientConfig', {}, { enableRetry: false });
-      return true;
-    } catch (error) {
-      console.warn('[PanaccessService] Sesión inválida:', error);
-      return false;
     }
   }
 
@@ -131,23 +133,9 @@ class PanaccessService {
     }
   }
 
-  /**
-   * Verifica si hay sesión activa
-   */
-  isAuthenticated() {
-    return this.client ? this.client.isAuthenticated() : false;
-  }
-
-  /**
-   * Obtiene el cliente actual
-   */
-  getClient() {
-    return this.client;
-  }
 }
 
 // Instancia singleton
 const panaccessService = new PanaccessService();
 
 export default panaccessService;
-

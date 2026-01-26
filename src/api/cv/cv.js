@@ -1,93 +1,65 @@
-import CryptoJS from 'crypto-js';
-import getUdid from './udid';
-import { createTimeoutPromise, classifyError } from './errorClassifier';
+import CryptoJS from "crypto-js";
+import getUdid from "./udid";
+import { createTimeoutPromise, classifyError } from "./errorClassifier";
 
-export class CVClient {
-  constructor(config = {}) {
-    this.baseUrl = config.baseUrl || '';
-    this.mode = ['json', 'jsonp'].includes(config.mode) ? config.mode : 'json';
-    this.jsonpTimeout = config.jsonpTimeout || 5000;
-    this.fetchTimeout = config.fetchTimeout || 30000;
-    this.sessionId = null;
-    this.apiToken = config.apiToken || '';
-    this.username = '';
-    this.password = '';
-  }
+export let CV = {
+  baseUrl: "",
+  mode: "json",
+  jsonpTimeout: 5000,
+  fetchTimeout: 30000, // 30 segundos de timeout para fetch
+  sessionId: null,
+  apiToken: "",
+  username: "",
+  password: "",
 
-  /**
-   * Inicializa el cliente con credenciales y hace login automático
-   */
-  async init(username, password, apiToken = null) {
-    this.username = username;
-    this.apiToken = apiToken || this.apiToken;
+  async init(options) {
+    this.baseUrl = options.baseUrl || this.baseUrl;
+    this.mode = ["json", "jsonp"].includes(options.mode) ? options.mode : "json";
+    this.jsonpTimeout = options.jsonpTimeout || this.jsonpTimeout;
+    this.fetchTimeout = options.fetchTimeout || this.fetchTimeout;
 
-    // Hash password si no está hasheado
-    const salt = '_panaccess';
-    if (!/^[0-9a-f]{32}$/.test(password)) {
-      this.password = CryptoJS.MD5(password + salt).toString();
-    } else {
-      this.password = password;
+    this.username = options.username;
+    this.password = options.password;
+    this.apiToken = options.apiToken || this.apiToken;
+
+    // Hash password if not already hashed
+    const salt = "_panaccess";
+    if (!/^[0-9a-f]{32}$/.test(this.password)) {
+      this.password = CryptoJS.MD5(this.password + salt).toString();
     }
 
-    // Intentar recuperar sesión guardada (buscar en ambas claves por compatibilidad)
-    const savedSession = localStorage.getItem('sessionId');
-    if (savedSession) {
-      this.sessionId = savedSession;
-      // Guardar en sessionId para unificar
-      localStorage.setItem('sessionId', savedSession);
-      console.log('[CV] Sesión recuperada del storage');
-      
-      // Validar sesión
-      try {
-        await this.validateSession();
-        console.log('[CV] Sesión válida');
-        return true;
-      } catch (error) {
-        console.warn('[CV] Sesión inválida, creando nueva');
-        this.sessionId = null;
-      }
-    }
-
-    // Hacer login
+    // Perform login
     try {
-      await this.login();
-      console.log('[CV] Login exitoso');
-      return true;
+      await this.login(this.apiToken, this.username, this.password);
     } catch (error) {
-      console.error('[CV] Login falló:', error);
+      console.error("Login failed:", error);
       throw error;
     }
-  }
+  },
 
-  /**
-   * Realiza una llamada al API
-   */
   async call(funcName, parameters = {}) {
     const url = `${this.baseUrl}?f=${funcName}&requestMode=function`;
 
-    // Agregar sessionId si existe (excepto en login)
-    if (this.sessionId && funcName !== 'clientLogin') {
+    if (this.sessionId && funcName !== "login") {
       parameters.sessionId = this.sessionId;
     }
 
-    if (this.mode === 'jsonp') {
+    if (this.mode === "jsonp") {
       return this.callJsonp(url, parameters);
     } else {
       return this.callJson(url, parameters);
     }
-  }
+  },
 
-  /**
-   * Llamada JSON via fetch
-   */
   async callJson(url, parameters) {
     const paramString = this.serialize(parameters);
-
+    
     try {
+      // Crear promise con timeout
       const fetchPromise = fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          "Content-Type": "application/x-www-form-urlencoded",
         },
         body: paramString,
       });
@@ -95,52 +67,45 @@ export class CVClient {
       // Race entre fetch y timeout
       const response = await Promise.race([
         fetchPromise,
-        createTimeoutPromise(this.fetchTimeout),
+        createTimeoutPromise(this.fetchTimeout)
       ]);
 
       if (!response.ok) {
-        const errorInfo = classifyError(
-          new Error(`HTTP error! Status: ${response.status}`),
-          response
-        );
+        const errorInfo = classifyError(new Error(`HTTP error! Status: ${response.status}`), response);
         const error = new Error(errorInfo.message);
         error.errorInfo = errorInfo;
         throw error;
       }
 
       const result = await response.json();
-      
       if (!result.success) {
-        const error = new Error(result.errorMessage || 'Unknown error');
+        const error = new Error(result.errorMessage || "Unknown error");
         error.errorInfo = classifyError(error);
         throw error;
       }
 
       return result.answer;
     } catch (error) {
-      // Si ya tiene errorInfo, relanzarlo
+      // Si ya tiene errorInfo (ya fue clasificado), simplemente relanzarlo
       if (error.errorInfo) {
         throw error;
       }
-
-      // Clasificarlo
+      
+      // Si no, clasificarlo ahora
       const errorInfo = classifyError(error);
       const classifiedError = new Error(errorInfo.message);
       classifiedError.errorInfo = errorInfo;
       classifiedError.originalError = error;
       throw classifiedError;
     }
-  }
+  },
 
-  /**
-   * Llamada JSONP (para CORS issues)
-   */
   callJsonp(url, parameters) {
     return new Promise((resolve, reject) => {
       const callbackName = `CVJSONP${Date.now()}`;
       const timeout = setTimeout(() => {
         delete window[callbackName];
-        reject(new Error('Request timed out'));
+        reject(new Error("Request timed out"));
       }, this.jsonpTimeout);
 
       window[callbackName] = (result) => {
@@ -150,47 +115,45 @@ export class CVClient {
         if (result.success) {
           resolve(result.answer);
         } else {
-          reject(new Error(result.errorMessage || 'Unknown error'));
+          reject(new Error(result.errorMessage || "Unknown error"));
         }
       };
 
       parameters.jsonp = `window.${callbackName}`;
       const paramString = this.serialize(parameters);
-      const script = document.createElement('script');
+      const script = document.createElement("script");
       script.src = `${url}&${paramString}`;
       document.head.appendChild(script);
       document.head.removeChild(script);
     });
-  }
+  },
 
-  /**
-   * Serializa objeto a URL params
-   */
   serialize(obj) {
     return Object.entries(obj)
       .map(([key, val]) => `${encodeURIComponent(key)}=${encodeURIComponent(val)}`)
-      .join('&');
-  }
+      .join("&");
+  },
 
-  /**
-   * Login al sistema
-   */
-  async login() {
+  async login(apiToken, username, password) {
     try {
-      const result = await this.call('clientLogin', {
-        apiToken: this.apiToken,
-        clientId: this.username,  // El API espera 'clientId', no 'username'
-        pwd: this.password,        // El API espera 'pwd', no 'password'
+      const result = await this.call("clientLogin", {
+        apiToken,
+        clientId: username,
+        pwd: password,
         udid: getUdid(),
       });
-
       this.sessionId = result;
-      localStorage.setItem('sessionId', this.sessionId);
+      localStorage.setItem("sessionId", this.sessionId);
       return result;
     } catch (error) {
-      throw new Error('Login failed: ' + error.message);
+      throw new Error("Login failed: " + error.message);
     }
-  }
+  },
+
+  logout() {
+    localStorage.removeItem("sessionId");
+    this.sessionId = null;
+  },
 
   /**
    * Valida si la sesión actual es válida
@@ -198,45 +161,42 @@ export class CVClient {
   async validateSession() {
     try {
       // Hacer una llamada simple para validar
-      await this.call('getCategories', {});
+      await this.call("getCategories", {});
       return true;
     } catch (error) {
       return false;
     }
-  }
-
-  /**
-   * Cierra sesión
-   */
-  logout() {
-    localStorage.removeItem('sessionId');
-    this.sessionId = null;
-    console.log('[CV] Sesión cerrada');
-  }
+  },
 
   /**
    * Verifica si hay sesión activa
    */
   isAuthenticated() {
     return !!this.sessionId;
-  }
-}
+  },
+};
 
 /**
- * Factory: Crea cliente CV desde brandConfig
+ * Factory: Crea instancia CV desde brandConfig
+ * Inicializa el objeto CV con la configuración de la marca
  */
 export function createCVClient(brandConfig) {
   if (!brandConfig) {
-    throw new Error('brandConfig es requerido');
+    throw new Error("brandConfig es requerido");
   }
 
-  return new CVClient({
-    baseUrl: brandConfig.drm,
-    apiToken: brandConfig.token,
-    mode: 'json',
-    fetchTimeout: 30000,
-  });
+  // Crear una nueva instancia del objeto CV
+  const cvInstance = Object.create(CV);
+  
+  // Inicializar con la configuración del brand
+  cvInstance.baseUrl = brandConfig.drm || "";
+  cvInstance.apiToken = brandConfig.token || "";
+  cvInstance.mode = "json";
+  cvInstance.jsonpTimeout = 5000;
+  cvInstance.fetchTimeout = 30000;
+  cvInstance.sessionId = null;
+
+  return cvInstance;
 }
 
-export default CVClient;
-
+export default CV;
