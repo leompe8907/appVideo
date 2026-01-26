@@ -1,0 +1,380 @@
+/**
+ * Estilos de la página de Perfiles
+ * Diseño moderno tipo OTT (Netflix, Disney+, HBO Max)
+ */
+
+@use '../variables' as *;
+@use '../mixins' as *;
+
+.profile-page {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  overflow: hidden;
+
+  // Overlay oscuro para mejorar legibilidad
+  .profile-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1;
+  }
+
+  .profile-container {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 1400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xxl;
+  }
+
+  // Header
+  .profile-header {
+    text-align: center;
+    margin-bottom: $spacing-lg;
+
+    .profile-logo {
+      max-width: 200px;
+      max-height: 80px;
+      margin-bottom: $spacing-xl;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+    }
+
+    .profile-title {
+      font-size: clamp(2rem, 5vw, 4rem);
+      font-weight: 600;
+      color: #ffffff;
+      margin: 0;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+      letter-spacing: -0.02em;
+    }
+  }
+
+  // Grid de perfiles
+  .profiles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
+    gap: $spacing-xl;
+    justify-content: center;
+    width: 100%;
+    max-width: 1200px;
+    padding: $spacing-xl 0;
+
+    @media (max-width: $breakpoint-tablet) {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 180px));
+      gap: $spacing-lg;
+    }
+
+    @media (max-width: $breakpoint-mobile) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: $spacing-md;
+    }
+  }
+
+  // Tarjeta de perfil
+  .profile-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-md;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: $spacing-lg;
+    border-radius: $border-radius-lg;
+    background: transparent;
+    border: 3px solid transparent;
+    position: relative;
+
+    // Avatar wrapper
+    .profile-avatar-wrapper {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      margin-bottom: $spacing-sm;
+
+      @media (max-width: $breakpoint-mobile) {
+        width: 100px;
+        height: 100px;
+      }
+    }
+
+    // Avatar
+    .profile-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4.5rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
+      position: relative;
+
+      @media (max-width: $breakpoint-mobile) {
+        font-size: 3rem;
+      }
+
+      // Imagen del avatar
+      .profile-avatar-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 4px;
+      }
+
+      // Fallback cuando no hay imagen
+      .profile-avatar-fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+      }
+
+      // Avatar para agregar perfil
+      &.profile-avatar-add {
+        background: rgba(255, 255, 255, 0.1);
+        border: 4px dashed rgba(255, 255, 255, 0.3);
+
+        .add-icon {
+          font-size: 4rem;
+          font-weight: 300;
+          color: rgba(255, 255, 255, 0.6);
+          line-height: 1;
+
+          @media (max-width: $breakpoint-mobile) {
+            font-size: 3rem;
+          }
+        }
+      }
+    }
+
+    // Indicador de selección
+    .profile-selected-indicator {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #4caf50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.5);
+      animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+      .check-icon {
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        line-height: 1;
+      }
+    }
+
+    // Nombre del perfil
+    .profile-name {
+      font-size: $font-size-lg;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.8);
+      text-align: center;
+      transition: color 0.3s ease;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    // Estados hover (PC)
+    &:hover {
+      transform: translateY(-8px) scale(1.05);
+
+      .profile-avatar {
+        border-color: rgba(255, 255, 255, 0.4);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+      }
+
+      .profile-name {
+        color: #ffffff;
+      }
+    }
+
+    // Estado focused (TV)
+    &.focused {
+      transform: translateY(-12px) scale(1.08);
+      border-color: rgba(255, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.05);
+
+      .profile-avatar {
+        border-color: rgba(255, 255, 255, 0.6);
+        box-shadow: 0 16px 40px rgba(102, 126, 234, 0.4);
+        transform: scale(1.05);
+      }
+
+      .profile-name {
+        color: #ffffff;
+        font-weight: 600;
+      }
+    }
+
+    // Estado selected
+    &.selected {
+      .profile-avatar {
+        border-color: #4caf50;
+        box-shadow: 0 12px 32px rgba(76, 175, 80, 0.4);
+      }
+    }
+
+    // Tarjeta para agregar perfil
+    &.profile-card-add {
+      .profile-avatar {
+        background: rgba(255, 255, 255, 0.05);
+        border: 4px dashed rgba(255, 255, 255, 0.2);
+      }
+
+      &:hover,
+      &.focused {
+        .profile-avatar {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.4);
+        }
+      }
+    }
+
+    // Focus visible para accesibilidad
+    &:focus-visible {
+      outline: 3px solid $primary-color;
+      outline-offset: 4px;
+    }
+  }
+
+  // Estado de carga
+  .profile-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xxl;
+    color: rgba(255, 255, 255, 0.8);
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: rgba(255, 255, 255, 0.6);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: $spacing-md;
+    }
+
+    p {
+      margin: 0;
+      font-size: $font-size-lg;
+    }
+  }
+
+  // Estado vacío
+  .profile-empty {
+    text-align: center;
+    padding: $spacing-xxl;
+    color: rgba(255, 255, 255, 0.6);
+
+    p {
+      margin: 0;
+      font-size: $font-size-lg;
+    }
+  }
+
+  // Footer
+  .profile-footer {
+    margin-top: $spacing-xl;
+    display: flex;
+    justify-content: center;
+  }
+
+  .profile-back-button {
+    padding: $spacing-md $spacing-xl;
+    font-size: $font-size-lg;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: $border-radius-md;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+
+    &:hover,
+    &:focus {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.4);
+      color: #ffffff;
+      transform: translateY(-2px);
+    }
+
+    &:focus-visible {
+      outline: 3px solid $primary-color;
+      outline-offset: 2px;
+    }
+  }
+}
+
+// Animaciones
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Responsive para TV
+@media (min-width: $breakpoint-fullhd) {
+  .profile-page {
+    .profiles-grid {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 240px));
+      gap: $spacing-xxl;
+    }
+
+    .profile-card {
+      .profile-avatar-wrapper {
+        width: 160px;
+        height: 160px;
+      }
+
+      .profile-avatar {
+        font-size: 5rem;
+      }
+    }
+  }
+}
+
+// Modo oscuro mejorado
+[data-theme="dark"] .profile-page {
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #0a0a0a 100%);
+}

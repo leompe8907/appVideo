@@ -101,7 +101,7 @@ export const BRANDS = [
     // Configuración de flujo de navegación inicial
     // Si profile es true → redirige a /profile después del login
     // Si profile es false → redirige a /smartcard después del login
-    profile: false,
+    profile: true,
     
     // Configuración de debug para navegación espacial
     debug: {
