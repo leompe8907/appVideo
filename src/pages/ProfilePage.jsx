@@ -41,7 +41,6 @@ export function ProfilePage() {
         console.log('[PROFILE] Llamando a getClientConfig...');
         const clientConfig = await panaccessService.callAuthenticatedApi('getClientConfig', {}, { enableRetry: false });
         console.log('[PROFILE] Respuesta de getClientConfig:', clientConfig);
-        console.log('[PROFILE] getClientConfig (JSON):', JSON.stringify(clientConfig, null, 2));
         
         // Obtener perfiles de clientConfig
         if (clientConfig?.profiles && Array.isArray(clientConfig.profiles)) {
