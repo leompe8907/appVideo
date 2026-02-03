@@ -6,47 +6,30 @@ export const BRANDS = [
     token: 'gQposTlrMIOYQVdYBNYC',
     developedBy: "Network Broadcast",
     version: "1.0.2",
-    splashDuration: 3000, // Duración en milisegundos
-    splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
     
     // Configuración de UI/Tema
     ui: {
-      logoPositionHome: "top",
-      showTime: true,
+      // Splash
+      splashDuration: 3000, // Duración en milisegundos
+      splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      // Logo
+      logoPositionHome: "top", // "top" | "right" | "left" | "center"
+      showTime: true, // Si es true → muestra el tiempo, si es false → no muestra el tiempo
+      // EPG
       epgLineColorTime: "#2CE308",
+      // Colores
       primaryColor: "#2CE308",
       secondaryColor: "#1a8a05",
       theme: "dark",
+      // Fuente
       fontFamily: "Arial, sans-serif",
-    },
-        
-    // Límites y restricciones
-    limits: {
-      maxProfiles: 5,
-      maxDownloads: 10,
-      concurrentStreams: 2,
-      recordingMaxDuration: 120, // minutos
-      watchlistMaxItems: 100,
     },
     
     // Features habilitadas/deshabilitadas
     features: {
-      miniPlayer: true,
-      chat: true,
-      recording: true,
-      pip: false,
-      chromecast: true,
-      downloads: false,
-      profiles: true,
-      parentalControl: true,
-      watchlist: true,
-      recommendations: true,
+      miniPlayer: true, // Si es true → muestra el mini player, si es false → no muestra el mini player
+      profiles: true, // Si es true → redirige a /profile después del login, si es false → redirige a /smartcard después del login
     },
-    
-    // Configuración de flujo de navegación inicial
-    // Si profile es true → redirige a /profile después del login
-    // Si profile es false → redirige a /smartcard después del login
-    profile: false,
     
     // Configuración de debug para navegación espacial
     debug: {
@@ -61,47 +44,30 @@ export const BRANDS = [
     token: "CQSepFFsoFNgyLNDYOpz",
     developedBy: "inTV&#174,",
     version: "2.0.2",
-    splashDuration: 3000, // Duración en milisegundos
-    splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
     
     // Configuración de UI/Tema
     ui: {
-      logoPositionHome: "right",
-      showTime: false,
+      // Splash
+      splashDuration: 3000, // Duración en milisegundos
+      splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      // Logo
+      logoPositionHome: "right", // "top" | "right" | "left" | "center"
+      showTime: false, // Si es true → muestra el tiempo, si es false → no muestra el tiempo
+      // EPG
       epgLineColorTime: "#3333FF",
+      // Colores
       primaryColor: "#3333FF",
       secondaryColor: "#1a1aaa",
       theme: "light",
+      // Fuente
       fontFamily: "Roboto, sans-serif",
-    },
-    
-    // Límites y restricciones
-    limits: {
-      maxProfiles: 7,
-      maxDownloads: 20,
-      concurrentStreams: 3,
-      recordingMaxDuration: 180,
-      watchlistMaxItems: 200,
     },
     
     // Features habilitadas/deshabilitadas
     features: {
-      miniPlayer: true,
-      chat: false,
-      recording: true,
-      pip: true,
-      chromecast: true,
-      downloads: true,
-      profiles: true,
-      parentalControl: true,
-      watchlist: true,
-      recommendations: true,
+      miniPlayer: true, // Si es true → muestra el mini player, si es false → no muestra el mini player
+      profiles: true, // Si es true → redirige a /profile después del login, si es false → redirige a /smartcard después del login
     },
-    
-    // Configuración de flujo de navegación inicial
-    // Si profile es true → redirige a /profile después del login
-    // Si profile es false → redirige a /smartcard después del login
-    profile: true,
     
     // Configuración de debug para navegación espacial
     debug: {
@@ -116,47 +82,30 @@ export const BRANDS = [
     token: "NLdLsrJkgIgnxMIDurSI",
     developedBy: "Gigmax",
     version: "2.0.3",
-    splashDuration: 3000, // Duración en milisegundos
-    splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
     
     // Configuración de UI/Tema
     ui: {
-      logoPositionHome: "right",
-      showTime: true,
+      // Splash
+      splashDuration: 3000, // Duración en milisegundos
+      splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      // Logo
+      logoPositionHome: "right", // "top" | "right" | "left" | "center"
+      showTime: true, // Si es true → muestra el tiempo, si es false → no muestra el tiempo
+      // EPG
       epgLineColorTime: "#2CE308",
+      // Colores
       primaryColor: "#FF6B35",
       secondaryColor: "#cc5528",
       theme: "dark",
+      // Fuente
       fontFamily: "Montserrat, sans-serif",
-    },
-    
-    // Límites y restricciones
-    limits: {
-      maxProfiles: 10,
-      maxDownloads: 15,
-      concurrentStreams: 4,
-      recordingMaxDuration: 240,
-      watchlistMaxItems: 150,
     },
     
     // Features habilitadas/deshabilitadas
     features: {
-      miniPlayer: true,
-      chat: true,
-      recording: true,
-      pip: true,
-      chromecast: true,
-      downloads: false,
-      profiles: true,
-      parentalControl: false,
-      watchlist: true,
-      recommendations: true,
+      miniPlayer: true, // Si es true → muestra el mini player, si es false → no muestra el mini player
+      profiles: false, // Si es true → redirige a /profile después del login, si es false → redirige a /smartcard después del login
     },
-    
-    // Configuración de flujo de navegación inicial
-    // Si profile es true → redirige a /profile después del login
-    // Si profile es false → redirige a /smartcard después del login
-    profile: false,
     
     // Configuración de debug para navegación espacial
     debug: {

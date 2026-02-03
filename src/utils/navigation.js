@@ -10,10 +10,10 @@
 export function getInitialRoute(brandConfig) {
   // Si profile es true → /profile
   // Si profile es false → /smartcard
-  if (brandConfig?.profile === true) {
+  if (brandConfig?.features?.profiles) {
     return '/profile';
+  }else{
+    return '/smartcard';
   }
-  // Por defecto, si profile es false o undefined, ir a smartcard
-  return '/smartcard';
 }
 
