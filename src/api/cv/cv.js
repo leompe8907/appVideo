@@ -142,9 +142,17 @@ export let CV = {
         pwd: password,
         udid: getUdid(),
       });
-      this.sessionId = result;
+      // Normalizar: la API puede devolver string o array con un elemento
+      let sessionId = result;
+      if (Array.isArray(result)) {
+        sessionId = result.length === 1 && typeof result[0] === "string" ? result[0] : null;
+      }
+      if (!sessionId || (typeof sessionId === "string" && sessionId.trim() === "")) {
+        throw new Error("No se recibió sesión. Verifica usuario y contraseña.");
+      }
+      this.sessionId = sessionId;
       localStorage.setItem("sessionId", this.sessionId);
-      return result;
+      return this.sessionId;
     } catch (error) {
       throw new Error("Login failed: " + error.message);
     }

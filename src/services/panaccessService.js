@@ -44,19 +44,23 @@ class PanaccessService {
       
       // Para clientLogin, usar init() del cliente
       if (method === 'clientLogin' && parameters.clientId && parameters.pwd) {
-        // El apiToken ya está en la configuración del cliente
+        // Trim para evitar espacios que invalidan la contraseña
+        const clientId = typeof parameters.clientId === 'string' ? parameters.clientId.trim() : parameters.clientId;
+        const pwd = typeof parameters.pwd === 'string' ? parameters.pwd.trim() : parameters.pwd;
         await this.client.init({
           baseUrl: this.brandConfig.drm,
           apiToken: parameters.apiToken || this.brandConfig.token,
-          username: parameters.clientId,
-          password: parameters.pwd,
+          username: clientId,
+          password: pwd,
           mode: 'json',
           fetchTimeout: 30000,
         });
         
-        // El sessionId ya está guardado en el cliente después de init()
         const sessionId = this.client.sessionId;
         console.log("Respuesta de la API (login):", sessionId);
+        if (!sessionId || (typeof sessionId === 'string' && sessionId.trim() === '') || (Array.isArray(sessionId) && sessionId.length === 0)) {
+          throw new Error('No se recibió sesión. Verifica usuario y contraseña.');
+        }
         return sessionId;
       } else {
         // Para otros métodos, usar call directamente

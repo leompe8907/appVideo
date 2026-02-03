@@ -75,13 +75,17 @@ export function LoginPage() {
 
       const sessionId = await panaccessService.callLoginApi("clientLogin", {
         apiToken: token,
-        clientId: username,
-        pwd: password,
+        clientId: username.trim(),
+        pwd: password.trim(),
         udid: udid,
       });
 
-      const encryptedUsername = CryptoJS.AES.encrypt(username, SECRET_KEY).toString();
-      const encryptedPassword = CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
+      if (!sessionId || (typeof sessionId === 'string' && sessionId.trim() === '')) {
+        throw new Error('No se pudo iniciar sesión. Verifica tus credenciales.');
+      }
+
+      const encryptedUsername = CryptoJS.AES.encrypt(username.trim(), SECRET_KEY).toString();
+      const encryptedPassword = CryptoJS.AES.encrypt(password.trim(), SECRET_KEY).toString();
 
       localStorage.setItem('username', encryptedUsername);
       localStorage.setItem('password', encryptedPassword);
@@ -90,7 +94,6 @@ export function LoginPage() {
 
       setTimeout(() => {
         setIsSubmitting(false);
-        // Navegar según la configuración del brand (profile o smartcard)
         const initialRoute = getInitialRoute(currentBrand);
         navigate(initialRoute);
       }, 1000);
