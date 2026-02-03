@@ -13,7 +13,7 @@ import CryptoJS from 'crypto-js';
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
 import '../styles/components/_login.scss';
 
-const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
+const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
 
 export function LoginPage() {
   const { t } = useTranslation();
