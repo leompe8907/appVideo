@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { getInitialRoute } from '../utils/navigation';
 import panaccessService from '../services/panaccessService';
@@ -10,6 +11,7 @@ import '../styles/components/_splash.scss';
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
 
 export function SplashPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { currentBrand, splashDuration, isLoading, getImage, appName } = useBrand();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -176,7 +178,7 @@ export function SplashPage() {
         {splashImage && (
           <img 
             src={splashImage} 
-            alt={`${appName} Splash`}
+            alt={t('splash.alt', { appName })}
             className="splash-image"
           />
         )}

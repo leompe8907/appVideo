@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
@@ -55,6 +56,7 @@ const renderLicenseContent = (data) => {
 };
 
 export function SmartCardPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { currentBrand, getImage } = useBrand();
   const { isTV, deviceType } = useDevice();
@@ -78,7 +80,7 @@ export function SmartCardPage() {
         const udid = localStorage.getItem('udid') || getUdid();
 
         if (!sessionId) {
-          throw new Error('No hay sesión activa. Por favor, inicia sesión.');
+          throw new Error(t('smartcard.errorNoSession'));
         }
 
         // Unificar: guardar solo en sessionId
@@ -106,7 +108,7 @@ export function SmartCardPage() {
 
       } catch (err) {
         console.error('[SMARTCARD] Error:', err);
-        setError(err.message || 'Error al obtener licencias');
+        setError(err.message || t('smartcard.errorFetch'));
       } finally {
         setIsLoading(false);
       }
@@ -125,7 +127,7 @@ export function SmartCardPage() {
     // Si es un array
     if (Array.isArray(licenses)) {
       if (licenses.length === 0) {
-        return <p className="no-licenses">No se encontraron licencias.</p>;
+        return <p className="no-licenses">{t('smartcard.noLicenses')}</p>;
       }
       return (
         <div className="licenses-grid">
@@ -171,7 +173,7 @@ export function SmartCardPage() {
           <LicenseCard
             license={licenses}
             index={0}
-            title="Información de Licencias"
+            title={t('smartcard.licenseInfo')}
             onSelect={() => handleLicenseSelect(licenses)}
             isSettingLicense={isSettingLicense}
             fullWidth
@@ -186,8 +188,8 @@ export function SmartCardPage() {
         <LicenseCard
           license={licenses}
           index={0}
-          title="Licencia"
-          onSelect={() => handleLicenseSelect(licenses)}
+title={t('smartcard.license')}
+            onSelect={() => handleLicenseSelect(licenses)}
           isSettingLicense={isSettingLicense}
           fullWidth
           showJson
@@ -234,7 +236,7 @@ export function SmartCardPage() {
       const pin = license.pin || license.PIN || license.Pin || '';
 
       if (!licenseKey) {
-        throw new Error('No se encontró la clave de licencia (KEY) en la tarjeta seleccionada.');
+        throw new Error(t('smartcard.errorNoKey'));
       }
 
       console.log('[SMARTCARD] Llamando setStreamingLicense:', {
@@ -254,11 +256,11 @@ export function SmartCardPage() {
       });
 
       console.log('[SMARTCARD] Respuesta setStreamingLicense: éxito');
-      setSuccessMessage('Todo salió bien.');
+      setSuccessMessage(t('smartcard.success'));
     } catch (err) {
       console.error('[SMARTCARD] Error al establecer licencia:', err);
       setSuccessMessage(null);
-      setError(err.message || 'Error al establecer la licencia');
+      setError(err.message || t('smartcard.errorSet'));
     } finally {
       setIsSettingLicense(false);
     }
@@ -287,7 +289,7 @@ export function SmartCardPage() {
               className="back-button"
               onClick={handleBack}
             >
-              ← Cerrar sesión
+              {t('common.backLogout')}
             </button>
           </div>
         )}
@@ -303,7 +305,7 @@ export function SmartCardPage() {
             {isSettingLicense && (
               <div className="setting-license-overlay">
                 <div className="loading-spinner"></div>
-                <p className="loading-text">Estableciendo licencia...</p>
+                <p className="loading-text">{t('smartcard.settingLicense')}</p>
               </div>
             )}
             {renderLicenseCards()}
@@ -312,19 +314,19 @@ export function SmartCardPage() {
               onClick={handleBack}
               disabled={isSettingLicense}
             >
-              ← Cerrar sesión
+              {t('common.backLogout')}
             </button>
           </div>
         )}
         
         {!isLoading && !error && !licenses && (
           <div className="no-data-container">
-            <p className="no-licenses">No se encontraron licencias.</p>
+            <p className="no-licenses">{t('smartcard.noLicenses')}</p>
             <button
               className="back-button"
               onClick={handleBack}
             >
-              ← Cerrar sesión
+              {t('common.backLogout')}
             </button>
           </div>
         )}
@@ -335,7 +337,10 @@ export function SmartCardPage() {
 
 // Componente de tarjeta de licencia con navegación
 function LicenseCard({ license, index, title, onSelect, isSettingLicense, fullWidth = false, showJson = false }) {
+  const { t } = useTranslation();
   const { isTV } = useDevice();
+  const titleText = title || t('smartcard.licenseNumber', { index: index + 1 });
+  const ariaLabel = t('smartcard.selectLicense', { title: titleText });
 
   // Handler para cuando se presiona Enter/OK
   const handleEnterPress = () => {
@@ -381,7 +386,7 @@ function LicenseCard({ license, index, title, onSelect, isSettingLicense, fullWi
     return (
       <>
         <div className="license-card-header">
-          <h3>{title || `Licencia #${index + 1}`}</h3>
+          <h3>{titleText}</h3>
         </div>
         <div className="license-card-body">
           {renderLicenseContent(license)}
@@ -408,7 +413,7 @@ function LicenseCard({ license, index, title, onSelect, isSettingLicense, fullWi
       onKeyDown={handleKeyDown}
       tabIndex={isTV ? -1 : 0}
       role="button"
-      aria-label={`Seleccionar ${title || `licencia ${index + 1}`}`}
+      aria-label={ariaLabel}
     >
       {renderContent()}
     </div>

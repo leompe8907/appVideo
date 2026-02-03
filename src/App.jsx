@@ -1,4 +1,5 @@
 import { useEffect, Suspense, lazy } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useViewport } from './hooks/useViewport';
 import { SpatialNavigationProvider } from './components/navigation/SpatialNavigationProvider';
@@ -10,7 +11,8 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
 // Loading component
 function Loading() {
-  return <div className="loading">Cargando...</div>;
+  const { t } = useTranslation();
+  return <div className="loading">{t('common.loading')}</div>;
 }
 
 /**

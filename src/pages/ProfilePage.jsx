@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
@@ -23,6 +24,7 @@ const getImageById = (imageId) => {
 };
 
 export function ProfilePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { currentBrand, appName, getImage } = useBrand();
   const { isTV } = useDevice();
@@ -81,7 +83,7 @@ export function ProfilePage() {
       } catch (err) {
         console.error('[PROFILE] Error al obtener getClientConfig:', err);
         setProfiles([]);
-        setError(err?.errorInfo?.userMessage || err?.message || 'Error al cargar perfiles.');
+        setError(err?.errorInfo?.userMessage || err?.message || t('profile.errorLoad'));
       } finally {
         setIsLoading(false);
       }
@@ -133,7 +135,7 @@ export function ProfilePage() {
     console.log('[PROFILE] Agregar nuevo perfil');
     // Aquí iría la lógica para agregar un nuevo perfil
     // Por ahora, solo mostramos un mensaje
-    alert('Funcionalidad de agregar perfil próximamente');
+    alert(t('profile.addProfileComingSoon'));
   };
 
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
@@ -155,7 +157,7 @@ export function ProfilePage() {
               className="profile-logo"
             />
           )}
-          <h1 className="profile-title">¿Quién está viendo?</h1>
+          <h1 className="profile-title">{t('profile.whoIsWatching')}</h1>
         </header>
 
         {/* Mensaje de error (carga de perfiles) */}
@@ -176,7 +178,7 @@ export function ProfilePage() {
         {isLoading ? (
           <div className="profile-loading">
             <div className="loading-spinner"></div>
-            <p>Cargando perfiles...</p>
+            <p>{t('profile.loadingProfiles')}</p>
           </div>
         ) : (
           <div className={`profiles-grid ${isActivating ? 'profiles-grid-disabled' : ''}`}>
@@ -200,7 +202,7 @@ export function ProfilePage() {
               </>
             ) : (
               <div className="profile-empty">
-                <p>No se encontraron perfiles</p>
+                <p>{t('profile.noProfiles')}</p>
               </div>
             )}
           </div>
@@ -212,7 +214,7 @@ export function ProfilePage() {
             onClick={handleBack}
             data-focus-key="profile-back"
           >
-            ← Cerrar sesión
+            {t('common.backLogout')}
           </button>
         </footer>
       </div>
@@ -224,6 +226,7 @@ export function ProfilePage() {
  * Componente de tarjeta de perfil
  */
 function ProfileCard({ profile, index, onSelect, isSelected, disabled = false }) {
+  const { t } = useTranslation();
   const { isTV } = useDevice();
   const { ref, focused } = useSpatialNavigation({
     onEnterPress: disabled ? undefined : onSelect,
@@ -252,7 +255,7 @@ function ProfileCard({ profile, index, onSelect, isSelected, disabled = false })
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={isTV ? -1 : 0}
-      aria-label={`Perfil ${profile.name}`}
+      aria-label={t('profile.profileAria', { name: profile.name })}
       data-focus-key={`profile-${index}`}
     >
       <div className="profile-avatar-wrapper">
@@ -288,6 +291,7 @@ function ProfileCard({ profile, index, onSelect, isSelected, disabled = false })
  * Componente de tarjeta para agregar perfil
  */
 function AddProfileCard({ index, onAdd }) {
+  const { t } = useTranslation();
   const { isTV } = useDevice();
   const { ref, focused } = useSpatialNavigation({
     onEnterPress: onAdd,
@@ -315,7 +319,7 @@ function AddProfileCard({ index, onAdd }) {
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={isTV ? -1 : 0}
-      aria-label="Agregar nuevo perfil"
+      aria-label={t('profile.addProfileAria')}
       data-focus-key={`profile-add-${index}`}
     >
       <div className="profile-avatar-wrapper">
@@ -323,7 +327,7 @@ function AddProfileCard({ index, onAdd }) {
           <span className="add-icon">+</span>
         </div>
       </div>
-      <div className="profile-name">Agregar Perfil</div>
+      <div className="profile-name">{t('profile.addProfile')}</div>
     </div>
   );
 }

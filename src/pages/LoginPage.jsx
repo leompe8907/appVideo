@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { FocusableInput } from '../components/navigation/FocusableInput';
@@ -15,6 +16,7 @@ import '../styles/components/_login.scss';
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { currentBrand, token, appName, isLoading, getImage } = useBrand();
   const { isTV } = useDevice();
@@ -81,7 +83,7 @@ export function LoginPage() {
       });
 
       if (!sessionId || (typeof sessionId === 'string' && sessionId.trim() === '')) {
-        throw new Error('No se pudo iniciar sesión. Verifica tus credenciales.');
+        throw new Error(t('login.errorNoSession'));
       }
 
       const encryptedUsername = CryptoJS.AES.encrypt(username.trim(), SECRET_KEY).toString();
@@ -102,23 +104,23 @@ export function LoginPage() {
       setTimeout(() => {
         setIsSubmitting(false);
         const errorInfo = err.errorInfo || classifyError(err);
-        let messageToShow = 'Error al iniciar sesión';
+        let messageToShow = t('login.errorGeneric');
 
         switch (errorInfo.type) {
           case ERROR_TYPES.NETWORK:
-            messageToShow = 'Sin conexión a internet.';
+            messageToShow = t('login.errorNetwork');
             break;
           case ERROR_TYPES.TIMEOUT:
-            messageToShow = 'Conexión lenta. Intenta de nuevo.';
+            messageToShow = t('login.errorTimeout');
             break;
           case ERROR_TYPES.SERVER:
-            messageToShow = 'Error del servidor.';
+            messageToShow = t('login.errorServer');
             break;
           case ERROR_TYPES.AUTH:
-            messageToShow = 'Credenciales inválidas.';
+            messageToShow = t('login.errorAuth');
             break;
           default:
-            messageToShow = errorInfo.userMessage || err.message || 'Error al iniciar sesión';
+            messageToShow = errorInfo.userMessage || err.message || t('login.errorGeneric');
         }
         setError(messageToShow);
       }, 1000);
@@ -130,7 +132,7 @@ export function LoginPage() {
   // ============================================
 
   if (isLoading || !currentBrand) {
-    return <div className="loading">Cargando...</div>;
+    return <div className="loading">{t('common.loading')}</div>;
   }
 
   const logoPath = getImage('logo.png');
@@ -146,18 +148,18 @@ export function LoginPage() {
       </div>
 
       <div className="login-card">
-        <h2>Iniciar Sesión</h2>
+        <h2>{t('login.title')}</h2>
 
         <form onSubmit={handleSubmit}>
           {/* Username */}
           <div className="form-group">
-            <label htmlFor="username">Usuario</label>
+            <label htmlFor="username">{t('login.user')}</label>
             <FocusableInput
               id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Tu usuario"
+              placeholder={t('login.userPlaceholder')}
               disabled={isSubmitting}
               autoComplete="username"
               required
@@ -167,14 +169,14 @@ export function LoginPage() {
 
           {/* Password */}
           <div className="form-group">
-            <label htmlFor="password">Contraseña</label>
+            <label htmlFor="password">{t('login.password')}</label>
             <div className="password-row">
               <FocusableInput
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Tu contraseña"
+                placeholder={t('login.passwordPlaceholder')}
                 disabled={isSubmitting}
                 autoComplete="current-password"
                 required
@@ -205,7 +207,7 @@ export function LoginPage() {
               }
             }}
           >
-            {isSubmitting ? 'Conectando...' : 'Entrar'}
+            {isSubmitting ? t('login.submitting') : t('login.submit')}
           </FocusableButton>
         </form>
       </div>

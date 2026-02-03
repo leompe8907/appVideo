@@ -1,3 +1,5 @@
+import i18n from '../../locales/i18n';
+
 export const ERROR_TYPES = {
   NETWORK: 'NETWORK_ERROR',
   TIMEOUT: 'TIMEOUT_ERROR',
@@ -6,6 +8,8 @@ export const ERROR_TYPES = {
   SERVER: 'SERVER_ERROR',
   UNKNOWN: 'UNKNOWN_ERROR',
 };
+
+const t = (key) => (i18n && i18n.t ? i18n.t(key) : key);
 
 /**
  * Crea un promise que se rechaza después del timeout
@@ -25,42 +29,42 @@ export function createTimeoutPromise(timeout) {
  */
 export function classifyError(error, response = null) {
   let errorType = ERROR_TYPES.UNKNOWN;
-  let message = error.message || 'Error desconocido';
-  let userMessage = 'Ocurrió un error inesperado';
+  let message = error.message || t('errors.unknown');
+  let userMessage = t('errors.unexpected');
   let retry = false;
 
   // Error de timeout
   if (error.isTimeout || error.name === 'AbortError' || message.includes('timeout')) {
     errorType = ERROR_TYPES.TIMEOUT;
-    userMessage = 'La conexión tardó demasiado. Intenta de nuevo.';
+    userMessage = t('errors.timeout');
     retry = true;
   }
   // Error de red
   else if (!navigator.onLine || error.name === 'NetworkError' || message.includes('network')) {
     errorType = ERROR_TYPES.NETWORK;
-    userMessage = 'Sin conexión a internet. Verifica tu red.';
+    userMessage = t('errors.network');
     retry = true;
   }
   // Error de autenticación
   else if (response?.status === 401 || response?.status === 403 || message.includes('auth')) {
     errorType = ERROR_TYPES.AUTH;
-    userMessage = 'Credenciales inválidas. Verifica tu usuario y contraseña.';
+    userMessage = t('errors.auth');
     retry = false;
   }
   // Error del API
   else if (response?.status >= 400 && response?.status < 500) {
     errorType = ERROR_TYPES.API;
-    userMessage = 'Error en la solicitud. Intenta de nuevo.';
+    userMessage = t('errors.api');
     retry = true;
   }
   // Error del servidor
   else if (response?.status >= 500) {
     errorType = ERROR_TYPES.SERVER;
-    userMessage = 'Error del servidor. Intenta más tarde.';
+    userMessage = t('errors.server');
     retry = true;
   }
   // Si tenemos mensaje concreto del API/servidor, usarlo en lugar del genérico
-  else if (message && message.length > 0 && message !== 'Error desconocido' && userMessage === 'Ocurrió un error inesperado') {
+  else if (message && message.length > 0) {
     userMessage = message;
   }
 
