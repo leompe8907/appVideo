@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import CryptoJS from 'crypto-js';
 import panaccessService from '../services/panaccessService';
 import { useBrand } from '../contexts/BrandContext';
-import getUdid from '../api/cv/udid';
+import getUdid from '../cv/udid';
 
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
 

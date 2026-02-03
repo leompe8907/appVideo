@@ -8,12 +8,12 @@ import { FocusableButton } from '../components/navigation/FocusableButton';
 import { getInitialRoute } from '../utils/navigation';
 import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 import panaccessService from '../services/panaccessService';
-import getUdid from '../api/cv/udid';
+import getUdid from '../cv/udid';
 import CryptoJS from 'crypto-js';
-import { classifyError, ERROR_TYPES } from '../api/cv/errorClassifier';
+import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
 import '../styles/components/_login.scss';
 
-const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
+const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
 
 export function LoginPage() {
   const { t } = useTranslation();

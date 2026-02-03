@@ -5,7 +5,7 @@ import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import panaccessService from '../services/panaccessService';
-import getUdid from '../api/cv/udid';
+import getUdid from '../cv/udid';
 import '../styles/pages/_smartcard.scss';
 
 // Función auxiliar para formatear las claves (camelCase a Title Case)

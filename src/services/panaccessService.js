@@ -3,8 +3,8 @@
  * Patrón Singleton - Una sola instancia global
  */
 
-import { createCVClient } from '../api/cv/cv';
-import { retryOperation } from '../api/cv/errorClassifier';
+import { createCVClient } from '../cv/cv';
+import { retryOperation } from '../cv/errorClassifier';
 
 class PanaccessService {
   constructor() {
