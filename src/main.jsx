@@ -12,7 +12,6 @@ import App from './App';
 import './styles/main.scss';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
     <BrowserRouter>
       <DeviceProvider>
         <BrandProvider>
@@ -20,5 +19,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         </BrandProvider>
       </DeviceProvider>
     </BrowserRouter>
-  </React.StrictMode>,
 );

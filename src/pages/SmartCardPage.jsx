@@ -62,6 +62,7 @@ export function SmartCardPage() {
   const [licenses, setLicenses] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
   const [isSettingLicense, setIsSettingLicense] = useState(false);
 
   console.log(`🖥️ [SMARTCARD] Modo: ${isTV ? 'TV' : 'PC'}`);
@@ -195,6 +196,15 @@ export function SmartCardPage() {
     );
   };
 
+  // Cerrar sesión y volver a login
+  const handleBack = () => {
+    panaccessService.logout();
+    localStorage.removeItem('sessionId');
+    localStorage.removeItem('username');
+    localStorage.removeItem('password');
+    navigate('/login');
+  };
+
   // Función para manejar la selección de una licencia
   const handleLicenseSelect = async (license) => {
     if (isSettingLicense) return;
@@ -202,6 +212,7 @@ export function SmartCardPage() {
     try {
       setIsSettingLicense(true);
       setError(null);
+      setSuccessMessage(null);
 
       // Obtener sessionId y udid del localStorage (unificado a sessionId)
       const sessionId = localStorage.getItem('sessionId');
@@ -211,23 +222,15 @@ export function SmartCardPage() {
         throw new Error('No hay sesión activa. Por favor, inicia sesión.');
       }
 
-      // Unificar: guardar solo en sessionId
-      if (sessionId && !localStorage.getItem('sessionId')) {
-        localStorage.setItem('sessionId', sessionId);
-      }
-
       // Restaurar sessionId en el cliente CVClient si no está autenticado
       const client = panaccessService.getClient();
       if (client && !client.isAuthenticated()) {
-        // Restaurar sessionId del localStorage al cliente
         client.sessionId = sessionId;
         console.log('[SMARTCARD] SessionId restaurado en el cliente');
       }
 
       // Extraer KEY y pin de la licencia
-      // KEY puede estar en diferentes propiedades: key, KEY, licenseKey, etc.
       const licenseKey = license.KEY || license.key || license.licenseKey || license.Key || '';
-      // pin puede estar en: pin, PIN, Pin, etc.
       const pin = license.pin || license.PIN || license.Pin || '';
 
       if (!licenseKey) {
@@ -239,25 +242,22 @@ export function SmartCardPage() {
         udid,
         licenseKey,
         pin,
-        failIfInUse:false
+        failIfInUse: false
       });
 
-      // Llamar a setStreamingLicense
-      const response = await panaccessService.callAuthenticatedApi('setStreamingLicense', {
+      await panaccessService.callAuthenticatedApi('setStreamingLicense', {
         sessionId: sessionId,
         udid: udid,
         licenseKey: licenseKey,
         pin: pin,
-        failIfInUse:false
+        failIfInUse: false
       });
 
-      console.log('[SMARTCARD] Respuesta setStreamingLicense:', response);
-
-      // Aquí puedes agregar lógica adicional después de establecer la licencia
-      // Por ejemplo, navegar a otra página o mostrar un mensaje de éxito
-      
+      console.log('[SMARTCARD] Respuesta setStreamingLicense: éxito');
+      setSuccessMessage('Todo salió bien.');
     } catch (err) {
       console.error('[SMARTCARD] Error al establecer licencia:', err);
+      setSuccessMessage(null);
       setError(err.message || 'Error al establecer la licencia');
     } finally {
       setIsSettingLicense(false);
@@ -285,15 +285,21 @@ export function SmartCardPage() {
             <p className="error-text">{error}</p>
             <button
               className="back-button"
-              onClick={() => navigate('/home')}
+              onClick={handleBack}
             >
-              ← Volver al Inicio
+              ← Cerrar sesión
             </button>
           </div>
         )}
         
         {!isLoading && !error && licenses && (
           <div className="smartcard-content">
+            {successMessage && (
+              <div className="success-message" role="status">
+                <span className="success-icon">✓</span>
+                <p className="success-text">{successMessage}</p>
+              </div>
+            )}
             {isSettingLicense && (
               <div className="setting-license-overlay">
                 <div className="loading-spinner"></div>
@@ -303,10 +309,10 @@ export function SmartCardPage() {
             {renderLicenseCards()}
             <button
               className="back-button"
-              onClick={() => navigate('/home')}
+              onClick={handleBack}
               disabled={isSettingLicense}
             >
-              ← Volver al Inicio
+              ← Cerrar sesión
             </button>
           </div>
         )}
@@ -316,9 +322,9 @@ export function SmartCardPage() {
             <p className="no-licenses">No se encontraron licencias.</p>
             <button
               className="back-button"
-              onClick={() => navigate('/home')}
+              onClick={handleBack}
             >
-              ← Volver al Inicio
+              ← Cerrar sesión
             </button>
           </div>
         )}
