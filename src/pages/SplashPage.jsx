@@ -5,7 +5,7 @@ import { useBrand } from '../contexts/BrandContext';
 import { getInitialRoute } from '../utils/navigation';
 import panaccessService from '../services/panaccessService';
 import CryptoJS from 'crypto-js';
-import getUdid from '../api/cv/udid';
+import getUdid from '../cv/udid';
 import '../styles/components/_splash.scss';
 
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';

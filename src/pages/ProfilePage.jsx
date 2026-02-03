@@ -9,6 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
+import { FocusableButton } from '../components/navigation/FocusableButton';
+import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 import panaccessService from '../services/panaccessService';
 import Img from '../constants/images';
 import '../styles/pages/_profile.scss';
@@ -92,13 +94,16 @@ export function ProfilePage() {
     fetchClientConfig();
   }, []);
 
-  // Establecer focus inicial en TV
+  // Establecer focus inicial en TV (misma lógica que Login: usar API de la librería)
   useEffect(() => {
     if (isTV && profiles.length > 0) {
       const timer = setTimeout(() => {
-        const firstProfile = document.querySelector('[data-focus-key="profile-0"]');
-        if (firstProfile) {
-          firstProfile.focus();
+        const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
+        if (setFocus && typeof setFocus === 'function') {
+          setFocus('profile-0');
+        } else {
+          const firstProfile = document.querySelector('[data-focus-key="profile-0"]');
+          if (firstProfile) firstProfile.focus();
         }
       }, 300);
       return () => clearTimeout(timer);
@@ -209,13 +214,14 @@ export function ProfilePage() {
         )}
 
         <footer className="profile-footer">
-          <button
+          <FocusableButton
             className="profile-back-button"
             onClick={handleBack}
-            data-focus-key="profile-back"
+            onEnterPress={handleBack}
+            focusKey="profile-back"
           >
             {t('common.backLogout')}
-          </button>
+          </FocusableButton>
         </footer>
       </div>
     </div>
