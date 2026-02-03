@@ -262,6 +262,12 @@
       outline: 3px solid $primary-color;
       outline-offset: 4px;
     }
+
+    // Deshabilitado durante activación
+    &.disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
   }
 
   // Estado de carga
@@ -286,6 +292,51 @@
     p {
       margin: 0;
       font-size: $font-size-lg;
+    }
+  }
+
+  // Mensaje al activar perfil (éxito o error)
+  .profile-message {
+    text-align: center;
+    padding: $spacing-lg $spacing-xl;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 500px;
+    box-sizing: border-box;
+
+    .profile-message-text {
+      margin: 0;
+      font-size: $font-size-base;
+      color: #fff;
+    }
+  }
+  .profile-message-success {
+    background: rgba(34, 139, 34, 0.35);
+    border: 1px solid rgba(100, 255, 100, 0.5);
+  }
+  .profile-message-error {
+    background: rgba(180, 50, 50, 0.25);
+    border: 1px solid rgba(255, 100, 100, 0.5);
+  }
+  .profiles-grid-disabled {
+    pointer-events: none;
+    opacity: 0.85;
+  }
+
+  // Mensaje de error (getClientConfig fallido)
+  .profile-error {
+    text-align: center;
+    padding: $spacing-lg $spacing-xl;
+    background: rgba(180, 50, 50, 0.2);
+    border: 1px solid rgba(255, 100, 100, 0.5);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 500px;
+
+    .profile-error-text {
+      margin: 0;
+      font-size: $font-size-base;
+      color: rgba(255, 255, 255, 0.95);
     }
   }
 

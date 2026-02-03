@@ -22,10 +22,13 @@ export let CV = {
     this.password = options.password;
     this.apiToken = options.apiToken || this.apiToken;
 
-    // Hash password if not already hashed
-    const salt = "_panaccess";
-    if (!/^[0-9a-f]{32}$/.test(this.password)) {
-      this.password = CryptoJS.MD5(this.password + salt).toString();
+    // Algunos backends (ej. intv) esperan contraseña en claro y hashean en servidor
+    const hashPassword = options.hashPassword !== false;
+    if (hashPassword) {
+      const salt = "_panaccess";
+      if (!/^[0-9a-f]{32}$/.test(this.password)) {
+        this.password = CryptoJS.MD5(this.password + salt).toString();
+      }
     }
 
     // Perform login
@@ -79,8 +82,11 @@ export let CV = {
 
       const result = await response.json();
       if (!result.success) {
-        const error = new Error(result.errorMessage || "Unknown error");
-        error.errorInfo = classifyError(error);
+        const apiMessage = result.errorMessage || "Unknown error";
+        const error = new Error(apiMessage);
+        const errorInfo = classifyError(error);
+        errorInfo.userMessage = apiMessage;
+        error.errorInfo = errorInfo;
         throw error;
       }
 

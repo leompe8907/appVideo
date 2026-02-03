@@ -44,14 +44,15 @@ class PanaccessService {
       
       // Para clientLogin, usar init() del cliente
       if (method === 'clientLogin' && parameters.clientId && parameters.pwd) {
-        // Trim para evitar espacios que invalidan la contraseña
         const clientId = typeof parameters.clientId === 'string' ? parameters.clientId.trim() : parameters.clientId;
         const pwd = typeof parameters.pwd === 'string' ? parameters.pwd.trim() : parameters.pwd;
+        const hashPassword = this.brandConfig.hashPasswordBeforeLogin !== false;
         await this.client.init({
           baseUrl: this.brandConfig.drm,
           apiToken: parameters.apiToken || this.brandConfig.token,
           username: clientId,
           password: pwd,
+          hashPassword,
           mode: 'json',
           fetchTimeout: 30000,
         });

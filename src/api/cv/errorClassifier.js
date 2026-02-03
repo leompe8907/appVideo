@@ -59,6 +59,10 @@ export function classifyError(error, response = null) {
     userMessage = 'Error del servidor. Intenta más tarde.';
     retry = true;
   }
+  // Si tenemos mensaje concreto del API/servidor, usarlo en lugar del genérico
+  else if (message && message.length > 0 && message !== 'Error desconocido' && userMessage === 'Ocurrió un error inesperado') {
+    userMessage = message;
+  }
 
   return {
     type: errorType,

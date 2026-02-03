@@ -30,6 +30,17 @@ export function ProfilePage() {
   const [profiles, setProfiles] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [profileMessage, setProfileMessage] = useState(null);
+  const [isActivating, setIsActivating] = useState(false);
+
+  const handleBack = () => {
+    panaccessService.logout();
+    localStorage.removeItem('sessionId');
+    localStorage.removeItem('username');
+    localStorage.removeItem('password');
+    navigate('/login');
+  };
 
   console.log(`🖥️ [PROFILE] Modo: ${isTV ? 'TV' : 'PC'}`);
 
@@ -43,6 +54,7 @@ export function ProfilePage() {
         console.log('[PROFILE] Respuesta de getClientConfig:', clientConfig);
         
         // Obtener perfiles de clientConfig
+        setError(null);
         if (clientConfig?.profiles && Array.isArray(clientConfig.profiles)) {
           const profilesWithImages = clientConfig.profiles.map(profile => {
             const imageUrl = getImageById(profile.imageId);
@@ -66,9 +78,10 @@ export function ProfilePage() {
           console.warn('[PROFILE] No se encontraron perfiles en clientConfig');
           setProfiles([]);
         }
-      } catch (error) {
-        console.error('[PROFILE] Error al obtener getClientConfig:', error);
+      } catch (err) {
+        console.error('[PROFILE] Error al obtener getClientConfig:', err);
         setProfiles([]);
+        setError(err?.errorInfo?.userMessage || err?.message || 'Error al cargar perfiles.');
       } finally {
         setIsLoading(false);
       }
@@ -90,14 +103,30 @@ export function ProfilePage() {
     }
   }, [isTV, profiles.length]);
 
-  const handleProfileSelect = (profile) => {
+  const handleProfileSelect = async (profile) => {
+    if (isActivating) return;
     setSelectedProfile(profile);
-    // Aquí iría la lógica para cargar el perfil seleccionado
+    setProfileMessage(null);
+    setError(null);
+    setIsActivating(true);
     console.log('[PROFILE] Perfil seleccionado:', profile);
-    // Por ahora, navegar a home
-    setTimeout(() => {
-      navigate('/home');
-    }, 500);
+    try {
+      const pin = profile.pin != null && profile.pin !== undefined ? String(profile.pin) : '';
+      await panaccessService.callAuthenticatedApi('setActiveProfile', {
+        profileId: profile.id,
+        activate: true,
+        deviceName: 'Web',
+        failIfInUse: false,
+        pin,
+      });
+      setProfileMessage({ type: 'success', text: `Perfil "${profile.name}" activado correctamente.` });
+    } catch (err) {
+      console.error('[PROFILE] Error al activar perfil:', err);
+      const message = err?.errorInfo?.userMessage || err?.message || 'Error al activar el perfil.';
+      setProfileMessage({ type: 'error', text: message });
+    } finally {
+      setIsActivating(false);
+    }
   };
 
   const handleAddProfile = () => {
@@ -129,6 +158,20 @@ export function ProfilePage() {
           <h1 className="profile-title">¿Quién está viendo?</h1>
         </header>
 
+        {/* Mensaje de error (carga de perfiles) */}
+        {error && (
+          <div className="profile-error">
+            <p className="profile-error-text">{error}</p>
+          </div>
+        )}
+
+        {/* Mensaje al activar perfil (éxito o error) */}
+        {profileMessage && (
+          <div className={profileMessage.type === 'success' ? 'profile-message profile-message-success' : 'profile-message profile-message-error'}>
+            <p className="profile-message-text">{profileMessage.text}</p>
+          </div>
+        )}
+
         {/* Grid de perfiles */}
         {isLoading ? (
           <div className="profile-loading">
@@ -136,7 +179,7 @@ export function ProfilePage() {
             <p>Cargando perfiles...</p>
           </div>
         ) : (
-          <div className="profiles-grid">
+          <div className={`profiles-grid ${isActivating ? 'profiles-grid-disabled' : ''}`}>
             {profiles.length > 0 ? (
               <>
                 {profiles.map((profile, index) => (
@@ -146,10 +189,10 @@ export function ProfilePage() {
                     index={index}
                     onSelect={() => handleProfileSelect(profile)}
                     isSelected={selectedProfile?.id === profile.id}
+                    disabled={isActivating}
                   />
                 ))}
                 
-                {/* Tarjeta para agregar perfil */}
                 <AddProfileCard
                   index={profiles.length}
                   onAdd={handleAddProfile}
@@ -163,14 +206,13 @@ export function ProfilePage() {
           </div>
         )}
 
-        {/* Footer con botón de volver */}
         <footer className="profile-footer">
           <button
             className="profile-back-button"
-            onClick={() => navigate('/home')}
+            onClick={handleBack}
             data-focus-key="profile-back"
           >
-            ← Volver
+            ← Cerrar sesión
           </button>
         </footer>
       </div>
@@ -181,20 +223,21 @@ export function ProfilePage() {
 /**
  * Componente de tarjeta de perfil
  */
-function ProfileCard({ profile, index, onSelect, isSelected }) {
+function ProfileCard({ profile, index, onSelect, isSelected, disabled = false }) {
   const { isTV } = useDevice();
   const { ref, focused } = useSpatialNavigation({
-    onEnterPress: onSelect,
+    onEnterPress: disabled ? undefined : onSelect,
     focusKey: `profile-${index}`,
+    isFocusable: !disabled,
   });
 
   const handleClick = () => {
-    if (!isTV) {
-      onSelect();
-    }
+    if (disabled) return;
+    if (!isTV) onSelect();
   };
 
   const handleKeyDown = (e) => {
+    if (disabled) return;
     if (!isTV && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
       onSelect();
@@ -204,7 +247,7 @@ function ProfileCard({ profile, index, onSelect, isSelected }) {
   return (
     <div
       ref={ref}
-      className={`profile-card ${focused ? 'focused' : ''} ${isSelected ? 'selected' : ''}`}
+      className={`profile-card ${focused ? 'focused' : ''} ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="button"

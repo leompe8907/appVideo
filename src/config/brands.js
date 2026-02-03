@@ -30,18 +30,18 @@ export const BRANDS = [
       miniPlayer: true, // Si es true → muestra el mini player, si es false → no muestra el mini player
       profiles: true, // Si es true → redirige a /profile después del login, si es false → redirige a /smartcard después del login
     },
-    
-    // Configuración de debug para navegación espacial
+    // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
+    hashPasswordBeforeLogin: true,
     debug: {
-      spatialNav: false,        // Logs en consola (default: solo en DEV)
-      spatialNavVisual: false,  // Debug visual (marcos rojos) (default: false)
+      spatialNav: false, // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
     },
   },
   {
     brand: "intv",
     appName: "inTV Play",
     drm: "https://pmdw-1.in.tv.br/",
-    token: "CQSepFFsoFNgyLNDYOpz",
+    token: "CEVQmnhOsXvpRQZbGADl",
     developedBy: "inTV&#174,",
     version: "2.0.2",
     
@@ -65,14 +65,14 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      miniPlayer: true, // Si es true → muestra el mini player, si es false → no muestra el mini player
-      profiles: true, // Si es true → redirige a /profile después del login, si es false → redirige a /smartcard después del login
+      miniPlayer: true,
+      profiles: true,
     },
-    
-    // Configuración de debug para navegación espacial
+    // intv (pmdw-1.in.tv.br) espera contraseña en claro; no hashear en cliente
+    hashPasswordBeforeLogin: false,
     debug: {
-      spatialNav: false,        // Logs en consola (default: solo en DEV)
-      spatialNavVisual: false,  // Debug visual (marcos rojos) (default: false)
+      spatialNav: false,
+      spatialNavVisual: false,
     },
   },
   {
@@ -103,14 +103,13 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      miniPlayer: true, // Si es true → muestra el mini player, si es false → no muestra el mini player
-      profiles: false, // Si es true → redirige a /profile después del login, si es false → redirige a /smartcard después del login
+      miniPlayer: true,
+      profiles: false,
     },
-    
-    // Configuración de debug para navegación espacial
+    hashPasswordBeforeLogin: true,
     debug: {
-      spatialNav: false,        // Logs en consola (default: solo en DEV)
-      spatialNavVisual: false,  // Debug visual (marcos rojos) (default: false)
+      spatialNav: false,
+      spatialNavVisual: false,
     },
   },
 ];
