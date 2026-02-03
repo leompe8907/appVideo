@@ -28,7 +28,20 @@
     "addProfile": "Add Profile",
     "addProfileAria": "Add new profile",
     "profileAria": "Profile {{name}}",
-    "addProfileComingSoon": "Add profile feature coming soon"
+    "addProfileComingSoon": "Add profile feature coming soon",
+    "createTitle": "Create profile",
+    "createName": "Name",
+    "createNamePlaceholder": "e.g. Mary",
+    "createNameRequired": "Name is required.",
+    "createAvatar": "Avatar",
+    "createPin": "PIN (optional)",
+    "createPinPlaceholder": "4 digits",
+    "createPinError": "PIN must be 4 digits.",
+    "createSubmit": "Create",
+    "createSubmitting": "Creating...",
+    "createCancel": "Cancel",
+    "createSuccess": "Profile created successfully.",
+    "createError": "Error creating profile."
   },
   "smartcard": {
     "loadingLicenses": "Loading licenses...",

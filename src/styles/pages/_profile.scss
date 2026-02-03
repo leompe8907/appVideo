@@ -404,22 +404,22 @@
   }
 }
 
-// Responsive para TV
+// Responsive para TV (sin provocar overflow)
 @media (min-width: $breakpoint-fullhd) {
   .profile-page {
     .profiles-grid {
-      grid-template-columns: repeat(auto-fit, minmax(200px, 240px));
-      gap: $spacing-xxl;
+      grid-template-columns: repeat(auto-fit, minmax(min(180px, 12vw), 1fr));
+      gap: $spacing-lg;
     }
 
     .profile-card {
       .profile-avatar-wrapper {
-        width: 160px;
-        height: 160px;
+        width: clamp(100px, 10vw, 140px);
+        height: clamp(100px, 10vw, 140px);
       }
 
       .profile-avatar {
-        font-size: 5rem;
+        font-size: clamp(2.5rem, 4vw, 4rem);
       }
     }
   }

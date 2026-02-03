@@ -28,7 +28,20 @@
     "addProfile": "Agregar Perfil",
     "addProfileAria": "Agregar nuevo perfil",
     "profileAria": "Perfil {{name}}",
-    "addProfileComingSoon": "Funcionalidad de agregar perfil próximamente"
+    "addProfileComingSoon": "Funcionalidad de agregar perfil próximamente",
+    "createTitle": "Crear perfil",
+    "createName": "Nombre",
+    "createNamePlaceholder": "Ej. María",
+    "createNameRequired": "El nombre es obligatorio.",
+    "createAvatar": "Avatar",
+    "createPin": "PIN (opcional)",
+    "createPinPlaceholder": "4 dígitos",
+    "createPinError": "El PIN debe tener 4 dígitos.",
+    "createSubmit": "Crear",
+    "createSubmitting": "Creando...",
+    "createCancel": "Cancelar",
+    "createSuccess": "Perfil creado correctamente.",
+    "createError": "Error al crear el perfil."
   },
   "smartcard": {
     "loadingLicenses": "Cargando licencias...",

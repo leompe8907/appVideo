@@ -3,13 +3,14 @@
  * Diseño moderno tipo OTT (Netflix, Disney+, HBO Max)
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import { FocusableButton } from '../components/navigation/FocusableButton';
+import { CreateProfileModal } from '../components/profile/CreateProfileModal';
 import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 import panaccessService from '../services/panaccessService';
 import Img from '../constants/images';
@@ -37,6 +38,7 @@ export function ProfilePage() {
   const [error, setError] = useState(null);
   const [profileMessage, setProfileMessage] = useState(null);
   const [isActivating, setIsActivating] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const handleBack = () => {
     panaccessService.logout();
@@ -48,51 +50,47 @@ export function ProfilePage() {
 
   console.log(`🖥️ [PROFILE] Modo: ${isTV ? 'TV' : 'PC'}`);
 
-  // Llamar a getClientConfig al montar el componente
-  useEffect(() => {
-    const fetchClientConfig = async () => {
-      try {
-        setIsLoading(true);
-        console.log('[PROFILE] Llamando a getClientConfig...');
-        const clientConfig = await panaccessService.callAuthenticatedApi('getClientConfig', {}, { enableRetry: false });
-        console.log('[PROFILE] Respuesta de getClientConfig:', clientConfig);
-        
-        // Obtener perfiles de clientConfig
-        setError(null);
-        if (clientConfig?.profiles && Array.isArray(clientConfig.profiles)) {
-          const profilesWithImages = clientConfig.profiles.map(profile => {
-            const imageUrl = getImageById(profile.imageId);
-            return {
-              id: profile.id,
-              name: profile.name,
-              imageId: profile.imageId,
-              imageUrl: imageUrl,
-              active: profile.active,
-              activeInThisSession: profile.activeInThisSession,
-              pin: profile.pin,
-              sn: profile.sn,
-              // Mantener todos los datos originales del perfil
-              ...profile
-            };
-          });
-          
-          console.log('[PROFILE] Perfiles procesados:', profilesWithImages);
-          setProfiles(profilesWithImages);
-        } else {
-          console.warn('[PROFILE] No se encontraron perfiles en clientConfig');
-          setProfiles([]);
-        }
-      } catch (err) {
-        console.error('[PROFILE] Error al obtener getClientConfig:', err);
-        setProfiles([]);
-        setError(err?.errorInfo?.userMessage || err?.message || t('profile.errorLoad'));
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchProfiles = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      console.log('[PROFILE] Llamando a getClientConfig...');
+      const clientConfig = await panaccessService.callAuthenticatedApi('getClientConfig', {}, { enableRetry: false });
+      console.log('[PROFILE] Respuesta de getClientConfig:', clientConfig);
 
-    fetchClientConfig();
-  }, []);
+      setError(null);
+      if (clientConfig?.profiles && Array.isArray(clientConfig.profiles)) {
+        const profilesWithImages = clientConfig.profiles.map(profile => {
+          const imageUrl = getImageById(profile.imageId);
+          return {
+            id: profile.id,
+            name: profile.name,
+            imageId: profile.imageId,
+            imageUrl: imageUrl,
+            active: profile.active,
+            activeInThisSession: profile.activeInThisSession,
+            pin: profile.pin,
+            sn: profile.sn,
+            ...profile
+          };
+        });
+        console.log('[PROFILE] Perfiles procesados:', profilesWithImages);
+        setProfiles(profilesWithImages);
+      } else {
+        console.warn('[PROFILE] No se encontraron perfiles en clientConfig');
+        setProfiles([]);
+      }
+    } catch (err) {
+      console.error('[PROFILE] Error al obtener getClientConfig:', err);
+      setProfiles([]);
+      setError(err?.errorInfo?.userMessage || err?.message || t('profile.errorLoad'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    fetchProfiles();
+  }, [fetchProfiles]);
 
   // Establecer focus inicial en TV (misma lógica que Login: usar API de la librería)
   useEffect(() => {
@@ -137,10 +135,12 @@ export function ProfilePage() {
   };
 
   const handleAddProfile = () => {
-    console.log('[PROFILE] Agregar nuevo perfil');
-    // Aquí iría la lógica para agregar un nuevo perfil
-    // Por ahora, solo mostramos un mensaje
-    alert(t('profile.addProfileComingSoon'));
+    setShowCreateModal(true);
+  };
+
+  const handleCreateSuccess = () => {
+    setShowCreateModal(false);
+    fetchProfiles();
   };
 
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
@@ -150,6 +150,13 @@ export function ProfilePage() {
       className="profile-page"
       style={backgroundPath ? { backgroundImage: `url(${backgroundPath})` } : {}}
     >
+      {showCreateModal && (
+        <CreateProfileModal
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={handleCreateSuccess}
+        />
+      )}
+
       <div className="profile-overlay"></div>
       
       <div className="profile-container">

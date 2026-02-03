@@ -13,6 +13,7 @@
 @use 'components/pages' as *;
 @use 'pages/smartcard' as *;
 @use 'pages/profile' as *;
+@use 'pages/create-profile' as *;
 
 // 2. Bootstrap personalizado (usa @import porque Bootstrap lo requiere)
 @import 'custom-bootstrap';
