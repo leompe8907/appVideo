@@ -242,12 +242,14 @@ class PanaccessService {
   /**
    * Crea un nuevo perfil.
    * sessionId y udid los gestiona callAuthenticatedApi (desde localStorage).
+   * Lógica OTT: pasar license + pin (de una tarjeta disponible) para asignar esa licencia al perfil.
+   * Alternativa: pasar assignNewLicense: true para que el backend asigne una licencia.
    * @param {Object} options - Opciones y parámetros del método.
    * @param {string} options.name - Nombre del perfil (requerido).
    * @param {number} options.imageId - ID de imagen (requerido).
-   * @param {boolean} [options.assignNewLicense=false] - Asignar una nueva licencia.
-   * @param {string} options.license - Licencia (requerido).
-   * @param {string} options.pin - PIN (requerido).
+   * @param {boolean} [options.assignNewLicense=false] - Asignar nueva licencia por backend (si no se pasa license).
+   * @param {string} [options.license] - Clave de licencia (key de tarjeta); si se pasa, se usa con pin.
+   * @param {string} [options.pin] - PIN de la tarjeta (requerido si se pasa license).
    * @param {boolean} [options.enableRetry] - Ver callAuthenticatedApi.
    * @returns {Promise<*>}
    */
@@ -256,14 +258,16 @@ class PanaccessService {
       throw new Error('Servicio no inicializado. Llama a initialize() primero.');
     }
     const { name, imageId, assignNewLicense = false, license, pin, ...apiOptions } = options;
+    const hasLicense = license != null && String(license).trim() !== '';
+    const params = { name, imageId };
+    if (hasLicense) {
+      params.license = String(license).trim();
+      params.pin = pin != null ? String(pin) : '';
+    } else {
+      params.assignNewLicense = assignNewLicense;
+    }
     try {
-      const result = await this.callAuthenticatedApi('createProfile', {
-        name,
-        imageId,
-        assignNewLicense,
-        license,
-        pin,
-      }, apiOptions);
+      const result = await this.callAuthenticatedApi('createProfile', params, apiOptions);
       return result;
     } catch (error) {
       const customError = new Error('Error al crear el perfil.');

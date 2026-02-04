@@ -66,7 +66,7 @@ export const BRANDS = [
     // Features habilitadas/deshabilitadas
     features: {
       miniPlayer: true,
-      profiles: false,
+      profiles: true,
     },
     // intv (pmdw-1.in.tv.br) espera contraseña en claro; no hashear en cliente
     hashPasswordBeforeLogin: false,

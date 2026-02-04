@@ -43,7 +43,8 @@
     "createSuccess": "Profile created successfully.",
     "createError": "Error creating profile.",
     "createProfilesLimit": "{{current}} of {{max}} profiles (based on cards).",
-    "createMaxProfilesReached": "Cannot create more profiles. Limit: {{max}} (number of cards)."
+    "createMaxProfilesReached": "Cannot create more profiles. Limit: {{max}} (number of cards).",
+    "noCards": "You cannot add more profiles. Please contact your cable operator."
   },
   "smartcard": {
     "loadingLicenses": "Loading licenses...",

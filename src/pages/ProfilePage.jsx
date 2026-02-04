@@ -33,6 +33,7 @@ export function ProfilePage() {
   const { isTV } = useDevice();
   
   const [profiles, setProfiles] = useState([]);
+  const [smartCards, setSmartCards] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -53,11 +54,15 @@ export function ProfilePage() {
   const fetchProfiles = useCallback(async () => {
     try {
       setIsLoading(true);
-      console.log('[PROFILE] Llamando a getClientConfig...');
-      const clientConfig = await panaccessService.callAuthenticatedApi('getClientConfig', {}, { enableRetry: false });
-      console.log('[PROFILE] Respuesta de getClientConfig:', clientConfig);
-
       setError(null);
+      console.log('[PROFILE] Llamando a getClientConfig y getStreamingLicenses...');
+      const [clientConfig, licensesResponse] = await Promise.all([
+        panaccessService.getClientConfig({ enableRetry: false }),
+        panaccessService.getStreamingLicenses({ withPins: true }),
+      ]);
+      console.log('[PROFILE] getClientConfig:', clientConfig);
+      console.log('[PROFILE] getStreamingLicenses:', licensesResponse);
+
       if (clientConfig?.profiles && Array.isArray(clientConfig.profiles)) {
         const profilesWithImages = clientConfig.profiles.map(profile => {
           const imageUrl = getImageById(profile.imageId);
@@ -73,15 +78,29 @@ export function ProfilePage() {
             ...profile
           };
         });
-        console.log('[PROFILE] Perfiles procesados:', profilesWithImages);
         setProfiles(profilesWithImages);
       } else {
-        console.warn('[PROFILE] No se encontraron perfiles en clientConfig');
         setProfiles([]);
       }
+
+      const licensesList = Array.isArray(licensesResponse)
+        ? licensesResponse
+        : (licensesResponse?.licenses || licensesResponse?.data || []);
+      const getCardKey = (card) => card?.KEY ?? card?.key ?? card?.licenseKey ?? card?.Key ?? '';
+      const validSmartCards = (Array.isArray(licensesList) ? licensesList : []).filter((card) => {
+        const key = getCardKey(card);
+        if (!key) return false;
+        const products = card?.products;
+        if (products !== undefined && products !== null) {
+          return typeof products === 'string' && products.trim() !== '';
+        }
+        return true;
+      });
+      setSmartCards(validSmartCards);
     } catch (err) {
-      console.error('[PROFILE] Error al obtener getClientConfig:', err);
+      console.error('[PROFILE] Error al cargar perfiles o licencias:', err);
       setProfiles([]);
+      setSmartCards([]);
       setError(err?.errorInfo?.userMessage || err?.message || t('profile.errorLoad'));
     } finally {
       setIsLoading(false);
@@ -117,7 +136,7 @@ export function ProfilePage() {
     console.log('[PROFILE] Perfil seleccionado:', profile);
     try {
       const pin = profile.pin != null && profile.pin !== undefined ? String(profile.pin) : '';
-      await panaccessService.callAuthenticatedApi('setActiveProfile', {
+      await panaccessService.setActiveProfile({
         profileId: profile.id,
         activate: true,
         deviceName: 'Web',
@@ -152,6 +171,8 @@ export function ProfilePage() {
     >
       {showCreateModal && (
         <CreateProfileModal
+          smartCards={smartCards}
+          profiles={profiles}
           onClose={() => setShowCreateModal(false)}
           onSuccess={handleCreateSuccess}
         />
@@ -194,7 +215,7 @@ export function ProfilePage() {
           </div>
         ) : (
           <div className={`profiles-grid ${isActivating ? 'profiles-grid-disabled' : ''}`}>
-            {profiles.length > 0 ? (
+            {profiles.length > 0 || smartCards.length > 0 ? (
               <>
                 {profiles.map((profile, index) => (
                   <ProfileCard
@@ -206,11 +227,12 @@ export function ProfilePage() {
                     disabled={isActivating}
                   />
                 ))}
-                
-                <AddProfileCard
-                  index={profiles.length}
-                  onAdd={handleAddProfile}
-                />
+                {profiles.length < smartCards.length && (
+                  <AddProfileCard
+                    index={profiles.length}
+                    onAdd={handleAddProfile}
+                  />
+                )}
               </>
             ) : (
               <div className="profile-empty">

@@ -1,7 +1,7 @@
 /**
- * Modal para crear un nuevo perfil
- * Formulario: nombre, avatar (imageId), PIN opcional.
- * Flujo: createProfile → si hay PIN, changeProfilePin.
+ * Modal para crear un nuevo perfil (lógica OTT).
+ * Usa la primera licencia disponible (smartCard no asignada a ningún perfil).
+ * Formulario: nombre, avatar (imageId). La licencia y el PIN vienen de la tarjeta seleccionada.
  */
 
 import { useState, useEffect } from 'react';
@@ -16,15 +16,20 @@ import Img from '../../constants/images';
 
 const DEFAULT_IMAGE_ID = Img && Img.length > 0 ? Img[0].id : null;
 
-export function CreateProfileModal({ onClose, onSuccess }) {
+const getCardKey = (card) => card?.KEY ?? card?.key ?? card?.licenseKey ?? card?.Key ?? '';
+
+export function CreateProfileModal({ smartCards = [], profiles = [], onClose, onSuccess }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
   const [name, setName] = useState('');
   const [imageId, setImageId] = useState(DEFAULT_IMAGE_ID);
-  const [pin, setPin] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+
+  const availableCard = smartCards.find(
+    (card) => !profiles.some((profile) => profile.sn === getCardKey(card))
+  );
 
   // Focus inicial en TV
   useEffect(() => {
@@ -49,42 +54,28 @@ export function CreateProfileModal({ onClose, onSuccess }) {
       return;
     }
 
-    const pinTrimmed = pin.trim();
-    if (pinTrimmed && !/^\d{4}$/.test(pinTrimmed)) {
-      setError(t('profile.createPinError'));
+    if (!availableCard) {
+      setError(t('profile.noCards'));
       return;
     }
+
+    const licenseKey = getCardKey(availableCard);
+    const pin = availableCard.pin ?? availableCard.PIN ?? availableCard.Pin ?? '';
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      // createProfile: name, imageId y defaults según doc Panaccess
-      // createProfile / cvCreateProfile según backend Panaccess
-      const profileId = await panaccessService.callAuthenticatedApi('createProfile', {
+      await panaccessService.createProfile({
         name: trimmedName,
         imageId: Number(imageId),
-        maxAge: 0,
-        dailyWatchTimeM: 0,
-        assignNewLicense: true,
+        license: licenseKey,
+        pin,
       }, { enableRetry: false });
-
-      const numericProfileId = typeof profileId === 'number' ? profileId : parseInt(profileId, 10);
-      if (isNaN(numericProfileId)) {
-        throw new Error(t('profile.createError'));
-      }
-
-      if (pinTrimmed) {
-        const pinValue = parseInt(pinTrimmed, 10);
-        await panaccessService.callAuthenticatedApi('changeProfilePin', {
-          profileId: numericProfileId,
-          pin: pinValue,
-        }, { enableRetry: false });
-      }
 
       setSuccessMessage(t('profile.createSuccess'));
       setTimeout(() => {
-        onSuccess();
+        onSuccess?.();
       }, 1500);
     } catch (err) {
       console.error('[CreateProfileModal] Error:', err);
@@ -128,22 +119,6 @@ export function CreateProfileModal({ onClose, onSuccess }) {
                 />
               ))}
             </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="create-profile-pin">{t('profile.createPin')}</label>
-            <FocusableInput
-              id="create-profile-pin"
-              type="tel"
-              inputMode="numeric"
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              placeholder={t('profile.createPinPlaceholder')}
-              disabled={isSubmitting}
-              focusKey="create-profile-pin"
-              maxLength={4}
-              autoComplete="off"
-            />
           </div>
 
           {error && <div className="create-profile-error">{error}</div>}
