@@ -5,7 +5,6 @@ import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import panaccessService from '../services/panaccessService';
-import getUdid from '../cv/udid';
 import '../styles/pages/_smartcard.scss';
 
 // Función auxiliar para formatear las claves (camelCase a Title Case)
@@ -75,37 +74,10 @@ export function SmartCardPage() {
         setIsLoading(true);
         setError(null);
 
-        // Obtener sessionId y udid del localStorage (unificado a sessionId)
-        const sessionId = localStorage.getItem('sessionId');
-        const udid = localStorage.getItem('udid') || getUdid();
-
-        if (!sessionId) {
-          throw new Error(t('smartcard.errorNoSession'));
-        }
-
-        // Unificar: guardar solo en sessionId
-        if (sessionId && !localStorage.getItem('sessionId')) {
-          localStorage.setItem('sessionId', sessionId);
-        }
-        
-        // Restaurar sessionId en el cliente CVClient si no está autenticado
-        const client = panaccessService.getClient();
-        if (client && !client.isAuthenticated()) {
-          // Restaurar sessionId del localStorage al cliente
-          client.sessionId = sessionId;
-          console.log('[SMARTCARD] SessionId restaurado en el cliente');
-        }
-
-        // Llamar a getStreamingLicenses
-        const response = await panaccessService.callAuthenticatedApi('getStreamingLicenses', {
-          sessionId: sessionId,
-          udid: udid,
-          withPins: true
-        });
+        const response = await panaccessService.getStreamingLicenses({ withPins: true });
 
         console.log('[SMARTCARD] Respuesta getStreamingLicenses:', response);
         setLicenses(response);
-
       } catch (err) {
         console.error('[SMARTCARD] Error:', err);
         setError(err.message || t('smartcard.errorFetch'));
@@ -115,7 +87,7 @@ export function SmartCardPage() {
     };
 
     fetchLicenses();
-  }, []);
+  }, [t]);
 
   // Obtener imagen de fondo del brand
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
@@ -216,22 +188,6 @@ title={t('smartcard.license')}
       setError(null);
       setSuccessMessage(null);
 
-      // Obtener sessionId y udid del localStorage (unificado a sessionId)
-      const sessionId = localStorage.getItem('sessionId');
-      const udid = localStorage.getItem('udid') || getUdid();
-
-      if (!sessionId) {
-        throw new Error('No hay sesión activa. Por favor, inicia sesión.');
-      }
-
-      // Restaurar sessionId en el cliente CVClient si no está autenticado
-      const client = panaccessService.getClient();
-      if (client && !client.isAuthenticated()) {
-        client.sessionId = sessionId;
-        console.log('[SMARTCARD] SessionId restaurado en el cliente');
-      }
-
-      // Extraer KEY y pin de la licencia
       const licenseKey = license.KEY || license.key || license.licenseKey || license.Key || '';
       const pin = license.pin || license.PIN || license.Pin || '';
 
@@ -239,23 +195,9 @@ title={t('smartcard.license')}
         throw new Error(t('smartcard.errorNoKey'));
       }
 
-      console.log('[SMARTCARD] Llamando setStreamingLicense:', {
-        sessionId,
-        udid,
-        licenseKey,
-        pin,
-        failIfInUse: false
-      });
+      await panaccessService.setStreamingLicense({ licenseKey, pin, failIfInUse: false });
 
-      await panaccessService.callAuthenticatedApi('setStreamingLicense', {
-        sessionId: sessionId,
-        udid: udid,
-        licenseKey: licenseKey,
-        pin: pin,
-        failIfInUse: false
-      });
-
-      console.log('[SMARTCARD] Respuesta setStreamingLicense: éxito');
+      console.log('[SMARTCARD] setStreamingLicense: éxito');
       setSuccessMessage(t('smartcard.success'));
     } catch (err) {
       console.error('[SMARTCARD] Error al establecer licencia:', err);

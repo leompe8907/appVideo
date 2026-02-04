@@ -141,6 +141,14 @@
   }
 }
 
+.create-profile-limit {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  flex-shrink: 0;
+}
+
 .create-profile-error {
   padding: $spacing-sm $spacing-md;
   border-radius: $border-radius-md;

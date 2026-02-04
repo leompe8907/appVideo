@@ -41,7 +41,9 @@
     "createSubmitting": "Creando...",
     "createCancel": "Cancelar",
     "createSuccess": "Perfil creado correctamente.",
-    "createError": "Error al crear el perfil."
+    "createError": "Error al crear el perfil.",
+    "createProfilesLimit": "{{current}} de {{max}} perfiles (según tarjetas).",
+    "createMaxProfilesReached": "No se pueden crear más perfiles. Límite: {{max}} (número de tarjetas)."
   },
   "smartcard": {
     "loadingLicenses": "Cargando licencias...",

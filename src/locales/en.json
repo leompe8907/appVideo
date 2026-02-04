@@ -41,7 +41,9 @@
     "createSubmitting": "Creating...",
     "createCancel": "Cancel",
     "createSuccess": "Profile created successfully.",
-    "createError": "Error creating profile."
+    "createError": "Error creating profile.",
+    "createProfilesLimit": "{{current}} of {{max}} profiles (based on cards).",
+    "createMaxProfilesReached": "Cannot create more profiles. Limit: {{max}} (number of cards)."
   },
   "smartcard": {
     "loadingLicenses": "Loading licenses...",

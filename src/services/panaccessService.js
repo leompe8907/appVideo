@@ -165,9 +165,146 @@ class PanaccessService {
     }
   }
 
+  /**
+   * Obtiene la configuración del cliente.
+   * sessionId y udid los gestiona callAuthenticatedApi (desde localStorage).
+   * @param {Object} options - Opciones de la llamada (ej. { enableRetry: false }).
+   * @returns {Promise<Object>}
+   */
+  async getClientConfig(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    try {
+      const result = await this.callAuthenticatedApi('getClientConfig', {}, options);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener la configuración del cliente.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Obtiene las licencias de streaming.
+   * sessionId y udid los gestiona callAuthenticatedApi (desde localStorage).
+   * @param {Object} options - Opciones de la llamada.
+   * @param {boolean} [options.withPins=true] - Incluir pins en la respuesta.
+   * @param {boolean} [options.enableRetry] - Ver callAuthenticatedApi.
+   * @returns {Promise<Object>} Licencias devueltas por getStreamingLicenses.
+   */
+  async getStreamingLicenses(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { withPins = true, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('getStreamingLicenses', {
+        withPins
+      }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener las licencias.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Establece una licencia de streaming.
+   * sessionId y udid los gestiona callAuthenticatedApi (desde localStorage).
+   * @param {Object} options - Opciones y parámetros del método.
+   * @param {string} options.licenseKey - Clave de la licencia (requerido).
+   * @param {string} options.pin - PIN (requerido).
+   * @param {boolean} [options.failIfInUse=false] - Fallar si la licencia está en uso.
+   * @param {boolean} [options.enableRetry] - Ver callAuthenticatedApi.
+   * @returns {Promise<*>}
+   */
+  async setStreamingLicense(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { licenseKey, pin, failIfInUse = false, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('setStreamingLicense', {
+        licenseKey,
+        pin,
+        failIfInUse,
+      }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al establecer la licencia de streaming.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Crea un nuevo perfil.
+   * sessionId y udid los gestiona callAuthenticatedApi (desde localStorage).
+   * @param {Object} options - Opciones y parámetros del método.
+   * @param {string} options.name - Nombre del perfil (requerido).
+   * @param {number} options.imageId - ID de imagen (requerido).
+   * @param {boolean} [options.assignNewLicense=false] - Asignar una nueva licencia.
+   * @param {string} options.license - Licencia (requerido).
+   * @param {string} options.pin - PIN (requerido).
+   * @param {boolean} [options.enableRetry] - Ver callAuthenticatedApi.
+   * @returns {Promise<*>}
+   */
+  async createProfile(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { name, imageId, assignNewLicense = false, license, pin, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('createProfile', {
+        name,
+        imageId,
+        assignNewLicense,
+        license,
+        pin,
+      }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al crear el perfil.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Activar el perfil seleccionado.
+   * sessionId y udid los gestiona callAuthenticatedApi (desde localStorage).
+   * @param {Object} options - Opciones y parámetros del método.
+   * @param {string} options.profileId - ID del perfil (requerido).
+   * @param {boolean} options.activate - Activar el perfil (requerido).
+   * @param {string} options.deviceName - Nombre del dispositivo (requerido).
+   * @param {boolean} options.failIfInUse - Fallar si el perfil está en uso (requerido).
+   * @param {string} options.pin - PIN (requerido).
+   * @param {boolean} [options.enableRetry] - Ver callAuthenticatedApi.
+   * @returns {Promise<*>}
+   */
+  async setActiveProfile(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { profileId, activate, deviceName, failIfInUse, pin, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('setActiveProfile', {
+        profileId,
+        activate,
+        deviceName,
+        failIfInUse,
+        pin,
+      }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al activar el perfil.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
 }
 
-// Instancia singleton
 const panaccessService = new PanaccessService();
-
 export default panaccessService;
