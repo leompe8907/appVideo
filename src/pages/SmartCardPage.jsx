@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
+import { MessageModal } from '../components/MessageModal';
 import panaccessService from '../services/panaccessService';
 import '../styles/pages/_smartcard.scss';
 
@@ -63,7 +64,7 @@ export function SmartCardPage() {
   const [licenses, setLicenses] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
+  const [resultModal, setResultModal] = useState(null);
   const [isSettingLicense, setIsSettingLicense] = useState(false);
 
   console.log(`🖥️ [SMARTCARD] Modo: ${isTV ? 'TV' : 'PC'}`);
@@ -186,7 +187,7 @@ title={t('smartcard.license')}
     try {
       setIsSettingLicense(true);
       setError(null);
-      setSuccessMessage(null);
+      setResultModal(null);
 
       const licenseKey = license.KEY || license.key || license.licenseKey || license.Key || '';
       const pin = license.pin || license.PIN || license.Pin || '';
@@ -198,11 +199,10 @@ title={t('smartcard.license')}
       await panaccessService.setStreamingLicense({ licenseKey, pin, failIfInUse: false });
 
       console.log('[SMARTCARD] setStreamingLicense: éxito');
-      setSuccessMessage(t('smartcard.success'));
+      setResultModal({ type: 'success', text: t('smartcard.success') });
     } catch (err) {
       console.error('[SMARTCARD] Error al establecer licencia:', err);
-      setSuccessMessage(null);
-      setError(err.message || t('smartcard.errorSet'));
+      setResultModal({ type: 'error', text: err?.errorInfo?.userMessage || err?.message || t('smartcard.errorSet') });
     } finally {
       setIsSettingLicense(false);
     }
@@ -213,6 +213,13 @@ title={t('smartcard.license')}
       className="smartcard-page"
       style={backgroundPath ? { backgroundImage: `url(${backgroundPath})` } : {}}
     >
+      {resultModal && (
+        <MessageModal
+          type={resultModal.type}
+          message={resultModal.text}
+          onClose={() => setResultModal(null)}
+        />
+      )}
       <div className="smartcard-overlay"></div>
       
       <div className="smartcard-container">
@@ -238,12 +245,6 @@ title={t('smartcard.license')}
         
         {!isLoading && !error && licenses && (
           <div className="smartcard-content">
-            {successMessage && (
-              <div className="success-message" role="status">
-                <span className="success-icon">✓</span>
-                <p className="success-text">{successMessage}</p>
-              </div>
-            )}
             {isSettingLicense && (
               <div className="setting-license-overlay">
                 <div className="loading-spinner"></div>

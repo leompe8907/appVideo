@@ -1,7 +1,10 @@
 {
   "common": {
     "loading": "Loading...",
-    "backLogout": "← Log out"
+    "backLogout": "← Log out",
+    "success": "Success",
+    "error": "Error",
+    "close": "Close"
   },
   "login": {
     "title": "Sign In",
@@ -44,7 +47,15 @@
     "createError": "Error creating profile.",
     "createProfilesLimit": "{{current}} of {{max}} profiles (based on cards).",
     "createMaxProfilesReached": "Cannot create more profiles. Limit: {{max}} (number of cards).",
-    "noCards": "You cannot add more profiles. Please contact your cable operator."
+    "noCards": "You cannot add more profiles. Please contact your cable operator.",
+    "deleteTitle": "Delete profile",
+    "deleteMessage": "Delete profile \"{{name}}\"? This action cannot be undone.",
+    "deleteConfirm": "Delete",
+    "deleteDeleting": "Deleting...",
+    "deleteCancel": "Cancel",
+    "deleteSuccess": "Profile deleted successfully.",
+    "deleteError": "Error deleting profile.",
+    "deleteProfileAria": "Delete profile {{name}}"
   },
   "smartcard": {
     "loadingLicenses": "Loading licenses...",

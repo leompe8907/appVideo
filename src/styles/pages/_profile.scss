@@ -91,14 +91,50 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: $spacing-md;
-    cursor: pointer;
+    gap: $spacing-sm;
+    cursor: default;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     padding: $spacing-lg;
     border-radius: $border-radius-lg;
     background: transparent;
     border: 3px solid transparent;
     position: relative;
+
+    // Área principal (seleccionar perfil)
+    .profile-card-select {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      cursor: pointer;
+      border-radius: $border-radius-md;
+      padding: $spacing-xs;
+      margin: -$spacing-xs;
+    }
+
+    // Botón eliminar
+    .profile-card-delete {
+      font-size: 0.75rem;
+      padding: $spacing-xs $spacing-sm;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: $border-radius-md;
+      color: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+
+      &:hover {
+        color: rgba(255, 255, 255, 0.95);
+        border-color: rgba(255, 255, 255, 0.4);
+      }
+
+      &.focused {
+        border-color: rgba(255, 255, 255, 0.6);
+        color: #fff;
+        outline: 2px solid $primary-color;
+        outline-offset: 2px;
+      }
+    }
 
     // Avatar wrapper
     .profile-avatar-wrapper {

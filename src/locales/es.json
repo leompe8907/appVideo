@@ -1,7 +1,10 @@
 {
   "common": {
     "loading": "Cargando...",
-    "backLogout": "← Cerrar sesión"
+    "backLogout": "← Cerrar sesión",
+    "success": "Éxito",
+    "error": "Error",
+    "close": "Cerrar"
   },
   "login": {
     "title": "Iniciar Sesión",
@@ -44,7 +47,15 @@
     "createError": "Error al crear el perfil.",
     "createProfilesLimit": "{{current}} de {{max}} perfiles (según tarjetas).",
     "createMaxProfilesReached": "No se pueden crear más perfiles. Límite: {{max}} (número de tarjetas).",
-    "noCards": "No se pueden agregar más perfiles. Comunícate con tu operador de cable."
+    "noCards": "No se pueden agregar más perfiles. Comunícate con tu operador de cable.",
+    "deleteTitle": "Eliminar perfil",
+    "deleteMessage": "¿Eliminar el perfil \"{{name}}\"? Esta acción no se puede deshacer.",
+    "deleteConfirm": "Eliminar",
+    "deleteDeleting": "Eliminando...",
+    "deleteCancel": "Cancelar",
+    "deleteSuccess": "Perfil eliminado correctamente.",
+    "deleteError": "Error al eliminar el perfil.",
+    "deleteProfileAria": "Eliminar perfil {{name}}"
   },
   "smartcard": {
     "loadingLicenses": "Cargando licencias...",

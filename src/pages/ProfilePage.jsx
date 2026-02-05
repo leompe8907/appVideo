@@ -11,6 +11,8 @@ import { useDevice } from '../contexts/DeviceContext';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import { FocusableButton } from '../components/navigation/FocusableButton';
 import { CreateProfileModal } from '../components/profile/CreateProfileModal';
+import { DeleteProfileModal } from '../components/profile/DeleteProfileModal';
+import { MessageModal } from '../components/MessageModal';
 import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 import panaccessService from '../services/panaccessService';
 import Img from '../constants/images';
@@ -40,6 +42,7 @@ export function ProfilePage() {
   const [profileMessage, setProfileMessage] = useState(null);
   const [isActivating, setIsActivating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [profileToDelete, setProfileToDelete] = useState(null);
 
   const handleBack = () => {
     panaccessService.logout();
@@ -162,6 +165,11 @@ export function ProfilePage() {
     fetchProfiles();
   };
 
+  const handleDeleteSuccess = () => {
+    setProfileToDelete(null);
+    fetchProfiles();
+  };
+
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
 
   return (
@@ -175,6 +183,20 @@ export function ProfilePage() {
           profiles={profiles}
           onClose={() => setShowCreateModal(false)}
           onSuccess={handleCreateSuccess}
+        />
+      )}
+      {profileToDelete && (
+        <DeleteProfileModal
+          profile={profileToDelete}
+          onClose={() => setProfileToDelete(null)}
+          onSuccess={handleDeleteSuccess}
+        />
+      )}
+      {profileMessage && (
+        <MessageModal
+          type={profileMessage.type}
+          message={profileMessage.text}
+          onClose={() => setProfileMessage(null)}
         />
       )}
 
@@ -200,13 +222,6 @@ export function ProfilePage() {
           </div>
         )}
 
-        {/* Mensaje al activar perfil (éxito o error) */}
-        {profileMessage && (
-          <div className={profileMessage.type === 'success' ? 'profile-message profile-message-success' : 'profile-message profile-message-error'}>
-            <p className="profile-message-text">{profileMessage.text}</p>
-          </div>
-        )}
-
         {/* Grid de perfiles */}
         {isLoading ? (
           <div className="profile-loading">
@@ -223,6 +238,7 @@ export function ProfilePage() {
                     profile={profile}
                     index={index}
                     onSelect={() => handleProfileSelect(profile)}
+                    onDelete={() => setProfileToDelete(profile)}
                     isSelected={selectedProfile?.id === profile.id}
                     disabled={isActivating}
                   />
@@ -260,7 +276,7 @@ export function ProfilePage() {
 /**
  * Componente de tarjeta de perfil
  */
-function ProfileCard({ profile, index, onSelect, isSelected, disabled = false }) {
+function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled = false }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
   const { ref, focused } = useSpatialNavigation({
@@ -269,7 +285,13 @@ function ProfileCard({ profile, index, onSelect, isSelected, disabled = false })
     isFocusable: !disabled,
   });
 
-  const handleClick = () => {
+  const { ref: deleteRef, focused: deleteFocused } = useSpatialNavigation({
+    onEnterPress: disabled ? undefined : () => onDelete?.(profile),
+    focusKey: `profile-${index}-delete`,
+    isFocusable: !disabled && !!onDelete,
+  });
+
+  const handleClick = (e) => {
     if (disabled) return;
     if (!isTV) onSelect();
   };
@@ -282,42 +304,71 @@ function ProfileCard({ profile, index, onSelect, isSelected, disabled = false })
     }
   };
 
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    if (disabled) return;
+    onDelete?.(profile);
+  };
+
   return (
     <div
-      ref={ref}
       className={`profile-card ${focused ? 'focused' : ''} ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      role="button"
-      tabIndex={isTV ? -1 : 0}
-      aria-label={t('profile.profileAria', { name: profile.name })}
-      data-focus-key={`profile-${index}`}
     >
-      <div className="profile-avatar-wrapper">
-        <div className="profile-avatar">
-          {profile.imageUrl ? (
-            <img 
-              src={profile.imageUrl} 
-              alt={profile.name}
-              className="profile-avatar-image"
-              onError={(e) => {
-                // Fallback a emoji si la imagen falla
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
-              }}
-            />
-          ) : null}
-          {!profile.imageUrl && (
-            <span className="profile-avatar-fallback">👤</span>
+      <div
+        ref={ref}
+        className="profile-card-select"
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={isTV ? -1 : 0}
+        aria-label={t('profile.profileAria', { name: profile.name })}
+        data-focus-key={`profile-${index}`}
+      >
+        <div className="profile-avatar-wrapper">
+          <div className="profile-avatar">
+            {profile.imageUrl ? (
+              <img 
+                src={profile.imageUrl} 
+                alt={profile.name}
+                className="profile-avatar-image"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            {!profile.imageUrl && (
+              <span className="profile-avatar-fallback">👤</span>
+            )}
+          </div>
+          {isSelected && (
+            <div className="profile-selected-indicator">
+              <span className="check-icon">✓</span>
+            </div>
           )}
         </div>
-        {isSelected && (
-          <div className="profile-selected-indicator">
-            <span className="check-icon">✓</span>
-          </div>
-        )}
+        <div className="profile-name">{profile.name}</div>
       </div>
-      <div className="profile-name">{profile.name}</div>
+      {onDelete && (
+        <button
+          ref={deleteRef}
+          type="button"
+          className={`profile-card-delete ${deleteFocused ? 'focused' : ''}`}
+          onClick={handleDeleteClick}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete(profile);
+            }
+          }}
+          tabIndex={isTV ? -1 : 0}
+          aria-label={t('profile.deleteProfileAria', { name: profile.name })}
+          data-focus-key={`profile-${index}-delete`}
+        >
+          {t('profile.deleteConfirm')}
+        </button>
+      )}
     </div>
   );
 }
