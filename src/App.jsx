@@ -9,6 +9,7 @@ const SplashPage = lazy(() => import('./pages/SplashPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
+const BouquetPage = lazy(() => import('./pages/BouquetPage'));
 // Loading component
 function Loading() {
   const { t } = useTranslation();
@@ -65,6 +66,9 @@ function App() {
             } />
             <Route path="/smartcard" element={
               <ProtectedRoute><SmartCardPage /></ProtectedRoute>
+            } />
+            <Route path="/bouquets" element={
+              <ProtectedRoute><BouquetPage /></ProtectedRoute>
             } />
 
             {/* Fallback */}

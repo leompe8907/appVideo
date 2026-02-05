@@ -196,7 +196,11 @@ export function ProfilePage() {
         <MessageModal
           type={profileMessage.type}
           message={profileMessage.text}
-          onClose={() => setProfileMessage(null)}
+          onClose={() => {
+            const wasSuccess = profileMessage.type === 'success';
+            setProfileMessage(null);
+            if (wasSuccess) navigate('/bouquets');
+          }}
         />
       )}
 

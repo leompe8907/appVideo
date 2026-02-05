@@ -72,6 +72,13 @@
     "selectLicense": "Seleccionar {{title}}",
     "selectLicenseFallback": "licencia {{index}}"
   },
+  "bouquet": {
+    "title": "Bouquets",
+    "loading": "Cargando bouquets...",
+    "noBouquets": "No se encontraron bouquets.",
+    "errorLoad": "Error al cargar bouquets.",
+    "bouquetAria": "Bouquet {{name}}"
+  },
   "splash": {
     "alt": "{{appName}} Splash"
   },

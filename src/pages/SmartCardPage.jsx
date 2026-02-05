@@ -217,7 +217,11 @@ title={t('smartcard.license')}
         <MessageModal
           type={resultModal.type}
           message={resultModal.text}
-          onClose={() => setResultModal(null)}
+          onClose={() => {
+            const wasSuccess = resultModal.type === 'success';
+            setResultModal(null);
+            if (wasSuccess) navigate('/bouquets');
+          }}
         />
       )}
       <div className="smartcard-overlay"></div>

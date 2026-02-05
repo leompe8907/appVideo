@@ -14,6 +14,7 @@
 @use 'pages/smartcard' as *;
 @use 'pages/profile' as *;
 @use 'pages/create-profile' as *;
+@use 'pages/bouquet' as *;
 
 // 2. Bootstrap personalizado (usa @import porque Bootstrap lo requiere)
 @import 'custom-bootstrap';
