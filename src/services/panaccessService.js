@@ -469,15 +469,292 @@ class PanaccessService {
     try {
       const result = await this.callAuthenticatedApi('getCatchupEvents', { epgStreamId }, apiOptions);
       return result;
-    }catch (error) {
+    } catch (error) {
       const customError = new Error('Error al obtener la lista de eventos de catchups.');
       customError.cause = error;
       throw customError;
     }
   }
 
+  /**
+   * Obtener servidores responsables (discovery). Puede no requerir sesión según backend.
+   * @param {Object} options - mode, data1, enableRetry...
+   * @returns {Promise<*>}
+   */
+  async getResponsibleServers(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { mode, data1, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('getResponsibleServers', { mode, data1 }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener servidores responsables.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
 
+  /**
+   * Obtener grupos de catchup.
+   * @param {Object} options - Opciones de la llamada.
+   * @returns {Promise<Object>}
+   */
+  async getCatchupGroups(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    try {
+      const result = await this.callAuthenticatedApi('getCatchupGroups', {}, options);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener grupos de catchup.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
 
+  /**
+   * Obtener tareas de grabación / catchups grabados.
+   * @param {Object} options - Opciones de la llamada.
+   * @returns {Promise<Object>}
+   */
+  async getRecordingTasks(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    try {
+      const result = await this.callAuthenticatedApi('getRecordingTasks', {}, options);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener tareas de grabación.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Obtener bibliotecas VOD.
+   * @param {Object} options - Opciones de la llamada.
+   * @returns {Promise<Object>}
+   */
+  async getVodLibraries(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    try {
+      const result = await this.callAuthenticatedApi('getVodLibraries', {}, options);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener bibliotecas VOD.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Obtener contenido VOD con paginación.
+   * @param {Object} options - offset (default 0), limit (default 100), enableRetry...
+   * @returns {Promise<Object>}
+   */
+  async getVodContent(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { offset = 0, limit = 100, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('getVodContent', { offset, limit }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener contenido VOD.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Obtener información de una serie VOD.
+   * @param {Object} options - options.seriesId (requerido), enableRetry...
+   * @returns {Promise<Object>}
+   */
+  async getVodSeriesInfo(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { seriesId, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('getVodSeriesInfo', { seriesId }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener información de la serie VOD.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Obtener OSMs (mensajes del sistema).
+   * @param {Object} options - lastKnownId (default -1), enableRetry...
+   * @returns {Promise<Object>}
+   */
+  async getOsms(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { lastKnownId = -1, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('getOsms', { lastKnownId }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener OSMs.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Devuelve la URL M3u8 para reproducir un VOD.
+   * @param {Object} options - options.vodId (requerido).
+   * @returns {string} URL del stream.
+   */
+  getVodM3u8Url(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { vodId } = options;
+    const sessionId = localStorage.getItem('sessionId') || this.client.sessionId || '';
+    const base = (this.client.baseUrl || '').replace(/\/?$/, '');
+    return `${base}/index.php?requestMode=function&f=getVodM3u8&plain=true&vodId=${vodId}&sessionId=${sessionId}&m3u8`;
+  }
+
+  /**
+   * Devuelve la URL M3u8 para reproducir un catchup.
+   * @param {Object} options - options.catchupId (requerido).
+   * @returns {string} URL del stream.
+   */
+  getCatchupM3u8Url(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { catchupId } = options;
+    const sessionId = localStorage.getItem('sessionId') || this.client.sessionId || '';
+    const base = (this.client.baseUrl || '').replace(/\/?$/, '');
+    return `${base}/index.php?requestMode=function&f=getCatchupM3u8&plain=true&catchupId=${catchupId}&sessionId=${sessionId}&m3u8`;
+  }
+
+  /**
+   * Devuelve la URL M3u8 para reproducir un stream en vivo.
+   * @param {Object} options - options.streamId (requerido).
+   * @returns {string} URL del stream.
+   */
+  getStreamM3u8Url(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { streamId } = options;
+    const sessionId = localStorage.getItem('sessionId') || this.client.sessionId || '';
+    const base = (this.client.baseUrl || '').replace(/\/?$/, '');
+    return `${base}/index.php?requestMode=function&f=getStreamM3u8&plain=true&streamId=${streamId}&sessionId=${sessionId}&m3u8`;
+  }
+
+  /**
+   * Añadir tarea de grabación (catchup).
+   * @param {Object} options - mode (ej. "4"), catchupId, enableRetry...
+   * @returns {Promise<*>}
+   */
+  async addRecordingTask(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { mode, catchupId, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('addRecordingTask', { mode, catchupId }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al añadir tarea de grabación.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Eliminar tarea de grabación.
+   * @param {Object} options - recordingTaskId (requerido), enableRetry...
+   * @returns {Promise<*>}
+   */
+  async deleteRecordingTask(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { recordingTaskId, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('deleteRecordingTask', { recordingTaskId }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al eliminar tarea de grabación.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Verificar si la sesión está logueada (loggedIn).
+   * @param {Object} options - Opciones de la llamada.
+   * @returns {Promise<*>}
+   */
+  async loggedIn(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    try {
+      const result = await this.callAuthenticatedApi('loggedIn', {}, options);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al verificar sesión.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Verificar credenciales de login.
+   * @param {Object} options - Opciones de la llamada.
+   * @returns {Promise<*>}
+   */
+  async verifyLoginCredentials(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    try {
+      const result = await this.callAuthenticatedApi('verifyLoginCredentials', {}, options);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al verificar credenciales.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Obtener entradas de la watchlist.
+   * @param {Object} options - Parámetros opcionales (filtros según API), enableRetry...
+   * @returns {Promise<Object>}
+   */
+  async getWatchlistEntries(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('getWatchlistEntries', {}, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener la watchlist.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
 
 
 
