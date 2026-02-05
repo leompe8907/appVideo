@@ -38,10 +38,10 @@ class PanaccessService {
     if (!this.client) {
       throw new Error('Servicio no inicializado. Llama a initialize() primero.');
     }
-    
+
     try {
       console.log("Llamando a la API (login):", method, parameters);
-      
+
       // Para clientLogin, usar init() del cliente
       if (method === 'clientLogin' && parameters.clientId && parameters.pwd) {
         const clientId = typeof parameters.clientId === 'string' ? parameters.clientId.trim() : parameters.clientId;
@@ -56,7 +56,7 @@ class PanaccessService {
           mode: 'json',
           fetchTimeout: 30000,
         });
-        
+
         const sessionId = this.client.sessionId;
         console.log("Respuesta de la API (login):", sessionId);
         if (!sessionId || (typeof sessionId === 'string' && sessionId.trim() === '') || (Array.isArray(sessionId) && sessionId.length === 0)) {
@@ -162,6 +162,47 @@ class PanaccessService {
     if (this.client) {
       this.client.logout();
       console.log('[PanaccessService] Sesión cerrada');
+    }
+  }
+
+  /**
+   * Añade un video/episodio/temporada a la lista de seguimiento (watchlist).
+   * sessionId lo gestiona callAuthenticatedApi (desde localStorage).
+   * @param {Object} options - Opciones y parámetros del método.
+   * @param {number} options.typeId - Tipo: 2=Movie, 3=Series, 4=Season, 5=Episode, 6=Stream, 7=Service, 8=Catchup, 9=App, 0=Generic.
+   * @param {number} options.contentId - ID del contenido a añadir.
+   * @param {string} [options.customData] - Datos adicionales (opcional). Máx. 10000 caracteres.
+   * @param {number} [options.genericTypeId] - Subtipo para typeId Generic (opcional).
+   * @param {string} [options.genericName] - Nombre para typeId Generic (opcional). Máx. 200 caracteres.
+   * @param {string} [options.genericDescription] - Descripción para typeId Generic (opcional). Máx. 10000 caracteres.
+   * @param {boolean} [options.enableRetry] - Ver callAuthenticatedApi.
+   * @returns {Promise<number>} ID de la entrada creada en la watchlist.
+   */
+  async addToWatchlist(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const {
+      typeId,
+      contentId,
+      customData,
+      genericTypeId,
+      genericName,
+      genericDescription,
+      ...apiOptions
+    } = options;
+    const params = { typeId, contentId };
+    if (customData !== undefined && customData !== null) params.customData = customData;
+    if (genericTypeId !== undefined && genericTypeId !== null) params.genericTypeId = genericTypeId;
+    if (genericName !== undefined && genericName !== null) params.genericName = genericName;
+    if (genericDescription !== undefined && genericDescription !== null) params.genericDescription = genericDescription;
+    try {
+      const result = await this.callAuthenticatedApi('cvAddToWatchlist', params, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al agregar el contenido a la lista de seguimiento.');
+      customError.cause = error;
+      throw customError;
     }
   }
 
@@ -308,6 +349,143 @@ class PanaccessService {
       throw customError;
     }
   }
+
+  /**
+  * Eliminar un perfil.
+  * @param {Object} options - Opciones y parámetros del método.
+  * @param {string} options.profileId - ID del perfil (requerido).
+  * @returns {Promise<*>}
+  */
+  async deleteProfile(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { profileId, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('deleteProfile', { profileId }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al eliminar el perfil.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Cambiar el pin del perfil.
+   * sessionId y udid los gestiona callAuthenticatedApi (desde localStorage).
+   * @param {Object} options - Opciones de la llamada.
+   * @param {number} [options.profileId] - ID del perfil.
+   * @param {number} [options.pin] - PIN del perfil.
+   * @returns {Promise<Object>} PIN cambiado.
+   */
+  async changeProfilePin(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { profileId, pin, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('changeProfilePin', { profileId, pin }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al cambiar el pin del perfil.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /** 
+   * Obtener lista de publicidad.
+   * @param {Object} options - Opciones de la llamada.
+   * @returns {Promise<Object>} Lista de publicidad.
+   * 
+  */
+  async getAds(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('getAds', {}, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener la lista de publicidad.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /** 
+   * Obtener los streams disponibles.
+   * @param {Object} options - Opciones de la llamada.
+   * @returns {Promise<Object>} Streams disponibles.
+   */
+  async getAvailableStreams(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('getAvailableStreams', {}, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener los streams disponibles.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /** 
+   * Obtener la lista de bouquets disponibles.
+   * @param {Object} options - Opciones de la llamada.
+   * @returns {Promise<Object>} Lista de bouquets disponibles.
+  */
+  async getBouquets(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('getBouquets', {}, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al obtener la lista de bouquets disponibles.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
+   * Obtener lista de los eventos de catchups.
+   * @param {Object} options - Opciones de la llamada.
+   * @param {number} options.epgStreamId - ID del stream de EPG.
+   * @returns {Promise<Object>} Lista de eventos de catchups.
+   */
+  async getCatchupEvents(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { epgStreamId, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('getCatchupEvents', { epgStreamId }, apiOptions);
+      return result;
+    }catch (error) {
+      const customError = new Error('Error al obtener la lista de eventos de catchups.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
 }
 
 const panaccessService = new PanaccessService();
