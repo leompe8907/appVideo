@@ -7,13 +7,9 @@ import { FocusableInput } from '../components/navigation/FocusableInput';
 import { FocusableButton } from '../components/navigation/FocusableButton';
 import { getInitialRoute } from '../utils/navigation';
 import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
-import panaccessService from '../services/panaccessService';
-import getUdid from '../cv/udid';
-import CryptoJS from 'crypto-js';
+import { loginAndActivateLicense } from '../services/loginFlow';
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
 import '../styles/components/_login.scss';
-
-const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -60,45 +56,24 @@ export function LoginPage() {
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (isSubmitting || !currentBrand) return;
-    
+
     setIsSubmitting(true);
     setError('');
 
     try {
-      let udid = localStorage.getItem("udid");
-      if (!udid) {
-        udid = getUdid();
-      }
-
-      // Asegurar que el servicio esté inicializado
-      if (!panaccessService.client) {
-        await panaccessService.initialize(currentBrand);
-      }
-
-      const sessionId = await panaccessService.callLoginApi("clientLogin", {
-        apiToken: token,
-        clientId: username.trim(),
-        pwd: password.trim(),
-        udid: udid,
+      await loginAndActivateLicense(currentBrand, {
+        username: username.trim(),
+        password: password.trim(),
+      }, {
+        autoActivateLicense: true,
+        storeClientConfig: true,
+        storeLicenses: true,
       });
-
-      if (!sessionId || (typeof sessionId === 'string' && sessionId.trim() === '')) {
-        throw new Error(t('login.errorNoSession'));
-      }
-
-      const encryptedUsername = CryptoJS.AES.encrypt(username.trim(), SECRET_KEY).toString();
-      const encryptedPassword = CryptoJS.AES.encrypt(password.trim(), SECRET_KEY).toString();
-
-      localStorage.setItem('username', encryptedUsername);
-      localStorage.setItem('password', encryptedPassword);
-      localStorage.setItem('sessionId', sessionId);
-      localStorage.setItem('udid', udid);
 
       setTimeout(() => {
         setIsSubmitting(false);
-        const initialRoute = getInitialRoute(currentBrand);
-        navigate(initialRoute);
-      }, 1000);
+        navigate(getInitialRoute(currentBrand));
+      }, 400);
 
     } catch (err) {
       setTimeout(() => {

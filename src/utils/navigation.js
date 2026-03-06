@@ -12,8 +12,7 @@ export function getInitialRoute(brandConfig) {
   // Si profile es false → /smartcard
   if (brandConfig?.features?.profiles) {
     return '/profile';
-  }else{
-    return '/smartcard';
   }
+  return '/smartcard';
 }
 

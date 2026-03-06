@@ -2,7 +2,9 @@ import { useEffect, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useViewport } from './hooks/useViewport';
+import { useAuthValidator } from './hooks/useAuthValidator';
 import { SpatialNavigationProvider } from './components/navigation/SpatialNavigationProvider';
+import { isAuthenticated } from './utils/userSession';
 
 // Lazy loading de páginas
 const SplashPage = lazy(() => import('./pages/SplashPage'));
@@ -10,23 +12,31 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
 const BouquetPage = lazy(() => import('./pages/BouquetPage'));
-// Loading component
+
 function Loading() {
   const { t } = useTranslation();
   return <div className="loading">{t('common.loading')}</div>;
 }
 
+/** Valida/reactiva sesión en rutas protegidas; redirige a / si falla */
+function AuthValidator() {
+  useAuthValidator();
+  return null;
+}
+
 /**
- * Ruta protegida - redirige a splash si no hay sesión
+ * Ruta protegida: redirige a splash si no hay sesión; valida/reactiva sesión al entrar.
  */
 function ProtectedRoute({ children }) {
-  const isAuthenticated = !!localStorage.getItem('sessionId');
-  
-  if (!isAuthenticated) {
+  if (!isAuthenticated()) {
     return <Navigate to="/" replace />;
   }
-  
-  return children;
+  return (
+    <>
+      <AuthValidator />
+      {children}
+    </>
+  );
 }
 
 function App() {
@@ -55,26 +65,17 @@ function App() {
   return (
     <SpatialNavigationProvider>
       <div className="App">
-        <Suspense fallback={<Loading />}>
-          <Routes>
-            {/* Rutas públicas */}
-            <Route path="/" element={<SplashPage />} />
-            <Route path="/login" element={<LoginPage />} />
-
-            <Route path="/profile" element={
-              <ProtectedRoute><ProfilePage /></ProtectedRoute>
-            } />
-            <Route path="/smartcard" element={
-              <ProtectedRoute><SmartCardPage /></ProtectedRoute>
-            } />
-            <Route path="/bouquets" element={
-              <ProtectedRoute><BouquetPage /></ProtectedRoute>
-            } />
-
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
+        <Routes>
+          {/* Rutas públicas */}
+          <Route path="/" element={<SplashPage />} />
+          <Route path="/login" element={<LoginPage />} />
+            {/* Rutas protegidas */}
+            <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<Loading />}><ProfilePage /></Suspense></ProtectedRoute>} />
+            <Route path="/smartcard" element={<ProtectedRoute><Suspense fallback={<Loading />}><SmartCardPage /></Suspense></ProtectedRoute>} />
+            <Route path="/bouquets" element={<ProtectedRoute><Suspense fallback={<Loading />}><BouquetPage /></Suspense></ProtectedRoute>} />
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </div>
     </SpatialNavigationProvider>
   );

@@ -3,87 +3,114 @@ import { DEFAULT_BRAND } from "./defaultBrand";
 import { getBrandAsset } from "../utils/assetLoader";
 import { getSplashPath } from "../utils/splashLoader";
 
+const isDev = import.meta.env.DEV;
+
+/** Caché en memoria por brand para evitar trabajo repetido en la misma sesión */
+let _cache = { key: null, config: null };
+
 /**
- * Obtiene la configuración activa de la marca
- * Prioridad: URL param > localStorage > Default Brand > Primera marca
+ * Resuelve el identificador de marca activo (sin enriquecer).
+ * Prioridad: URL param > localStorage > Default Brand > "bromteck"
+ * @returns {{ brandId: string, from: 'url'|'storage'|'default'|'fallback' }}
  */
-export function getActiveBrandConfig() {
-  // 1. Intentar obtener del query param ?brand=xxx (máxima prioridad)
+function resolveBrandKey() {
   const urlParams = new URLSearchParams(window.location.search);
   const brandFromUrl = urlParams.get("brand");
-  
   if (brandFromUrl) {
     const config = getBrandConfig(brandFromUrl);
-    if (config) {
-      console.log(`[Brand] Cargado desde URL: ${brandFromUrl}`);
-      // Guardar en localStorage para persistencia
-      localStorage.setItem('brand', brandFromUrl);
-      return enrichConfigWithAssets(config);
-    }
-    console.warn(`[Brand] No encontrado en URL: ${brandFromUrl}`);
+    if (config) return { brandId: brandFromUrl, from: "url" };
+    if (isDev) console.warn(`[Brand] No encontrado en URL: ${brandFromUrl}`);
   }
 
-  // 2. Intentar obtener del localStorage (persistencia entre sesiones)
-  const brandFromStorage = localStorage.getItem('brand');
+  const brandFromStorage = localStorage.getItem("brand");
   if (brandFromStorage) {
     const config = getBrandConfig(brandFromStorage);
-    if (config) {
-      console.log(`[Brand] Cargado desde localStorage: ${brandFromStorage}`);
-      return enrichConfigWithAssets(config);
-    }
-    // Si el brand en localStorage no existe, limpiarlo
-    console.warn(`[Brand] Brand en localStorage inválido: ${brandFromStorage}`);
-    localStorage.removeItem('brand');
+    if (config) return { brandId: brandFromStorage, from: "storage" };
+    if (isDev) console.warn(`[Brand] Brand en localStorage inválido: ${brandFromStorage}`);
+    localStorage.removeItem("brand");
   }
 
-  // 3. Usar marca por defecto del build
-  if (DEFAULT_BRAND) {
-    const config = getBrandConfig(DEFAULT_BRAND);
-    if (config) {
-      console.log(`[Brand] Cargado por defecto: ${DEFAULT_BRAND}`);
-      // Guardar en localStorage para persistencia
-      localStorage.setItem('brand', DEFAULT_BRAND);
-      return enrichConfigWithAssets(config);
-    }
+  if (DEFAULT_BRAND && getBrandConfig(DEFAULT_BRAND)) {
+    return { brandId: DEFAULT_BRAND, from: "default" };
   }
 
-  // 4. Fallback a la primera marca disponible
-  const config = getBrandConfig("bromteck");
-  console.warn("[Brand] Usando fallback: bromteck");
-  // Guardar en localStorage para persistencia
-  localStorage.setItem('brand', 'bromteck');
-  return enrichConfigWithAssets(config);
+  return { brandId: "bromteck", from: "fallback" };
 }
 
 /**
- * Enriquece la configuración con rutas de assets
+ * Obtiene la configuración activa de la marca.
+ * Prioridad: URL param > localStorage > Default Brand > Primera marca.
+ * Usa caché en memoria para la misma resolución de brand y evita re-enriquecer.
  */
-function enrichConfigWithAssets(config) {
+export function getActiveBrandConfig() {
+  const { brandId, from } = resolveBrandKey();
+  if (_cache.key === brandId && _cache.config) {
+    return _cache.config;
+  }
+
+  const config = getBrandConfig(brandId);
+  if (!config) {
+    if (isDev) console.warn("[Brand] Usando fallback: bromteck");
+    const fallback = getBrandConfig("bromteck");
+    const enriched = enrichConfigWithAssets(fallback);
+    if (enriched) {
+      localStorage.setItem("brand", "bromteck");
+      _cache = { key: "bromteck", config: enriched };
+    }
+    return enriched || null;
+  }
+
+  if (from === "url") localStorage.setItem("brand", brandId);
+  if (from === "default") localStorage.setItem("brand", DEFAULT_BRAND);
+  if (from === "fallback") localStorage.setItem("brand", "bromteck");
+
+  if (isDev) {
+    console.log(`[Brand] Cargado desde ${from}: ${brandId}`);
+  }
+
+  const enriched = enrichConfigWithAssets(config);
+  _cache = { key: brandId, config: enriched };
+  return enriched;
+}
+
+/**
+ * Invalida la caché (útil tras changeBrand sin reload).
+ */
+export function invalidateBrandCache() {
+  _cache = { key: null, config: null };
+}
+
+/**
+ * Enriquece la configuración con rutas de assets.
+ * Exportado para reutilizar en BrandContext y evitar duplicar la construcción de assets.
+ * @param {Object} config - Configuración base de la marca (de brands.js)
+ * @returns {Object|null} Config con assets o null
+ */
+export function enrichConfigWithAssets(config) {
   if (!config) return null;
-  
-  // Determinar ruta de splash según splashAnimado (puede estar en ui o en raíz)
+
   const splashAnimado = config.ui?.splashAnimado === true || config.splashAnimado === true;
   const splashPath = getSplashPath(config.brand, splashAnimado);
-  
+
   return {
     ...config,
     assets: {
-      logo: getBrandAsset(config.brand, 'logo.png'),
-      logoWhite: getBrandAsset(config.brand, 'logo-white.png'),
-      logoTop: getBrandAsset(config.brand, 'logo-top.png'),
-      logoBlack: getBrandAsset(config.brand, 'logo_black.png'),
-      background: getBrandAsset(config.brand, 'background.png'),
-      favicon: getBrandAsset(config.brand, 'favicon.ico'),
+      logo: getBrandAsset(config.brand, "logo.png"),
+      logoWhite: getBrandAsset(config.brand, "logo-white.png"),
+      logoTop: getBrandAsset(config.brand, "logo-top.png"),
+      logoBlack: getBrandAsset(config.brand, "logo_black.png"),
+      background: getBrandAsset(config.brand, "background.png"),
+      favicon: getBrandAsset(config.brand, "favicon.ico"),
       splash: splashPath,
-      placeholder: getBrandAsset(config.brand, 'placeholder_220x160.png'),
-      // Helper para obtener cualquier asset custom
+      placeholder: getBrandAsset(config.brand, "placeholder_220x160.png"),
       get: (path) => getBrandAsset(config.brand, path),
-    }
+    },
   };
 }
 
 /**
- * Hook para React (opcional)
+ * Helper para uso fuera de React. No es reactivo.
+ * Dentro de componentes prefiere useBrand() del BrandContext.
  */
 export function useBrandConfig() {
   return getActiveBrandConfig();

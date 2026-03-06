@@ -68,8 +68,10 @@ export function applyTheme(brandConfig) {
   
   // Aplicar clase de tema
   root.setAttribute('data-theme', ui.theme);
-  
-  console.log(`[Theme] Aplicado tema ${ui.theme} para ${brandConfig.brand}`);
+
+  if (import.meta.env.DEV) {
+    console.log(`[Theme] Aplicado tema ${ui.theme} para ${brandConfig.brand}`);
+  }
 }
 
 /**

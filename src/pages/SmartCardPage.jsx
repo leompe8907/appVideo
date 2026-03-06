@@ -6,6 +6,7 @@ import { useDevice } from '../contexts/DeviceContext';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import { MessageModal } from '../components/MessageModal';
 import panaccessService from '../services/panaccessService';
+import { setLoggedOut } from '../utils/userSession';
 import '../styles/pages/_smartcard.scss';
 
 // Función auxiliar para formatear las claves (camelCase a Title Case)
@@ -174,9 +175,7 @@ title={t('smartcard.license')}
   // Cerrar sesión y volver a login
   const handleBack = () => {
     panaccessService.logout();
-    localStorage.removeItem('sessionId');
-    localStorage.removeItem('username');
-    localStorage.removeItem('password');
+    setLoggedOut();
     navigate('/login');
   };
 

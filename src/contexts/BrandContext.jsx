@@ -1,8 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getActiveBrandConfig } from '../config/brandConfig';
+import {
+  getActiveBrandConfig,
+  enrichConfigWithAssets,
+  invalidateBrandCache,
+} from '../config/brandConfig';
 import { getBrandConfig } from '../config/brands';
 import { getBrandAsset } from '../utils/assetLoader';
-import { getSplashPath } from '../utils/splashLoader';
 import { applyTheme } from '../utils/config';
 import panaccessService from '../services/panaccessService';
 
@@ -36,32 +39,20 @@ export const BrandProvider = ({ children }) => {
   const loadBrandConfig = (brandId = null) => {
     try {
       let brandConfig;
-      
+
       if (brandId) {
-        // Cargar brand específico
+        // Cargar configuración del brand especificado
         const config = getBrandConfig(brandId);
         if (!config) {
-          console.warn(`[BrandContext] Brand "${brandId}" no encontrado, usando default`);
+          if (import.meta.env.DEV) {
+            console.warn(`[BrandContext] Brand "${brandId}" no encontrado, usando default`);
+          }
           brandConfig = getActiveBrandConfig();
         } else {
-          // Enriquecer con assets
-          brandConfig = {
-            ...config,
-            assets: {
-              logo: getBrandAsset(config.brand, 'logo.png'),
-              logoWhite: getBrandAsset(config.brand, 'logo-white.png'),
-              logoTop: getBrandAsset(config.brand, 'logo-top.png'),
-              logoBlack: getBrandAsset(config.brand, 'logo_black.png'),
-              background: getBrandAsset(config.brand, 'background.png'),
-              favicon: getBrandAsset(config.brand, 'favicon.ico'),
-              splash: getSplashPath(config.brand, config.ui?.splashAnimado || config.splashAnimado),
-              placeholder: getBrandAsset(config.brand, 'placeholder_220x160.png'),
-              get: (path) => getBrandAsset(config.brand, path),
-            }
-          };
+          brandConfig = enrichConfigWithAssets(config);
         }
       } else {
-        // Cargar brand desde URL/localStorage/default
+        // Cargar configuración del brand activo
         brandConfig = getActiveBrandConfig();
       }
       
@@ -105,14 +96,15 @@ export const BrandProvider = ({ children }) => {
    * @param {boolean} reload - Si true, recarga la página (por defecto: false)
    */
   const changeBrand = (brandId, reload = false) => {
-    // Guardar en localStorage antes de cambiar
+    // Guardar brand en localStorage para persistencia
     localStorage.setItem('brand', brandId);
-    
+    invalidateBrandCache();
+
     if (reload) {
-      // Recargar página para aplicar cambios completamente
+      // Recargar la página con el nuevo brand en la URL
       window.location.href = `${window.location.pathname}?brand=${brandId}`;
     } else {
-      // Cambiar sin recargar
+      // Cargar la nueva configuración del brand
       loadBrandConfig(brandId);
     }
   };

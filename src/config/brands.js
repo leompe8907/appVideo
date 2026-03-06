@@ -1,3 +1,37 @@
+/**
+ * Configuración de marcas (brands) de la aplicación.
+ *
+ * Cada objeto de marca define:
+ *
+ * @param {string} brand - Identificador único de la marca (slug), usado para seleccionar la configuración activa.
+ * @param {string} appName - Nombre visible de la aplicación que se muestra en la UI.
+ * @param {string} drm - URL base del servicio DRM/backend (ej. Panaccess, inTV) para autenticación y contenido.
+ * @param {string} token - Token de API o clave para autenticar las peticiones contra el servicio DRM.
+ * @param {string} developedBy - Texto o HTML del crédito "Desarrollado por" (puede incluir entidades como &#174).
+ * @param {string} version - Número de versión de la app para esta marca (ej. "1.0.2", "2.0.2").
+ *
+ * @param {Object} ui - Configuración de interfaz y tema:
+ *   @param {number} ui.splashDuration - Tiempo en milisegundos que se muestra la pantalla de splash al iniciar.
+ *   @param {boolean} ui.splashAnimado - true: usa imagen animada (.gif); false: usa imagen estática (.png/.webp/.jpg).
+ *   @param {string} ui.logoPositionHome - Posición del logo en la home: "top" | "right" | "left" | "center".
+ *   @param {boolean} ui.showTime - true: muestra la hora en la UI; false: la oculta.
+ *   @param {string} ui.epgLineColorTime - Color (hex) de la línea de tiempo actual en la guía de programación (EPG).
+ *   @param {string} ui.primaryColor - Color principal de la marca (botones, acentos, etc.).
+ *   @param {string} ui.secondaryColor - Color secundario (hover, fondos, etc.).
+ *   @param {string} ui.theme - Tema global: "dark" o "light".
+ *   @param {string} ui.fontFamily - Familia de fuentes CSS (ej. "Arial, sans-serif", "Roboto, sans-serif").
+ *
+ * @param {Object} features - Funcionalidades activas o no para esta marca:
+ *   @param {boolean} features.miniPlayer - true: habilita el mini reproductor; false: lo deshabilita.
+ *   @param {boolean} features.profiles - true: tras login redirige a /profile; false: redirige a /smartcard.
+ *
+ * @param {boolean} hashPasswordBeforeLogin - true: hashear contraseña en cliente antes de enviar (ej. Panaccess);
+ *   false: enviar contraseña en claro (ej. backends como intv).
+ *
+ * @param {Object} debug - Opciones de depuración (normalmente solo en desarrollo):
+ *   @param {boolean} debug.spatialNav - true: activa logs en consola de la navegación espacial.
+ *   @param {boolean} debug.spatialNavVisual - true: muestra marcos rojos de debug para la navegación espacial.
+ */
 export const BRANDS = [
   {
     brand: "bromteck",
@@ -6,7 +40,7 @@ export const BRANDS = [
     token: 'gQposTlrMIOYQVdYBNYC',
     developedBy: "Network Broadcast",
     version: "1.0.2",
-    
+
     // Configuración de UI/Tema
     ui: {
       // Splash
@@ -18,17 +52,17 @@ export const BRANDS = [
       // EPG
       epgLineColorTime: "#2CE308",
       // Colores
-      primaryColor: "#2CE308",
-      secondaryColor: "#1a8a05",
-      theme: "dark",
+      primaryColor: "#2CE308", // Color principal de la marca (botones, acentos, etc.)
+      secondaryColor: "#1a8a05", // Color secundario (hover, fondos, etc.)
+      theme: "dark", // Tema global: "dark" o "light"
       // Fuente
-      fontFamily: "Arial, sans-serif",
+      fontFamily: "Arial, sans-serif", // Familia de fuentes CSS (ej. "Arial, sans-serif", "Roboto, sans-serif")
     },
     
     // Features habilitadas/deshabilitadas
     features: {
       miniPlayer: true, // Si es true → muestra el mini player, si es false → no muestra el mini player
-      profiles: true, // Si es true → redirige a /profile después del login, si es false → redirige a /smartcard después del login
+      profiles: false, // Si es true → redirige a /profile después del login, si es false → redirige a /smartcard después del login
     },
     // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
     hashPasswordBeforeLogin: true,
@@ -68,11 +102,11 @@ export const BRANDS = [
       miniPlayer: true,
       profiles: true,
     },
-    // intv (pmdw-1.in.tv.br) espera contraseña en claro; no hashear en cliente
+    // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
     hashPasswordBeforeLogin: false,
     debug: {
-      spatialNav: false,
-      spatialNavVisual: false,
+      spatialNav: false, // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
     },
   },
   {
@@ -114,6 +148,11 @@ export const BRANDS = [
   },
 ];
 
+/**
+ * Obtiene la configuración de una marca por su identificador.
+ * @param {string} brandName - Identificador de la marca (ej. "bromteck", "intv", "gigmax").
+ * @returns {Object|null} Objeto de configuración de la marca o null si no existe.
+ */
 export function getBrandConfig(brandName) {
   const brand = BRANDS.find(b => b.brand === brandName);
   return brand || null;

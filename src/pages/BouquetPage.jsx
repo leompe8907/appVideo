@@ -9,6 +9,7 @@ import { useBrand } from '../contexts/BrandContext';
 import { FocusableButton } from '../components/navigation/FocusableButton';
 import { Bouquet } from '../components/bouquet/Bouquet';
 import panaccessService from '../services/panaccessService';
+import { setLoggedOut } from '../utils/userSession';
 import '../styles/pages/_bouquet.scss';
 
 export function BouquetPage() {
@@ -18,9 +19,7 @@ export function BouquetPage() {
 
   const handleBack = () => {
     panaccessService.logout();
-    localStorage.removeItem('sessionId');
-    localStorage.removeItem('username');
-    localStorage.removeItem('password');
+    setLoggedOut();
     navigate('/login');
   };
 

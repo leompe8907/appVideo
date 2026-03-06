@@ -15,6 +15,7 @@ import { DeleteProfileModal } from '../components/profile/DeleteProfileModal';
 import { MessageModal } from '../components/MessageModal';
 import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 import panaccessService from '../services/panaccessService';
+import { setLoggedOut } from '../utils/userSession';
 import Img from '../constants/images';
 import '../styles/pages/_profile.scss';
 
@@ -31,9 +32,9 @@ const getImageById = (imageId) => {
 export function ProfilePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { currentBrand, appName, getImage } = useBrand();
+  const { currentBrand, appName, getImage, isFeatureEnabled } = useBrand();
   const { isTV } = useDevice();
-  
+
   const [profiles, setProfiles] = useState([]);
   const [smartCards, setSmartCards] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState(null);
@@ -44,11 +45,17 @@ export function ProfilePage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState(null);
 
+  // Si esta marca no tiene perfiles, redirigir a smartcard (evita acceso directo por URL)
+  const profilesFeatureEnabled = currentBrand ? isFeatureEnabled('profiles') : true;
+  useEffect(() => {
+    if (currentBrand && !profilesFeatureEnabled) {
+      navigate('/smartcard', { replace: true });
+    }
+  }, [currentBrand, profilesFeatureEnabled, navigate]);
+
   const handleBack = () => {
     panaccessService.logout();
-    localStorage.removeItem('sessionId');
-    localStorage.removeItem('username');
-    localStorage.removeItem('password');
+    setLoggedOut();
     navigate('/login');
   };
 
@@ -169,6 +176,11 @@ export function ProfilePage() {
     setProfileToDelete(null);
     fetchProfiles();
   };
+
+  // No mostrar contenido mientras se redirige a /smartcard (marca sin perfiles)
+  if (currentBrand && !profilesFeatureEnabled) {
+    return null;
+  }
 
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
 
