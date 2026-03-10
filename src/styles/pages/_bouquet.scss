@@ -1,23 +1,23 @@
 /**
  * Estilos de la página Bouquet
- * Diseño OTT coherente con Profile y SmartCard
+ * 100% ancho, sin scroll; solo muro de bouquets con canales.
  */
 
 @use '../variables' as *;
 @use '../mixins' as *;
 
 .bouquet-page {
-  position: relative;
-  min-height: 100vh;
-  width: 100%;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $spacing-xl;
+  align-items: stretch;
+  justify-content: stretch;
   overflow: hidden;
 
   .bouquet-overlay {
@@ -34,71 +34,129 @@
     position: relative;
     z-index: 2;
     width: 100%;
-    max-width: 1400px;
+    max-width: none;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: $spacing-xxl;
-  }
-
-  .bouquet-header {
-    text-align: center;
-    margin-bottom: $spacing-lg;
-
-    .bouquet-logo {
-      max-width: 200px;
-      max-height: 80px;
-      margin-bottom: $spacing-xl;
-      object-fit: contain;
-      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
-    }
-
-    .bouquet-title {
-      font-size: clamp(2rem, 5vw, 4rem);
-      font-weight: 600;
-      color: #ffffff;
-      margin: 0;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
-      letter-spacing: -0.02em;
-    }
+    align-items: stretch;
+    overflow: hidden;
   }
 
   .bouquet-content {
-    width: 100%;
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
     min-height: 0;
+    overflow: hidden;
   }
 
-  .bouquet-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
-    gap: $spacing-xl;
-    justify-content: center;
+  /**
+   * BouquetWall: filas de bouquets con canales, sin scroll
+   */
+  .bouquet-wall {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0.75rem 0;
+  }
+
+  .bouquet-row-carousel {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .bouquet-heading {
+      flex-shrink: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 0 0 0.35rem;
+      padding: 0 0.25rem;
+    }
+
+    .horizontal-slide {
+      margin: 0;
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      gap: 0.35rem;
+      padding: 0 0.25rem;
+      overflow: hidden;
+    }
+  }
+
+  .channel-card {
+    flex-shrink: 0;
+    border-radius: $border-radius-sm;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.04);
+    border: 2px solid transparent;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0.8);
+    transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out,
+      transform 0.1s ease-out;
+
+    .channel-card-img {
+      display: block;
+      width: 8rem;
+      height: 4.5rem;
+      object-fit: cover;
+    }
+
+    &.focused {
+      border-color: #ffffff;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+      transform: translateY(-2px);
+    }
+
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.6);
+    }
+  }
+
+  @media screen and (min-width: 1792px) {
+    .channel-card .channel-card-img {
+      width: 10rem;
+      height: 5.5rem;
+    }
+  }
+
+  .bouquet-list {
     width: 100%;
-    max-width: 1200px;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
     padding: $spacing-xl 0;
   }
 
-  .bouquet-card {
+  .bouquet-row {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: $spacing-lg;
-    border-radius: $border-radius-lg;
-    background: rgba(42, 42, 42, 0.6);
-    border: 3px solid transparent;
+    justify-content: space-between;
+    padding: $spacing-md $spacing-lg;
+    border-radius: $border-radius-md;
+    background: rgba(42, 42, 42, 0.7);
+    border: 2px solid transparent;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s ease-out;
 
-    .bouquet-card-inner {
-      text-align: center;
+    .bouquet-row-content {
+      display: flex;
+      align-items: center;
+      width: 100%;
     }
 
-    .bouquet-card-name {
+    .bouquet-row-main {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-xs;
+    }
+
+    .bouquet-row-name {
       font-size: $font-size-lg;
       font-weight: 500;
       color: rgba(255, 255, 255, 0.9);
@@ -106,12 +164,11 @@
 
     &:hover,
     &.focused {
-      transform: translateY(-8px) scale(1.05);
-      border-color: rgba(255, 255, 255, 0.5);
-      background: rgba(42, 42, 42, 0.85);
+      border-color: rgba(255, 255, 255, 0.6);
+      transform: translateY(-2px);
 
-      .bouquet-card-name {
-        color: #fff;
+      .bouquet-row-name {
+        color: #ffffff;
       }
     }
 
@@ -141,6 +198,16 @@
 
   .bouquet-error-text {
     color: #f8d7da;
+  }
+
+  .bouquet-streams-info {
+    margin-top: $spacing-md;
+    text-align: center;
+
+    .bouquet-streams-count {
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.85);
+    }
   }
 
   .bouquet-footer {

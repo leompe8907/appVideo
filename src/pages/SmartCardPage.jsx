@@ -9,51 +9,25 @@ import panaccessService from '../services/panaccessService';
 import { setLoggedOut } from '../utils/userSession';
 import '../styles/pages/_smartcard.scss';
 
-// Función auxiliar para formatear las claves (camelCase a Title Case)
-const formatKey = (key) => {
-  return key
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, str => str.toUpperCase())
-    .trim();
-};
-
-// Función auxiliar para renderizar el contenido de una licencia - minimalista
-const renderLicenseContent = (data) => {
-  if (!data || typeof data !== 'object') {
-    return <p className="license-value">{String(data)}</p>;
+// Normaliza la estructura de una licencia a los campos clave para la UI
+const normalizeLicense = (license) => {
+  if (!license || typeof license !== 'object') {
+    return { key: '', pin: '', active: false, products: '' };
   }
 
-  // Limitar a los primeros 4 campos más importantes para diseño minimalista
-  const entries = Object.entries(data).slice(0, 4);
+  const key =
+    license.KEY ||
+    license.key ||
+    license.licenseKey ||
+    license.Key ||
+    '';
 
-  return (
-    <div className="license-fields">
-      {entries.map(([key, value]) => {
-        // Formatear el valor de forma muy compacta
-        let displayValue = '';
-        if (value === null || value === undefined) {
-          displayValue = '—';
-        } else if (typeof value === 'object') {
-          if (Array.isArray(value)) {
-            displayValue = `${value.length}`;
-          } else {
-            const objKeys = Object.keys(value);
-            displayValue = objKeys.length > 0 ? `${objKeys.length}` : '0';
-          }
-        } else {
-          const str = String(value);
-          displayValue = str.length > 20 ? str.substring(0, 20) + '...' : str;
-        }
+  const pin = license.pin || license.PIN || license.Pin || '';
+  const active = license.active === true;
+  const products =
+    typeof license.products === 'string' ? license.products : '';
 
-        return (
-          <div key={key} className="license-field">
-            <span className="license-label">{formatKey(key)}</span>
-            <span className="license-value">{displayValue}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
+  return { key, pin, active, products };
 };
 
 export function SmartCardPage() {
@@ -100,12 +74,24 @@ export function SmartCardPage() {
 
     // Si es un array
     if (Array.isArray(licenses)) {
-      if (licenses.length === 0) {
+      const validLicenses = licenses
+        .map((license) => ({ raw: license, norm: normalizeLicense(license) }))
+        .filter(({ norm }) => norm.key && String(norm.key).trim().length > 0)
+        // Ordenar: primero activas, luego por clave para consistencia
+        .sort((a, b) => {
+          if (a.norm.active === b.norm.active) {
+            return String(a.norm.key).localeCompare(String(b.norm.key));
+          }
+          return a.norm.active ? -1 : 1;
+        })
+        .map(({ raw }) => raw);
+
+      if (validLicenses.length === 0) {
         return <p className="no-licenses">{t('smartcard.noLicenses')}</p>;
       }
       return (
         <div className="licenses-grid">
-          {licenses.map((license, index) => (
+          {validLicenses.map((license, index) => (
             <LicenseCard
               key={index}
               license={license}
@@ -124,7 +110,20 @@ export function SmartCardPage() {
       const arrayKeys = Object.keys(licenses).filter(key => Array.isArray(licenses[key]));
       if (arrayKeys.length > 0) {
         const arrayKey = arrayKeys[0];
-        const items = licenses[arrayKey];
+        const items = licenses[arrayKey]
+          .map((item) => ({ raw: item, norm: normalizeLicense(item) }))
+          .filter(({ norm }) => norm.key && String(norm.key).trim().length > 0)
+          .sort((a, b) => {
+            if (a.norm.active === b.norm.active) {
+              return String(a.norm.key).localeCompare(String(b.norm.key));
+            }
+            return a.norm.active ? -1 : 1;
+          })
+          .map(({ raw }) => raw);
+
+        if (items.length === 0) {
+          return <p className="no-licenses">{t('smartcard.noLicenses')}</p>;
+        }
         return (
           <div className="licenses-grid">
             {items.map((item, index) => (
@@ -162,8 +161,8 @@ export function SmartCardPage() {
         <LicenseCard
           license={licenses}
           index={0}
-title={t('smartcard.license')}
-            onSelect={() => handleLicenseSelect(licenses)}
+          title={t('smartcard.license')}
+          onSelect={() => handleLicenseSelect(licenses)}
           isSettingLicense={isSettingLicense}
           fullWidth
           showJson
@@ -195,7 +194,8 @@ title={t('smartcard.license')}
         throw new Error(t('smartcard.errorNoKey'));
       }
 
-      await panaccessService.setStreamingLicense({ licenseKey, pin, failIfInUse: false });
+      // Primera activación: forzar failIfInUse=true (mismo comportamiento que el proyecto EPG).
+      await panaccessService.setStreamingLicense({ licenseKey, pin, failIfInUse: true });
 
       console.log('[SMARTCARD] setStreamingLicense: éxito');
       setResultModal({ type: 'success', text: t('smartcard.success') });
@@ -287,6 +287,7 @@ function LicenseCard({ license, index, title, onSelect, isSettingLicense, fullWi
   const { isTV } = useDevice();
   const titleText = title || t('smartcard.licenseNumber', { index: index + 1 });
   const ariaLabel = t('smartcard.selectLicense', { title: titleText });
+  const normalized = normalizeLicense(license);
 
   // Handler para cuando se presiona Enter/OK
   const handleEnterPress = () => {
@@ -319,7 +320,7 @@ function LicenseCard({ license, index, title, onSelect, isSettingLicense, fullWi
     }
   };
 
-  // Renderizar contenido
+  // Renderizar contenido optimizado para selección de smartcard
   const renderContent = () => {
     if (showJson) {
       return (
@@ -329,13 +330,31 @@ function LicenseCard({ license, index, title, onSelect, isSettingLicense, fullWi
       );
     }
 
+    const { key, active, products } = normalized;
+    const truncatedProducts =
+      products && products.length > 80
+        ? `${products.slice(0, 80)}…`
+        : products;
+
     return (
       <>
         <div className="license-card-header">
           <h3>{titleText}</h3>
+          <span className={`license-status ${active ? 'active' : 'inactive'}`}>
+            {active ? t('smartcard.statusActive') : t('smartcard.statusInactive')}
+          </span>
         </div>
         <div className="license-card-body">
-          {renderLicenseContent(license)}
+          <div className="license-row">
+            <span className="license-label">{t('smartcard.fieldKey')}</span>
+            <span className="license-value code">{key || '—'}</span>
+          </div>
+          {truncatedProducts && (
+            <div className="license-row">
+              <span className="license-label">{t('smartcard.fieldProducts')}</span>
+              <span className="license-value">{truncatedProducts}</span>
+            </div>
+          )}
         </div>
       </>
     );
@@ -362,6 +381,15 @@ function LicenseCard({ license, index, title, onSelect, isSettingLicense, fullWi
       aria-label={ariaLabel}
     >
       {renderContent()}
+      <div className="license-card-footer">
+        <button
+          type="button"
+          className="license-select-button"
+          disabled={isSettingLicense}
+        >
+          {t('smartcard.useThisCard')}
+        </button>
+      </div>
     </div>
   );
 }

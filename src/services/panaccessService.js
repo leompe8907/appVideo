@@ -5,6 +5,7 @@
 
 import { createCVClient } from '../cv/cv';
 import { retryOperation } from '../cv/errorClassifier';
+import i18n from '../locales/i18n';
 
 class PanaccessService {
   constructor() {
@@ -106,10 +107,26 @@ class PanaccessService {
         throw error;
       }
 
+      // Metadatos comunes requeridos por algunos backends Panaccess
+      const os = this.brandConfig?.os || 'HTML5';
+      const appVersion = this.brandConfig?.appVersion || this.brandConfig?.version || '1';
+      const branding = this.brandConfig?.branding || this.brandConfig?.appName || 'Panaccess';
+      const apiToken = this.brandConfig?.token;
+      const lang = (i18n?.language || 'es').split('-')[0].toUpperCase();
+
       parameters = {
         ...parameters,
         sessionId,
+        os,
+        appVersion,
+        branding,
+        l: lang,
       };
+
+      // Token de API como en el cliente clásico (necesario para algunos métodos)
+      if (apiToken) {
+        parameters.apiToken = apiToken;
+      }
 
       // Agregar udid si está disponible
       if (udid) {

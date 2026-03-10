@@ -24,6 +24,14 @@
  * @param {Object} features - Funcionalidades activas o no para esta marca:
  *   @param {boolean} features.miniPlayer - true: habilita el mini reproductor; false: lo deshabilita.
  *   @param {boolean} features.profiles - true: tras login redirige a /profile; false: redirige a /smartcard.
+ *   @param {boolean} features.seekbar - true: habilita la barra de búsqueda del player; false: la oculta.
+ *   @param {boolean} features.logout - true: muestra la opción de cerrar sesión en la UI; false: la oculta.
+ *   @param {boolean} features.showRating - true: muestra la clasificación/rating de contenido; false: la oculta.
+ *   @param {boolean} features.osms - true: habilita la integración OSMS y su menú; false: la deshabilita.
+ *
+ * @param {Object} api - Configuración de endpoints propios por marca:
+ *   @param {string} api.baseUrl - URL base del backend propio (ej. validación de UDID, auth, etc.).
+ *   @param {string} api.wsUrl - URL de WebSocket asociado (si aplica) para esta marca.
  *
  * @param {boolean} hashPasswordBeforeLogin - true: hashear contraseña en cliente antes de enviar (ej. Panaccess);
  *   false: enviar contraseña en claro (ej. backends como intv).
@@ -38,6 +46,10 @@ export const BRANDS = [
     appName: "Bromteck",
     drm: 'https://cv01.panaccess.com/',
     token: 'gQposTlrMIOYQVdYBNYC',
+    // Metadatos de integración con DRM (equivalentes al proyecto EPG clásico)
+    os: 'HTML5',
+    appVersion: '1',
+    branding: 'Panaccess',
     developedBy: "Network Broadcast",
     version: "1.0.2",
 
@@ -63,6 +75,14 @@ export const BRANDS = [
     features: {
       miniPlayer: true, // Si es true → muestra el mini player, si es false → no muestra el mini player
       profiles: false, // Si es true → redirige a /profile después del login, si es false → redirige a /smartcard después del login
+      seekbar: true, // Equivalente a seekbarEnabled en 10foot
+      logout: false, // Equivalente a logoutEnabled en 10foot
+      showRating: true, // Equivalente a showRating en 10foot
+      osms: false, // Equivalente a osmsEnabled en 10foot
+    },
+    api: {
+      baseUrl: "", // Equivalente a baseUrl en 10foot
+      wsUrl: "", // Equivalente a wsUrl en 10foot
     },
     // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
     hashPasswordBeforeLogin: true,
@@ -76,6 +96,9 @@ export const BRANDS = [
     appName: "inTV Play",
     drm: "https://pmdw-1.in.tv.br/",
     token: "CEVQmnhOsXvpRQZbGADl",
+    os: 'HTML5',
+    appVersion: '1',
+    branding: 'Panaccess',
     developedBy: "inTV&#174,",
     version: "2.0.2",
     
@@ -100,7 +123,15 @@ export const BRANDS = [
     // Features habilitadas/deshabilitadas
     features: {
       miniPlayer: true,
-      profiles: true,
+      profiles: false,
+      seekbar: false, // Equivalente a seekbarEnabled en 10foot
+      logout: false, // Equivalente a logoutEnabled en 10foot
+      showRating: true, // Equivalente a showRating en 10foot
+      osms: false, // Equivalente a osmsEnabled en 10foot
+    },
+    api: {
+      baseUrl: "", // Equivalente a baseUrl en 10foot
+      wsUrl: "", // Equivalente a wsUrl en 10foot
     },
     // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
     hashPasswordBeforeLogin: false,
@@ -114,6 +145,9 @@ export const BRANDS = [
     appName: "Gigmax",
     drm: "https://cv10.panaccess.com/",
     token: "NLdLsrJkgIgnxMIDurSI",
+    os: 'HTML5',
+    appVersion: '1',
+    branding: 'Panaccess',
     developedBy: "Gigmax",
     version: "2.0.3",
     
@@ -139,6 +173,14 @@ export const BRANDS = [
     features: {
       miniPlayer: true,
       profiles: false,
+      seekbar: false, // Equivalente a seekbarEnabled en 10foot
+      logout: false, // Equivalente a logoutEnabled en 10foot
+      showRating: false, // Equivalente a showRating en 10foot
+      osms: false, // Equivalente a osmsEnabled en 10foot
+    },
+    api: {
+      baseUrl: "", // Equivalente a baseUrl en 10foot
+      wsUrl: "", // Equivalente a wsUrl en 10foot
     },
     hashPasswordBeforeLogin: true,
     debug: {
