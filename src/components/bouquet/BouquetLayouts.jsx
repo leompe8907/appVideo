@@ -15,13 +15,65 @@ function normalizeColor(color) {
 }
 
 /**
+ * Normaliza el tipo de layout de canal a una variante interna simple.
+ * Entradas esperadas: service_layout_logo_normal, service_layout_event_normal, etc.
+ */
+function getChannelLayoutVariant(layoutType) {
+  if (!layoutType) return 'logo';
+  const value = String(layoutType).toLowerCase();
+
+  if (value === 'service_layout_logo_normal' || value === 'logo_normal' || value === 'logo') {
+    return 'logo';
+  }
+  if (
+    value === 'service_layout_event_normal' ||
+    value === 'event_normal' ||
+    value === 'event'
+  ) {
+    return 'event';
+  }
+  if (
+    value === 'service_layout_event_and_logo' ||
+    value === 'event_and_logo' ||
+    value === 'event+logo'
+  ) {
+    return 'event_and_logo';
+  }
+  if (
+    value === 'service_layout_event_line' ||
+    value === 'event_line' ||
+    value === 'eventline'
+  ) {
+    return 'event_line';
+  }
+
+  // Para layouts grid, el contenido de la tarjeta puede seguir siendo el estándar de logo
+  if (
+    value === 'service_layout_grid_horizontal' ||
+    value === 'grid_horizontal' ||
+    value === 'grid-h'
+  ) {
+    return 'logo';
+  }
+  if (
+    value === 'service_layout_grid_vertical' ||
+    value === 'grid_vertical' ||
+    value === 'grid-v'
+  ) {
+    return 'logo';
+  }
+
+  return 'logo';
+}
+
+/**
  * Diseño tipo 10foot: fila horizontal de canales por bouquet.
  * Espera un objeto bouquet con:
  * - bouquet.bouquetId
  * - bouquet.name / description
  * - bouquet.items: array de canales { id, name, img, lcn, backgroundColor, ... }
  */
-export function BouquetRowCarousel({ bouquet, onChannelSelect, layoutType = 'channels' }) {
+export function BouquetRowCarousel({ bouquet, onChannelSelect, layoutType }) {
   const { t } = useTranslation();
   const title =
     bouquet?.name ??
@@ -45,6 +97,7 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, layoutType = 'cha
             key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
             channel={channel}
             index={index}
+            layoutType={layoutType}
             onSelect={() => onChannelSelect?.(channel, bouquet)}
           />
         ))}
@@ -53,7 +106,14 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, layoutType = 'cha
   );
 }
 
-function ChannelCard({ channel, index, onSelect }) {
+/**
+ * Tarjeta de canal. Su diseño concreto depende de la variante:
+ * - logo: solo logo del canal
+ * - event: imagen del evento (o logo si no hay)
+ * - event_and_logo: logo arriba + imagen de evento abajo + barra de tiempo (timeship)
+ * - event_line: igual que event pero con tamaño mayor
+ */
+function ChannelCard({ channel, index, layoutType, onSelect }) {
   const { isTV } = useDevice();
   const { ref, focused } = useSpatialNavigation({
     focusKey: `channel-${channel.id ?? index}`,
@@ -62,6 +122,11 @@ function ChannelCard({ channel, index, onSelect }) {
 
   const bgColor = normalizeColor(channel.backgroundColor ?? channel.bgColor);
   const style = bgColor ? { backgroundColor: bgColor } : {};
+  const variant = getChannelLayoutVariant(layoutType);
+
+  // Datos de evento (si el backend los provee)
+  const eventImage = channel.eventImage || channel.currentEvent?.image || null;
+  const logoImage = channel.img || null;
 
   const handleClick = () => {
     if (!isTV) {
@@ -79,7 +144,7 @@ function ChannelCard({ channel, index, onSelect }) {
   return (
     <div
       ref={ref}
-      className={`channel-card ${focused ? 'focused' : ''}`}
+      className={`channel-card channel-card--${variant} ${focused ? 'focused' : ''}`}
       style={style}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
@@ -88,13 +153,128 @@ function ChannelCard({ channel, index, onSelect }) {
       data-lcn={channel.lcn}
       data-id={channel.id}
     >
-      {channel.img && (
-        <img
-          src={channel.img}
-          alt={channel.name || ''}
-          className="channel-card-img"
-        />
+      {variant === 'event_and_logo' ? (
+        <>
+          {logoImage && (
+            <div className="channel-card-logo-top">
+              <img
+                src={logoImage}
+                alt={channel.name || ''}
+                className="channel-card-logo-img"
+              />
+            </div>
+          )}
+          <div className="channel-card-event-block">
+            <img
+              src={eventImage || logoImage}
+              alt={channel.name || ''}
+              className="channel-card-event-img"
+            />
+            <div className="channel-timeship">
+              <div className="channel-timeship-progress" />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <img
+            src={
+              variant === 'event' || variant === 'event_line'
+                ? eventImage || logoImage
+                : logoImage
+            }
+            alt={channel.name || ''}
+            className="channel-card-img"
+          />
+        </>
       )}
+    </div>
+  );
+}
+
+/**
+ * Layout de tipo grid horizontal: 3 filas de canales que se desplazan en horizontal
+ * de izquierda a derecha para un mismo bouquet.
+ */
+export function BouquetGridHorizontal({ bouquet, onChannelSelect, layoutType }) {
+  const { t } = useTranslation();
+  const title =
+    bouquet?.name ??
+    bouquet?.title ??
+    bouquet?.Name ??
+    bouquet?.Title ??
+    t('bouquet.unknown');
+
+  const items = Array.isArray(bouquet?.items) ? bouquet.items : [];
+  if (items.length === 0) return null;
+
+  const rows = [[], [], []];
+  items.forEach((channel, index) => {
+    const rowIndex = index % 3;
+    rows[rowIndex].push({ channel, index });
+  });
+
+  return (
+    <div
+      className="bouquet-grid-horizontal"
+      data-bouquet-id={bouquet.bouquetId ?? bouquet.id ?? ''}
+    >
+      <h4 className="bouquet-heading">{title}</h4>
+      <div className="bouquet-grid-horizontal-rows">
+        {rows.map((row, rowIndex) => (
+          <div
+            key={`row-${rowIndex}`}
+            className="horizontal-slide horizontal-slide--grid-row"
+          >
+            {row.map(({ channel, index }) => (
+              <ChannelCard
+                key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
+                channel={channel}
+                index={index}
+                layoutType={layoutType}
+                onSelect={() => onChannelSelect?.(channel, bouquet)}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Layout de tipo grid vertical: N columnas de canales que se desplazan
+ * de arriba hacia abajo.
+ */
+export function BouquetGridVertical({ bouquet, onChannelSelect, layoutType }) {
+  const { t } = useTranslation();
+  const title =
+    bouquet?.name ??
+    bouquet?.title ??
+    bouquet?.Name ??
+    bouquet?.Title ??
+    t('bouquet.unknown');
+
+  const items = Array.isArray(bouquet?.items) ? bouquet.items : [];
+  if (items.length === 0) return null;
+
+  return (
+    <div
+      className="bouquet-grid-vertical"
+      data-bouquet-id={bouquet.bouquetId ?? bouquet.id ?? ''}
+    >
+      <h4 className="bouquet-heading">{title}</h4>
+      <div className="bouquet-grid-vertical-content">
+        {items.map((channel, index) => (
+          <ChannelCard
+            key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
+            channel={channel}
+            index={index}
+            layoutType={layoutType}
+            onSelect={() => onChannelSelect?.(channel, bouquet)}
+          />
+        ))}
+      </div>
     </div>
   );
 }

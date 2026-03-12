@@ -62,6 +62,80 @@
     padding: 0.75rem 0;
   }
 
+  .bouquet-grid-horizontal {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .bouquet-heading {
+      flex-shrink: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 0 0 0.35rem;
+      padding: 0 0.25rem;
+    }
+
+    .bouquet-grid-horizontal-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .horizontal-slide--grid-row {
+      margin: 0;
+      width: 100%;
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0 0.25rem;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-behavior: smooth;
+    }
+  }
+
+  .bouquet-grid-vertical {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .bouquet-heading {
+      flex-shrink: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 0 0 0.35rem;
+      padding: 0 0.25rem;
+    }
+
+    .bouquet-grid-vertical-content {
+      display: grid;
+      grid-auto-rows: minmax(10em, auto);
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 0.35rem;
+      padding: 0 0.25rem;
+    }
+  }
+
+  // Columnas por dispositivo usando clases del root (configuradas en App/useViewport)
+  :root.mobile & .bouquet-grid-vertical .bouquet-grid-vertical-content {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  :root.tablet & .bouquet-grid-vertical .bouquet-grid-vertical-content {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  :root.desktop & .bouquet-grid-vertical .bouquet-grid-vertical-content,
+  :root.hd & .bouquet-grid-vertical .bouquet-grid-vertical-content,
+  :root.fullhd & .bouquet-grid-vertical .bouquet-grid-vertical-content {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
   .bouquet-row-carousel {
     flex: 0 0 auto;
     display: flex;
@@ -81,16 +155,20 @@
       margin: 0;
       width: 100%;
       display: flex;
-      flex-wrap: wrap;
-      align-content: flex-start;
+      flex-wrap: nowrap;
+      align-items: center;
       gap: 0.35rem;
       padding: 0 0.25rem;
-      overflow: hidden;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-behavior: smooth;
     }
   }
 
   .channel-card {
     flex-shrink: 0;
+    width: 13em;
+    height: 13em;
     border-radius: $border-radius-sm;
     overflow: hidden;
     background: rgba(255, 255, 255, 0.04);
@@ -101,9 +179,68 @@
 
     .channel-card-img {
       display: block;
-      width: 8rem;
-      height: 4.5rem;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
+    }
+
+    &.channel-card--event_line .channel-card-img {
+      width: 100%;
+      height: 100%;
+    }
+
+    &.channel-card--event_and_logo {
+      display: flex;
+      flex-direction: column;
+
+      .channel-card-logo-top {
+        flex-shrink: 0;
+        padding: 0.25em 0.5em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 3em;
+        background-color:#0a0a0a;
+
+        .channel-card-logo-img {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+        }
+      }
+
+      .channel-card-event-block {
+        position: relative;
+        flex: 1;
+
+        .channel-card-event-img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+
+        .channel-timeship {
+          position: absolute;
+          left: 0.3em;
+          right: 0.3em;
+          bottom: 0.3em;
+          height: 0.25em;
+          background: rgba(0, 0, 0, 0.5);
+          border-radius: 999px;
+
+          .channel-timeship-progress {
+            width: 40%; // valor inicial; se actualizará cuando se integre EPG
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(
+              90deg,
+              var(--epg-line-color, #3333ff),
+              #2ce308
+            );
+          }
+        }
+      }
     }
 
     &.focused {

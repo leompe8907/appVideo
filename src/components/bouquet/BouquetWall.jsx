@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getBouquetsWithChannels } from '../../services/tvDataService';
-import { BouquetRowCarousel } from './BouquetLayouts';
+import {
+  BouquetRowCarousel,
+  BouquetGridHorizontal,
+  BouquetGridVertical,
+} from './BouquetLayouts';
 
 /**
  * BouquetWall: muestra filas horizontales de canales agrupados por bouquet,
@@ -68,13 +72,42 @@ export function BouquetWall({ onChannelSelect }) {
 
   return (
     <div className="bouquet-wall">
-      {bouquets.map((bouquet) => (
-        <BouquetRowCarousel
-          key={bouquet.bouquetId ?? bouquet.id}
-          bouquet={bouquet}
-          onChannelSelect={onChannelSelect}
-        />
-      ))}
+      {bouquets.map((bouquet) => {
+        const layoutType = bouquet.layoutType;
+        const key = bouquet.bouquetId ?? bouquet.id;
+
+        if (layoutType === 'service_layout_grid_horizontal') {
+          return (
+            <BouquetGridHorizontal
+              key={key}
+              bouquet={bouquet}
+              layoutType={layoutType}
+              onChannelSelect={onChannelSelect}
+            />
+          );
+        }
+
+        if (layoutType === 'service_layout_grid_vertical') {
+          return (
+            <BouquetGridVertical
+              key={key}
+              bouquet={bouquet}
+              layoutType={layoutType}
+              onChannelSelect={onChannelSelect}
+            />
+          );
+        }
+
+        // Layout por defecto: fila horizontal tipo carrusel
+        return (
+          <BouquetRowCarousel
+            key={key}
+            bouquet={bouquet}
+            layoutType={layoutType}
+            onChannelSelect={onChannelSelect}
+          />
+        );
+      })}
     </div>
   );
 }
