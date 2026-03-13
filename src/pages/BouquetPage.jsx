@@ -7,14 +7,13 @@
 import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import BouquetWall from '../components/bouquet/BouquetWall';
-import PlayerContainer from '../components/player/PlayerContainer';
 import panaccessService from '../services/panaccessService';
 import '../styles/pages/_bouquet.scss';
 
 export function BouquetPage() {
   const { currentBrand, getImage } = useBrand();
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
-  const { play } = usePlayer();
+  const { play, containerRef, state: playerState } = usePlayer();
 
   const handleChannelSelect = (channel) => {
     if (import.meta.env?.DEV) {
@@ -62,10 +61,14 @@ export function BouquetPage() {
       style={backgroundPath ? { backgroundImage: `url(${backgroundPath})` } : {}}
     >
       <div className="bouquet-overlay" />
+      {/* Zona donde se monta el video al reproducir; solo cubre la pantalla cuando hay stream activo para no bloquear clics/scroll en otros monitores */}
+      <div
+        className={`bouquet-player-video${playerState?.url ? ' bouquet-player-video--active' : ''}`}
+        ref={containerRef}
+      />
       <div className="bouquet-container">
         <div className="bouquet-content">
           <BouquetWall onChannelSelect={handleChannelSelect} />
-          <PlayerContainer />
         </div>
       </div>
     </div>

@@ -31,6 +31,39 @@
     pointer-events: none; /* no interceptar clics; que lleguen al contenido */
   }
 
+  /**
+   * Zona donde se monta el video al reproducir (sin player-shell).
+   * Por defecto colapsada para no bloquear clics/scroll (p. ej. al cambiar de monitor).
+   * Solo cubre la pantalla cuando hay stream activo (--active).
+   */
+  .bouquet-player-video {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .bouquet-player-video--active {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    z-index: 10;
+  }
+
+  .bouquet-player-video video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: auto; /* permitir controles nativos del video si se usan */
+  }
+
   .bouquet-container {
     position: relative;
     z-index: 2;
