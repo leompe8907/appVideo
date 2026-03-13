@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
@@ -225,7 +226,12 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
     return () => clearInterval(id);
   }, [variant]);
 
-  // Imagen de evento: EPG primero, luego fallbacks. Si falla o no hay imagen → logo del canal
+  // Placeholder cuando ni evento ni logo cargan (imagen de canal dañada o ausente)
+  const { currentBrand, getImage } = useBrand();
+  const placeholderImageUrl =
+    currentBrand?.assets?.placeholder || getImage?.('placeholder_220x160.png') || '';
+
+  // Imagen de evento: EPG primero, luego fallbacks. Cadena: evento → logo → placeholder
   const eventImage = eventImageFromEpg || channel.eventImage || channel.currentEvent?.image || null;
   const fallbackLogoImage = channel.img || null;
   const initialLogoUrl = buildLogoUrlFromLogo2Id(channel) || fallbackLogoImage;
@@ -239,6 +245,8 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
   const handleLogoError = () => {
     if (fallbackLogoImage && logoImage !== fallbackLogoImage) {
       setLogoImage(fallbackLogoImage);
+    } else if (placeholderImageUrl) {
+      setLogoImage(placeholderImageUrl);
     }
   };
 
@@ -246,8 +254,9 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
     setEventImageFailed(true);
   };
 
+  // Cadena: imagen de evento → logo del canal → placeholder (si evento o logo faltan/fallan)
   const effectiveEventImage =
-    eventImage && !eventImageFailed ? eventImage : logoImage;
+    eventImage && !eventImageFailed ? eventImage : (logoImage || placeholderImageUrl || '');
 
   const handleClick = (e) => {
     e.preventDefault();
@@ -280,10 +289,10 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
       {variant === 'event_and_logo' ? (
         <>
           <div className="channel-card-frame">
-            {logoImage && (
+            {(logoImage || placeholderImageUrl) && (
               <div className="channel-card-logo-top">
                 <img
-                  src={logoImage}
+                  src={logoImage || placeholderImageUrl}
                   alt={channel.name || ''}
                   className="channel-card-logo-img"
                   onError={handleLogoError}
@@ -327,10 +336,10 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
         </>
       ) : variant === 'event_and_logo_overlay' ? (
         <>
-          {logoImage && (
+          {(logoImage || placeholderImageUrl) && (
             <div className="channel-card-logo-top">
               <img
-                src={logoImage}
+                src={logoImage || placeholderImageUrl}
                 alt={channel.name || ''}
                 className="channel-card-logo-img"
                 onError={handleLogoError}
@@ -376,12 +385,16 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
           <img
             src={
               variant === 'event' || variant === 'event_line'
-                ? eventImage || logoImage
-                : logoImage
+                ? effectiveEventImage
+                : (logoImage || placeholderImageUrl)
             }
             alt={channel.name || ''}
             className="channel-card-img"
-            onError={handleLogoError}
+            onError={
+              variant === 'event' || variant === 'event_line'
+                ? (eventImage && !eventImageFailed ? handleEventImageError : handleLogoError)
+                : handleLogoError
+            }
           />
         </>
       )}
