@@ -59,11 +59,16 @@ export function applyTheme(brandConfig) {
 
   const root = document.documentElement;
   const ui = brandConfig.ui;
+  const bouquets = brandConfig.bouquets || {};
 
   // Aplicar variables CSS
   root.style.setProperty('--primary-color', ui.primaryColor);
   root.style.setProperty('--secondary-color', ui.secondaryColor);
   root.style.setProperty('--epg-line-color', ui.epgLineColorTime);
+  root.style.setProperty(
+    '--bouquet-timeship-color',
+    bouquets.timeshipColor || ui.epgLineColorTime
+  );
   root.style.setProperty('--font-family', ui.fontFamily);
   
   // Aplicar clase de tema

@@ -33,20 +33,29 @@ export function classifyError(error, response = null) {
   let userMessage = t('errors.unexpected');
   let retry = false;
 
+  const normalizedMessage = (message || '').toLowerCase();
+
+  // Caso específico: permiso denegado por backend Panaccess
+  // "You do not have the permission to execute this functionality."
+  if (normalizedMessage.includes('you do not have the permission to execute this functionality')) {
+    errorType = ERROR_TYPES.AUTH;
+    userMessage = t('errors.auth');
+    retry = false; // no sirve reintentar sin re-login
+  }
   // Error de timeout
-  if (error.isTimeout || error.name === 'AbortError' || message.includes('timeout')) {
+  else if (error.isTimeout || error.name === 'AbortError' || normalizedMessage.includes('timeout')) {
     errorType = ERROR_TYPES.TIMEOUT;
     userMessage = t('errors.timeout');
     retry = true;
   }
   // Error de red
-  else if (!navigator.onLine || error.name === 'NetworkError' || message.includes('network')) {
+  else if (!navigator.onLine || error.name === 'NetworkError' || normalizedMessage.includes('network')) {
     errorType = ERROR_TYPES.NETWORK;
     userMessage = t('errors.network');
     retry = true;
   }
   // Error de autenticación
-  else if (response?.status === 401 || response?.status === 403 || message.includes('auth')) {
+  else if (response?.status === 401 || response?.status === 403 || normalizedMessage.includes('auth')) {
     errorType = ERROR_TYPES.AUTH;
     userMessage = t('errors.auth');
     retry = false;

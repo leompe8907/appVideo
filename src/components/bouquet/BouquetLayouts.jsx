@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
@@ -12,6 +13,20 @@ function normalizeColor(color) {
     return `#${trimmed}`;
   }
   return null;
+}
+
+/**
+ * Construye la URL del logo de canal a partir de logo2id.
+ * Si no se puede construir, se devuelve null y se usará la ruta de img.
+ */
+function buildLogoUrlFromLogo2Id(channel) {
+  if (!channel) return null;
+  const logo2id =
+    channel.logo2id ?? channel.logo2Id ?? channel.logo2ID ?? channel.logo_2_id;
+  if (!logo2id) return null;
+
+  // Ruta estándar: cdn/public/images/(logo2id)/v/thumb.png
+  return `/cdn/public/images/${logo2id}/v/thumb.png`;
 }
 
 /**
@@ -126,7 +141,15 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
 
   // Datos de evento (si el backend los provee)
   const eventImage = channel.eventImage || channel.currentEvent?.image || null;
-  const logoImage = channel.img || null;
+  const fallbackLogoImage = channel.img || null;
+  const initialLogoUrl = buildLogoUrlFromLogo2Id(channel) || fallbackLogoImage;
+  const [logoImage, setLogoImage] = useState(initialLogoUrl);
+
+  const handleLogoError = () => {
+    if (fallbackLogoImage && logoImage !== fallbackLogoImage) {
+      setLogoImage(fallbackLogoImage);
+    }
+  };
 
   const handleClick = () => {
     if (!isTV) {
@@ -161,6 +184,7 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
                 src={logoImage}
                 alt={channel.name || ''}
                 className="channel-card-logo-img"
+                onError={handleLogoError}
               />
             </div>
           )}
@@ -169,6 +193,8 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
               src={eventImage || logoImage}
               alt={channel.name || ''}
               className="channel-card-event-img"
+              // Si no hay imagen de evento, permitimos fallback al logo de canal
+              onError={!eventImage ? handleLogoError : undefined}
             />
             <div className="channel-timeship">
               <div className="channel-timeship-progress" />
@@ -185,6 +211,7 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
             }
             alt={channel.name || ''}
             className="channel-card-img"
+            onError={handleLogoError}
           />
         </>
       )}

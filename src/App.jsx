@@ -5,6 +5,7 @@ import { useViewport } from './hooks/useViewport';
 import { useAuthValidator } from './hooks/useAuthValidator';
 import { SpatialNavigationProvider } from './components/navigation/SpatialNavigationProvider';
 import { isAuthenticated } from './utils/userSession';
+import { PlayerProvider } from './contexts/PlayerContext';
 
 // Lazy loading de páginas
 const SplashPage = lazy(() => import('./pages/SplashPage'));
@@ -64,19 +65,48 @@ function App() {
 
   return (
     <SpatialNavigationProvider>
-      <div className="App">
-        <Routes>
-          {/* Rutas públicas */}
-          <Route path="/" element={<SplashPage />} />
-          <Route path="/login" element={<LoginPage />} />
+      <PlayerProvider>
+        <div className="App">
+          <Routes>
+            {/* Rutas públicas */}
+            <Route path="/" element={<SplashPage />} />
+            <Route path="/login" element={<LoginPage />} />
             {/* Rutas protegidas */}
-            <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<Loading />}><ProfilePage /></Suspense></ProtectedRoute>} />
-            <Route path="/smartcard" element={<ProtectedRoute><Suspense fallback={<Loading />}><SmartCardPage /></Suspense></ProtectedRoute>} />
-            <Route path="/bouquets" element={<ProtectedRoute><Suspense fallback={<Loading />}><BouquetPage /></Suspense></ProtectedRoute>} />
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </div>
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={<Loading />}>
+                    <ProfilePage />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/smartcard"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={<Loading />}>
+                    <SmartCardPage />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bouquets"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={<Loading />}>
+                    <BouquetPage />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+      </PlayerProvider>
     </SpatialNavigationProvider>
   );
 }

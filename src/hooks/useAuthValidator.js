@@ -13,7 +13,11 @@ export function useAuthValidator() {
   const { currentBrand } = useBrand();
 
   useEffect(() => {
+    let cancelled = false;
+
     const validate = async () => {
+      if (cancelled) return;
+
       if (!userSession.isAuthenticated()) {
         if (import.meta.env.DEV) console.log('[AuthValidator] No hay sessionId. Redirigiendo...');
         navigate('/', { replace: true });
@@ -36,7 +40,18 @@ export function useAuthValidator() {
       }
     };
 
+    // Validar inmediatamente al entrar en la ruta
     validate();
+
+    // Validar periódicamente mientras la ruta esté activa (cada 5 minutos)
+    const intervalId = window.setInterval(() => {
+      validate();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
   }, [navigate, currentBrand]);
 
   return null;

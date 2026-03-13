@@ -220,7 +220,7 @@
           object-fit: contain;
         }
 
-        .channel-timeship {
+          .channel-timeship {
           position: absolute;
           left: 0.3em;
           right: 0.3em;
@@ -233,11 +233,7 @@
             width: 40%; // valor inicial; se actualizará cuando se integre EPG
             height: 100%;
             border-radius: inherit;
-            background: linear-gradient(
-              90deg,
-              var(--epg-line-color, #3333ff),
-              #2ce308
-            );
+            background: var(--bouquet-timeship-color, var(--epg-line-color, #3333ff));
           }
         }
       }

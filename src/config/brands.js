@@ -36,6 +36,9 @@
  * @param {boolean} hashPasswordBeforeLogin - true: hashear contraseña en cliente antes de enviar (ej. Panaccess);
  *   false: enviar contraseña en claro (ej. backends como intv).
  *
+ * @param {Object} bouquets - Configuración visual específica para bouquets:
+ *   @param {string} bouquets.timeshipColor - Color (hex) de la barra de progreso (timeship) en los bouquets.
+ *
  * @param {Object} debug - Opciones de depuración (normalmente solo en desarrollo):
  *   @param {boolean} debug.spatialNav - true: activa logs en consola de la navegación espacial.
  *   @param {boolean} debug.spatialNavVisual - true: muestra marcos rojos de debug para la navegación espacial.
@@ -69,6 +72,12 @@ export const BRANDS = [
       theme: "dark", // Tema global: "dark" o "light"
       // Fuente
       fontFamily: "Arial, sans-serif", // Familia de fuentes CSS (ej. "Arial, sans-serif", "Roboto, sans-serif")
+    },
+
+    // Configuración específica de bouquets
+    bouquets: {
+      // Color de la barra de progreso (timeship) en diseños event_and_logo, etc.
+      timeshipColor: "#2CE308",
     },
     
     // Features habilitadas/deshabilitadas
@@ -119,6 +128,11 @@ export const BRANDS = [
       // Fuente
       fontFamily: "Roboto, sans-serif",
     },
+
+    // Configuración específica de bouquets
+    bouquets: {
+      timeshipColor: "#3333FF",
+    },
     
     // Features habilitadas/deshabilitadas
     features: {
@@ -167,6 +181,11 @@ export const BRANDS = [
       theme: "dark",
       // Fuente
       fontFamily: "Montserrat, sans-serif",
+    },
+
+    // Configuración específica de bouquets
+    bouquets: {
+      timeshipColor: "#2CE308",
     },
     
     // Features habilitadas/deshabilitadas
