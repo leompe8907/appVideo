@@ -101,13 +101,18 @@ export function PlayerProvider({ children }) {
       return;
     }
 
+    // Si el engine nunca se inicializó (container no existía al montar), inicializar ahora
+    if (!engine.video && containerRef.current) {
+      engine.init(containerRef.current);
+    }
+
     // Si ya estamos en el mismo contenido, solo darle play
     if (state.type === type && state.id === id && state.url === url) {
       engine.play();
       return;
     }
 
-    engine.load(url, { type });
+    engine.load(url, { type, autoPlay });
     setState((s) => ({
       ...s,
       type,
@@ -116,10 +121,6 @@ export function PlayerProvider({ children }) {
       item,
       error: null,
     }));
-
-    if (autoPlay) {
-      engine.play();
-    }
   };
 
   const pause = () => {

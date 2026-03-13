@@ -22,6 +22,8 @@ export function PlayerContainer() {
     }
   };
 
+  const hasContent = Boolean(state.url);
+
   return (
     <div className="player-shell">
       <div className="player-video-area" ref={containerRef} />
@@ -30,7 +32,8 @@ export function PlayerContainer() {
           type="button"
           className="player-toggle-button"
           onClick={togglePlay}
-          disabled={!state.url}
+          disabled={!hasContent}
+          title={!hasContent ? 'Selecciona un canal primero' : undefined}
         >
           {state.isPlaying ? 'Pausar' : 'Reproducir'}
         </button>

@@ -1,12 +1,14 @@
 /**
  * Página de Bouquets.
  * Solo muestra el muro de bouquets con canales (sin header/footer; resto configurable en Home).
+ * La URL de reproducción se toma del backend o se construye con getStreamM3u8 (lógica 10foot).
  */
 
 import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import BouquetWall from '../components/bouquet/BouquetWall';
 import PlayerContainer from '../components/player/PlayerContainer';
+import panaccessService from '../services/panaccessService';
 import '../styles/pages/_bouquet.scss';
 
 export function BouquetPage() {
@@ -15,9 +17,12 @@ export function BouquetPage() {
   const { play } = usePlayer();
 
   const handleChannelSelect = (channel) => {
+    if (import.meta.env?.DEV) {
+      console.log('[BouquetPage] handleChannelSelect', channel?.id ?? channel?.lcn, channel);
+    }
     if (!channel) return;
 
-    const url =
+    let url =
       channel.url ||
       channel.streamUrl ||
       channel.hlsUrl ||
@@ -25,7 +30,19 @@ export function BouquetPage() {
       null;
 
     if (!url) {
-      // eslint-disable-next-line no-console
+      const streamId = channel.id ?? channel.epgStreamId;
+      if (streamId != null && streamId !== '') {
+        try {
+          url = panaccessService.getStreamM3u8Url({ streamId });
+        } catch (e) {
+          if (import.meta.env?.DEV) {
+            console.warn('[BouquetPage] getStreamM3u8Url fallback:', e?.message || e);
+          }
+        }
+      }
+    }
+
+    if (!url) {
       console.warn('[BouquetPage] Canal sin URL de streaming', channel);
       return;
     }

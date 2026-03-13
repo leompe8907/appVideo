@@ -151,14 +151,17 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
     }
   };
 
-  const handleClick = () => {
-    if (!isTV) {
-      onSelect?.();
+  const handleClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (import.meta.env?.DEV) {
+      console.log('[ChannelCard] click', channel?.id ?? channel?.lcn);
     }
+    onSelect?.();
   };
 
   const handleKeyDown = (e) => {
-    if (!isTV && (e.key === 'Enter' || e.key === ' ')) {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onSelect?.();
     }

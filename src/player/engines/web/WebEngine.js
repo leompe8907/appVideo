@@ -63,10 +63,20 @@ export class WebEngine {
     });
   }
 
-  load(url, { type }) {
+  load(url, { type, autoPlay = false }) {
     if (!this.video || !url) return;
-    this.video.src = url;
-    this.video.load();
+    const v = this.video;
+
+    const onCanPlay = () => {
+      v.removeEventListener('canplay', onCanPlay);
+      if (autoPlay) this.play();
+    };
+    if (autoPlay) {
+      v.addEventListener('canplay', onCanPlay, { once: true });
+    }
+
+    v.src = url;
+    v.load();
     this.emit('statechange', { state: 'loaded', type });
   }
 

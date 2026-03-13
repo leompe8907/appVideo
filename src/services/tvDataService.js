@@ -138,6 +138,38 @@ export function normalizeStreamsResponse(response) {
 }
 
 /**
+ * Asegura que el stream tenga una URL de reproducción (como en 10foot).
+ * Si el backend no devolvió url/streamUrl/hlsUrl/hls, construye la URL con getStreamM3u8.
+ * @param {Object} stream - Objeto canal/stream (id, epgStreamId, url, ...)
+ * @returns {Object} El mismo stream, con .url definida si fue posible.
+ */
+function ensureStreamPlaybackUrl(stream) {
+  if (!stream || typeof stream !== 'object') return stream;
+  const hasUrl =
+    (stream.url && typeof stream.url === 'string' && stream.url.trim() !== '') ||
+    (stream.streamUrl && typeof stream.streamUrl === 'string' && stream.streamUrl.trim() !== '') ||
+    (stream.hlsUrl && typeof stream.hlsUrl === 'string' && stream.hlsUrl.trim() !== '') ||
+    (stream.hls && typeof stream.hls === 'string' && stream.hls.trim() !== '');
+  if (hasUrl) {
+    if (!stream.url && (stream.streamUrl || stream.hlsUrl || stream.hls)) {
+      stream.url = stream.streamUrl || stream.hlsUrl || stream.hls;
+    }
+    return stream;
+  }
+  const streamId = stream.id ?? stream.epgStreamId;
+  if (streamId == null || streamId === '') return stream;
+  try {
+    const url = panaccessService.getStreamM3u8Url({ streamId });
+    if (url) stream.url = url;
+  } catch (e) {
+    if (import.meta.env?.DEV) {
+      console.warn('[tvDataService] ensureStreamPlaybackUrl:', e?.message || e);
+    }
+  }
+  return stream;
+}
+
+/**
  * Obtiene y normaliza los bouquets "principales" (isMain) ordenados por prioridad.
  * Equivalente a parte de la lógica de AppData.getDataForServicesTV en 10foot.
  */
@@ -191,6 +223,7 @@ export async function getChannelsForBouquet(bouquet, options = {}) {
 
   filtered.sort((a, b) => Number(a.lcn ?? 0) - Number(b.lcn ?? 0));
 
+  filtered.forEach(ensureStreamPlaybackUrl);
   return filtered;
 }
 
@@ -209,6 +242,8 @@ export async function getBouquetsWithChannels(options = {}) {
 
   const bouquets = normalizeBouquetsResponse(bouquetResp);
   const streams = normalizeStreamsResponse(streamsResp);
+
+  streams.forEach(ensureStreamPlaybackUrl);
 
   const byBouquetId = {};
 
