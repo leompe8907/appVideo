@@ -106,6 +106,12 @@ function getChannelLayoutVariant(layoutType) {
     return 'event_and_logo';
   }
   if (
+    value === 'service_layout_event_and_logo_overlay' ||
+    value === 'event_and_logo_overlay'
+  ) {
+    return 'event_and_logo_overlay';
+  }
+  if (
     value === 'service_layout_event_line' ||
     value === 'event_line' ||
     value === 'eventline'
@@ -187,8 +193,9 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
   });
 
   const bgColor = normalizeColor(channel.backgroundColor ?? channel.bgColor);
-  const style = bgColor ? { backgroundColor: bgColor } : {};
   const variant = getChannelLayoutVariant(layoutType);
+  const style =
+    variant === 'event_and_logo' ? {} : bgColor ? { backgroundColor: bgColor } : {};
 
   // EPG: evento actual al aire (para event_and_logo)
   const epgItems = channel.epgItems ?? [];
@@ -208,7 +215,7 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
   const epgItemsRef = useRef(epgItems);
   epgItemsRef.current = epgItems;
   useEffect(() => {
-    if (variant !== 'event_and_logo') return;
+    if (variant !== 'event_and_logo' && variant !== 'event_and_logo_overlay') return;
     const tick = () => {
       const event = getCurrentEpgEvent(epgItemsRef.current);
       setTimeshipPercent(getEpgEventProgressPercent(event));
@@ -218,17 +225,29 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
     return () => clearInterval(id);
   }, [variant]);
 
-  // Imagen de evento: EPG primero, luego fallbacks
+  // Imagen de evento: EPG primero, luego fallbacks. Si falla o no hay imagen → logo del canal
   const eventImage = eventImageFromEpg || channel.eventImage || channel.currentEvent?.image || null;
   const fallbackLogoImage = channel.img || null;
   const initialLogoUrl = buildLogoUrlFromLogo2Id(channel) || fallbackLogoImage;
   const [logoImage, setLogoImage] = useState(initialLogoUrl);
+  const [eventImageFailed, setEventImageFailed] = useState(false);
+
+  useEffect(() => {
+    setEventImageFailed(false);
+  }, [currentEpgEvent?.event_id]);
 
   const handleLogoError = () => {
     if (fallbackLogoImage && logoImage !== fallbackLogoImage) {
       setLogoImage(fallbackLogoImage);
     }
   };
+
+  const handleEventImageError = () => {
+    setEventImageFailed(true);
+  };
+
+  const effectiveEventImage =
+    eventImage && !eventImageFailed ? eventImage : logoImage;
 
   const handleClick = (e) => {
     e.preventDefault();
@@ -260,6 +279,54 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
     >
       {variant === 'event_and_logo' ? (
         <>
+          <div className="channel-card-frame">
+            {logoImage && (
+              <div className="channel-card-logo-top">
+                <img
+                  src={logoImage}
+                  alt={channel.name || ''}
+                  className="channel-card-logo-img"
+                  onError={handleLogoError}
+                />
+              </div>
+            )}
+            <div className="channel-card-event-block">
+              <img
+                key={currentEpgEvent?.event_id ?? `channel-${channel.id ?? ''}`}
+                src={effectiveEventImage}
+                alt={eventTitle || channel.name || ''}
+                className="channel-card-event-img"
+                onError={eventImage ? handleEventImageError : handleLogoError}
+              />
+              <div className="channel-card-event-info">
+                <div className="channel-timeship">
+                  <div
+                    className="channel-timeship-progress"
+                    style={{ width: `${timeshipPercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          {(eventStartTime || eventEndTime || eventTitle) && (
+            <div className="channel-card-event-time-below">
+              {(eventStartTime || eventEndTime) && (
+                <span className="channel-card-event-time">
+                  {eventStartTime}
+                  {eventStartTime && eventEndTime ? ' – ' : ''}
+                  {eventEndTime}
+                </span>
+              )}
+              {eventTitle && (
+                <span className="channel-card-event-title" title={eventTitle}>
+                  {eventTitle}
+                </span>
+              )}
+            </div>
+          )}
+        </>
+      ) : variant === 'event_and_logo_overlay' ? (
+        <>
           {logoImage && (
             <div className="channel-card-logo-top">
               <img
@@ -273,10 +340,10 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
           <div className="channel-card-event-block">
             <img
               key={currentEpgEvent?.event_id ?? `channel-${channel.id ?? ''}`}
-              src={eventImage || logoImage}
+              src={effectiveEventImage}
               alt={eventTitle || channel.name || ''}
               className="channel-card-event-img"
-              onError={!eventImage ? handleLogoError : undefined}
+              onError={eventImage ? handleEventImageError : handleLogoError}
             />
             <div className="channel-card-event-info">
               {(eventStartTime || eventEndTime || eventTitle) && (

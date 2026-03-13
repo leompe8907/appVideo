@@ -78,6 +78,12 @@ function getBouquetLayoutType(rawBouquet) {
     return 'service_layout_event_and_logo';
   }
   if (
+    value === 'service_layout_event_and_logo_overlay' ||
+    value === 'event_and_logo_overlay'
+  ) {
+    return 'service_layout_event_and_logo_overlay';
+  }
+  if (
     value === 'service_layout_event_line' ||
     value === 'event_line' ||
     value === 'eventline'
