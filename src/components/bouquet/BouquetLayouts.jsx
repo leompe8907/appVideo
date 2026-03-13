@@ -1,7 +1,58 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+
+// --- Helpers EPG para layout event_and_logo ---
+/** Parsea "YYYY-MM-DD HH:mm:ss" a "HH:mm" para mostrar en UI */
+function formatEpgTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return '';
+  const h = d.getHours();
+  const m = d.getMinutes();
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/**
+ * Devuelve el evento EPG que está al aire ahora (now entre start y end).
+ * - Si ahora está dentro de un evento → ese evento (barra avanza en tiempo real).
+ * - Si ahora es antes del primer evento → primer evento (barra en 0%).
+ * - Si ahora es después del último evento → último evento (barra en 100%, imagen e info del último programa).
+ * Así la barra y la imagen se actualizan solas cuando cambia el evento.
+ */
+function getCurrentEpgEvent(epgItems) {
+  if (!Array.isArray(epgItems) || epgItems.length === 0) return null;
+  const now = Date.now();
+  let lastValid = null;
+  for (const event of epgItems) {
+    const startMs = event.startDate?.valueOf?.() ?? new Date(event.start).getTime();
+    const endMs = event.endDate?.valueOf?.() ?? new Date(event.end).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(endMs)) continue;
+    lastValid = event;
+    if (now >= startMs && now <= endMs) return event;
+    if (now < startMs) return lastValid ?? event; // aún no empieza → mostrar el que viene (barra 0%)
+  }
+  return lastValid ?? epgItems[0] ?? null; // ya pasó todo → último evento (barra 100%)
+}
+
+/** Progreso 0–100 del evento actual (para la barra). start/end como string o con startDate/endDate */
+function getEpgEventProgressPercent(event) {
+  if (!event) return 0;
+  const now = Date.now();
+  const startMs = event.startDate?.valueOf?.() ?? new Date(event.start).getTime();
+  const endMs = event.endDate?.valueOf?.() ?? new Date(event.end).getTime();
+  if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) return 0;
+  const p = ((now - startMs) / (endMs - startMs)) * 100;
+  return Math.min(100, Math.max(0, p));
+}
+
+/** Título del evento desde languages[0].title o campo directo */
+function getEpgEventTitle(event) {
+  if (!event) return '';
+  if (event.languages?.[0]?.title) return event.languages[0].title;
+  return event.title ?? '';
+}
 
 // Helper local para normalizar colores (copia ligera del usado en Bouquet.jsx)
 function normalizeColor(color) {
@@ -139,8 +190,36 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
   const style = bgColor ? { backgroundColor: bgColor } : {};
   const variant = getChannelLayoutVariant(layoutType);
 
-  // Datos de evento (si el backend los provee)
-  const eventImage = channel.eventImage || channel.currentEvent?.image || null;
+  // EPG: evento actual al aire (para event_and_logo)
+  const epgItems = channel.epgItems ?? [];
+  const currentEpgEvent = getCurrentEpgEvent(epgItems);
+  const eventTitle = getEpgEventTitle(currentEpgEvent);
+  const eventStartTime = formatEpgTime(currentEpgEvent?.start);
+  const eventEndTime = formatEpgTime(currentEpgEvent?.end);
+  const eventImageFromEpg =
+    currentEpgEvent?.imageUrl ||
+    currentEpgEvent?.imageUrl2 ||
+    currentEpgEvent?.catchupImageUrl ||
+    null;
+
+  const [timeshipPercent, setTimeshipPercent] = useState(() =>
+    getEpgEventProgressPercent(currentEpgEvent)
+  );
+  const epgItemsRef = useRef(epgItems);
+  epgItemsRef.current = epgItems;
+  useEffect(() => {
+    if (variant !== 'event_and_logo') return;
+    const tick = () => {
+      const event = getCurrentEpgEvent(epgItemsRef.current);
+      setTimeshipPercent(getEpgEventProgressPercent(event));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [variant]);
+
+  // Imagen de evento: EPG primero, luego fallbacks
+  const eventImage = eventImageFromEpg || channel.eventImage || channel.currentEvent?.image || null;
   const fallbackLogoImage = channel.img || null;
   const initialLogoUrl = buildLogoUrlFromLogo2Id(channel) || fallbackLogoImage;
   const [logoImage, setLogoImage] = useState(initialLogoUrl);
@@ -193,14 +272,35 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
           )}
           <div className="channel-card-event-block">
             <img
+              key={currentEpgEvent?.event_id ?? `channel-${channel.id ?? ''}`}
               src={eventImage || logoImage}
-              alt={channel.name || ''}
+              alt={eventTitle || channel.name || ''}
               className="channel-card-event-img"
-              // Si no hay imagen de evento, permitimos fallback al logo de canal
               onError={!eventImage ? handleLogoError : undefined}
             />
-            <div className="channel-timeship">
-              <div className="channel-timeship-progress" />
+            <div className="channel-card-event-info">
+              {(eventStartTime || eventEndTime || eventTitle) && (
+                <div className="channel-card-event-meta">
+                  {(eventStartTime || eventEndTime) && (
+                    <span className="channel-card-event-time">
+                      {eventStartTime}
+                      {eventStartTime && eventEndTime ? ' – ' : ''}
+                      {eventEndTime}
+                    </span>
+                  )}
+                  {eventTitle && (
+                    <span className="channel-card-event-title" title={eventTitle}>
+                      {eventTitle}
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className="channel-timeship">
+                <div
+                  className="channel-timeship-progress"
+                  style={{ width: `${timeshipPercent}%` }}
+                />
+              </div>
             </div>
           </div>
         </>
