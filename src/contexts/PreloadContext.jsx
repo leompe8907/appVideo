@@ -7,7 +7,7 @@ import { createContext, useContext, useCallback, useRef, useState } from 'react'
 import { getBouquetsWithChannels, loadEPGForStreams } from '../services/tvDataService';
 import { loadVODData } from '../services/vodService';
 
-const LOADING_TIMEOUT_MS = 30000;
+const LOADING_TIMEOUT_MS = 300000;
 
 const epgInitialState = {
   status: 'idle', // 'idle' | 'loading' | 'finishing' | 'ready' | 'error'
