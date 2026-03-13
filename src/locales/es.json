@@ -79,6 +79,9 @@
     "errorLoad": "Error al cargar bouquets.",
     "bouquetAria": "Bouquet {{name}}"
   },
+  "vod": {
+    "seriesCategory": "Séries"
+  },
   "preload": {
     "message": "Preparando guía de programación...",
     "channelsProgress": "{{current}} de {{total}} canales",

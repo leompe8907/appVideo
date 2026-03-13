@@ -151,7 +151,7 @@ export const BRANDS = [
     // Features habilitadas/deshabilitadas
     features: {
       miniPlayer: true,
-      profiles: true,
+      profiles: false,
       seekbar: false, // Equivalente a seekbarEnabled en 10foot
       logout: false, // Equivalente a logoutEnabled en 10foot
       showRating: true, // Equivalente a showRating en 10foot

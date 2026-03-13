@@ -1,17 +1,28 @@
 /**
- * Contexto de precarga de datos (EPG, y en el futuro catchups, VOD, ads, OSMS).
- * Centraliza la descarga y el estado para uso en bouquets, player y futuros componentes.
+ * Contexto de precarga de datos (EPG, VOD, y en el futuro catchups, ads, OSMS).
+ * Centraliza la descarga y el estado para uso en bouquets, player, VOD y futuros componentes.
  */
 
 import { createContext, useContext, useCallback, useRef, useState } from 'react';
 import { getBouquetsWithChannels, loadEPGForStreams } from '../services/tvDataService';
+import { loadVODData } from '../services/vodService';
 
 const LOADING_TIMEOUT_MS = 30000;
 
-const initialState = {
+const epgInitialState = {
   status: 'idle', // 'idle' | 'loading' | 'finishing' | 'ready' | 'error'
   streams: [],
   progress: { current: 0, total: 0, percent: 0 },
+  error: null,
+  lastLoadedAt: null,
+};
+
+const vodInitialState = {
+  status: 'idle', // 'idle' | 'loading' | 'ready' | 'error'
+  categories: [],
+  allVods: [],
+  vodRecommended: [],
+  progress: { loadedCount: 0 },
   error: null,
   lastLoadedAt: null,
 };
@@ -52,9 +63,11 @@ export function mergeEpgIntoChannels(channels, streamsWithEpg) {
 }
 
 export function PreloadProvider({ children }) {
-  const [epg, setEpg] = useState(initialState);
+  const [epg, setEpg] = useState(epgInitialState);
+  const [vod, setVod] = useState(vodInitialState);
   const loadingTimeoutRef = useRef(null);
   const loadingStartedRef = useRef(false);
+  const vodLoadingRef = useRef(false);
 
   const clearTimeoutRef = useCallback(() => {
     if (loadingTimeoutRef.current) {
@@ -126,15 +139,30 @@ export function PreloadProvider({ children }) {
         });
 
         clearTimeoutRef();
-        setEpg((prev) => ({
-          ...prev,
-          status: 'finishing',
-          streams: allStreams,
-          progress: { current: total, total, percent: 100 },
-          error: null,
-        }));
+        setEpg((prev) => {
+          // Si el timeout ya marcó 'ready', solo actualizar datos; no volver a 'finishing' para evitar
+          // que el usuario vuelva a ver la pantalla de carga y luego "regrese" a bouquets.
+          if (prev.status !== 'loading') {
+            return {
+              ...prev,
+              streams: allStreams,
+              progress: { current: total, total, percent: 100 },
+              error: null,
+            };
+          }
+          return {
+            ...prev,
+            status: 'finishing',
+            streams: allStreams,
+            progress: { current: total, total, percent: 100 },
+            error: null,
+          };
+        });
         setTimeout(() => {
-          setEpg((prev) => ({ ...prev, status: 'ready', lastLoadedAt: Date.now() }));
+          setEpg((prev) => {
+            if (prev.status !== 'finishing') return prev;
+            return { ...prev, status: 'ready', lastLoadedAt: Date.now() };
+          });
         }, 500);
       } catch (err) {
         clearTimeoutRef();
@@ -155,10 +183,54 @@ export function PreloadProvider({ children }) {
     [clearTimeoutRef, epg.status]
   );
 
+  /**
+   * Carga VOD en segundo plano (en paralelo con EPG). No bloquea la pantalla de preload.
+   * Se ejecuta al mismo tiempo que loadEPG; cuando termina, vod.status pasa a 'ready'.
+   */
+  const loadVOD = useCallback((brandConfig, options = {}) => {
+    if (!brandConfig || vodLoadingRef.current) return;
+    vodLoadingRef.current = true;
+    setVod((prev) => ({ ...prev, status: 'loading', error: null, progress: { loadedCount: 0 } }));
+
+    loadVODData(brandConfig, {
+      ...options,
+      onProgress: (loadedCount) => {
+        setVod((prev) => ({ ...prev, progress: { loadedCount } }));
+      },
+    })
+      .then(({ categories, allVods, vodRecommended }) => {
+        setVod((prev) => ({
+          ...prev,
+          status: 'ready',
+          categories,
+          allVods,
+          vodRecommended,
+          progress: { loadedCount: allVods.length },
+          error: null,
+          lastLoadedAt: Date.now(),
+        }));
+      })
+      .catch((err) => {
+        const message = err?.message || 'Error al cargar VOD';
+        if (import.meta.env?.DEV) console.warn('[Preload] loadVOD error:', err);
+        setVod((prev) => ({
+          ...prev,
+          status: 'error',
+          error: message,
+          progress: prev.progress,
+        }));
+      })
+      .finally(() => {
+        vodLoadingRef.current = false;
+      });
+  }, []);
+
   const resetPreload = useCallback(() => {
     clearTimeoutRef();
-    setEpg(initialState);
+    setEpg(epgInitialState);
+    setVod(vodInitialState);
     loadingStartedRef.current = false;
+    vodLoadingRef.current = false;
   }, [clearTimeoutRef]);
 
   /**
@@ -174,6 +246,8 @@ export function PreloadProvider({ children }) {
   const value = {
     epg,
     loadEPG,
+    vod,
+    loadVOD,
     resetPreload,
     getStreamsWithEPG,
   };
