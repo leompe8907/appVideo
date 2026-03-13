@@ -4,6 +4,7 @@
  */
 
 import panaccessService from './panaccessService';
+import { loadEPGForChannels } from './epgService';
 
 /**
  * Obtiene el tipo de layout a usar para un bouquet a partir de customData.
@@ -269,5 +270,28 @@ export async function getBouquetsWithChannels(options = {}) {
       return { ...b, bouquetId, items, layoutType };
     })
     .filter((b) => b.items.length > 0);
+}
+
+/**
+ * Carga EPG para una lista de streams (canales) usando la config de marca.
+ * Migrado del proyecto EPG (getEPGByBouquet). Asigna channel.epgItems a cada canal.
+ * @param {Array} streams - Lista de canales (con epgStreamId).
+ * @param {Object} brandConfig - Config de marca (epgApiKey/epgApiToken en brandConfig; epg: { daysOffset, rowsOnInit, hoursLimit } en marca).
+ * @param {Object} options - maxChannels, onProgress(index, total).
+ * @returns {Promise<Array>} La misma lista con epgItems asignados.
+ */
+export async function loadEPGForStreams(streams, brandConfig, options = {}) {
+  if (!Array.isArray(streams) || streams.length === 0 || !brandConfig) return streams;
+  const epg = brandConfig.epg ?? {};
+  const maxChannels = options.maxChannels ?? epg.rowsOnInit ?? 7;
+  await loadEPGForChannels(streams, {
+    epgApiKey: brandConfig.epgApiKey ?? '',
+    epgApiToken: brandConfig.epgApiToken ?? '',
+    epgDaysOffset: epg.daysOffset ?? 2,
+    epgHoursLimit: epg.hoursLimit ?? 12,
+    maxChannels,
+    onProgress: options.onProgress ?? (() => {}),
+  });
+  return streams;
 }
 

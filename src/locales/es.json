@@ -79,6 +79,16 @@
     "errorLoad": "Error al cargar bouquets.",
     "bouquetAria": "Bouquet {{name}}"
   },
+  "preload": {
+    "message": "Preparando guía de programación...",
+    "channelsProgress": "{{current}} de {{total}} canales",
+    "finishing": "Listo en un momento...",
+    "error": "Error al cargar la guía. Puedes continuar sin ella.",
+    "tip1": "Usa las flechas para navegar entre canales.",
+    "tip2": "Pulsa Enter o haz clic para reproducir un canal.",
+    "tip3": "La guía de programación muestra lo que está en vivo.",
+    "tip4": "Selecciona un bouquet para ver sus canales."
+  },
   "splash": {
     "alt": "{{appName}} Splash"
   },

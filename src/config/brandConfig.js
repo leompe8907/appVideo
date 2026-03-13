@@ -5,6 +5,12 @@ import { getSplashPath } from "../utils/splashLoader";
 
 const isDev = import.meta.env.DEV;
 
+/** Parámetros EPG compartidos por todos los clientes (API de guía de programación) */
+export const EPG_SHARED = {
+  epgApiKey: "724aa4b262071d28844ac2fa85fe7eb198d9cb819c8913f6769b2b48a56a1f61",
+  epgApiToken: "OMGRUhcoXKFqnpzZEfrF",
+};
+
 /** Caché en memoria por brand para evitar trabajo repetido en la misma sesión */
 let _cache = { key: null, config: null };
 
@@ -94,6 +100,7 @@ export function enrichConfigWithAssets(config) {
 
   return {
     ...config,
+    ...EPG_SHARED,
     assets: {
       logo: getBrandAsset(config.brand, "logo.png"),
       logoWhite: getBrandAsset(config.brand, "logo-white.png"),

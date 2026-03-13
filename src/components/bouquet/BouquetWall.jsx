@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getBouquetsWithChannels } from '../../services/tvDataService';
+import { usePreload } from '../../contexts/PreloadContext';
 import {
   BouquetRowCarousel,
   BouquetGridHorizontal,
@@ -9,10 +10,11 @@ import {
 
 /**
  * BouquetWall: muestra filas horizontales de canales agrupados por bouquet,
- * similar a la home de 10foot.
+ * similar a la home de 10foot. Fusiona epgItems del PreloadContext cuando existan.
  */
 export function BouquetWall({ onChannelSelect }) {
   const { t } = useTranslation();
+  const { getStreamsWithEPG } = usePreload();
   const [bouquets, setBouquets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,7 +28,11 @@ export function BouquetWall({ onChannelSelect }) {
         setError(null);
         const list = await getBouquetsWithChannels({ enableRetry: false });
         if (!isMounted) return;
-        setBouquets(list);
+        const withEpg = list.map((b) => ({
+          ...b,
+          items: getStreamsWithEPG(b.items || []),
+        }));
+        setBouquets(withEpg);
       } catch (err) {
         if (!isMounted) return;
         console.error('[BouquetWall] Error al cargar bouquets con canales:', err);
@@ -43,7 +49,7 @@ export function BouquetWall({ onChannelSelect }) {
     return () => {
       isMounted = false;
     };
-  }, [t]);
+  }, [t, getStreamsWithEPG]);
 
   if (isLoading) {
     return (

@@ -185,4 +185,39 @@ export function setClientConfig(config) {
   localStorage.setItem(STORAGE_KEYS.clientConfig, JSON.stringify(config));
 }
 
+/**
+ * Config efectivo: el backend puede devolver { answer: config }; usamos config.answer ?? config.
+ * @param {Object} raw
+ * @returns {Object|null}
+ */
+function getEffectiveClientConfig(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  return raw.answer ?? raw;
+}
+
+/**
+ * Obtiene la URL del CDN de EPG a partir del config del cliente (getClientConfig).
+ * Equivalente a User.epgCdnUrl en el proyecto EPG (setConfig → epgCdnGroupId + cdnServers).
+ * @returns {string}
+ */
+export function getEpgCdnUrl() {
+  const config = getEffectiveClientConfig(getClientConfig());
+  if (!config?.cdnServers?.length || config.epgCdnGroupId == null) return '';
+  const cdn = config.epgCdnGroupId;
+  const server = config.cdnServers.find((s) => String(s.id) === String(cdn));
+  if (!server?.urls?.length) return '';
+  return typeof server.urls[0] === 'string' ? server.urls[0] : '';
+}
+
+/**
+ * Obtiene el nombre del operador a partir del config del cliente (getClientConfig).
+ * Equivalente a User.operatorName en el proyecto EPG (setConfig → subscriber.operator).
+ * @returns {string}
+ */
+export function getOperatorName() {
+  const config = getEffectiveClientConfig(getClientConfig());
+  const op = config?.subscriber?.operator;
+  return op != null && String(op).trim() !== '' ? String(op).trim() : '';
+}
+
 export { STORAGE_KEYS };

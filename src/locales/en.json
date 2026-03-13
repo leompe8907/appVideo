@@ -79,6 +79,16 @@
     "errorLoad": "Error loading bouquets.",
     "bouquetAria": "Bouquet {{name}}"
   },
+  "preload": {
+    "message": "Preparing program guide...",
+    "channelsProgress": "{{current}} of {{total}} channels",
+    "finishing": "Almost ready...",
+    "error": "Error loading the guide. You can continue without it.",
+    "tip1": "Use the arrow keys to navigate between channels.",
+    "tip2": "Press Enter or click to play a channel.",
+    "tip3": "The program guide shows what's on now.",
+    "tip4": "Select a bouquet to see its channels."
+  },
   "splash": {
     "alt": "{{appName}} Splash"
   },

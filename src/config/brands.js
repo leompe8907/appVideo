@@ -56,6 +56,13 @@ export const BRANDS = [
     developedBy: "Network Broadcast",
     version: "1.0.2",
 
+    // EPG: parámetros generales para la API de guía de programación (mismo valor en todas las marcas)
+    epg: {
+      daysOffset: 2, // Días de offset para la API de guía de programación
+      rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
+      hoursLimit: 12, // Límite de horas para la API de guía de programación
+    },
+
     // Configuración de UI/Tema
     ui: {
       // Splash
@@ -110,6 +117,13 @@ export const BRANDS = [
     branding: 'Panaccess',
     developedBy: "inTV&#174,",
     version: "2.0.2",
+
+    // EPG: parámetros generales para la API de guía de programación (mismo valor en todas las marcas)
+    epg: {
+      daysOffset: 2, // Días de offset para la API de guía de programación
+      rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
+      hoursLimit: 12, // Límite de horas para la API de guía de programación
+    },
     
     // Configuración de UI/Tema
     ui: {
@@ -164,6 +178,13 @@ export const BRANDS = [
     branding: 'Panaccess',
     developedBy: "Gigmax",
     version: "2.0.3",
+
+    // EPG: parámetros generales para la API de guía de programación (mismo valor en todas las marcas)
+    epg: {
+      daysOffset: 2, // Días de offset para la API de guía de programación
+      rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
+      hoursLimit: 12, // Límite de horas para la API de guía de programación
+    },
     
     // Configuración de UI/Tema
     ui: {
