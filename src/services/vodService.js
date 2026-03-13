@@ -106,7 +106,11 @@ export async function loadVODData(brandConfig, options = {}) {
 
   const categories = categoryGroups.flatMap((g) => g.categories || []);
   categories.forEach((cat, i) => {
-    if (cat.name) categories[i].name = typeof t === 'function' ? t(cat.name) : cat.name;
+    if (cat.name && typeof t === 'function') {
+      const key = `vod.categories.${cat.name}`;
+      const translated = t(key);
+      categories[i].name = translated !== key ? translated : cat.name;
+    }
   });
 
   let vodRecommendedId = -1;
