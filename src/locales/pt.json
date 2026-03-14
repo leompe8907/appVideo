@@ -83,7 +83,16 @@
     "loading": "Carregando pacotes...",
     "noBouquets": "Nenhum pacote encontrado.",
     "errorLoad": "Erro ao carregar pacotes.",
+    "errorStreams": "Erro ao carregar canais.",
+    "loadingStreams": "Carregando canais...",
+    "streamsCount": "{{count}} canal(is)",
     "bouquetAria": "Pacote {{name}}"
+  },
+  "player": {
+    "selectChannelFirst": "Selecione um canal primeiro",
+    "play": "Reproduzir",
+    "pause": "Pausar",
+    "playbackError": "Erro na reprodução"
   },
   "vod": {
     "title": "VOD",
@@ -92,6 +101,7 @@
     "errorLoad": "Erro ao carregar VOD.",
     "noContent": "Nenhum conteúdo VOD disponível.",
     "recommended": "Recomendado",
+    "seeMore": "Ver mais",
     "play": "Reproduzir",
     "episodes": "Episódios",
     "errorLoadSeries": "Erro ao carregar a série.",

@@ -83,7 +83,16 @@
     "loading": "Loading bouquets...",
     "noBouquets": "No bouquets found.",
     "errorLoad": "Error loading bouquets.",
+    "errorStreams": "Error loading channels.",
+    "loadingStreams": "Loading channels...",
+    "streamsCount": "{{count}} channel(s)",
     "bouquetAria": "Bouquet {{name}}"
+  },
+  "player": {
+    "selectChannelFirst": "Select a channel first",
+    "play": "Play",
+    "pause": "Pause",
+    "playbackError": "Playback error"
   },
   "vod": {
     "title": "VOD",
@@ -92,6 +101,7 @@
     "errorLoad": "Error loading VOD.",
     "noContent": "No VOD content available.",
     "recommended": "Recommended",
+    "seeMore": "See more",
     "play": "Play",
     "episodes": "Episodes",
     "errorLoadSeries": "Error loading series info.",

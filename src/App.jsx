@@ -73,8 +73,22 @@ function App() {
           <div className="App">
             <Routes>
               {/* Rutas públicas */}
-              <Route path="/" element={<SplashPage />} />
-              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/"
+                element={
+                  <Suspense fallback={<Loading />}>
+                    <SplashPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/login"
+                element={
+                  <Suspense fallback={<Loading />}>
+                    <LoginPage />
+                  </Suspense>
+                }
+              />
               {/* Rutas protegidas */}
               <Route
                 path="/profile"

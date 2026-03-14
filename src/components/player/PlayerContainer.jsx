@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { usePlayer } from '../../contexts/PlayerContext';
 
 /**
@@ -5,6 +6,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
  * El engine pinta el <video> dentro de player-video-area.
  */
 export function PlayerContainer() {
+  const { t } = useTranslation();
   const { state, containerRef, play, pause } = usePlayer();
 
   const togglePlay = () => {
@@ -33,9 +35,9 @@ export function PlayerContainer() {
           className="player-toggle-button"
           onClick={togglePlay}
           disabled={!hasContent}
-          title={!hasContent ? 'Selecciona un canal primero' : undefined}
+          title={!hasContent ? t('player.selectChannelFirst') : undefined}
         >
-          {state.isPlaying ? 'Pausar' : 'Reproducir'}
+          {state.isPlaying ? t('player.pause') : t('player.play')}
         </button>
         <span className="player-time">
           {Number.isFinite(state.currentTime) ? Math.floor(state.currentTime) : 0} /
@@ -43,7 +45,7 @@ export function PlayerContainer() {
         </span>
         {state.error && (
           <span className="player-error">
-            {typeof state.error === 'string' ? state.error : 'Error en reproducción'}
+            {typeof state.error === 'string' ? state.error : t('player.playbackError')}
           </span>
         )}
       </div>

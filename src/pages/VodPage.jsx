@@ -1,5 +1,6 @@
 /**
  * Página VOD: categorías y recomendados desde PreloadContext.
+ * Por género: 9 ítems + "Ver más" que abre modal con todo el género.
  * Reproduce películas directamente; series abren modal de episodios.
  */
 
@@ -10,8 +11,12 @@ import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import panaccessService from '../services/panaccessService';
 import VodCard from '../components/vod/VodCard';
+import VodSeeMoreCard from '../components/vod/VodSeeMoreCard';
 import VodDetailModal from '../components/vod/VodDetailModal';
+import VodCategoryModal from '../components/vod/VodCategoryModal';
 import '../styles/pages/_vod.scss';
+
+const ITEMS_PER_ROW = 9;
 
 export function VodPage() {
   const { t } = useTranslation();
@@ -19,6 +24,7 @@ export function VodPage() {
   const { currentBrand, getImage } = useBrand();
   const { play, containerRef, state: playerState } = usePlayer();
   const [detailItem, setDetailItem] = useState(null);
+  const [categoryModal, setCategoryModal] = useState(null);
 
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
   const baseUrl = currentBrand?.drm || '';
@@ -26,6 +32,7 @@ export function VodPage() {
 
   const handleVodSelect = (item) => {
     if (!item?.id) return;
+    setCategoryModal(null);
     if (item.isSeries === true) {
       setDetailItem(item);
       return;
@@ -36,6 +43,10 @@ export function VodPage() {
     } catch (e) {
       console.warn('[VodPage] getVodM3u8Url:', e?.message);
     }
+  };
+
+  const openCategoryModal = (name, vods) => {
+    setCategoryModal({ name, vods: vods || [] });
   };
 
   const handlePlayFromModal = (params) => {
@@ -80,7 +91,7 @@ export function VodPage() {
               <section className="vod-row" aria-label={t('vod.recommended')}>
                 <h2 className="vod-row-title">{t('vod.recommended')}</h2>
                 <div className="vod-row-cards">
-                  {vodRecommended.map((v, i) => (
+                  {vodRecommended.slice(0, ITEMS_PER_ROW).map((v, i) => (
                     <VodCard
                       key={v.id ?? i}
                       item={v}
@@ -90,36 +101,60 @@ export function VodPage() {
                       baseUrl={baseUrl}
                     />
                   ))}
+                  {vodRecommended.length > ITEMS_PER_ROW && (
+                    <VodSeeMoreCard
+                      focusKeyPrefix="vod-rec"
+                      onSelect={() => openCategoryModal(t('vod.recommended'), vodRecommended)}
+                    />
+                  )}
                 </div>
               </section>
             )}
-            {categories?.map((cat) => (
-              <section
-                key={cat.id ?? cat.name}
-                className="vod-row"
-                aria-label={cat.name}
-              >
-                <h2 className="vod-row-title">{cat.name}</h2>
-                <div className="vod-row-cards">
-                  {(cat.vods || []).map((v, i) => (
-                    <VodCard
-                      key={v.id ?? i}
-                      item={v}
-                      index={i}
-                      onSelect={handleVodSelect}
-                      focusKeyPrefix={`vod-cat-${cat.id ?? i}`}
-                      baseUrl={baseUrl}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
+            {categories?.map((cat, catIndex) => {
+              const catVods = cat.vods || [];
+              return (
+                <section
+                  key={cat.id ?? cat.name}
+                  className="vod-row"
+                  aria-label={cat.name}
+                >
+                  <h2 className="vod-row-title">{cat.name}</h2>
+                  <div className="vod-row-cards">
+                    {catVods.slice(0, ITEMS_PER_ROW).map((v, i) => (
+                      <VodCard
+                        key={v.id ?? i}
+                        item={v}
+                        index={i}
+                        onSelect={handleVodSelect}
+                        focusKeyPrefix={`vod-cat-${cat.id ?? catIndex}`}
+                        baseUrl={baseUrl}
+                      />
+                    ))}
+                    {catVods.length > ITEMS_PER_ROW && (
+                      <VodSeeMoreCard
+                        focusKeyPrefix={`vod-cat-${cat.id ?? catIndex}`}
+                        onSelect={() => openCategoryModal(cat.name, catVods)}
+                      />
+                    )}
+                  </div>
+                </section>
+              );
+            })}
             {status === 'ready' && (!categories?.length || categories.every((c) => !(c.vods?.length))) && !vodRecommended?.length && (
               <p className="vod-no-content">{t('vod.noContent')}</p>
             )}
           </div>
         )}
       </div>
+
+      {categoryModal && (
+        <VodCategoryModal
+          categoryName={categoryModal.name}
+          vods={categoryModal.vods}
+          onSelectItem={handleVodSelect}
+          onClose={() => setCategoryModal(null)}
+        />
+      )}
 
       {detailItem && (
         <VodDetailModal

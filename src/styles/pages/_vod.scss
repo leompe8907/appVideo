@@ -366,3 +366,98 @@
     border-color: #e50914;
   }
 }
+
+// VodSeeMoreCard (décimo ítem "Ver más") — misma estructura que VodCard: poster + título
+.vod-see-more-card {
+  .vod-see-more-poster {
+    @include flex-center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px dashed rgba(255, 255, 255, 0.25);
+  }
+
+  .vod-see-more-icon {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .vod-see-more-title {
+    margin-top: 0.35rem;
+  }
+
+  &.focused .vod-see-more-poster {
+    border-color: #e50914;
+    background: rgba(229, 9, 20, 0.15);
+  }
+}
+
+// VodCategoryModal (todas las películas del género)
+.vod-category-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  @include flex-center;
+  padding: $spacing-md;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.vod-category-backdrop {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+.vod-category-modal {
+  position: relative;
+  width: 100%;
+  max-width: 95vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(28, 28, 28, 0.98);
+  border-radius: $border-radius-lg;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.vod-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.vod-category-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.vod-category-close {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  border-radius: 50%;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+.vod-category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  overflow-y: auto;
+  @include scrollbar-hidden;
+}
