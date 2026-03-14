@@ -1,7 +1,7 @@
 /**
  * Servicio de carga y preparación de datos VOD.
  * Equivalente a getVOD/callGetVODContent/prepareDataForVOD de app-data.js (10foot).
- * Pensado para usarse desde PreloadContext en paralelo con EPG.
+ * Plantillas de imagen igual que 10foot config.js (vod_poster_list, vod_poster_info, original).
  */
 
 import panaccessService from './panaccessService';
@@ -9,31 +9,55 @@ import panaccessService from './panaccessService';
 const VOD_CONTENT_PAGE_SIZE = 100;
 const VOD_CONTENT_MAX_OFFSET = 1000;
 
+/** Plantillas por defecto 10foot: mismo patrón que config.js imageUrlVodPosterList/Info/Original */
+const DEFAULT_VOD_IMAGE_TEMPLATES = {
+  posterList: '%base_url%/cv_data_pub/images/%image_id%/v/vod_poster_list.jpg',
+  posterInfo: '%base_url%/cv_data_pub/images/%image_id%/v/vod_poster_info.jpg',
+  original: '%base_url%/cv_data_pub/images/%image_id%/v/original.jpg',
+};
+
 /**
- * Construye URLs de imagen VOD. Si brandConfig tiene vod.imageUrlTemplates se usan;
- * si no, se devuelve null y el UI puede usar placeholders.
+ * Construye una URL de imagen VOD a partir de baseUrl e imageId (fallback 10foot).
+ * @param {string} baseUrl - URL base (p. ej. brandConfig.drm)
+ * @param {string|number} imageId - ID de imagen (image1Id, image2Id, image3Id)
+ * @param {'posterList'|'posterInfo'|'original'} type - Tipo de imagen
+ * @returns {string} URL de la imagen
+ */
+export function getVodImageUrl(baseUrl, imageId, type = 'posterList') {
+  if (baseUrl == null || imageId == null) return '';
+  const base = String(baseUrl).replace(/\/?$/, '');
+  const template = DEFAULT_VOD_IMAGE_TEMPLATES[type] || DEFAULT_VOD_IMAGE_TEMPLATES.posterList;
+  return template.replace(/%base_url%/g, base).replace(/%image_id%/g, imageId);
+}
+
+/**
+ * Construye URLs de imagen VOD. Usa plantillas de marca o las por defecto (10foot).
+ * Siempre rellena posterListURL/posterInfoURL cuando hay image1Id (fallback como en home.js getHTMLRowVOD).
  * @param {Object} vod - Ítem VOD con image1Id, image2Id, image3Id
  * @param {string} baseUrl - URL base (p. ej. brandConfig.drm)
  * @param {Object} templates - { posterList, posterInfo, original } con %base_url% y %image_id%
  */
 function buildVodImageUrls(vod, baseUrl, templates = {}) {
   const base = (baseUrl || '').replace(/\/?$/, '');
+  const t = { ...DEFAULT_VOD_IMAGE_TEMPLATES, ...templates };
   const result = {};
-  if (vod.image1Id != null && templates.posterList) {
-    result.posterListURL = templates.posterList.replace(/%base_url%/g, base).replace(/%image_id%/g, vod.image1Id);
+
+  if (vod.image1Id != null) {
+    const posterList = t.posterList ? t.posterList.replace(/%base_url%/g, base).replace(/%image_id%/g, vod.image1Id) : getVodImageUrl(base, vod.image1Id, 'posterList');
+    const posterInfo = t.posterInfo ? t.posterInfo.replace(/%base_url%/g, base).replace(/%image_id%/g, vod.image1Id) : getVodImageUrl(base, vod.image1Id, 'posterInfo');
+    result.posterListURL = posterList;
+    result.posterInfoURL = posterInfo;
   }
-  if (vod.image1Id != null && templates.posterInfo) {
-    result.posterInfoURL = templates.posterInfo.replace(/%base_url%/g, base).replace(/%image_id%/g, vod.image1Id);
+
+  if (vod.image2Id != null) {
+    result.extraImageURL = t.original ? t.original.replace(/%base_url%/g, base).replace(/%image_id%/g, vod.image2Id) : getVodImageUrl(base, vod.image2Id, 'original');
   }
-  if (vod.image2Id != null && templates.original) {
-    result.extraImageURL = templates.original.replace(/%base_url%/g, base).replace(/%image_id%/g, vod.image2Id);
+
+  if (vod.image3Id != null) {
+    result.backgroundImageURL = t.original ? t.original.replace(/%base_url%/g, base).replace(/%image_id%/g, vod.image3Id) : getVodImageUrl(base, vod.image3Id, 'original');
   }
-  if (vod.image3Id != null && templates.original) {
-    result.backgroundImageURL = templates.original.replace(/%base_url%/g, base).replace(/%image_id%/g, vod.image3Id);
-  }
-  if (templates.original) {
-    result.baseImageUrl = templates.original.replace(/%base_url%/g, base).replace(/%image_id%/g, '{id}');
-  }
+
+  result.baseImageUrl = t.original ? t.original.replace(/%base_url%/g, base).replace(/%image_id%/g, '{id}') : (base + '/cv_data_pub/images/{id}/v/original.jpg');
   return result;
 }
 
@@ -96,7 +120,7 @@ export function prepareDataForVOD(vods, categories, vodRecommendedId, baseUrl, i
 export async function loadVODData(brandConfig, options = {}) {
   const { onProgress = () => {}, t = (x) => x, enableRetry = false } = options;
   const baseUrl = brandConfig?.drm || '';
-  const imageTemplates = brandConfig?.vod?.imageUrlTemplates || {};
+  const imageTemplates = { ...DEFAULT_VOD_IMAGE_TEMPLATES, ...(brandConfig?.vod?.imageUrlTemplates || {}) };
 
   const libraryResponse = await panaccessService.getVodLibraries({ enableRetry });
   const library = Array.isArray(libraryResponse) && libraryResponse.length > 0
@@ -136,4 +160,6 @@ export async function loadVODData(brandConfig, options = {}) {
 export default {
   loadVODData,
   prepareDataForVOD,
+  getVodImageUrl,
+  DEFAULT_VOD_IMAGE_TEMPLATES,
 };

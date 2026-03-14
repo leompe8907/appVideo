@@ -15,6 +15,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
 const BouquetPage = lazy(() => import('./pages/BouquetPage'));
+const VodPage = lazy(() => import('./pages/VodPage'));
 
 function Loading() {
   const { t } = useTranslation();
@@ -104,6 +105,16 @@ function App() {
                         <BouquetPage />
                       </Suspense>
                     </PreloadGate>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/vod"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                      <VodPage />
+                    </Suspense>
                   </ProtectedRoute>
                 }
               />

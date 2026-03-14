@@ -180,3 +180,12 @@
   }
 }
 
+// Scroll sin barras visibles (vertical y horizontal permitidos, barras ocultas)
+@mixin scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+

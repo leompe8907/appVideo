@@ -4,7 +4,8 @@
     "backLogout": "← Sair",
     "success": "Sucesso",
     "error": "Erro",
-    "close": "Fechar"
+    "close": "Fechar",
+    "navigation": "Navegação"
   },
   "login": {
     "title": "Entrar",
@@ -70,7 +71,12 @@
     "errorNoSession": "Não há sessão ativa. Por favor, entre.",
     "errorNoKey": "Chave de licença (KEY) não encontrada no cartão selecionado.",
     "selectLicense": "Selecionar {{title}}",
-    "selectLicenseFallback": "licença {{index}}"
+    "selectLicenseFallback": "licença {{index}}",
+    "instructionsNoPIN": "Aqui você pode escolher qual das suas licenças ativar neste dispositivo. Para ativar uma licença, clique nela.",
+    "logout": "Sair",
+    "licenseInUseConfirm": "Smartcard em uso. Deseja continuar aqui?",
+    "licenseInUseYes": "Sim",
+    "licenseInUseNo": "Não"
   },
   "bouquet": {
     "title": "Pacotes",
@@ -80,6 +86,16 @@
     "bouquetAria": "Pacote {{name}}"
   },
   "vod": {
+    "title": "VOD",
+    "back": "← Voltar",
+    "loading": "Carregando VOD...",
+    "errorLoad": "Erro ao carregar VOD.",
+    "noContent": "Nenhum conteúdo VOD disponível.",
+    "recommended": "Recomendado",
+    "play": "Reproduzir",
+    "episodes": "Episódios",
+    "errorLoadSeries": "Erro ao carregar a série.",
+    "errorPlay": "Erro ao reproduzir.",
     "seriesCategory": "Séries",
     "categories": {
       "Ação": "Ação",

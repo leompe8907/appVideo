@@ -4,7 +4,8 @@
     "backLogout": "← Log out",
     "success": "Success",
     "error": "Error",
-    "close": "Close"
+    "close": "Close",
+    "navigation": "Navigation"
   },
   "login": {
     "title": "Sign In",
@@ -70,7 +71,12 @@
     "errorNoSession": "No active session. Please sign in.",
     "errorNoKey": "License key (KEY) not found on selected card.",
     "selectLicense": "Select {{title}}",
-    "selectLicenseFallback": "license {{index}}"
+    "selectLicenseFallback": "license {{index}}",
+    "instructionsNoPIN": "Here you can choose which of your licenses should be activated on this device. To activate a license, click on it.",
+    "logout": "Log out",
+    "licenseInUseConfirm": "Smartcard already in use. Do you want to continue here?",
+    "licenseInUseYes": "Yes",
+    "licenseInUseNo": "No"
   },
   "bouquet": {
     "title": "Bouquets",
@@ -80,6 +86,16 @@
     "bouquetAria": "Bouquet {{name}}"
   },
   "vod": {
+    "title": "VOD",
+    "back": "← Back",
+    "loading": "Loading VOD...",
+    "errorLoad": "Error loading VOD.",
+    "noContent": "No VOD content available.",
+    "recommended": "Recommended",
+    "play": "Play",
+    "episodes": "Episodes",
+    "errorLoadSeries": "Error loading series info.",
+    "errorPlay": "Error playing.",
     "seriesCategory": "Series",
     "categories": {
       "Ação": "Action",
