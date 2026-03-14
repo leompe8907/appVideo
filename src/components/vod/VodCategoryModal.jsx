@@ -4,11 +4,13 @@
 
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
+import { useDevice } from '../../contexts/DeviceContext';
 import VodCard from './VodCard';
 
 export function VodCategoryModal({ categoryName, vods = [], onSelectItem, onClose }) {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
+  const { isTV } = useDevice();
   const baseUrl = currentBrand?.drm || '';
 
   return (
@@ -17,14 +19,16 @@ export function VodCategoryModal({ categoryName, vods = [], onSelectItem, onClos
       <div className="vod-category-modal">
         <div className="vod-category-header">
           <h2 id="vod-category-modal-title" className="vod-category-title">{categoryName}</h2>
-          <button
-            type="button"
-            className="vod-category-close"
-            onClick={onClose}
-            aria-label={t('common.close')}
-          >
-            ×
-          </button>
+          {!isTV && (
+            <button
+              type="button"
+              className="vod-category-close"
+              onClick={onClose}
+              aria-label={t('common.close')}
+            >
+              {t('common.close')}
+            </button>
+          )}
         </div>
         <div className="vod-category-grid">
           {vods.map((v, i) => (
