@@ -277,14 +277,27 @@
   position: absolute;
   left: 0;
   right: 0;
+  top: 0;
   bottom: 0;
   padding: 2rem 2.5rem 2.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  max-height: 75vh;
+  max-height: none;
   overflow-y: auto;
   @include scrollbar-hidden;
+
+  &--top {
+    justify-content: flex-start;
+  }
+
+  &--middle {
+    justify-content: center;
+  }
+
+  &--bottom {
+    justify-content: flex-end;
+  }
 }
 
 .vod-detail-content-inner {

@@ -42,6 +42,25 @@
  * @param {Object} debug - Opciones de depuración (normalmente solo en desarrollo):
  *   @param {boolean} debug.spatialNav - true: activa logs en consola de la navegación espacial.
  *   @param {boolean} debug.spatialNavVisual - true: muestra marcos rojos de debug para la navegación espacial.
+ *
+ * @param {Object} vod - Configuración de la sección VOD:
+ *   @param {Object} vod.vodDetail - Opciones del modal de detalle VOD (película/serie):
+ *     @param {number} vod.vodDetail.descriptionMaxLength - Caracteres máximos de la descripción antes de "Leer más" (0 = sin límite). Default: 180.
+ *     @param {boolean} vod.vodDetail.showReleaseYear - Mostrar año de estreno en la metadata. Default: true.
+ *     @param {boolean} vod.vodDetail.showDuration - Mostrar duración (min) en la metadata. Default: true.
+ *     @param {boolean} vod.vodDetail.showParentalRating - Mostrar badge de clasificación por edades. Default: true.
+ *     @param {boolean} vod.vodDetail.showCategories - Mostrar etiquetas de categorías. Default: true.
+ *     @param {boolean} vod.vodDetail.showStarRating - Mostrar valoración en estrellas. Default: true (respeta features.showRating si existe).
+ *     @param {boolean} vod.vodDetail.showDescription - Mostrar bloque de descripción. Default: true.
+ *     @param {string|null} vod.vodDetail.playButtonColor - Color del botón Reproducir (hex/css). null = usar ui.primaryColor. Default: null.
+ *     @param {string|null} vod.vodDetail.starRatingColor - Color de las estrellas rellenas (hex/css). null = usar playButtonColor o #e50914. Default: null.
+ *     @param {number} vod.vodDetail.heroGradientOpacity - Opacidad del gradiente inferior del hero (0–1). Default: 0.95.
+ *     @param {number} vod.vodDetail.posterWidthMin - Ancho mínimo del poster en px. Default: 100.
+ *     @param {number} vod.vodDetail.posterWidthMax - Ancho máximo del poster en px. Default: 200.
+ *     @param {string} vod.vodDetail.categoryTagBackground - Color/fondo de las etiquetas de categoría (css). Default: "rgba(255, 255, 255, 0.12)".
+ *     @param {string} vod.vodDetail.categoryTagBorderColor - Borde de las etiquetas de categoría (css). Default: "rgba(255, 255, 255, 0.2)".
+ *     @param {string} vod.vodDetail.parentalBadgeBorderColor - Borde del badge de clasificación por edades (css). Default: "rgba(255, 255, 255, 0.5)".
+ *     @param {string} vod.vodDetail.contentPosition - Posición vertical del bloque de contenido (poster + info): "top" | "middle" | "bottom". Default: "bottom".
  */
 export const BRANDS = [
   {
@@ -106,6 +125,27 @@ export const BRANDS = [
       spatialNav: false, // Logs en consola (default: solo en DEV)
       spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
     },
+
+    vod: {
+      vodDetail: {
+        descriptionMaxLength: 180,
+        showReleaseYear: true,
+        showDuration: true,
+        showParentalRating: true,
+        showCategories: true,
+        showStarRating: true,
+        showDescription: true,
+        playButtonColor: null,
+        starRatingColor: null,
+        heroGradientOpacity: 0.95,
+        posterWidthMin: 100,
+        posterWidthMax: 200,
+        categoryTagBackground: "rgba(255, 255, 255, 0.12)",
+        categoryTagBorderColor: "rgba(255, 255, 255, 0.2)",
+        parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)",
+        contentPosition: "bottom",
+      },
+    },
   },
   {
     brand: "intv",
@@ -167,6 +207,27 @@ export const BRANDS = [
       spatialNav: false, // Logs en consola (default: solo en DEV)
       spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
     },
+
+    vod: {
+      vodDetail: {
+        descriptionMaxLength: 180, // Caracteres máximos de la descripción antes de "Leer más" (0 = sin límite)
+        showReleaseYear: true, // Mostrar año de estreno en la metadata
+        showDuration: true, // Mostrar duración (min) en la metadata
+        showParentalRating: true, // Mostrar badge de clasificación por edades
+        showCategories: true, // Mostrar etiquetas de categorías
+        showStarRating: true, // Mostrar valoración en estrellas
+        showDescription: true, // Mostrar bloque de descripción
+        playButtonColor: null, // Color del botón Reproducir (hex/css)
+        starRatingColor: null, // Color de las estrellas rellenas (hex/css)
+        heroGradientOpacity: 0.95, // Opacidad del gradiente inferior del hero (0–1)    
+        posterWidthMin: 100, // Ancho mínimo del poster en px
+        posterWidthMax: 200, // Ancho máximo del poster en px
+        categoryTagBackground: "rgba(255, 255, 255, 0.12)", // Color/fondo de las etiquetas de categoría (css)
+        categoryTagBorderColor: "rgba(255, 255, 255, 0.2)", // Borde de las etiquetas de categoría (css)
+        parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)", // Borde del badge de clasificación por edades (css)
+        contentPosition: "middle", // "top" | "middle" | "bottom" - posición vertical del bloque poster + info
+      },
+    },
   },
   {
     brand: "gigmax",
@@ -226,6 +287,27 @@ export const BRANDS = [
     debug: {
       spatialNav: false,
       spatialNavVisual: false,
+    },
+
+    vod: {
+      vodDetail: {
+        descriptionMaxLength: 180,
+        showReleaseYear: true,
+        showDuration: true,
+        showParentalRating: true,
+        showCategories: true,
+        showStarRating: true,
+        showDescription: true,
+        playButtonColor: null,
+        starRatingColor: null,
+        heroGradientOpacity: 0.95,
+        posterWidthMin: 100,
+        posterWidthMax: 200,
+        categoryTagBackground: "rgba(255, 255, 255, 0.12)",
+        categoryTagBorderColor: "rgba(255, 255, 255, 0.2)",
+        parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)",
+        contentPosition: "bottom",
+      },
     },
   },
 ];

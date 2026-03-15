@@ -23,6 +23,11 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
   const [error, setError] = useState(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
+  const vodDetailConfig = currentBrand?.vod?.vodDetail || {};
+  const contentPosition = vodDetailConfig.contentPosition === 'top' || vodDetailConfig.contentPosition === 'middle'
+    ? vodDetailConfig.contentPosition
+    : 'bottom';
+
   const isSeries = item?.isSeries === true;
   const title = item?.name || item?.title || '';
   const rawDescription = item?.description || seriesInfo?.description || '';
@@ -135,7 +140,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
         )}
 
         {/* Content layer */}
-        <div className="vod-detail-content">
+        <div className={`vod-detail-content vod-detail-content--${contentPosition}`}>
           <div className="vod-detail-content-inner">
             <div className="vod-detail-poster-wrap">
               {posterUrl ? (
