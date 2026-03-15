@@ -1,7 +1,7 @@
 /**
  * Página VOD: categorías y recomendados desde PreloadContext.
  * Por género: 9 ítems + "Ver más" que abre modal con todo el género.
- * Reproduce películas directamente; series abren modal de episodios.
+ * Al seleccionar un ítem (película o serie) se abre el modal de detalle; desde ahí se reproduce.
  */
 
 import { useState } from 'react';
@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 import { usePreload } from '../contexts/PreloadContext';
 import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
-import panaccessService from '../services/panaccessService';
 import VodCard from '../components/vod/VodCard';
 import VodSeeMoreCard from '../components/vod/VodSeeMoreCard';
 import VodDetailModal from '../components/vod/VodDetailModal';
@@ -33,16 +32,7 @@ export function VodPage() {
   const handleVodSelect = (item) => {
     if (!item?.id) return;
     setCategoryModal(null);
-    if (item.isSeries === true) {
-      setDetailItem(item);
-      return;
-    }
-    try {
-      const url = panaccessService.getVodM3u8Url({ vodId: item.id });
-      play({ type: 'vod', id: item.id, url, item, autoPlay: true });
-    } catch (e) {
-      console.warn('[VodPage] getVodM3u8Url:', e?.message);
-    }
+    setDetailItem(item);
   };
 
   const openCategoryModal = (name, vods) => {
@@ -159,6 +149,7 @@ export function VodPage() {
       {detailItem && (
         <VodDetailModal
           item={detailItem}
+          categories={categories}
           onClose={() => setDetailItem(null)}
           onPlay={handlePlayFromModal}
         />

@@ -202,14 +202,16 @@
   }
 }
 
-// VodDetailModal
+// VodDetailModal — Hero + capas (estilo Netflix/Disney+)
 .vod-detail-overlay {
   position: fixed;
   inset: 0;
   z-index: 100;
-  @include flex-center;
-  padding: $spacing-md;
-  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.85);
 }
 
 .vod-detail-backdrop {
@@ -218,68 +220,108 @@
   cursor: pointer;
 }
 
-.vod-detail-modal {
+.vod-detail-modal.vod-detail-hero-layout {
   position: relative;
   width: 100%;
-  max-width: 720px;
-  max-height: 90vh;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100vh;
   overflow: hidden;
-  background: rgba(28, 28, 28, 0.98);
-  border-radius: $border-radius-lg;
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+.vod-detail-hero {
+  position: absolute;
+  inset: 0;
+  background-color: #111;
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+
+.vod-detail-hero-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.6) 30%, transparent 60%);
+  pointer-events: none;
 }
 
 .vod-detail-close {
   position: absolute;
-  top: $spacing-sm;
-  right: $spacing-sm;
-  z-index: 2;
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: rgba(255, 255, 255, 0.15);
+  top: $spacing-md;
+  right: $spacing-md;
+  z-index: 10;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.5);
   color: #fff;
-  font-size: 1.5rem;
-  line-height: 1;
-  border-radius: 50%;
+  font-size: 0.95rem;
+  border-radius: 6px;
   cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.8);
+    outline-offset: 2px;
   }
 }
 
 .vod-detail-content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2rem 2.5rem 2.5rem;
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
-  padding: $spacing-lg;
+  gap: 1.25rem;
+  max-height: 75vh;
   overflow-y: auto;
-  max-height: 90vh;
   @include scrollbar-hidden;
 }
 
-.vod-detail-poster {
-  width: 100%;
-  max-width: 280px;
-  margin: 0 auto;
+.vod-detail-content-inner {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  align-items: flex-end;
+  flex-shrink: 0;
+
+  @media (max-width: 560px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.vod-detail-poster-wrap {
+  flex-shrink: 0;
+  width: clamp(100px, 18vw, 200px);
   aspect-ratio: 2/3;
   border-radius: $border-radius-md;
   overflow: hidden;
   background: #1a1a1a;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
 
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+.vod-detail-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .vod-detail-poster-placeholder {
   width: 100%;
   height: 100%;
-  background: #2a2a2a;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
 }
 
 .vod-detail-info {
@@ -288,17 +330,101 @@
 }
 
 .vod-detail-title {
-  margin: 0 0 $spacing-sm;
-  font-size: 1.25rem;
-  font-weight: 600;
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 700;
   color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.vod-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.vod-detail-meta-item {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.vod-detail-parental {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15em 0.4em;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.vod-detail-meta-categories {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.vod-detail-category-tag {
+  display: inline-block;
+  padding: 0.2em 0.5em;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.vod-detail-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.vod-detail-star {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background: rgba(255, 255, 255, 0.3);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+
+  &.fill {
+    background: #e50914;
+  }
+
+  &.half {
+    background: linear-gradient(90deg, #e50914 50%, rgba(255, 255, 255, 0.3) 50%);
+  }
+}
+
+.vod-detail-description-wrap {
+  margin-bottom: 0.75rem;
+  max-width: 60ch;
 }
 
 .vod-detail-description {
-  margin: 0 0 $spacing-md;
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+.vod-detail-read-more {
+  @include button-base;
+  margin-top: 0.35rem;
+  padding: 0;
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.85);
-  line-height: 1.5;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+
+  &:hover {
+    color: #fff;
+  }
 }
 
 .vod-detail-error {
@@ -308,29 +434,60 @@
 }
 
 .vod-detail-loading {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.8);
   margin: 0 0 $spacing-sm;
+}
+
+.vod-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.vod-detail-actions-fallback {
+  margin-top: 0.5rem;
 }
 
 .vod-detail-play-btn {
   @include button-base;
-  padding: 0.6rem 1.25rem;
-  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
   background: #e50914;
   color: #fff;
   border: none;
-  border-radius: $border-radius-md;
+  border-radius: 6px;
   cursor: pointer;
-  margin-top: $spacing-sm;
+  transition: background 0.2s;
 
   &:hover {
     background: #f40612;
   }
+
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.9);
+    outline-offset: 2px;
+  }
 }
 
-.vod-detail-episodes h3 {
-  margin: 0 0 $spacing-sm;
-  font-size: 1rem;
+.vod-detail-play-icon {
+  font-size: 0.85em;
+  opacity: 0.95;
+}
+
+// Episodios (series)
+.vod-detail-episodes {
+  flex-shrink: 0;
+  margin-top: 0.5rem;
+}
+
+.vod-detail-episodes-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #fff;
 }
@@ -340,31 +497,94 @@
   margin: 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-direction: row;
+  gap: 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.5rem;
+  @include scrollbar-hidden;
+}
+
+.vod-episode-item {
+  flex-shrink: 0;
 }
 
 .vod-episode-btn {
   @include button-base;
-  width: 100%;
-  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 160px;
+  padding: 0;
   text-align: left;
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: $border-radius-sm;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: $border-radius-md;
   cursor: pointer;
-  font-size: 0.9rem;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.15s;
 
   &:hover,
   &.focused {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.4);
   }
 
   &.focused {
     border-color: #e50914;
+    box-shadow: 0 0 0 1px #e50914;
   }
+}
+
+.vod-episode-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #1a1a1a;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.vod-episode-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+}
+
+.vod-episode-play-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.vod-episode-info {
+  padding: 0.5rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.vod-episode-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #fff;
+  @include text-truncate;
+}
+
+.vod-episode-duration {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.65);
 }
 
 // VodSeeMoreCard (décimo ítem "Ver más") — misma estructura que VodCard: poster + título
