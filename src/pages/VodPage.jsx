@@ -12,6 +12,7 @@ import { usePlayer } from '../contexts/PlayerContext';
 import VodCard from '../components/vod/VodCard';
 import VodSeeMoreCard from '../components/vod/VodSeeMoreCard';
 import VodDetailModal from '../components/vod/VodDetailModal';
+import VodDetailModalClassic from '../components/vod/VodDetailModalClassic';
 import VodCategoryModal from '../components/vod/VodCategoryModal';
 import '../styles/pages/_vod.scss';
 
@@ -27,6 +28,7 @@ export function VodPage() {
 
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
   const baseUrl = currentBrand?.drm || '';
+  const vodLayout = currentBrand?.vod?.layout === 'classic' ? 'classic' : 'hero';
   const { status, categories, vodRecommended, error } = vod;
 
   const handleVodSelect = (item) => {
@@ -146,7 +148,15 @@ export function VodPage() {
         />
       )}
 
-      {detailItem && (
+      {detailItem && vodLayout === 'classic' && (
+        <VodDetailModalClassic
+          item={detailItem}
+          categories={categories}
+          onClose={() => setDetailItem(null)}
+          onPlay={handlePlayFromModal}
+        />
+      )}
+      {detailItem && vodLayout === 'hero' && (
         <VodDetailModal
           item={detailItem}
           categories={categories}

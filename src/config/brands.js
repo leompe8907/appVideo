@@ -44,7 +44,8 @@
  *   @param {boolean} debug.spatialNavVisual - true: muestra marcos rojos de debug para la navegación espacial.
  *
  * @param {Object} vod - Configuración de la sección VOD:
- *   @param {Object} vod.vodDetail - Opciones del modal de detalle VOD (película/serie):
+ *   @param {string} vod.layout - Diseño de lista y detalle VOD: "hero" (actual, estilo Netflix/Disney+) | "classic" (estilo 10foot: mitad poster/info, abajo similar, series con episodios). Default: "hero".
+ *   @param {Object} vod.vodDetail - Opciones del modal de detalle VOD (película/serie). Solo aplica cuando vod.layout === "hero".
  *     @param {number} vod.vodDetail.descriptionMaxLength - Caracteres máximos de la descripción antes de "Leer más" (0 = sin límite). Default: 180.
  *     @param {boolean} vod.vodDetail.showReleaseYear - Mostrar año de estreno en la metadata. Default: true.
  *     @param {boolean} vod.vodDetail.showDuration - Mostrar duración (min) en la metadata. Default: true.
@@ -127,6 +128,7 @@ export const BRANDS = [
     },
 
     vod: {
+      layout: "hero",
       vodDetail: {
         descriptionMaxLength: 180,
         showReleaseYear: true,
@@ -209,6 +211,7 @@ export const BRANDS = [
     },
 
     vod: {
+      layout: "classic", // "hero" | "classic"
       vodDetail: {
         descriptionMaxLength: 180, // Caracteres máximos de la descripción antes de "Leer más" (0 = sin límite)
         showReleaseYear: true, // Mostrar año de estreno en la metadata
@@ -290,6 +293,7 @@ export const BRANDS = [
     },
 
     vod: {
+      layout: "hero",
       vodDetail: {
         descriptionMaxLength: 180,
         showReleaseYear: true,

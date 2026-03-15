@@ -600,6 +600,282 @@
   color: rgba(255, 255, 255, 0.65);
 }
 
+// VodDetailModal — Layout classic (estilo 10foot)
+.vod-detail-overlay--classic .vod-detail-modal--classic {
+  max-width: 100%;
+  height: 100%;
+  max-height: 100vh;
+  background: rgba(20, 20, 20, 0.98);
+  border-radius: 0;
+  border: none;
+}
+
+.vod-detail-close--classic {
+  position: absolute;
+  top: $spacing-md;
+  right: $spacing-md;
+  z-index: 10;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.vod-detail-container--classic {
+  height: 100%;
+  width: 100%;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+}
+
+.vod-classic-container-top {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  flex: 0 0 50%;
+  min-height: 0;
+  margin-bottom: 1rem;
+}
+
+.vod-classic-top-left {
+  flex: 0 0 30%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vod-classic-poster-wrap {
+  width: 100%;
+  position: relative;
+  img { width: 100%; height: auto; max-height: 100%; object-fit: contain; }
+}
+
+.vod-classic-picture {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.vod-classic-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(233, 233, 233, 0.5);
+  color: #333;
+  font-size: 2.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  @include button-base;
+
+  &.focused {
+    border: 2px solid #e50914;
+    box-shadow: 0 0 0 2px #e50914;
+  }
+}
+
+.vod-classic-play-icon {
+  margin-left: 0.2em;
+}
+
+.vod-classic-top-right {
+  flex: 1 1 70%;
+  min-width: 0;
+  font-size: 1.1rem;
+  overflow-y: auto;
+  @include scrollbar-hidden;
+}
+
+.vod-classic-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.vod-classic-category {
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+}
+
+.vod-classic-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.vod-classic-time {
+  font-weight: 600;
+}
+
+.vod-classic-rating {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.vod-classic-star {
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  background: rgba(255, 255, 255, 0.3);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  &.fill { background: #e50914; }
+  &.half { background: linear-gradient(90deg, #e50914 50%, rgba(255, 255, 255, 0.3) 50%); }
+}
+
+.vod-classic-description {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+.vod-classic-container-bottom {
+  flex: 1 1 auto;
+  min-height: 80px;
+}
+
+// Series — layout classic (dos columnas)
+.vod-detail-serie-container--classic {
+  height: 100%;
+  width: 100%;
+  color: #fff;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.vod-classic-serie-row {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  gap: 1.5rem;
+  min-height: 0;
+}
+
+.vod-classic-serie-left {
+  width: 55%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.vod-classic-serie-poster-wrap {
+  flex: 0 0 50%;
+  text-align: center;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  img { max-width: 90%; max-height: 100%; object-fit: contain; }
+}
+
+.vod-classic-serie-picture {
+  max-height: 100%;
+  max-width: 90%;
+  object-fit: contain;
+}
+
+.vod-classic-serie-info {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+  @include scrollbar-hidden;
+  .vod-classic-title { font-size: 1.35rem; }
+  .vod-classic-description { font-size: 0.9rem; }
+}
+
+.vod-classic-serie-right {
+  flex: 1;
+  width: 45%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.vod-classic-episodes-label {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+}
+
+.vod-classic-episodes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  @include scrollbar-hidden;
+}
+
+.vod-classic-episode-item {
+  margin-bottom: 0.5rem;
+}
+
+.vod-classic-episode-btn {
+  @include button-base;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  font-size: 0.9rem;
+
+  &:hover,
+  &.focused {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #e50914;
+  }
+}
+
+.vod-classic-episode-play {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.vod-classic-episode-name {
+  flex: 1;
+  @include text-truncate;
+}
+
+.vod-classic-play-btn-inline {
+  @include button-base;
+  padding: 0.5rem 1rem;
+  background: #e50914;
+  color: #fff;
+  border: none;
+  border-radius: $border-radius-md;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
 // VodSeeMoreCard (décimo ítem "Ver más") — misma estructura que VodCard: poster + título
 .vod-see-more-card {
   .vod-see-more-poster {
