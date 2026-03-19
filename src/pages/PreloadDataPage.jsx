@@ -5,12 +5,12 @@
  * - Bouquets asociados a los streams (a través de loadEPG/getBouquetsWithChannels)
  *
  * Muestra la misma UI de carga que PreloadScreen y, cuando termina,
- * redirige automáticamente a la página principal de bouquets.
+ * redirige automáticamente a Home/Bouquets.
  */
 
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
 import { usePreload } from '../contexts/PreloadContext';
 import { PreloadScreen } from '../components/preload/PreloadScreen';
@@ -18,6 +18,7 @@ import { PreloadScreen } from '../components/preload/PreloadScreen';
 export function PreloadDataPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentBrand } = useBrand();
   const { epg, vod, loadEPG, loadVOD } = usePreload();
 
@@ -34,15 +35,21 @@ export function PreloadDataPage() {
     }
   }, [currentBrand, epg.status, vod.status, loadEPG, loadVOD, t]);
 
-  // Cuando EPG y VOD estén listos (o en error), redirigir a bouquets
+  // Cuando EPG y VOD estén listos (o en error), redirigir a Home/Bouquets
   useEffect(() => {
     const epgReady = epg.status === 'ready' || epg.status === 'error';
     const vodReady = vod.status === 'ready' || vod.status === 'error';
 
     if (epgReady && vodReady) {
-      navigate('/bouquets', { replace: true });
+      const params = new URLSearchParams(location.search);
+      const redirect = params.get('redirect');
+      const safeTarget =
+        redirect && redirect.startsWith('/home/')
+          ? redirect
+          : '/home/bouquets';
+      navigate(safeTarget, { replace: true });
     }
-  }, [epg.status, vod.status, navigate]);
+  }, [epg.status, vod.status, navigate, location.search]);
 
   return <PreloadScreen />;
 }

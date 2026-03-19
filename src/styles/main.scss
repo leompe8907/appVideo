@@ -17,6 +17,7 @@
 @use 'pages/bouquet' as *;
 @use 'pages/vod' as *;
 @use 'pages/preload' as *;
+@use 'pages/home-shell' as *;
 
 // 2. Bootstrap personalizado (usa @import porque Bootstrap lo requiere)
 @import 'custom-bootstrap';

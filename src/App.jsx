@@ -17,6 +17,10 @@ const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
 const BouquetPage = lazy(() => import('./pages/BouquetPage'));
 const VodPage = lazy(() => import('./pages/VodPage'));
 const PreloadDataPage = lazy(() => import('./pages/PreloadDataPage'));
+const HomePage = lazy(() => import('./pages/HomePage'));
+const HomePlaceholderPage = lazy(() =>
+  import('./pages/HomePage').then((m) => ({ default: m.HomePlaceholderPage }))
+);
 
 function Loading() {
   const { t } = useTranslation();
@@ -124,25 +128,78 @@ function App() {
               <Route
                 path="/bouquets"
                 element={
-                  <ProtectedRoute>
-                    <PreloadGate required="epg">
-                      <Suspense fallback={<Loading />}>
-                        <BouquetPage />
-                      </Suspense>
-                    </PreloadGate>
-                  </ProtectedRoute>
+                  <Navigate to="/home/bouquets" replace />
                 }
               />
               <Route
                 path="/vod"
                 element={
+                  <Navigate to="/home/vod" replace />
+                }
+              />
+              <Route
+                path="/home"
+                element={
                   <ProtectedRoute>
                     <Suspense fallback={<Loading />}>
-                      <VodPage />
+                      <HomePage />
                     </Suspense>
                   </ProtectedRoute>
                 }
-              />
+              >
+                <Route
+                  path="bouquets"
+                  element={
+                    <PreloadGate required="epg">
+                      <Suspense fallback={<Loading />}>
+                        <BouquetPage />
+                      </Suspense>
+                    </PreloadGate>
+                  }
+                />
+                <Route
+                  path="vod"
+                  element={
+                    <Suspense fallback={<Loading />}>
+                      <VodPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="ads"
+                  element={
+                    <Suspense fallback={<Loading />}>
+                      <HomePlaceholderPage
+                        title="Ads"
+                        description="Modulo en preparacion para administracion de publicidad."
+                      />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="catchup"
+                  element={
+                    <Suspense fallback={<Loading />}>
+                      <HomePlaceholderPage
+                        title="Catchup"
+                        description="Modulo en preparacion para contenidos catchup."
+                      />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="osms"
+                  element={
+                    <Suspense fallback={<Loading />}>
+                      <HomePlaceholderPage
+                        title="OSMS"
+                        description="Modulo en preparacion para mensajes del sistema."
+                      />
+                    </Suspense>
+                  }
+                />
+                <Route path="*" element={<Navigate to="/home/bouquets" replace />} />
+              </Route>
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

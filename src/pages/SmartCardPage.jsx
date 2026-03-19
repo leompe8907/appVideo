@@ -148,7 +148,7 @@ export function SmartCardPage() {
           onClose={() => {
             const wasSuccess = resultModal.type === 'success';
             setResultModal(null);
-            if (wasSuccess) navigate('/bouquets');
+            if (wasSuccess) navigate('/home/bouquets');
           }}
         />
       )}

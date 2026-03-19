@@ -211,7 +211,7 @@ export function ProfilePage() {
           onClose={() => {
             const wasSuccess = profileMessage.type === 'success';
             setProfileMessage(null);
-            if (wasSuccess) navigate('/bouquets');
+            if (wasSuccess) navigate('/home/bouquets');
           }}
         />
       )}
