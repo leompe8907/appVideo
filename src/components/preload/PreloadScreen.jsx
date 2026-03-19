@@ -13,7 +13,7 @@ const TIPS_INTERVAL_MS = 4000;
 export function PreloadScreen() {
   const { t } = useTranslation();
   const { currentBrand, getImage } = useBrand();
-  const { epg, loadEPG, loadVOD } = usePreload();
+  const { epg } = usePreload();
   const [tipIndex, setTipIndex] = useState(0);
 
   const tips = [
@@ -22,14 +22,6 @@ export function PreloadScreen() {
     t('preload.tip3'),
     t('preload.tip4'),
   ].filter(Boolean);
-
-  useEffect(() => {
-    if (epg.status === 'idle' && currentBrand) {
-      loadEPG(currentBrand);
-      // VOD en paralelo: no bloquea la pantalla; estará listo cuando el usuario entre a /vod
-      loadVOD(currentBrand, { t });
-    }
-  }, [epg.status, currentBrand, loadEPG, loadVOD, t]);
 
   useEffect(() => {
     if (tips.length <= 1) return;
@@ -41,10 +33,10 @@ export function PreloadScreen() {
 
   const logoPath = currentBrand?.assets?.logo || getImage('logo.png');
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
-  const { progress } = epg;
-  const percent = progress?.percent ?? 0;
-  const current = progress?.current ?? 0;
-  const total = progress?.total ?? 0;
+  const progress = epg?.progress || { percent: 0, current: 0, total: 0 };
+  const percent = progress.percent ?? 0;
+  const current = progress.current ?? 0;
+  const total = progress.total ?? 0;
 
   const message = epg.status === 'loading'
     ? t('preload.message')

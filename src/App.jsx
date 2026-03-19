@@ -16,6 +16,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
 const BouquetPage = lazy(() => import('./pages/BouquetPage'));
 const VodPage = lazy(() => import('./pages/VodPage'));
+const PreloadDataPage = lazy(() => import('./pages/PreloadDataPage'));
 
 function Loading() {
   const { t } = useTranslation();
@@ -106,6 +107,16 @@ function App() {
                   <ProtectedRoute>
                     <Suspense fallback={<Loading />}>
                       <SmartCardPage />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/preload"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                      <PreloadDataPage />
                     </Suspense>
                   </ProtectedRoute>
                 }

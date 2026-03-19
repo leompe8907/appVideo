@@ -3,8 +3,8 @@
  * Cuando required incluye "epg", muestra la pantalla de carga hasta epg.status === 'ready' (o error/timeout).
  */
 
+import { Navigate } from 'react-router-dom';
 import { usePreload } from '../../contexts/PreloadContext';
-import { PreloadScreen } from './PreloadScreen';
 
 export function PreloadGate({ required = 'epg', children }) {
   const { epg } = usePreload();
@@ -13,7 +13,8 @@ export function PreloadGate({ required = 'epg', children }) {
   const epgReady = epg.status === 'ready' || epg.status === 'error';
 
   if (needsEpg && !epgReady) {
-    return <PreloadScreen />;
+    // Redirigir a la nueva página centralizada de precarga
+    return <Navigate to="/preload" replace />;
   }
 
   return children;
