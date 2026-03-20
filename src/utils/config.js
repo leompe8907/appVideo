@@ -60,6 +60,8 @@ export function applyTheme(brandConfig) {
   const root = document.documentElement;
   const ui = brandConfig.ui;
   const bouquets = brandConfig.bouquets || {};
+  const epgCards = brandConfig.epgCards || {};
+  const assets = brandConfig.assets || {};
 
   // Aplicar variables CSS
   root.style.setProperty('--primary-color', ui.primaryColor);
@@ -69,7 +71,31 @@ export function applyTheme(brandConfig) {
     '--bouquet-timeship-color',
     bouquets.timeshipColor || ui.epgLineColorTime
   );
+  // EPG (cards)
+  root.style.setProperty(
+    '--epg-cards-channel-active-bg',
+    epgCards.epgCardsChannelActiveBg || '#0A4385'
+  );
+  root.style.setProperty(
+    '--epg-cards-program-live-bg',
+    epgCards.epgCardsProgramLiveBg || '#6C8EB6'
+  );
+  root.style.setProperty(
+    '--epg-cards-program-live-progress-bg',
+    epgCards.epgCardsProgramLiveProgressBg || epgCards.epgCardsProgramLiveBg || '#6C8EB6'
+  );
   root.style.setProperty('--font-family', ui.fontFamily);
+
+  // Background compartido Home (sin tocar sidebar).
+  // Probamos varias extensiones manteniendo el mismo nombre base `background.*`.
+  // Ponemos `png` primero para que sea idéntico al usado por Login (background.png)
+  // y caiga a otros formatos si no existe.
+  const bgExts = ['png', 'webp', 'jpg', 'jpeg', 'svg'];
+  const bgUrls = bgExts
+    .map((ext) => (assets.get ? assets.get(`background.${ext}`) : null))
+    .filter(Boolean)
+    .map((u) => `url("${u}")`);
+  root.style.setProperty('--home-background-image', bgUrls.join(', ') || 'none');
   
   // Aplicar clase de tema
   root.setAttribute('data-theme', ui.theme);

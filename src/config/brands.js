@@ -79,8 +79,20 @@ export const BRANDS = [
     // EPG: parámetros generales para la API de guía de programación (mismo valor en todas las marcas)
     epg: {
       daysOffset: 2, // Días de offset para la API de guía de programación
-      rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
+      rowsOnInit: 200, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
+      epgLineColorTime: "#2CE308",
+    },
+
+    // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
+    epgCards: {
+      epgPast: true,
+      epgPagesPastEnabled: false,
+      epgCardsChannelActiveBg: "#0A4385",
+      epgCardsProgramLiveBg: "#6C8EB6",
+      // Color de la barra de progreso (programa en vivo / "Ahora")
+      epgCardsProgramLiveProgressBg: "#6C8EB6",
+      epgCardsLaterGlobal: true,
     },
 
     // Configuración de UI/Tema
@@ -92,7 +104,6 @@ export const BRANDS = [
       logoPositionHome: "top", // "top" | "right" | "left" | "center"
       showTime: true, // Si es true → muestra el tiempo, si es false → no muestra el tiempo
       // EPG
-      epgLineColorTime: "#2CE308",
       // Colores
       primaryColor: "#2CE308", // Color principal de la marca (botones, acentos, etc.)
       secondaryColor: "#1a8a05", // Color secundario (hover, fondos, etc.)
@@ -166,6 +177,17 @@ export const BRANDS = [
       hoursLimit: 12, // Límite de horas para la API de guía de programación
     },
     
+    // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
+    epgCards: {
+      epgPast: true,
+      epgPagesPastEnabled: true,
+      epgCardsChannelActiveBg: "rgb(0 0 0)",
+      epgCardsProgramLiveBg: "#6C8EB6",
+      // Color de la barra de progreso (programa en vivo / "Ahora")
+      epgCardsProgramLiveProgressBg: "#6C8EB6",
+      epgCardsLaterGlobal: true,
+    },
+
     // Configuración de UI/Tema
     ui: {
       // Splash
@@ -248,6 +270,17 @@ export const BRANDS = [
       hoursLimit: 12, // Límite de horas para la API de guía de programación
     },
     
+    // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
+    epgCards: {
+      epgPast: true,
+      epgPagesPastEnabled: true,
+      epgCardsChannelActiveBg: "#0A4385",
+      epgCardsProgramLiveBg: "#6C8EB6",
+      // Color de la barra de progreso (programa en vivo / "Ahora")
+      epgCardsProgramLiveProgressBg: "#6C8EB6",
+      epgCardsLaterGlobal: true,
+    },
+
     // Configuración de UI/Tema
     ui: {
       // Splash

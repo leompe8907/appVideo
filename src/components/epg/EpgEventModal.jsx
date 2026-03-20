@@ -1,7 +1,16 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+import { useDevice } from '../../contexts/DeviceContext';
 import '../epg/epg-common.scss';
+
+function fmtHHmm(ms) {
+  if (!ms || Number.isNaN(ms)) return '';
+  const d = new Date(ms);
+  const h = d.getHours();
+  const m = d.getMinutes();
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
 
 /**
  * Modal de detalles para eventos EPG.
@@ -11,10 +20,25 @@ import '../epg/epg-common.scss';
  */
 export function EpgEventModal({ open, channel, event, isLive, onClose, onPlayLive }) {
   const { t } = useTranslation();
+  const { isTV } = useDevice();
 
   const eventTitle = event?.languages?.[0]?.title || event?.title || '';
   const eventDescription =
     event?.languages?.[0]?.extendedDescription || event?.languages?.[0]?.description || event?.description || '';
+
+  const channelImg =
+    channel?.img || channel?.imageUrl || channel?.logoUrl || channel?.logo || channel?.icon || null;
+  const eventImg =
+    event?.imageUrl ||
+    event?.imageUrl2 ||
+    event?.catchupImageUrl ||
+    event?.imageUrlVod ||
+    event?.imageUrl_vod ||
+    event?.img ||
+    event?.image ||
+    event?.posterUrl ||
+    null;
+  const channelRating = channel?.parentalRating;
 
   const startMs = useMemo(() => {
     const v = event?.startDate;
@@ -30,20 +54,19 @@ export function EpgEventModal({ open, channel, event, isLive, onClose, onPlayLiv
     return new Date(v).getTime();
   }, [event]);
 
-  const fmtTime = (ms) => {
-    if (!ms || Number.isNaN(ms)) return '';
-    const d = new Date(ms);
-    const h = d.getHours();
-    const m = d.getMinutes();
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  };
+  const startTime = fmtHHmm(startMs);
+  const endTime = fmtHHmm(endMs);
 
-  const startTime = fmtTime(startMs);
-  const endTime = fmtTime(endMs);
+  const durationMinutes = useMemo(() => {
+    if (startMs == null || endMs == null) return null;
+    const diffMs = endMs - startMs;
+    if (!Number.isFinite(diffMs) || diffMs <= 0) return null;
+    return Math.max(0, Math.round(diffMs / 60000));
+  }, [startMs, endMs]);
 
   const { ref: closeRef, focused: closeFocused } = useSpatialNavigation({
     focusKey: 'epg-modal-close',
-    isFocusable: !!open,
+    isFocusable: !!open && !isTV,
     onEnterPress: () => onClose?.(),
   });
 
@@ -66,27 +89,80 @@ export function EpgEventModal({ open, channel, event, isLive, onClose, onPlayLiv
     >
       <div className="epg-event-modal" onClick={(e) => e.stopPropagation()}>
         <div className="epg-event-modal-header">
-          <div className="epg-event-modal-channel">
-            <div className="epg-event-modal-lcn">{channel?.lcn ?? ''}</div>
-            <div className="epg-event-modal-name">{channel?.name ?? ''}</div>
+          <div className="epg-event-modal-header-left">
+            <div className="epg-event-modal-channel">
+              {channelImg ? (
+                <img
+                  src={channelImg}
+                  alt={channel?.name || ''}
+                  className="epg-event-modal-channel-logo"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : null}
+              <div className="epg-event-modal-channel-text">
+                <div className="epg-event-modal-name">{channel?.name ?? ''}</div>
+                <div className="epg-event-modal-meta-row">
+                  <div className="epg-event-modal-meta-item">
+                    <div className="epg-event-modal-lcn">{channel?.lcn ?? ''}</div>
+                  </div>
+
+                  <div className="epg-event-modal-meta-item epg-event-modal-meta-time">
+                    {channelRating != null ? <span className="epg-event-modal-rating">+{channelRating}</span> : null}
+                    <span className="epg-event-modal-meta-time-value">
+                      {startTime && endTime ? `${startTime} - ${endTime}` : ''}
+                    </span>
+                  </div>
+
+                  {durationMinutes != null ? (
+                    <div className="epg-event-modal-meta-item epg-event-modal-meta-duration">
+                      {durationMinutes} {t('vod.minutes', { defaultValue: 'min' })}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <button
-            ref={closeRef}
-            className={`epg-event-modal-close ${closeFocused ? 'focused' : ''}`}
-            onClick={() => onClose?.()}
-            type="button"
-            tabIndex={-1}
-          >
-            {t('common.close', { defaultValue: 'Cerrar' })}
-          </button>
+          <div className="epg-event-modal-header-right">
+            {eventImg ? (
+              <img
+                key={eventImg}
+                src={eventImg}
+                alt={eventTitle || ''}
+                className="epg-event-modal-event-img"
+                onLoad={(e) => {
+                  // Si el evento anterior falló y dejó opacidad baja, al cargar bien volvemos a mostrar al 100%.
+                  e.currentTarget.style.opacity = '1';
+                }}
+                onError={(e) => {
+                  // No ocultar para que podamos ver si el problema es de URL.
+                  e.currentTarget.style.opacity = '0.25';
+                }}
+              />
+            ) : null}
+
+            {!isTV && (
+              <button
+                ref={closeRef}
+                className={`epg-event-modal-close ${closeFocused ? 'focused' : ''}`}
+                onClick={() => onClose?.()}
+                type="button"
+                tabIndex={-1}
+              >
+                {t('common.close', { defaultValue: 'Cerrar' })}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="epg-event-modal-body">
+          {eventImg ? (
+            <span aria-hidden="true" />
+          ) : null}
+
           <h2 className="epg-event-modal-title">{eventTitle || t('epg.eventNoTitle', { defaultValue: 'Sin título' })}</h2>
-          <div className="epg-event-modal-time">
-            {startTime && endTime ? `${startTime} - ${endTime}` : ''}
-          </div>
 
           <div className="epg-event-modal-live-badge">
             {isLive ? t('epg.live', { defaultValue: 'En vivo' }) : t('epg.notLive', { defaultValue: 'No en vivo' })}

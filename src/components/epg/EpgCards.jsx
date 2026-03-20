@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { usePlayer } from '../../contexts/PlayerContext';
@@ -38,11 +38,11 @@ function getSortedEvents(epgItems) {
   return list;
 }
 
-function computeSlots(epgItems) {
+function computeSlots(epgItems, { nowMs, epgPastEnabled = false } = {}) {
   const events = getSortedEvents(epgItems);
-  if (!events.length) return { now: null, next: null, later: null, isLive: false };
-
-  const nowMs = Date.now();
+  if (!events.length)
+    return { before: null, now: null, next: null, later: null, isLive: false };
+  if (nowMs == null) return { before: null, now: null, next: null, later: null, isLive: false };
 
   let idxNow = events.findIndex((ev) => {
     const s = asMs(ev?.startDate);
@@ -64,6 +64,7 @@ function computeSlots(epgItems) {
   }
 
   const now = events[idxNow] ?? null;
+  const before = epgPastEnabled ? events[idxNow - 1] ?? null : null;
   const next = events[idxNow + 1] ?? null;
   const later = events[idxNow + 2] ?? null;
 
@@ -75,7 +76,7 @@ function computeSlots(epgItems) {
     return nowMs >= s && nowMs <= e;
   })();
 
-  return { now, next, later, isLive };
+  return { before, now, next, later, isLive };
 }
 
 function Card({
@@ -87,18 +88,57 @@ function Card({
   progressPercent,
   disabled,
 }) {
-  const { ref, focused } = useSpatialNavigation({
+  const { ref: focusRef, focused } = useSpatialNavigation({
     focusKey,
     isFocusable: !disabled,
     onEnterPress: disabled ? undefined : onEnter,
   });
 
+  // Cuando el foco cambia (TV/remote), aseguramos que la tarjeta sea visible.
+  // Esto evita el "scroll roto" si la grilla no se desplaza automáticamente.
+  const localElRef = useRef(null);
+  useEffect(() => {
+    if (!focused) return;
+    const el = localElRef.current;
+    const container = el?.closest?.('.epg-cards-grid') || null;
+
+    if (!el) return;
+
+    // Ajuste directo del scroll en el contenedor (más robusto que scrollIntoView).
+    if (container) {
+      const cTop = container.getBoundingClientRect().top;
+      const cBottom = cTop + container.clientHeight;
+      const elTop = el.getBoundingClientRect().top;
+      const elBottom = elTop + el.offsetHeight;
+
+      if (elTop < cTop) {
+        container.scrollTop -= cTop - elTop;
+      } else if (elBottom > cBottom) {
+        container.scrollTop += elBottom - cBottom;
+      }
+      return;
+    }
+
+    if (typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [focused]);
+
   return (
     <div
-      ref={ref}
-      className={`epg-card ${focused ? 'focused' : ''} ${disabled ? 'disabled' : ''}`}
+      ref={(node) => {
+        localElRef.current = node;
+        if (typeof focusRef === 'function') {
+          focusRef(node);
+        }
+      }}
+      className={`epg-card ${focused ? 'focused' : ''} ${disabled ? 'disabled' : ''} ${isLive ? 'epg-card--live-now' : ''}`}
       role="button"
       tabIndex={-1}
+      onClick={() => {
+        if (disabled) return;
+        onEnter?.();
+      }}
     >
       <div className="epg-card-slot-title">{title || '—'}</div>
       <div className="epg-card-slot-time">{timeText || ''}</div>
@@ -118,15 +158,17 @@ export function EpgCards({ onSelect }) {
   const { play } = usePlayer();
 
   const streams = epg?.streams || [];
+  const epgCardsCfg = currentBrand?.epgCards || {};
+  const epgPastEnabled = !!epgCardsCfg.epgPast;
 
   const [detail, setDetail] = useState(null); // { channel, event, isLive }
 
   const showRating = !!currentBrand?.features?.showRating;
 
-  // Tick para actualizar progreso live (1s es suficiente para UI)
-  const [, setNowTick] = useState(0);
+  // Reloj para calcular "Ahora" / progreso live sin usar Date.now durante render.
+  const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    const id = window.setInterval(() => setNowTick((x) => x + 1), 1000);
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
 
@@ -163,20 +205,63 @@ export function EpgCards({ onSelect }) {
       </div>
 
       <div className="epg-cards-grid">
+        <div className="epg-cards-table-header">
+          <div className="epg-cards-table-header-channel">
+            {t('epg.channel', { defaultValue: 'Canal' })}
+          </div>
+          <div
+            className="epg-cards-row-cards epg-cards-row-cards--header"
+            style={{ ['--epg-cards-cols']: epgPastEnabled ? 4 : 3 }}
+          >
+            {epgPastEnabled && (
+              <div className="epg-cards-slot-header">
+                {t('epg.before', { defaultValue: 'Antes' })}
+              </div>
+            )}
+            <div className="epg-cards-slot-header">
+              {t('epg.now', { defaultValue: 'Ahora' })}
+            </div>
+            <div className="epg-cards-slot-header">
+              {t('epg.next', { defaultValue: 'Siguiente' })}
+            </div>
+            <div className="epg-cards-slot-header">
+              {t('epg.later', { defaultValue: 'Más tarde' })}
+            </div>
+          </div>
+        </div>
+
         {channels.map((channel) => {
-          const { now, next, later, isLive } = computeSlots(channel.epgItems);
+          const { before, now, next, later, isLive } = computeSlots(channel.epgItems, {
+            nowMs,
+            epgPastEnabled,
+          });
+
+          const channelImg =
+            channel?.img ||
+            channel?.imageUrl ||
+            channel?.logoUrl ||
+            channel?.logo ||
+            channel?.icon ||
+            null;
 
           const nowStart = asMs(now?.startDate);
           const nowEnd = asMs(now?.endDate);
           const nowProgress =
             now && isLive && nowStart != null && nowEnd != null
-              ? ((Date.now() - nowStart) / (nowEnd - nowStart)) * 100
+              ? ((nowMs - nowStart) / (nowEnd - nowStart)) * 100
               : null;
 
+          const beforeStart = asMs(before?.startDate);
+          const beforeEnd = asMs(before?.endDate);
           const nowTitle = now?.languages?.[0]?.title || now?.title || '';
+          const beforeTitle = before?.languages?.[0]?.title || before?.title || '';
           const nextTitle = next?.languages?.[0]?.title || next?.title || '';
           const laterTitle = later?.languages?.[0]?.title || later?.title || '';
 
+          const beforeTime =
+            beforeStart != null && beforeEnd != null
+              ? `${formatHHmm(beforeStart)} - ${formatHHmm(beforeEnd)}`
+              : '';
           const nowTime =
             nowStart != null ? `${formatHHmm(nowStart)} - ${formatHHmm(nowEnd)}` : '';
           const nextTime = (() => {
@@ -192,15 +277,51 @@ export function EpgCards({ onSelect }) {
 
           return (
             <div key={channel.id ?? channel.lcn} className="epg-cards-row">
-              <div className="epg-cards-channel">
+              <div
+                className="epg-cards-channel"
+                style={
+                  isLive
+                    ? {
+                        backgroundColor:
+                          epgCardsCfg.epgCardsChannelActiveBg || 'rgba(10, 67, 133, 0.3)',
+                        padding: 8,
+                        borderRadius: 14,
+                      }
+                    : undefined
+                }
+              >
                 <div className="epg-cards-channel-lcn">{channel.lcn ?? ''}</div>
+                {channelImg ? (
+                  <img
+                    className="epg-cards-channel-logo"
+                    src={channelImg}
+                    alt={channel.name ?? ''}
+                    onError={(e) => {
+                      // Ocultar si falla la carga (misma idea de legacy onerror).
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : null}
                 <div className="epg-cards-channel-name">{channel.name ?? ''}</div>
                 {showRating && typeof channel.parentalRating !== 'undefined' && channel.parentalRating != null ? (
                   <div className="epg-cards-channel-rating">+{channel.parentalRating}</div>
                 ) : null}
               </div>
 
-              <div className="epg-cards-row-cards">
+              <div className="epg-cards-row-cards" style={{ ['--epg-cards-cols']: epgPastEnabled ? 4 : 3 }}>
+                {epgPastEnabled && (
+                  <Card
+                    focusKey={`epg-${channel.id ?? channel.lcn}-before`}
+                    disabled={!before}
+                    onEnter={() => {
+                      setDetail({ channel, event: before, isLive: false });
+                      onSelect?.({ channel, event: before, isLive: false });
+                    }}
+                    title={beforeTitle}
+                    timeText={beforeTime}
+                    isLive={false}
+                  />
+                )}
                 <Card
                   focusKey={`epg-${channel.id ?? channel.lcn}-now`}
                   disabled={!now}

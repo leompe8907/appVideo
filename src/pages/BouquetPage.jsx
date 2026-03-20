@@ -4,15 +4,13 @@
  * La URL de reproducción se toma del backend o se construye con getStreamM3u8 (lógica 10foot).
  */
 
-import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import BouquetWall from '../components/bouquet/BouquetWall';
 import panaccessService from '../services/panaccessService';
 import '../styles/pages/_bouquet.scss';
 
 export function BouquetPage() {
-  const { currentBrand, getImage } = useBrand();
-  const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
+  // El background común lo maneja Home (.home-content)
   const { play, containerRef, state: playerState } = usePlayer();
 
   const handleChannelSelect = (channel) => {
@@ -56,10 +54,7 @@ export function BouquetPage() {
   };
 
   return (
-    <div
-      className="bouquet-page"
-      style={backgroundPath ? { backgroundImage: `url(${backgroundPath})` } : {}}
-    >
+    <div className="bouquet-page">
       <div className="bouquet-overlay" />
       {/* Zona donde se monta el video al reproducir; solo cubre la pantalla cuando hay stream activo para no bloquear clics/scroll en otros monitores */}
       <div

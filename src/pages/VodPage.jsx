@@ -21,12 +21,11 @@ const ITEMS_PER_ROW = 9;
 export function VodPage() {
   const { t } = useTranslation();
   const { vod, loadVOD } = usePreload();
-  const { currentBrand, getImage } = useBrand();
+  const { currentBrand } = useBrand();
   const { play, containerRef, state: playerState } = usePlayer();
   const [detailItem, setDetailItem] = useState(null);
   const [categoryModal, setCategoryModal] = useState(null);
 
-  const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
   const baseUrl = currentBrand?.drm || '';
   const vodLayout = currentBrand?.vod?.layout === 'classic' ? 'classic' : 'hero';
   const { status, categories, vodRecommended, error } = vod;
@@ -52,10 +51,7 @@ export function VodPage() {
   };
 
   return (
-    <div
-      className="vod-page"
-      style={backgroundPath ? { backgroundImage: `url(${backgroundPath})` } : {}}
-    >
+    <div className="vod-page">
       <div className="vod-overlay" />
       <div
         className={`vod-player-video${playerState?.url ? ' vod-player-video--active' : ''}`}
