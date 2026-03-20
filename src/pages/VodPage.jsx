@@ -4,7 +4,7 @@
  * Al seleccionar un ítem (película o serie) se abre el modal de detalle; desde ahí se reproduce.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePreload } from '../contexts/PreloadContext';
 import { useBrand } from '../contexts/BrandContext';
@@ -31,6 +31,12 @@ export function VodPage() {
   const vodLayout = currentBrand?.vod?.layout === 'classic' ? 'classic' : 'hero';
   const { status, categories, vodRecommended, error } = vod;
 
+  useEffect(() => {
+    if (status === 'idle' && currentBrand) {
+      loadVOD(currentBrand, { t });
+    }
+  }, [status, currentBrand, loadVOD, t]);
+
   const handleVodSelect = (item) => {
     if (!item?.id) return;
     setCategoryModal(null);
@@ -44,10 +50,6 @@ export function VodPage() {
   const handlePlayFromModal = (params) => {
     if (params?.url) play(params);
   };
-
-  if (status === 'idle' && currentBrand) {
-    loadVOD(currentBrand, { t });
-  }
 
   return (
     <div

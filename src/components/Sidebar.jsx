@@ -27,6 +27,7 @@ export function Sidebar() {
       <nav className="home-sidebar-nav">
         <SidebarLink to="/home/bouquets" label={t('bouquet.title', { defaultValue: 'Bouquets' })} />
         <SidebarLink to="/home/vod" label={t('vod.title', { defaultValue: 'VOD' })} />
+        <SidebarLink to="/home/epg" label={t('epg.title', { defaultValue: 'EPG' })} />
         <SidebarLink to="/home/ads" label={t('common.ads', { defaultValue: 'Ads' })} />
         <SidebarLink to="/home/catchup" label={t('common.catchup', { defaultValue: 'Catchup' })} />
         <SidebarLink to="/home/osms" label={t('common.osms', { defaultValue: 'OSMS' })} />

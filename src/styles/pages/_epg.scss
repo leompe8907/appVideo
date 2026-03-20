@@ -1,0 +1,29 @@
+@use '../variables' as *;
+@use '../mixins' as *;
+
+.epg-page {
+  position: relative;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+.epg-page-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.epg-page-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  min-height: 100vh;
+}
+
+/* Para que el módulo EPGcards encaje dentro del layout de Home */
+.home-content .epg-page-content {
+  min-height: 0;
+  height: 100%;
+}
+

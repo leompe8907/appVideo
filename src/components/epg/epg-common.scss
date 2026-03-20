@@ -1,0 +1,257 @@
+/* Estilos comunes EPG (modal + layout cards).
+   Se mantienen aquí porque el módulo EPGcards aún no está 100% migrado desde el legacy. */
+
+.epg-event-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.epg-event-modal {
+  width: min(900px, 92vw);
+  max-height: 86vh;
+  border-radius: 16px;
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.epg-event-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 18px 12px;
+}
+
+.epg-event-modal-channel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.epg-event-modal-lcn {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+}
+
+.epg-event-modal-name {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.epg-event-modal-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.epg-event-modal-close.focused {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.epg-event-modal-body {
+  padding: 0 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.epg-event-modal-title {
+  margin: 0;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.epg-event-modal-time {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+}
+
+.epg-event-modal-live-badge {
+  align-self: flex-start;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 13px;
+}
+
+.epg-event-modal-description {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: auto;
+}
+
+.epg-event-modal-footer {
+  padding: 14px 18px 18px;
+  display: flex;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.epg-event-modal-primary {
+  background: var(--primary-color, #2CE308);
+  color: #000;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.epg-event-modal-primary.focused {
+  filter: brightness(1.1);
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.epg-event-modal-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+
+.epg-event-modal-secondary--disabled {
+  opacity: 0.5;
+}
+
+.epg-cards-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  color: #fff;
+  overflow: hidden;
+}
+
+.epg-cards-header {
+  padding: 18px 18px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.epg-cards-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.epg-cards-subtitle {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
+.epg-cards-grid {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 12px 16px;
+}
+
+.epg-cards-row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.epg-cards-channel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.epg-cards-channel-lcn {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+}
+
+.epg-cards-channel-name {
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.epg-cards-channel-rating {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+}
+
+.epg-cards-row-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.epg-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 92px;
+  user-select: none;
+}
+
+.epg-card.focused {
+  outline: 2px solid rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.epg-card.disabled {
+  opacity: 0.35;
+}
+
+.epg-card-slot-title {
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.epg-card-slot-time {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+}
+
+.epg-card-live-progress {
+  margin-top: auto;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.epg-card-live-progress-fill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--epg-line-color, #2CE308),
+    var(--primary-color, #2CE308)
+  );
+}
+

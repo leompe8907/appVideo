@@ -120,13 +120,6 @@ export const BRANDS = [
       baseUrl: "", // Equivalente a baseUrl en 10foot
       wsUrl: "", // Equivalente a wsUrl en 10foot
     },
-    // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
-    hashPasswordBeforeLogin: true,
-    debug: {
-      spatialNav: false, // Logs en consola (default: solo en DEV)
-      spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
-    },
-
     vod: {
       layout: "hero",
       vodDetail: {
@@ -147,6 +140,12 @@ export const BRANDS = [
         parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)",
         contentPosition: "bottom",
       },
+    },
+    // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
+    hashPasswordBeforeLogin: true,
+    debug: {
+      spatialNav: false, // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
     },
   },
   {
@@ -203,13 +202,6 @@ export const BRANDS = [
       baseUrl: "", // Equivalente a baseUrl en 10foot
       wsUrl: "", // Equivalente a wsUrl en 10foot
     },
-    // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
-    hashPasswordBeforeLogin: false,
-    debug: {
-      spatialNav: false, // Logs en consola (default: solo en DEV)
-      spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
-    },
-
     vod: {
       layout: "classic", // "hero" | "classic"
       vodDetail: {
@@ -230,6 +222,12 @@ export const BRANDS = [
         parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)", // Borde del badge de clasificación por edades (css)
         contentPosition: "middle", // "top" | "middle" | "bottom" - posición vertical del bloque poster + info
       },
+    },
+    // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
+    hashPasswordBeforeLogin: false,
+    debug: {
+      spatialNav: false, // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
     },
   },
   {
