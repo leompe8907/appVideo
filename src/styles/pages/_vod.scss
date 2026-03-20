@@ -45,6 +45,50 @@
     z-index: 10;
   }
 
+  .vod-player-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(circle at center, rgba(9, 14, 22, 0.18) 0%, rgba(9, 14, 22, 0.62) 78%),
+      linear-gradient(180deg, rgba(4, 8, 14, 0.22), rgba(4, 8, 14, 0.48));
+    backdrop-filter: blur(5px) saturate(1.05);
+    -webkit-backdrop-filter: blur(5px) saturate(1.05);
+    z-index: 2;
+    pointer-events: none;
+    animation: vod-player-fade-in 160ms ease-out;
+  }
+
+  .vod-player-loading-spinner {
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #fff;
+    box-shadow:
+      0 0 0 7px rgba(255, 255, 255, 0.05),
+      0 0 36px rgba(120, 170, 255, 0.32);
+    animation:
+      vod-player-spin 0.85s linear infinite,
+      vod-player-pulse 1.25s ease-in-out infinite;
+  }
+
+  @keyframes vod-player-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes vod-player-pulse {
+    0%, 100% { opacity: 0.82; }
+    50% { opacity: 1; }
+  }
+
+  @keyframes vod-player-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
   .vod-container {
     position: relative;
     z-index: 2;
@@ -93,6 +137,17 @@
 
   .vod-error p {
     color: #ffb3b3;
+  }
+
+  .vod-error-refresh-button {
+    margin-top: $spacing-sm;
+    padding: 0.55rem 0.9rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
   }
 
   @keyframes vod-spin {

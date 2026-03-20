@@ -25,6 +25,7 @@ export function PlayerProvider({ children }) {
     url: null,
     item: null,
     isPlaying: false,
+    isLoading: false,
     currentTime: 0,
     duration: 0,
     error: null,
@@ -58,21 +59,26 @@ export function PlayerProvider({ children }) {
       setState((s) => ({
         ...s,
         isPlaying: false,
+        isLoading: false,
       }));
     };
 
     const handleError = (err) => {
       setState((s) => ({
         ...s,
+        isPlaying: false,
+        isLoading: false,
         error: err,
       }));
     };
 
     const handleStateChange = ({ state }) => {
-      if (state === 'playing') {
-        setState((s) => ({ ...s, isPlaying: true }));
+      if (state === 'loading' || state === 'loaded') {
+        setState((s) => ({ ...s, isLoading: true }));
+      } else if (state === 'playing') {
+        setState((s) => ({ ...s, isPlaying: true, isLoading: false }));
       } else if (state === 'paused' || state === 'ended') {
-        setState((s) => ({ ...s, isPlaying: false }));
+        setState((s) => ({ ...s, isPlaying: false, isLoading: false }));
       }
     };
 
@@ -96,7 +102,6 @@ export function PlayerProvider({ children }) {
   const play = ({ type, id, url, item, autoPlay = true }) => {
     const engine = engineRef.current;
     if (!engine || !url) {
-      // eslint-disable-next-line no-console
       console.warn('[PlayerProvider] No hay engine o URL para reproducir');
       return;
     }
@@ -108,19 +113,25 @@ export function PlayerProvider({ children }) {
 
     // Si ya estamos en el mismo contenido, solo darle play
     if (state.type === type && state.id === id && state.url === url) {
+      setState((s) => ({ ...s, isLoading: true, error: null }));
       engine.play();
       return;
     }
 
-    engine.load(url, { type, autoPlay });
     setState((s) => ({
       ...s,
       type,
       id,
       url,
       item,
+      isPlaying: false,
+      isLoading: true,
       error: null,
+      currentTime: 0,
+      duration: 0,
     }));
+
+    engine.load(url, { type, autoPlay });
   };
 
   const pause = () => {

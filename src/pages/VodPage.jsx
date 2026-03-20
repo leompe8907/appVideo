@@ -4,7 +4,7 @@
  * Al seleccionar un ítem (película o serie) se abre el modal de detalle; desde ahí se reproduce.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePreload } from '../contexts/PreloadContext';
 import { useBrand } from '../contexts/BrandContext';
@@ -25,14 +25,26 @@ export function VodPage() {
   const { play, containerRef, state: playerState } = usePlayer();
   const [detailItem, setDetailItem] = useState(null);
   const [categoryModal, setCategoryModal] = useState(null);
+  const vodRetryOnEnterRef = useRef(false);
 
   const baseUrl = currentBrand?.drm || '';
   const vodLayout = currentBrand?.vod?.layout === 'classic' ? 'classic' : 'hero';
   const { status, categories, vodRecommended, error } = vod;
 
   useEffect(() => {
-    if (status === 'idle' && currentBrand) {
+    if (!currentBrand) return;
+
+    // Carga inicial normal
+    if (status === 'idle') {
       loadVOD(currentBrand, { t });
+      return;
+    }
+
+    // Si venimos de un error previo guardado en memoria, reintentar una vez
+    // al entrar al módulo VOD para no dejar al usuario bloqueado con error viejo.
+    if (status === 'error' && !vodRetryOnEnterRef.current) {
+      vodRetryOnEnterRef.current = true;
+      loadVOD(currentBrand, { t, enableRetry: true });
     }
   }, [status, currentBrand, loadVOD, t]);
 
@@ -56,7 +68,13 @@ export function VodPage() {
       <div
         className={`vod-player-video${playerState?.url ? ' vod-player-video--active' : ''}`}
         ref={containerRef}
-      />
+      >
+        {playerState?.url && playerState?.isLoading && (
+          <div className="vod-player-loading">
+            <div className="vod-player-loading-spinner" />
+          </div>
+        )}
+      </div>
       <div className="vod-container">
         <header className="vod-header">
           <h1 className="vod-title">{t('vod.title')}</h1>
@@ -72,6 +90,13 @@ export function VodPage() {
         {status === 'error' && (
           <div className="vod-error">
             <p>{error || t('vod.errorLoad')}</p>
+            <button
+              type="button"
+              className="vod-error-refresh-button"
+              onClick={() => window.location.reload()}
+            >
+              {t('common.refreshPage', { defaultValue: 'Refrescar página' })}
+            </button>
           </div>
         )}
 

@@ -18,7 +18,7 @@ function fmtHHmm(ms) {
  * - Siempre permitimos "Reproducir canal (en vivo)"
  * - Si el evento no es live, mostramos el botón "Watch" como deshabilitado (por ahora).
  */
-export function EpgEventModal({ open, channel, event, isLive, onClose, onPlayLive }) {
+export function EpgEventModal({ open, channel, event, isLive, canPlayLive = true, onClose, onPlayLive }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
 
@@ -72,8 +72,8 @@ export function EpgEventModal({ open, channel, event, isLive, onClose, onPlayLiv
 
   const { ref: playRef, focused: playFocused } = useSpatialNavigation({
     focusKey: 'epg-modal-play',
-    isFocusable: !!open,
-    onEnterPress: () => onPlayLive?.(),
+    isFocusable: !!open && !!canPlayLive,
+    onEnterPress: canPlayLive ? () => onPlayLive?.() : undefined,
   });
 
   if (!open) return null;
@@ -183,6 +183,7 @@ export function EpgEventModal({ open, channel, event, isLive, onClose, onPlayLiv
             className={`epg-event-modal-primary ${playFocused ? 'focused' : ''}`}
             onClick={() => onPlayLive?.()}
             type="button"
+            disabled={!canPlayLive}
             tabIndex={-1}
           >
             {t('epg.playLiveChannel', { defaultValue: 'Reproducir canal (en vivo)' })}

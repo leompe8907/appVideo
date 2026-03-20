@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { usePlayer } from '../../contexts/PlayerContext';
+import { useDevice } from '../../contexts/DeviceContext';
 import { usePreload } from '../../contexts/PreloadContext';
 import { useBrand } from '../../contexts/BrandContext';
 import panaccessService from '../../services/panaccessService';
@@ -156,10 +157,14 @@ export function EpgCards({ onSelect }) {
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
+  const { isTV } = useDevice();
 
-  const streams = epg?.streams || [];
   const epgCardsCfg = currentBrand?.epgCards || {};
   const epgPastEnabled = !!epgCardsCfg.epgPast;
+  const closeModalOnPlayLive =
+    typeof epgCardsCfg.epgCloseModalOnPlayLive === 'boolean'
+      ? epgCardsCfg.epgCloseModalOnPlayLive
+      : isTV;
 
   const [detail, setDetail] = useState(null); // { channel, event, isLive }
 
@@ -173,12 +178,13 @@ export function EpgCards({ onSelect }) {
   }, []);
 
   const channels = useMemo(() => {
+    const streams = epg?.streams || [];
     // Mantener orden estable por LCN si existe (no depende del tick)
     return [...streams].sort((a, b) => Number(a.lcn ?? 0) - Number(b.lcn ?? 0));
-  }, [streams]);
+  }, [epg?.streams]);
 
-  const handlePlayLive = (channel) => {
-    if (!channel) return;
+  const resolveChannelLiveUrl = (channel) => {
+    if (!channel) return null;
     let url =
       channel.url ||
       channel.streamUrl ||
@@ -188,12 +194,26 @@ export function EpgCards({ onSelect }) {
     if (!url) {
       const streamId = channel.id ?? channel.epgStreamId;
       if (streamId != null && streamId !== '') {
-        url = panaccessService.getStreamM3u8Url({ streamId });
+        try {
+          url = panaccessService.getStreamM3u8Url({ streamId });
+        } catch (e) {
+          if (import.meta.env?.DEV) {
+            console.warn('[EpgCards] getStreamM3u8Url error:', e?.message || e);
+          }
+        }
       }
     }
-    if (!url) return;
-    play({ type: 'service', id: channel.id ?? channel.lcn ?? undefined, url, item: channel, autoPlay: true });
+    return url || null;
   };
+
+  const handlePlayLive = (channel) => {
+    const url = resolveChannelLiveUrl(channel);
+    if (!url) return false;
+    play({ type: 'service', id: channel.id ?? channel.lcn ?? undefined, url, item: channel, autoPlay: true });
+    return true;
+  };
+
+  const canPlayLive = !!resolveChannelLiveUrl(detail?.channel);
 
   return (
     <div className="epg-cards-page">
@@ -367,8 +387,14 @@ export function EpgCards({ onSelect }) {
         channel={detail?.channel}
         event={detail?.event}
         isLive={detail?.isLive}
+        canPlayLive={canPlayLive}
         onClose={() => setDetail(null)}
-        onPlayLive={() => handlePlayLive(detail?.channel)}
+        onPlayLive={() => {
+          const started = handlePlayLive(detail?.channel);
+          if (started && closeModalOnPlayLive) {
+            setDetail(null);
+          }
+        }}
       />
     </div>
   );

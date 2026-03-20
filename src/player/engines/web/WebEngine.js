@@ -66,6 +66,7 @@ export class WebEngine {
   load(url, { type, autoPlay = false }) {
     if (!this.video || !url) return;
     const v = this.video;
+    this.emit('statechange', { state: 'loading', type });
 
     const onCanPlay = () => {
       v.removeEventListener('canplay', onCanPlay);
@@ -134,7 +135,6 @@ export class WebEngine {
       try {
         fn(payload);
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error('[WebEngine] Error en handler', event, e);
       }
     });

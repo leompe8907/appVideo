@@ -93,6 +93,9 @@ export const BRANDS = [
       // Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsProgramLiveProgressBg: "#6C8EB6",
       epgCardsLaterGlobal: true,
+      // Control del cierre de modal al reproducir en vivo:
+      // true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
+      epgCloseModalOnPlayLive: 'auto',
     },
 
     // Configuración de UI/Tema
@@ -186,6 +189,9 @@ export const BRANDS = [
       // Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsProgramLiveProgressBg: "#6C8EB6",
       epgCardsLaterGlobal: true,
+      // Control del cierre de modal al reproducir en vivo:
+      // true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
+      epgCloseModalOnPlayLive: 'auto',
     },
 
     // Configuración de UI/Tema
@@ -279,6 +285,9 @@ export const BRANDS = [
       // Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsProgramLiveProgressBg: "#6C8EB6",
       epgCardsLaterGlobal: true,
+      // Control del cierre de modal al reproducir en vivo:
+      // true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
+      epgCloseModalOnPlayLive: 'auto',
     },
 
     // Configuración de UI/Tema

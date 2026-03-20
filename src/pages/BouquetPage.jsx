@@ -60,7 +60,13 @@ export function BouquetPage() {
       <div
         className={`bouquet-player-video${playerState?.url ? ' bouquet-player-video--active' : ''}`}
         ref={containerRef}
-      />
+      >
+        {playerState?.url && playerState?.isLoading && (
+          <div className="bouquet-player-loading">
+            <div className="bouquet-player-loading-spinner" />
+          </div>
+        )}
+      </div>
       <div className="bouquet-container">
         <div className="bouquet-content">
           <BouquetWall onChannelSelect={handleChannelSelect} />

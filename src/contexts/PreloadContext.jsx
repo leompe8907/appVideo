@@ -187,42 +187,71 @@ export function PreloadProvider({ children }) {
    * Carga VOD en segundo plano (en paralelo con EPG). No bloquea la pantalla de preload.
    * Se ejecuta al mismo tiempo que loadEPG; cuando termina, vod.status pasa a 'ready'.
    */
-  const loadVOD = useCallback((brandConfig, options = {}) => {
+  const loadVOD = useCallback(async (brandConfig, options = {}) => {
     if (!brandConfig || vodLoadingRef.current) return;
     vodLoadingRef.current = true;
     setVod((prev) => ({ ...prev, status: 'loading', error: null, progress: { loadedCount: 0 } }));
 
-    loadVODData(brandConfig, {
-      ...options,
-      onProgress: (loadedCount) => {
-        setVod((prev) => ({ ...prev, progress: { loadedCount } }));
-      },
-    })
-      .then(({ categories, allVods, vodRecommended }) => {
-        setVod((prev) => ({
-          ...prev,
-          status: 'ready',
-          categories,
-          allVods,
-          vodRecommended,
-          progress: { loadedCount: allVods.length },
-          error: null,
-          lastLoadedAt: Date.now(),
-        }));
-      })
-      .catch((err) => {
-        const message = err?.message || 'Error al cargar VOD';
-        if (import.meta.env?.DEV) console.warn('[Preload] loadVOD error:', err);
-        setVod((prev) => ({
+    const runLoad = (extra = {}) =>
+      loadVODData(brandConfig, {
+        ...options,
+        ...extra,
+        onProgress: (loadedCount) => {
+          setVod((prev) => ({ ...prev, progress: { loadedCount } }));
+        },
+      });
+
+    try {
+      let payload;
+      try {
+        payload = await runLoad();
+      } catch (firstError) {
+        // Reintento interno único para evitar errores transitorios de red/backend.
+        if (import.meta.env?.DEV) {
+          console.warn('[Preload] loadVOD first attempt failed, retrying once:', firstError);
+        }
+        payload = await runLoad({ enableRetry: true });
+      }
+
+      const { categories, allVods, vodRecommended } = payload;
+      setVod((prev) => ({
+        ...prev,
+        status: 'ready',
+        categories,
+        allVods,
+        vodRecommended,
+        progress: { loadedCount: allVods.length },
+        error: null,
+        lastLoadedAt: Date.now(),
+      }));
+    } catch (err) {
+      const message = err?.message || 'Error al cargar VOD';
+      if (import.meta.env?.DEV) console.warn('[Preload] loadVOD error:', err);
+      setVod((prev) => {
+        const hasCachedData =
+          (prev.categories?.length ?? 0) > 0 ||
+          (prev.allVods?.length ?? 0) > 0 ||
+          (prev.vodRecommended?.length ?? 0) > 0;
+
+        // Si ya hay datos cargados en memoria, mantenerlos visibles y evitar estado de error bloqueante.
+        if (hasCachedData) {
+          return {
+            ...prev,
+            status: 'ready',
+            error: null,
+          };
+        }
+
+        return {
           ...prev,
           status: 'error',
           error: message,
           progress: prev.progress,
-        }));
-      })
-      .finally(() => {
-        vodLoadingRef.current = false;
+        };
       });
+    } finally {
+      vodLoadingRef.current = false;
+    }
   }, []);
 
   const resetPreload = useCallback(() => {
