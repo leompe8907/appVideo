@@ -20,6 +20,8 @@
  *   @param {string} ui.secondaryColor - Color secundario (hover, fondos, etc.).
  *   @param {string} ui.theme - Tema global: "dark" o "light".
  *   @param {string} ui.fontFamily - Familia de fuentes CSS (ej. "Arial, sans-serif", "Roboto, sans-serif").
+ *   @param {Object} ui.playerLoading - Estilo del overlay de carga de reproducción.
+ *     @param {boolean} ui.playerLoading.premium - true: overlay premium (blur + gradientes + glow); false: overlay simple.
  *
  * @param {Object} features - Funcionalidades activas o no para esta marca:
  *   @param {boolean} features.miniPlayer - true: habilita el mini reproductor; false: lo deshabilita.
@@ -113,6 +115,10 @@ export const BRANDS = [
       theme: "dark", // Tema global: "dark" o "light"
       // Fuente
       fontFamily: "Arial, sans-serif", // Familia de fuentes CSS (ej. "Arial, sans-serif", "Roboto, sans-serif")
+      // Player loading overlay
+      playerLoading: {
+        premium: true,
+      },
     },
 
     // Configuración específica de bouquets
@@ -210,6 +216,10 @@ export const BRANDS = [
       theme: "light",
       // Fuente
       fontFamily: "Roboto, sans-serif",
+      // Player loading overlay
+      playerLoading: {
+        premium: true,
+      },
     },
 
     // Configuración específica de bouquets
@@ -306,6 +316,10 @@ export const BRANDS = [
       theme: "dark",
       // Fuente
       fontFamily: "Montserrat, sans-serif",
+      // Player loading overlay
+      playerLoading: {
+        premium: true,
+      },
     },
 
     // Configuración específica de bouquets
