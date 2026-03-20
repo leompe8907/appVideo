@@ -14,9 +14,15 @@ export function PreloadGate({ required = 'epg', children }) {
   const epgReady = epg.status === 'ready' || epg.status === 'error';
 
   if (needsEpg && !epgReady) {
-    // Redirigir al preload conservando destino para volver al módulo solicitado.
+    // Redirigir a la página de preload completa (sin Home/sidebar).
+    // Guardamos la ruta destino para volver exactamente al módulo solicitado.
     const redirectTo = `${location.pathname}${location.search || ''}${location.hash || ''}`;
-    return <Navigate to={`/preload?redirect=${encodeURIComponent(redirectTo)}`} replace />;
+    return (
+      <Navigate
+        to={`/preload?redirect=${encodeURIComponent(redirectTo)}`}
+        replace
+      />
+    );
   }
 
   return children;

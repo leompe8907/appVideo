@@ -5,6 +5,7 @@
   grid-template-columns: 240px minmax(0, 1fr);
   min-height: 100vh;
   background: #0f1117;
+  position: relative;
 }
 
 .home-sidebar {
@@ -12,6 +13,7 @@
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(6px);
   padding: 1rem 0.75rem;
+  position: relative;
 }
 
 .home-sidebar-header {
