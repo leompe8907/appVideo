@@ -18,6 +18,7 @@
 @use 'pages/vod' as *;
 @use 'pages/preload' as *;
 @use 'pages/home-shell' as *;
+@use 'pages/home-ads' as *;
 @use 'pages/epg' as *;
 
 // 2. Bootstrap personalizado (usa @import porque Bootstrap lo requiere)

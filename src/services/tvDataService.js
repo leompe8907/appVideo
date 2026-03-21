@@ -177,16 +177,13 @@ function ensureStreamPlaybackUrl(stream) {
 }
 
 /**
- * Obtiene y normaliza los bouquets "principales" (isMain) ordenados por prioridad.
- * Equivalente a parte de la lógica de AppData.getDataForServicesTV en 10foot.
+ * Filtra bouquets marcados como principales (isMain) y ordena por prioridad.
+ * Útil con datos ya cargados (p. ej. preload) sin volver a llamar al API.
  */
-export async function getMainBouquets(options = {}) {
-  const { enableRetry = false, ...apiOptions } = options;
+export function filterMainBouquets(bouquets) {
+  if (!Array.isArray(bouquets)) return [];
 
-  const response = await panaccessService.getBouquets({ enableRetry, ...apiOptions });
-  const list = normalizeBouquetsResponse(response);
-
-  const mainBouquets = (Array.isArray(list) ? list : []).filter((b) => {
+  const mainBouquets = bouquets.filter((b) => {
     const raw = b.isMain ?? b.ismain ?? b.main;
     if (typeof raw === 'boolean') return raw;
     if (typeof raw === 'string') {
@@ -203,6 +200,19 @@ export async function getMainBouquets(options = {}) {
   });
 
   return mainBouquets;
+}
+
+/**
+ * Obtiene y normaliza los bouquets "principales" (isMain) ordenados por prioridad.
+ * Equivalente a parte de la lógica de AppData.getDataForServicesTV en 10foot.
+ */
+export async function getMainBouquets(options = {}) {
+  const { enableRetry = false, ...apiOptions } = options;
+
+  const response = await panaccessService.getBouquets({ enableRetry, ...apiOptions });
+  const list = normalizeBouquetsResponse(response);
+
+  return filterMainBouquets(list);
 }
 
 /**

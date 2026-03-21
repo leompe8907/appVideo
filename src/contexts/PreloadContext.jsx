@@ -1,17 +1,21 @@
 /**
- * Contexto de precarga de datos (EPG, VOD, y en el futuro catchups, ads, OSMS).
- * Centraliza la descarga y el estado para uso en bouquets, player, VOD y futuros componentes.
+ * Contexto de precarga de datos (EPG, VOD, publicidad; en el futuro catchups, OSMS).
+ * Centraliza la descarga y el estado para uso en bouquets, player, VOD y Home.
  */
 
 import { createContext, useContext, useCallback, useRef, useState } from 'react';
 import { getBouquetsWithChannels, loadEPGForStreams } from '../services/tvDataService';
 import { loadVODData } from '../services/vodService';
+import panaccessService from '../services/panaccessService';
+import { processAdsFromApi } from '../utils/adsData';
 
 const LOADING_TIMEOUT_MS = 300000;
 
 const epgInitialState = {
   status: 'idle', // 'idle' | 'loading' | 'finishing' | 'ready' | 'error'
   streams: [],
+  /** Resultado de getBouquetsWithChannels (bouquets con items); evita repetir getBouquets/getAvailableStreams en Inicio */
+  bouquetsWithChannels: [],
   progress: { current: 0, total: 0, percent: 0 },
   error: null,
   lastLoadedAt: null,
@@ -23,6 +27,15 @@ const vodInitialState = {
   allVods: [],
   vodRecommended: [],
   progress: { loadedCount: 0 },
+  error: null,
+  lastLoadedAt: null,
+};
+
+const adsInitialState = {
+  status: 'idle', // 'idle' | 'loading' | 'ready' | 'error'
+  processed: [],
+  top: [],
+  bottom: [],
   error: null,
   lastLoadedAt: null,
 };
@@ -65,9 +78,11 @@ export function mergeEpgIntoChannels(channels, streamsWithEpg) {
 export function PreloadProvider({ children }) {
   const [epg, setEpg] = useState(epgInitialState);
   const [vod, setVod] = useState(vodInitialState);
+  const [ads, setAds] = useState(adsInitialState);
   const loadingTimeoutRef = useRef(null);
   const loadingStartedRef = useRef(false);
   const vodLoadingRef = useRef(false);
+  const adsLoadingRef = useRef(false);
 
   const clearTimeoutRef = useCallback(() => {
     if (loadingTimeoutRef.current) {
@@ -85,6 +100,7 @@ export function PreloadProvider({ children }) {
         ...prev,
         status: 'loading',
         error: null,
+        bouquetsWithChannels: [],
         progress: { current: 0, total: 0, percent: 0 },
       }));
 
@@ -114,6 +130,7 @@ export function PreloadProvider({ children }) {
             ...prev,
             status: 'finishing',
             streams: [],
+            bouquetsWithChannels: bouquets,
             progress: { current: 0, total: 0, percent: 100 },
           }));
           setTimeout(() => {
@@ -146,6 +163,7 @@ export function PreloadProvider({ children }) {
             return {
               ...prev,
               streams: allStreams,
+              bouquetsWithChannels: bouquets,
               progress: { current: total, total, percent: 100 },
               error: null,
             };
@@ -154,6 +172,7 @@ export function PreloadProvider({ children }) {
             ...prev,
             status: 'finishing',
             streams: allStreams,
+            bouquetsWithChannels: bouquets,
             progress: { current: total, total, percent: 100 },
             error: null,
           };
@@ -174,6 +193,7 @@ export function PreloadProvider({ children }) {
           ...prev,
           status: 'error',
           error: message,
+          bouquetsWithChannels: [],
           progress: prev.progress,
         }));
       } finally {
@@ -254,12 +274,52 @@ export function PreloadProvider({ children }) {
     }
   }, []);
 
+  /**
+   * Publicidad HTML5 (getAds). No bloquea la salida de PreloadDataPage; se ejecuta en paralelo con EPG/VOD.
+   */
+  const loadAds = useCallback(async () => {
+    if (adsLoadingRef.current) return;
+    adsLoadingRef.current = true;
+    setAds((prev) => ({ ...prev, status: 'loading', error: null }));
+
+    try {
+      const raw = await panaccessService.getAds({ enableRetry: false });
+      const list = Array.isArray(raw) ? raw : [];
+      const { processed, top, bottom } = processAdsFromApi(list);
+      setAds({
+        status: 'ready',
+        processed,
+        top,
+        bottom,
+        error: null,
+        lastLoadedAt: Date.now(),
+      });
+    } catch (err) {
+      const message = err?.message || err?.errorInfo?.userMessage || 'Error al cargar publicidad';
+      if (import.meta.env?.DEV) {
+        console.warn('[Preload] loadAds error:', err);
+      }
+      setAds({
+        status: 'error',
+        processed: [],
+        top: [],
+        bottom: [],
+        error: message,
+        lastLoadedAt: null,
+      });
+    } finally {
+      adsLoadingRef.current = false;
+    }
+  }, []);
+
   const resetPreload = useCallback(() => {
     clearTimeoutRef();
     setEpg(epgInitialState);
     setVod(vodInitialState);
+    setAds(adsInitialState);
     loadingStartedRef.current = false;
     vodLoadingRef.current = false;
+    adsLoadingRef.current = false;
   }, [clearTimeoutRef]);
 
   /**
@@ -277,6 +337,8 @@ export function PreloadProvider({ children }) {
     loadEPG,
     vod,
     loadVOD,
+    ads,
+    loadAds,
     resetPreload,
     getStreamsWithEPG,
   };

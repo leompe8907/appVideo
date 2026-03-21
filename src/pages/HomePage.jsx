@@ -1,6 +1,6 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
+import { HomeShellContent } from '../components/ads/HomeShellContent';
 import '../styles/pages/_home-shell.scss';
 
 export function HomePlaceholderPage({ title, description }) {
@@ -23,7 +23,7 @@ export function HomePage() {
     <div className="home-shell">
       <Sidebar />
       <main className="home-content">
-        <Outlet />
+        <HomeShellContent />
       </main>
     </div>
   );

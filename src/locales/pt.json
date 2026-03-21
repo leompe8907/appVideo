@@ -79,7 +79,7 @@
     "licenseInUseNo": "Não"
   },
   "bouquet": {
-    "title": "Pacotes",
+    "title": "Início",
     "loading": "Carregando pacotes...",
     "noBouquets": "Nenhum pacote encontrado.",
     "errorLoad": "Erro ao carregar pacotes.",
@@ -87,6 +87,21 @@
     "loadingStreams": "Carregando canais...",
     "streamsCount": "{{count}} canal(is)",
     "bouquetAria": "Pacote {{name}}"
+  },
+  "epg": {
+    "title": "Guia de canais",
+    "subtitle": "Selecione um programa",
+    "channel": "Canal",
+    "before": "Antes",
+    "now": "Agora",
+    "next": "Próximo",
+    "later": "Mais tarde",
+    "eventNoTitle": "Sem título",
+    "live": "Ao vivo",
+    "notLive": "Não ao vivo",
+    "noDescription": "Sem descrição",
+    "playLiveChannel": "Reproduzir canal (ao vivo)",
+    "watchCatchup": "Assistir / Catchup (indisponível)"
   },
   "player": {
     "selectChannelFirst": "Selecione um canal primeiro",

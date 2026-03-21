@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getBouquetsWithChannels } from '../../services/tvDataService';
-import { usePreload } from '../../contexts/PreloadContext';
+import { usePreload, mergeEpgIntoChannels } from '../../contexts/PreloadContext';
 import {
   BouquetRowCarousel,
   BouquetGridHorizontal,
@@ -9,37 +9,55 @@ import {
 } from './BouquetLayouts';
 
 /**
- * BouquetWall: muestra filas horizontales de canales agrupados por bouquet,
- * similar a la home de 10foot. Fusiona epgItems del PreloadContext cuando existan.
+ * BouquetWall: filas de canales por bouquet (home 10foot).
+ * Con precarga EPG lista: usa `epg.bouquetsWithChannels` del PreloadContext (sin repetir getBouquets/getAvailableStreams).
+ * Solo pide red si el preload de EPG falló.
  */
 export function BouquetWall({ onChannelSelect }) {
   const { t } = useTranslation();
-  const { getStreamsWithEPG } = usePreload();
-  const [bouquets, setBouquets] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { epg } = usePreload();
+
+  const bouquetsFromPreload = useMemo(() => {
+    if (epg.status !== 'ready') return null;
+    const list = epg.bouquetsWithChannels || [];
+    return list.map((b) => ({
+      ...b,
+      items: mergeEpgIntoChannels(b.items || [], epg.streams),
+    }));
+  }, [epg.status, epg.bouquetsWithChannels, epg.streams]);
+
+  const [fallbackBouquets, setFallbackBouquets] = useState([]);
+  const [fallbackLoading, setFallbackLoading] = useState(false);
+  const [fallbackError, setFallbackError] = useState(null);
 
   useEffect(() => {
+    if (bouquetsFromPreload !== null) {
+      return;
+    }
+    if (epg.status !== 'error') {
+      return;
+    }
+
     let isMounted = true;
 
     const fetchData = async () => {
       try {
-        setIsLoading(true);
-        setError(null);
+        setFallbackLoading(true);
+        setFallbackError(null);
         const list = await getBouquetsWithChannels({ enableRetry: false });
         if (!isMounted) return;
         const withEpg = list.map((b) => ({
           ...b,
-          items: getStreamsWithEPG(b.items || []),
+          items: mergeEpgIntoChannels(b.items || [], epg.streams),
         }));
-        setBouquets(withEpg);
+        setFallbackBouquets(withEpg);
       } catch (err) {
         if (!isMounted) return;
         console.error('[BouquetWall] Error al cargar bouquets con canales:', err);
-        setError(err?.errorInfo?.userMessage || err?.message || t('bouquet.errorLoad'));
+        setFallbackError(err?.errorInfo?.userMessage || err?.message || t('bouquet.errorLoad'));
       } finally {
         if (isMounted) {
-          setIsLoading(false);
+          setFallbackLoading(false);
         }
       }
     };
@@ -49,7 +67,11 @@ export function BouquetWall({ onChannelSelect }) {
     return () => {
       isMounted = false;
     };
-  }, [t, getStreamsWithEPG]);
+  }, [bouquetsFromPreload, epg.status, epg.streams, t]);
+
+  const bouquets = bouquetsFromPreload !== null ? bouquetsFromPreload : fallbackBouquets;
+  const isLoading = bouquetsFromPreload !== null ? false : fallbackLoading;
+  const error = bouquetsFromPreload !== null ? null : fallbackError;
 
   if (isLoading) {
     return (
@@ -104,7 +126,6 @@ export function BouquetWall({ onChannelSelect }) {
           );
         }
 
-        // Layout por defecto: fila horizontal tipo carrusel
         return (
           <BouquetRowCarousel
             key={key}
@@ -119,4 +140,3 @@ export function BouquetWall({ onChannelSelect }) {
 }
 
 export default BouquetWall;
-

@@ -59,11 +59,29 @@
   height: 100vh;
   overflow: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
   background-color: #0f1117; // fallback si no existe imagen
   background-image: var(--home-background-image);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+.home-content-stack {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.home-content-outlet {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  position: relative;
 }
 
 .home-placeholder {

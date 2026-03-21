@@ -3,6 +3,7 @@
  * - EPG + streams/servicios (a través de loadEPG, que internamente usa tvDataService)
  * - VOD (categorías, contenido, recomendados)
  * - Bouquets asociados a los streams (a través de loadEPG/getBouquetsWithChannels)
+ * - Publicidad (getAds), en paralelo; no bloquea la redirección al terminar EPG+VOD
  *
  * Muestra la misma UI de carga que PreloadScreen y, cuando termina,
  * redirige automáticamente a Home/Bouquets.
@@ -20,7 +21,7 @@ export function PreloadDataPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentBrand } = useBrand();
-  const { epg, vod, loadEPG, loadVOD } = usePreload();
+  const { epg, vod, ads, loadEPG, loadVOD, loadAds } = usePreload();
 
   // Disparar cargas iniciales centralizadas
   useEffect(() => {
@@ -33,7 +34,11 @@ export function PreloadDataPage() {
     if (vod.status === 'idle') {
       loadVOD(currentBrand, { t });
     }
-  }, [currentBrand, epg.status, vod.status, loadEPG, loadVOD, t]);
+
+    if (ads.status === 'idle') {
+      loadAds();
+    }
+  }, [currentBrand, epg.status, vod.status, ads.status, loadEPG, loadVOD, loadAds, t]);
 
   // Cuando EPG y VOD estén listos (o en error), redirigir a Home/Bouquets
   useEffect(() => {

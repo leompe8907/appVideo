@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePreload } from '../contexts/PreloadContext';
 import { useBrand } from '../contexts/BrandContext';
@@ -20,6 +21,8 @@ const ITEMS_PER_ROW = 9;
 
 export function VodPage() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { vod, loadVOD } = usePreload();
   const { currentBrand } = useBrand();
   const { play, containerRef, state: playerState } = usePlayer();
@@ -47,6 +50,19 @@ export function VodPage() {
       loadVOD(currentBrand, { t, enableRetry: true });
     }
   }, [status, currentBrand, loadVOD, t]);
+
+  /** Abrir detalle VOD desde publicidad (genericData vod_id=) */
+  useEffect(() => {
+    const id = location.state?.adOpenVodId;
+    if (id == null) return;
+    if (status !== 'ready' || !Array.isArray(vod.allVods)) return;
+    const item = vod.allVods.find((v) => String(v.id) === String(id));
+    const timer = setTimeout(() => {
+      if (item) setDetailItem(item);
+      navigate('/home/vod', { replace: true, state: {} });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [location.state, vod.allVods, status, navigate]);
 
   const handleVodSelect = (item) => {
     if (!item?.id) return;

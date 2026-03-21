@@ -3,12 +3,13 @@
  * Se activa después de seleccionar un perfil o una tarjeta (licencia).
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
-import { getMainBouquets, getChannelsForBouquet } from '../../services/tvDataService';
+import { usePreload, mergeEpgIntoChannels } from '../../contexts/PreloadContext';
+import { getMainBouquets, getChannelsForBouquet, filterMainBouquets } from '../../services/tvDataService';
 
 /**
  * Normaliza un color devuelto por el backend (ej. "ffffff  ") a formato CSS (#ffffff).
@@ -30,32 +31,50 @@ function normalizeColor(color) {
 export function Bouquet() {
   const { t } = useTranslation();
   const { isTV } = useDevice();
-  const [bouquets, setBouquets] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { epg } = usePreload();
+
+  /** Bouquets principales con canales y EPG fusionados desde PreloadContext (sin nuevas llamadas a getBouquets/getAvailableStreams). */
+  const bouquetsFromPreload = useMemo(() => {
+    if (epg.status !== 'ready') return null;
+    return filterMainBouquets(epg.bouquetsWithChannels || []).map((b) => ({
+      ...b,
+      items: mergeEpgIntoChannels(b.items || [], epg.streams),
+    }));
+  }, [epg.status, epg.bouquetsWithChannels, epg.streams]);
+
+  const [fallbackBouquets, setFallbackBouquets] = useState([]);
+  const [fallbackLoading, setFallbackLoading] = useState(false);
+  const [fallbackError, setFallbackError] = useState(null);
+
   const [selectedBouquet, setSelectedBouquet] = useState(null);
   const [channels, setChannels] = useState([]);
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
   const [channelsError, setChannelsError] = useState(null);
 
-  const fetchBouquets = useCallback(async () => {
+  const fetchBouquetsFallback = useCallback(async () => {
     try {
-      setIsLoading(true);
-      setError(null);
+      setFallbackLoading(true);
+      setFallbackError(null);
       const mainBouquets = await getMainBouquets({ enableRetry: false });
-      setBouquets(mainBouquets);
+      setFallbackBouquets(mainBouquets);
     } catch (err) {
       console.error('[Bouquet] Error al obtener bouquets:', err);
-      setBouquets([]);
-      setError(err?.errorInfo?.userMessage || err?.message || t('bouquet.errorLoad'));
+      setFallbackBouquets([]);
+      setFallbackError(err?.errorInfo?.userMessage || err?.message || t('bouquet.errorLoad'));
     } finally {
-      setIsLoading(false);
+      setFallbackLoading(false);
     }
   }, [t]);
 
   useEffect(() => {
-    fetchBouquets();
-  }, [fetchBouquets]);
+    if (epg.status === 'error') {
+      fetchBouquetsFallback();
+    }
+  }, [epg.status, fetchBouquetsFallback]);
+
+  const bouquets = bouquetsFromPreload !== null ? bouquetsFromPreload : fallbackBouquets;
+  const isLoading = bouquetsFromPreload !== null ? false : fallbackLoading;
+  const error = bouquetsFromPreload !== null ? null : fallbackError;
 
   useEffect(() => {
     if (isTV && bouquets.length > 0) {
@@ -74,10 +93,26 @@ export function Bouquet() {
 
   const handleSelectBouquet = async (bouquet) => {
     setSelectedBouquet(bouquet);
-    setIsLoadingChannels(true);
     setChannelsError(null);
     setChannels([]);
 
+    const fromPreload =
+      bouquetsFromPreload !== null &&
+      Array.isArray(bouquet.items) &&
+      bouquet.items.length > 0;
+
+    if (fromPreload) {
+      const merged = mergeEpgIntoChannels(bouquet.items, epg.streams);
+      setChannels(merged);
+      setIsLoadingChannels(false);
+      if (import.meta.env.DEV) {
+        const bouquetId = String(bouquet.bouquetId ?? bouquet.id ?? '');
+        console.log('[Bouquet] Streams desde preload para bouquet', bouquetId, merged.length);
+      }
+      return;
+    }
+
+    setIsLoadingChannels(true);
     try {
       const filtered = await getChannelsForBouquet(bouquet, { enableRetry: false });
       if (import.meta.env.DEV) {
@@ -165,12 +200,11 @@ function BouquetRow({ bouquet, index, onSelect }) {
   const { ref, focused } = useSpatialNavigation({
     focusKey: `bouquet-${index}`,
     isFocusable: true,
+    onEnterPress: () => onSelect?.(bouquet),
   });
 
   const handleClick = () => {
-    if (!isTV) {
-      onSelect?.(bouquet);
-    }
+    onSelect?.(bouquet);
   };
 
   const handleKeyDown = (e) => {

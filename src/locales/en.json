@@ -79,7 +79,7 @@
     "licenseInUseNo": "No"
   },
   "bouquet": {
-    "title": "Bouquets",
+    "title": "Home",
     "loading": "Loading bouquets...",
     "noBouquets": "No bouquets found.",
     "errorLoad": "Error loading bouquets.",
@@ -87,6 +87,21 @@
     "loadingStreams": "Loading channels...",
     "streamsCount": "{{count}} channel(s)",
     "bouquetAria": "Bouquet {{name}}"
+  },
+  "epg": {
+    "title": "Channel guide",
+    "subtitle": "Select a program",
+    "channel": "Channel",
+    "before": "Before",
+    "now": "Now",
+    "next": "Next",
+    "later": "Later",
+    "eventNoTitle": "No title",
+    "live": "Live",
+    "notLive": "Not live",
+    "noDescription": "No description",
+    "playLiveChannel": "Play channel (live)",
+    "watchCatchup": "Watch / Catchup (not available)"
   },
   "player": {
     "selectChannelFirst": "Select a channel first",
