@@ -19,6 +19,7 @@ const VodPage = lazy(() => import('./pages/VodPage'));
 const PreloadDataPage = lazy(() => import('./pages/PreloadDataPage'));
 const HomePage = lazy(() => import('./pages/HomePage'));
 const EpgCardsPage = lazy(() => import('./pages/EpgCardsPage'));
+const CatchupPage = lazy(() => import('./pages/CatchupPage'));
 const HomePlaceholderPage = lazy(() =>
   import('./pages/HomePage').then((m) => ({ default: m.HomePlaceholderPage }))
 );
@@ -101,7 +102,14 @@ function App() {
                 }
               />
                 <Route path="ads" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="Ads" description="Modulo en preparacion para administracion de publicidad."/></Suspense>}/>
-                <Route path="catchup" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="Catchup" description="Modulo en preparacion para contenidos catchup."/></Suspense>}/>
+                <Route
+                  path="catchup"
+                  element={
+                    <Suspense fallback={<Loading />}>
+                      <CatchupPage />
+                    </Suspense>
+                  }
+                />
                 <Route path="osms" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="OSMS" description="Modulo en preparacion para mensajes del sistema." /></Suspense>}/>
                 <Route path="*" element={<Navigate to="/home/bouquets" replace />} />
               </Route>

@@ -5,6 +5,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { usePreload } from '../../contexts/PreloadContext';
 import { useBrand } from '../../contexts/BrandContext';
+import { useNavigate } from 'react-router-dom';
 import panaccessService from '../../services/panaccessService';
 import EpgEventModal from './EpgEventModal';
 import '../epg/epg-common.scss';
@@ -158,6 +159,7 @@ export function EpgCards({ onSelect }) {
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
   const { isTV } = useDevice();
+  const navigate = useNavigate();
 
   const epgCardsCfg = currentBrand?.epgCards || {};
   const epgPastEnabled = !!epgCardsCfg.epgPast;
@@ -394,6 +396,10 @@ export function EpgCards({ onSelect }) {
           if (started && closeModalOnPlayLive) {
             setDetail(null);
           }
+        }}
+        onWatchCatchup={(catchupId) => {
+          if (!catchupId) return;
+          navigate('/home/catchup', { state: { catchupId, from: 'epg' }, replace: false });
         }}
       />
     </div>

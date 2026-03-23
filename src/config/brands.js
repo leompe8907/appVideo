@@ -100,6 +100,22 @@ export const BRANDS = [
       epgCloseModalOnPlayLive: 'auto',
     },
 
+    // Catchup: pantalla independiente con 3 diseños (Legacy / Timeline / Netflix).
+    // Nota: la UI se decide con `catchup.ui.activeLayout`; si `showAllLayouts` está en true
+    // se renderizan los 3 para que el cliente pueda revisarlos.
+    catchup: {
+      enabled: true,
+      ui: {
+        activeLayout: 'legacy', // 'legacy' | 'timeline' | 'netflix'
+        showAllLayouts: false, // para revisar los 3 diseños
+      },
+      layouts: {
+        legacy: { enabled: true },
+        timeline: { enabled: true },
+        netflix: { enabled: true },
+      },
+    },
+
     // Configuración de UI/Tema
     ui: {
       // Splash
@@ -200,6 +216,20 @@ export const BRANDS = [
       epgCloseModalOnPlayLive: 'auto',
     },
 
+    // Catchup: pantalla independiente con 3 diseños (Legacy / Timeline / Netflix).
+    catchup: {
+      enabled: true,
+      ui: {
+        activeLayout: 'legacy',
+        showAllLayouts: false,
+      },
+      layouts: {
+        legacy: { enabled: true },
+        timeline: { enabled: true },
+        netflix: { enabled: true },
+      },
+    },
+
     // Configuración de UI/Tema
     ui: {
       // Splash
@@ -298,6 +328,20 @@ export const BRANDS = [
       // Control del cierre de modal al reproducir en vivo:
       // true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
       epgCloseModalOnPlayLive: 'auto',
+    },
+
+    // Catchup: pantalla independiente con 3 diseños (Legacy / Timeline / Netflix).
+    catchup: {
+      enabled: true,
+      ui: {
+        activeLayout: 'legacy',
+        showAllLayouts: false,
+      },
+      layouts: {
+        legacy: { enabled: true },
+        timeline: { enabled: true },
+        netflix: { enabled: true },
+      },
     },
 
     // Configuración de UI/Tema

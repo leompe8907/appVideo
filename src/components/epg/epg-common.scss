@@ -208,6 +208,11 @@
   border-radius: 12px;
 }
 
+.epg-event-modal-secondary.focused {
+  filter: brightness(1.1);
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+}
+
 .epg-event-modal-secondary--disabled {
   opacity: 0.5;
 }

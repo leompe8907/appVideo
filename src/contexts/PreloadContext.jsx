@@ -40,6 +40,15 @@ const adsInitialState = {
   lastLoadedAt: null,
 };
 
+const catchupInitialState = {
+  status: 'idle', // 'idle' | 'loading' | 'ready' | 'error'
+  groups: [], // [{ catchupGroupId, epgStreamId, lcn, name, img, events: [...] }]
+  recorded: [], // array de tareas de grabación ya normalizadas con metadata (event, image, lcn, catchupName...)
+  progress: { loadedGroups: 0, totalGroups: 0 },
+  error: null,
+  lastLoadedAt: null,
+};
+
 const PreloadContext = createContext(null);
 
 export function usePreload() {
@@ -79,10 +88,12 @@ export function PreloadProvider({ children }) {
   const [epg, setEpg] = useState(epgInitialState);
   const [vod, setVod] = useState(vodInitialState);
   const [ads, setAds] = useState(adsInitialState);
+  const [catchup, setCatchup] = useState(catchupInitialState);
   const loadingTimeoutRef = useRef(null);
   const loadingStartedRef = useRef(false);
   const vodLoadingRef = useRef(false);
   const adsLoadingRef = useRef(false);
+  const catchupLoadingRef = useRef(false);
 
   const clearTimeoutRef = useCallback(() => {
     if (loadingTimeoutRef.current) {
@@ -312,14 +323,215 @@ export function PreloadProvider({ children }) {
     }
   }, []);
 
+  const loadCatchup = useCallback(
+    async (brandConfig, options = {}) => {
+      if (!brandConfig) return;
+      if (catchup.status === 'loading') return;
+      if (catchupLoadingRef.current) return;
+
+      catchupLoadingRef.current = true;
+      setCatchup((prev) => ({
+        ...prev,
+        status: 'loading',
+        error: null,
+        groups: [],
+        recorded: [],
+        progress: { loadedGroups: 0, totalGroups: 0 },
+      }));
+
+      const toMs = (v) => {
+        if (v == null) return null;
+        if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+        const ms = new Date(v).getTime();
+        return Number.isFinite(ms) ? ms : null;
+      };
+
+      const normalizeGroups = (resp) => {
+        if (Array.isArray(resp)) return resp;
+        if (resp && typeof resp === 'object') {
+          return resp.catchupGroups || resp.groups || resp.items || resp.answer || [];
+        }
+        return [];
+      };
+
+      const normalizeEvents = (resp) => {
+        if (Array.isArray(resp)) return resp;
+        if (resp && typeof resp === 'object') {
+          return resp.events || resp.items || resp.answer || [];
+        }
+        return [];
+      };
+
+      const normalizeRecorded = (resp) => {
+        if (Array.isArray(resp)) return resp;
+        if (resp && typeof resp === 'object') {
+          return resp.recordingTasks || resp.items || resp.tasks || resp.answer || [];
+        }
+        return [];
+      };
+
+      const buildGroupsWithEvents = async (enableRetry) => {
+        const groupsResp = await panaccessService.getCatchupGroups({ enableRetry });
+        const groupsList = normalizeGroups(groupsResp);
+        groupsList.sort((a, b) => Number(a.lcn ?? 0) - Number(b.lcn ?? 0));
+
+        const totalGroups = groupsList.length;
+        const groupsWithEvents = [];
+
+        for (let i = 0; i < groupsList.length; i++) {
+          const group = groupsList[i];
+          if (!group) continue;
+
+          const epgStreamId = group.epgStreamId ?? group.epg_stream_id ?? group.epgStreamid;
+          const eventsResp = await panaccessService.getCatchupEvents({
+            epgStreamId,
+            enableRetry,
+          });
+
+          const eventsList = normalizeEvents(eventsResp);
+          const catchupGroupId = group.catchupGroupId ?? group.catchup_group_id ?? group.id ?? null;
+
+          const mappedEvents = eventsList.map((ev) => {
+            const startRaw = ev.start ?? ev.startDate ?? ev.start_date ?? null;
+            const durationSeconds = Number(ev.duration ?? ev.durationSeconds ?? ev.duration_sec ?? 0);
+            const endRaw = ev.end ?? ev.endDate ?? ev.end_date ?? null;
+
+            const startMs = toMs(startRaw);
+            const endMsFromDuration =
+              startMs != null && Number.isFinite(durationSeconds) && durationSeconds > 0 ? startMs + durationSeconds * 1000 : null;
+            const endMs = endMsFromDuration ?? toMs(endRaw);
+
+            const resolvedCatchupId = ev.catchupId ?? ev.catchup_id ?? ev.catchupEventId ?? ev.id ?? ev.eventId ?? null;
+
+            return {
+              ...ev,
+              catchupGroupId,
+              catchupId: resolvedCatchupId,
+              startDate: startMs != null ? new Date(startMs) : null,
+              endDate: endMs != null ? new Date(endMs) : null,
+              durationSeconds: durationSeconds > 0 ? durationSeconds : ev.durationSeconds ?? ev.duration ?? null,
+            };
+          });
+
+          groupsWithEvents.push({
+            ...group,
+            events: mappedEvents,
+          });
+
+          setCatchup((prev) => ({
+            ...prev,
+            progress: { loadedGroups: i + 1, totalGroups },
+          }));
+        }
+
+        return groupsWithEvents;
+      };
+
+      const prepareRecorded = (tasksList, groupsWithEvents) => {
+        const validTasks = normalizeRecorded(tasksList).filter((t) => {
+          const mode = Number(t.mode ?? 0);
+          const catchupId = Number(t.catchupId ?? t.catchup_id ?? t.id ?? 0);
+          const deleted = !!t.deleted;
+          return mode === 4 && catchupId > 0 && !deleted;
+        });
+
+        const recorded = validTasks
+          .map((task) => {
+            const taskCatchupId = task.catchupId ?? task.catchup_id ?? task.id ?? null;
+            if (taskCatchupId == null) return null;
+
+            const taskCatchupIdStr = String(taskCatchupId);
+            const group = groupsWithEvents.find((g) =>
+              Array.isArray(g.events) &&
+              g.events.some((ev) => String(ev?.id ?? ev?.eventId ?? ev?.catchupId ?? '') === taskCatchupIdStr)
+            );
+
+            if (!group) return null;
+
+            const event = group.events.find((ev) =>
+              String(ev?.id ?? ev?.eventId ?? ev?.catchupId ?? '') === taskCatchupIdStr
+            );
+
+            if (!event) return null;
+
+            const startMs = toMs(task.startDate ?? task.start ?? null);
+
+            return {
+              ...task,
+              catchupId: Number(taskCatchupIdStr),
+              startDate: startMs != null ? new Date(startMs) : null,
+              event,
+              image: group.img ?? group.imageUrl ?? group.posterUrl ?? null,
+              lcn: group.lcn ?? null,
+              catchupName: group.name ?? null,
+            };
+          })
+          .filter(Boolean);
+
+        recorded.sort((a, b) => {
+          const aa = a.startDate?.valueOf?.() ?? 0;
+          const bb = b.startDate?.valueOf?.() ?? 0;
+          return aa - bb;
+        });
+
+        return recorded;
+      };
+
+      const runLoad = async (enableRetry) => {
+        const groupsWithEvents = await buildGroupsWithEvents(enableRetry);
+        const recordedResp = await panaccessService.getRecordingTasks({ enableRetry });
+        const recordedTasks = normalizeRecorded(recordedResp);
+        const recorded = prepareRecorded(recordedTasks, groupsWithEvents);
+
+        return { groupsWithEvents, recorded };
+      };
+
+      try {
+        let payload;
+        try {
+          payload = await runLoad(false);
+        } catch (firstError) {
+          if (import.meta.env?.DEV) {
+            console.warn('[Preload] loadCatchup first attempt failed, retrying once:', firstError);
+          }
+          payload = await runLoad(true);
+        }
+
+        setCatchup((prev) => ({
+          ...prev,
+          status: 'ready',
+          groups: payload.groupsWithEvents,
+          recorded: payload.recorded,
+          error: null,
+          progress: { loadedGroups: payload.groupsWithEvents.length, totalGroups: payload.groupsWithEvents.length },
+          lastLoadedAt: Date.now(),
+        }));
+      } catch (err) {
+        const message = err?.message || 'Error al cargar catchup';
+        setCatchup((prev) => {
+          const hasCachedData = (prev.groups?.length ?? 0) > 0 || (prev.recorded?.length ?? 0) > 0;
+          if (hasCachedData) {
+            return { ...prev, status: 'ready', error: null };
+          }
+          return { ...prev, status: 'error', error: message };
+        });
+      } finally {
+        catchupLoadingRef.current = false;
+      }
+    },
+    [catchup.status]
+  );
+
   const resetPreload = useCallback(() => {
     clearTimeoutRef();
     setEpg(epgInitialState);
     setVod(vodInitialState);
     setAds(adsInitialState);
+    setCatchup(catchupInitialState);
     loadingStartedRef.current = false;
     vodLoadingRef.current = false;
     adsLoadingRef.current = false;
+    catchupLoadingRef.current = false;
   }, [clearTimeoutRef]);
 
   /**
@@ -339,6 +551,8 @@ export function PreloadProvider({ children }) {
     loadVOD,
     ads,
     loadAds,
+    catchup,
+    loadCatchup,
     resetPreload,
     getStreamsWithEPG,
   };

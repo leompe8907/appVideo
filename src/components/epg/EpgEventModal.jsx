@@ -18,7 +18,16 @@ function fmtHHmm(ms) {
  * - Siempre permitimos "Reproducir canal (en vivo)"
  * - Si el evento no es live, mostramos el botón "Watch" como deshabilitado (por ahora).
  */
-export function EpgEventModal({ open, channel, event, isLive, canPlayLive = true, onClose, onPlayLive }) {
+export function EpgEventModal({
+  open,
+  channel,
+  event,
+  isLive,
+  canPlayLive = true,
+  onClose,
+  onPlayLive,
+  onWatchCatchup,
+}) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
 
@@ -64,6 +73,11 @@ export function EpgEventModal({ open, channel, event, isLive, canPlayLive = true
     return Math.max(0, Math.round(diffMs / 60000));
   }, [startMs, endMs]);
 
+  // El evento EPG puede incluir identificador de catchup (backend/config).
+  // Si existe, habilitamos "Watch / Catchup".
+  const catchupId = event?.catchupId ?? event?.catchup_id ?? event?.catchupEventId ?? null;
+  const canWatch = !!catchupId;
+
   const { ref: closeRef, focused: closeFocused } = useSpatialNavigation({
     focusKey: 'epg-modal-close',
     isFocusable: !!open && !isTV,
@@ -76,9 +90,13 @@ export function EpgEventModal({ open, channel, event, isLive, canPlayLive = true
     onEnterPress: canPlayLive ? () => onPlayLive?.() : undefined,
   });
 
-  if (!open) return null;
+  const { ref: watchRef, focused: watchFocused } = useSpatialNavigation({
+    focusKey: 'epg-modal-watch',
+    isFocusable: !!open && !!canWatch,
+    onEnterPress: canWatch ? () => onWatchCatchup?.(catchupId, event) : undefined,
+  });
 
-  const canWatch = false; // catchup no migrado (Opcion A)
+  if (!open) return null;
 
   return (
     <div
@@ -190,10 +208,17 @@ export function EpgEventModal({ open, channel, event, isLive, canPlayLive = true
           </button>
 
           <button
-            className="epg-event-modal-secondary epg-event-modal-secondary--disabled"
+            ref={watchRef}
+            className={`epg-event-modal-secondary ${!canWatch ? 'epg-event-modal-secondary--disabled' : ''} ${
+              watchFocused ? 'focused' : ''
+            }`}
             type="button"
             disabled={!canWatch}
             tabIndex={-1}
+            onClick={() => {
+              if (!canWatch) return;
+              onWatchCatchup?.(catchupId, event);
+            }}
           >
             {t('epg.watchCatchup', { defaultValue: 'Watch / Catchup (no disponible)' })}
           </button>
