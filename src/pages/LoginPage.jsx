@@ -9,12 +9,13 @@ import { getInitialRoute } from '../utils/navigation';
 import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 import { loginAndActivateLicense } from '../services/loginFlow';
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
+import { getActiveLicense } from '../utils/userSession';
 import '../styles/components/_login.scss';
 
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { currentBrand, token, appName, isLoading, getImage } = useBrand();
+  const { currentBrand, appName, isLoading, getImage } = useBrand();
   const { isTV } = useDevice();
   
   const [username, setUsername] = useState('');
@@ -66,13 +67,19 @@ export function LoginPage() {
         password: password.trim(),
       }, {
         autoActivateLicense: true,
+        // Si la tarjeta está en uso, intenta activar otra disponible.
+        failIfInUse: true,
+        activationRecursive: true,
         storeClientConfig: true,
         storeLicenses: true,
       });
 
       setTimeout(() => {
         setIsSubmitting(false);
-        navigate(getInitialRoute(currentBrand));
+        const active = getActiveLicense?.();
+        const hasActiveLicense = !!active?.licenseKey;
+        const skipSmartcard = !currentBrand?.features?.profiles && hasActiveLicense;
+        navigate(skipSmartcard ? '/home/bouquets' : getInitialRoute(currentBrand));
       }, 400);
 
     } catch (err) {

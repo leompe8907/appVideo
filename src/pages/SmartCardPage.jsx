@@ -1,12 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
-import { useDevice } from '../contexts/DeviceContext';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import { MessageModal } from '../components/MessageModal';
 import panaccessService from '../services/panaccessService';
-import { setLoggedOut, setLicenses as storeLicenses, setActiveLicense } from '../utils/userSession';
+import {
+  setLoggedOut,
+  setLicenses as storeLicenses,
+  setActiveLicense,
+  getActiveLicense,
+} from '../utils/userSession';
 import '../styles/pages/_smartcard.scss';
 
 // Normaliza la estructura de una licencia (alineado con 10foot)
@@ -40,7 +44,6 @@ export function SmartCardPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { currentBrand, getImage } = useBrand();
-  const { isTV } = useDevice();
 
   const [licenses, setLicenses] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +51,10 @@ export function SmartCardPage() {
   const [resultModal, setResultModal] = useState(null);
   const [isSettingLicense, setIsSettingLicense] = useState(false);
   const [confirmLicenseInUse, setConfirmLicenseInUse] = useState(null);
+
+  // Backstop: si ya existe una licencia activa en storage, activarla automáticamente
+  // para que el usuario no quede atascado en esta pantalla.
+  const autoActivateAttemptedRef = useRef(false);
 
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
 
@@ -76,6 +83,55 @@ export function SmartCardPage() {
     };
     fetchLicenses();
   }, [t]);
+
+  useEffect(() => {
+    if (autoActivateAttemptedRef.current) return;
+    if (isLoading || !!error) return;
+    if (!licenses || licenses.length === 0) return;
+
+    const active = getActiveLicense?.();
+    const activeKey = active?.licenseKey ? String(active.licenseKey).trim() : '';
+    const activePin = active?.pin != null ? String(active.pin) : '';
+    if (!activeKey) return;
+
+    const matching = licenses.find((l) => {
+      const norm = normalizeLicense(l);
+      return norm.key && String(norm.key).trim() === activeKey;
+    });
+
+    if (!matching) return;
+    autoActivateAttemptedRef.current = true;
+
+    const activate = async () => {
+      try {
+        setIsSettingLicense(true);
+        setError(null);
+        setResultModal(null);
+        setConfirmLicenseInUse(null);
+
+        await panaccessService.setStreamingLicense({
+          licenseKey: activeKey,
+          pin: activePin,
+          failIfInUse: true,
+        });
+        setActiveLicense({ licenseKey: activeKey, pin: activePin });
+
+        // Para esta ruta esperamos que las marcas sin profiles vayan directo a home/bouquets.
+        navigate('/home/bouquets');
+      } catch (err) {
+        console.error('[SMARTCARD] Auto-activate error:', err);
+        if (isLicenseInUseError(err)) {
+          setConfirmLicenseInUse({ licenseKey: activeKey, pin: activePin });
+        } else {
+          setError(err?.errorInfo?.userMessage || err?.message || t('smartcard.errorSet'));
+        }
+      } finally {
+        setIsSettingLicense(false);
+      }
+    };
+
+    activate();
+  }, [isLoading, error, licenses, navigate, t]);
 
   const handleBack = () => {
     panaccessService.logout();

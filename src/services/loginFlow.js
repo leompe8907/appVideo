@@ -71,6 +71,13 @@ export async function loginAndActivateLicense(brandConfig, credentials, options 
     udid,
   });
 
+  // Evita "licencia vieja" en storage si la activación falla (ej. license in use).
+  // Esto es clave para rutas automáticas (splash/login) que dependen de si hay licencia activa.
+  const shouldAttemptActivation = Boolean(opts.autoActivateLicense || (opts.licenseKey != null && String(opts.licenseKey).trim() !== ''));
+  if (shouldAttemptActivation) {
+    userSession.setActiveLicense({ licenseKey: '', pin: '' });
+  }
+
   let clientConfig = null;
   let licenses = [];
 

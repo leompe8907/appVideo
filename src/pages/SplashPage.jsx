@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
-import { getInitialRoute } from '../utils/navigation';
 import panaccessService from '../services/panaccessService';
-import { loginAndActivateLicense } from '../services/loginFlow';
+import { loginAndActivateLicense, reactivateLicense } from '../services/loginFlow';
 import * as userSession from '../utils/userSession';
 import '../styles/components/_splash.scss';
 
@@ -12,7 +11,7 @@ export function SplashPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { currentBrand, splashDuration, isLoading, getImage, appName } = useBrand();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Nota: se mantiene el mismo splash visual; no usamos un estado adicional.
 
   useEffect(() => {
     if (isLoading) return;
@@ -31,8 +30,55 @@ export function SplashPage() {
           try {
             const isValid = await panaccessService.validateSession();
             if (isValid) {
-              setIsAuthenticated(true);
-              setTimeout(() => navigate(getInitialRoute(currentBrand)), splashDuration);
+              const active = userSession.getActiveLicense?.();
+              const hasActiveLicense = !!active?.licenseKey;
+              let reactivatedOk = false;
+
+              if (hasActiveLicense) {
+                try {
+                  // Re-activar licencia:
+                  // - si está "in use", que falle para poder intentar otra disponible
+                  reactivatedOk = await reactivateLicense(currentBrand, true);
+                } catch {
+                  reactivatedOk = false;
+                }
+              }
+
+              const profilesEnabled = !!currentBrand?.features?.profiles;
+
+              // Caso 1: reactivación OK -> saltamos smartcard (si no usan profiles).
+              if (hasActiveLicense && reactivatedOk) {
+                const target = profilesEnabled ? '/profile' : '/home/bouquets';
+                setTimeout(() => navigate(target), splashDuration);
+                return;
+              }
+
+              // Caso 2: la licencia activa está en uso o no existe -> intentamos auto-activar otra libre
+              const credentials =
+                userSession.getCredentials() ??
+                userSession.getCredentialsWithFallback(currentBrand?.token);
+
+              if (!credentials) {
+                setTimeout(() => navigate('/login'), splashDuration);
+                return;
+              }
+
+              await loginAndActivateLicense(currentBrand, credentials, {
+                autoActivateLicense: true,
+                activationRecursive: true,
+                failIfInUse: true,
+                storeClientConfig: true,
+                storeLicenses: true,
+              });
+
+              const activeAfter = userSession.getActiveLicense?.();
+              const hasActiveAfter = !!activeAfter?.licenseKey;
+              const target = hasActiveAfter
+                ? profilesEnabled
+                  ? '/profile'
+                  : '/home/bouquets'
+                : '/smartcard';
+              setTimeout(() => navigate(target), splashDuration);
               return;
             }
           } catch (err) {
@@ -53,12 +99,23 @@ export function SplashPage() {
 
           await loginAndActivateLicense(currentBrand, credentials, {
             autoActivateLicense: true,
+            activationRecursive: true,
+            // Si una smartcard está "in use", buscamos otra disponible.
+            failIfInUse: true,
             storeClientConfig: true,
             storeLicenses: true,
           });
 
-          setIsAuthenticated(true);
-          setTimeout(() => navigate(getInitialRoute(currentBrand)), splashDuration);
+          const activeAfter = userSession.getActiveLicense?.();
+          const hasActiveAfter = !!activeAfter?.licenseKey;
+          const profilesEnabled = !!currentBrand?.features?.profiles;
+          const target = hasActiveAfter
+            ? profilesEnabled
+              ? '/profile'
+              : '/home/bouquets'
+            : '/smartcard';
+
+          setTimeout(() => navigate(target), splashDuration);
         };
 
         const apiBaseUrl = currentBrand?.api?.baseUrl;
