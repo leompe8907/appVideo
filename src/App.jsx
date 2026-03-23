@@ -92,6 +92,14 @@ function App() {
                 <Route path="bouquets" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><BouquetPage /></Suspense></PreloadGate>}/>
                 <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>}/>
                 <Route path="epg" element={<PreloadGate required="epg"> <Suspense fallback={<Loading />}> <EpgCardsPage /></Suspense></PreloadGate>}/>
+              <Route
+                path="inicio"
+                element={
+                  <Suspense fallback={<Loading />}>
+                    <HomePlaceholderPage title="Inicio" description="Modulo en preparacion para el modulo Inicio." />
+                  </Suspense>
+                }
+              />
                 <Route path="ads" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="Ads" description="Modulo en preparacion para administracion de publicidad."/></Suspense>}/>
                 <Route path="catchup" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="Catchup" description="Modulo en preparacion para contenidos catchup."/></Suspense>}/>
                 <Route path="osms" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="OSMS" description="Modulo en preparacion para mensajes del sistema." /></Suspense>}/>

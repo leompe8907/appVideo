@@ -19,18 +19,20 @@ function SidebarLink({ to, label }) {
  */
 export function Sidebar() {
   const { t } = useTranslation();
-  const { appName } = useBrand();
+  const { appName, currentBrand } = useBrand();
 
   return (
     <aside className="home-sidebar" aria-label={t('common.menu', { defaultValue: 'Menu' })}>
       <div className="home-sidebar-header">{appName || 'App'}</div>
       <nav className="home-sidebar-nav">
-        <SidebarLink to="/home/bouquets" label={t('bouquet.title', { defaultValue: 'Home' })} />
-        <SidebarLink to="/home/vod" label={t('vod.title', { defaultValue: 'VOD' })} />
+        <SidebarLink to="/home/bouquets" label="Canales" />
+        <SidebarLink to="/home/vod" label="Peliculas" />
         <SidebarLink to="/home/epg" label={t('epg.title', { defaultValue: 'Channel guide' })} />
-        <SidebarLink to="/home/ads" label={t('common.ads', { defaultValue: 'Ads' })} />
+        <SidebarLink to="/home/inicio" label="Inicio" />
         <SidebarLink to="/home/catchup" label={t('common.catchup', { defaultValue: 'Catchup' })} />
-        <SidebarLink to="/home/osms" label={t('common.osms', { defaultValue: 'OSMS' })} />
+        {currentBrand?.features?.osms && (
+          <SidebarLink to="/home/osms" label={t('common.osms', { defaultValue: 'OSMS' })} />
+        )}
       </nav>
     </aside>
   );
