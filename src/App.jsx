@@ -90,26 +90,11 @@ function App() {
               <Route path="/vod" element={<Navigate to="/home/vod" replace />}/>
               <Route path="/epg" element={<Navigate to="/home/epg" replace />}/>
               <Route path="/home" element={<ProtectedRoute><Suspense fallback={<Loading />}><HomePage /></Suspense></ProtectedRoute>}>
+                <Route path="inicio" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="Inicio" description="Modulo en preparacion para el modulo Inicio." /></Suspense>}/>
                 <Route path="bouquets" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><BouquetPage /></Suspense></PreloadGate>}/>
                 <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>}/>
                 <Route path="epg" element={<PreloadGate required="epg"> <Suspense fallback={<Loading />}> <EpgCardsPage /></Suspense></PreloadGate>}/>
-              <Route
-                path="inicio"
-                element={
-                  <Suspense fallback={<Loading />}>
-                    <HomePlaceholderPage title="Inicio" description="Modulo en preparacion para el modulo Inicio." />
-                  </Suspense>
-                }
-              />
-                <Route path="ads" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="Ads" description="Modulo en preparacion para administracion de publicidad."/></Suspense>}/>
-                <Route
-                  path="catchup"
-                  element={
-                    <Suspense fallback={<Loading />}>
-                      <CatchupPage />
-                    </Suspense>
-                  }
-                />
+                <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>}/>
                 <Route path="osms" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="OSMS" description="Modulo en preparacion para mensajes del sistema." /></Suspense>}/>
                 <Route path="*" element={<Navigate to="/home/bouquets" replace />} />
               </Route>

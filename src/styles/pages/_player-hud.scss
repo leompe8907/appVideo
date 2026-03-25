@@ -1,0 +1,131 @@
+.player-hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 14;
+  pointer-events: none;
+  padding: 0 1.1rem 1rem;
+  transition: opacity 180ms ease, transform 200ms ease;
+}
+
+.player-hud--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.player-hud--hidden {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+
+.player-hud__chrome {
+  pointer-events: auto;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 10, 12, 0.72) 0%,
+    rgba(10, 10, 12, 0.9) 100%
+  );
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  padding: 0.7rem 0.85rem 0.8rem;
+}
+
+.player-hud__status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.player-hud__badge {
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 0.2rem 0.45rem;
+}
+
+.player-hud__time {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.78rem;
+}
+
+.player-hud__status-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.player-hud__live-delay {
+  font-variant-numeric: tabular-nums;
+  color: #9fe8ff;
+  font-size: 0.74rem;
+  border: 1px solid rgba(159, 232, 255, 0.35);
+  background: rgba(80, 200, 255, 0.16);
+  border-radius: 999px;
+  padding: 0.12rem 0.42rem;
+}
+
+.player-hud__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.player-hud__btn {
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 0.36rem 0.7rem;
+  font-size: 0.78rem;
+  line-height: 1.1;
+}
+
+.player-hud__btn--primary {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.player-hud__btn--danger {
+  border-color: rgba(255, 80, 80, 0.48);
+  background: rgba(255, 80, 80, 0.18);
+}
+
+.player-hud__btn--exit {
+  border-color: rgba(255, 180, 110, 0.45);
+  background: rgba(255, 170, 90, 0.2);
+}
+
+.player-hud__btn--live {
+  border-color: rgba(88, 204, 255, 0.42);
+  background: rgba(88, 204, 255, 0.2);
+}
+
+.player-hud__progress {
+  position: relative;
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.player-hud__progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4ed3ff 0%, #8efeb3 100%);
+  transition: width 220ms linear;
+}
+

@@ -222,7 +222,7 @@ export function CatchupPage() {
   const location = useLocation();
   const { currentBrand } = useBrand();
   const { catchup, loadCatchup } = usePreload();
-  const { play, containerRef, state: playerState } = usePlayer();
+  const { play } = usePlayer();
 
   const catchupCfg = currentBrand?.catchup || {};
   const uiCfg = catchupCfg.ui || {};
@@ -296,17 +296,6 @@ export function CatchupPage() {
   return (
     <div className="catchup-page">
       <div className="catchup-overlay" />
-
-      <div
-        className={`catchup-player-video${playerState?.url ? ' catchup-player-video--active' : ''}`}
-        ref={containerRef}
-      >
-        {playerState?.url && playerState?.isLoading && (
-          <div className="catchup-player-loading">
-            <div className="catchup-player-loading-spinner" />
-          </div>
-        )}
-      </div>
 
       <div className="catchup-content">
         <header className="catchup-header">

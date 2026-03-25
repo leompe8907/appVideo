@@ -11,7 +11,7 @@ import '../styles/pages/_bouquet.scss';
 
 export function BouquetPage() {
   // El background común lo maneja Home (.home-content)
-  const { play, containerRef, state: playerState } = usePlayer();
+  const { play } = usePlayer();
 
   const handleChannelSelect = (channel) => {
     if (import.meta.env?.DEV) {
@@ -56,17 +56,6 @@ export function BouquetPage() {
   return (
     <div className="bouquet-page">
       <div className="bouquet-overlay" />
-      {/* Zona donde se monta el video al reproducir; solo cubre la pantalla cuando hay stream activo para no bloquear clics/scroll en otros monitores */}
-      <div
-        className={`bouquet-player-video${playerState?.url ? ' bouquet-player-video--active' : ''}`}
-        ref={containerRef}
-      >
-        {playerState?.url && playerState?.isLoading && (
-          <div className="bouquet-player-loading">
-            <div className="bouquet-player-loading-spinner" />
-          </div>
-        )}
-      </div>
       <div className="bouquet-container">
         <div className="bouquet-content">
           <BouquetWall onChannelSelect={handleChannelSelect} />

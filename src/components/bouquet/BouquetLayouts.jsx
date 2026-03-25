@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
 
 // --- Helpers EPG para layout event_and_logo ---
 /** Parsea "YYYY-MM-DD HH:mm:ss" a "HH:mm" para mostrar en UI */
@@ -13,28 +14,6 @@ function formatEpgTime(dateStr) {
   const h = d.getHours();
   const m = d.getMinutes();
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
-
-/**
- * Devuelve el evento EPG que está al aire ahora (now entre start y end).
- * - Si ahora está dentro de un evento → ese evento (barra avanza en tiempo real).
- * - Si ahora es antes del primer evento → primer evento (barra en 0%).
- * - Si ahora es después del último evento → último evento (barra en 100%, imagen e info del último programa).
- * Así la barra y la imagen se actualizan solas cuando cambia el evento.
- */
-function getCurrentEpgEvent(epgItems) {
-  if (!Array.isArray(epgItems) || epgItems.length === 0) return null;
-  const now = Date.now();
-  let lastValid = null;
-  for (const event of epgItems) {
-    const startMs = event.startDate?.valueOf?.() ?? new Date(event.start).getTime();
-    const endMs = event.endDate?.valueOf?.() ?? new Date(event.end).getTime();
-    if (Number.isNaN(startMs) || Number.isNaN(endMs)) continue;
-    lastValid = event;
-    if (now >= startMs && now <= endMs) return event;
-    if (now < startMs) return lastValid ?? event; // aún no empieza → mostrar el que viene (barra 0%)
-  }
-  return lastValid ?? epgItems[0] ?? null; // ya pasó todo → último evento (barra 100%)
 }
 
 /** Progreso 0–100 del evento actual (para la barra). start/end como string o con startDate/endDate */

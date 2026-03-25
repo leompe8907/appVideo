@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useDevice } from './DeviceContext';
 import { createEngine } from '../player/engines/createEngine';
+import { DEFAULT_SEEK_STEP_SECONDS, PLAYER_ENGINE_EVENTS } from '../player/engines/contracts';
 
 const PlayerContext = createContext(null);
 
@@ -18,6 +19,7 @@ export function PlayerProvider({ children }) {
   const deviceInfo = useDevice();
   const containerRef = useRef(null);
   const engineRef = useRef(null);
+  const seekTimeoutRef = useRef(null);
 
   const [state, setState] = useState({
     type: null, // 'service' | 'vod' | 'catchup'
@@ -26,10 +28,30 @@ export function PlayerProvider({ children }) {
     item: null,
     isPlaying: false,
     isLoading: false,
+    isSeeking: false,
     currentTime: 0,
     duration: 0,
+    liveInitialPlayerTime: null,
+    liveInitialServerMs: null,
+    liveSecondsLate: 0,
     error: null,
   });
+
+  const clearSeekTimeout = () => {
+    if (seekTimeoutRef.current) {
+      clearTimeout(seekTimeoutRef.current);
+      seekTimeoutRef.current = null;
+    }
+  };
+
+  const armSeekTimeout = () => {
+    clearSeekTimeout();
+    // Paridad con legacy: no dejar el estado "seeking" colgado indefinidamente.
+    seekTimeoutRef.current = setTimeout(() => {
+      setState((s) => ({ ...s, isSeeking: false, isLoading: false }));
+      seekTimeoutRef.current = null;
+    }, 20000);
+  };
 
   // Inicializar engine una vez según el dispositivo
   useEffect(() => {
@@ -41,11 +63,31 @@ export function PlayerProvider({ children }) {
     }
 
     const handleTime = ({ currentTime, duration }) => {
-      setState((s) => ({
-        ...s,
-        currentTime: typeof currentTime === 'number' ? currentTime : s.currentTime,
-        duration: typeof duration === 'number' ? duration : s.duration,
-      }));
+      setState((s) => {
+        const nextCurrentTime = typeof currentTime === 'number' ? currentTime : s.currentTime;
+        const nextDuration = typeof duration === 'number' ? duration : s.duration;
+
+        if (s.type === 'service') {
+          const initialPlayer = s.liveInitialPlayerTime ?? nextCurrentTime ?? 0;
+          const initialServer = s.liveInitialServerMs ?? Date.now();
+          const estimatedLivePoint = initialPlayer + (Date.now() - initialServer) / 1000;
+          const liveSecondsLate = Math.max(0, estimatedLivePoint - (nextCurrentTime ?? 0));
+          return {
+            ...s,
+            currentTime: nextCurrentTime,
+            duration: nextDuration,
+            liveInitialPlayerTime: initialPlayer,
+            liveInitialServerMs: initialServer,
+            liveSecondsLate,
+          };
+        }
+
+        return {
+          ...s,
+          currentTime: nextCurrentTime,
+          duration: nextDuration,
+        };
+      });
     };
 
     const handleDuration = ({ duration }) => {
@@ -56,18 +98,22 @@ export function PlayerProvider({ children }) {
     };
 
     const handleEnded = () => {
+      clearSeekTimeout();
       setState((s) => ({
         ...s,
         isPlaying: false,
         isLoading: false,
+        isSeeking: false,
       }));
     };
 
     const handleError = (err) => {
+      clearSeekTimeout();
       setState((s) => ({
         ...s,
         isPlaying: false,
         isLoading: false,
+        isSeeking: false,
         error: err,
       }));
     };
@@ -75,31 +121,53 @@ export function PlayerProvider({ children }) {
     const handleStateChange = ({ state }) => {
       if (state === 'loading' || state === 'loaded') {
         setState((s) => ({ ...s, isLoading: true }));
+      } else if (state === 'seeking') {
+        armSeekTimeout();
+        setState((s) => ({ ...s, isSeeking: true, isLoading: true }));
+      } else if (state === 'seeked') {
+        setState((s) => ({ ...s, isSeeking: false }));
       } else if (state === 'playing') {
-        setState((s) => ({ ...s, isPlaying: true, isLoading: false }));
+        clearSeekTimeout();
+        setState((s) => ({ ...s, isPlaying: true, isLoading: false, isSeeking: false }));
       } else if (state === 'paused' || state === 'ended') {
-        setState((s) => ({ ...s, isPlaying: false, isLoading: false }));
+        clearSeekTimeout();
+        setState((s) => ({ ...s, isPlaying: false, isLoading: false, isSeeking: false }));
       }
     };
 
-    engine.on('timeupdate', handleTime);
-    engine.on('durationchange', handleDuration);
-    engine.on('ended', handleEnded);
-    engine.on('error', handleError);
-    engine.on('statechange', handleStateChange);
+    const handleSeekStart = () => {
+      armSeekTimeout();
+      setState((s) => ({ ...s, isSeeking: true, isLoading: true }));
+    };
+
+    const handleSeekEnd = () => {
+      clearSeekTimeout();
+      setState((s) => ({ ...s, isSeeking: false }));
+    };
+
+    engine.on(PLAYER_ENGINE_EVENTS.TIME_UPDATE, handleTime);
+    engine.on(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, handleDuration);
+    engine.on(PLAYER_ENGINE_EVENTS.ENDED, handleEnded);
+    engine.on(PLAYER_ENGINE_EVENTS.ERROR, handleError);
+    engine.on(PLAYER_ENGINE_EVENTS.STATE_CHANGE, handleStateChange);
+    engine.on(PLAYER_ENGINE_EVENTS.SEEK_START, handleSeekStart);
+    engine.on(PLAYER_ENGINE_EVENTS.SEEK_END, handleSeekEnd);
 
     return () => {
-      engine.off('timeupdate', handleTime);
-      engine.off('durationchange', handleDuration);
-      engine.off('ended', handleEnded);
-      engine.off('error', handleError);
-      engine.off('statechange', handleStateChange);
+      engine.off(PLAYER_ENGINE_EVENTS.TIME_UPDATE, handleTime);
+      engine.off(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, handleDuration);
+      engine.off(PLAYER_ENGINE_EVENTS.ENDED, handleEnded);
+      engine.off(PLAYER_ENGINE_EVENTS.ERROR, handleError);
+      engine.off(PLAYER_ENGINE_EVENTS.STATE_CHANGE, handleStateChange);
+      engine.off(PLAYER_ENGINE_EVENTS.SEEK_START, handleSeekStart);
+      engine.off(PLAYER_ENGINE_EVENTS.SEEK_END, handleSeekEnd);
+      clearSeekTimeout();
       engine.destroy();
       engineRef.current = null;
     };
   }, [deviceInfo]);
 
-  const play = ({ type, id, url, item, autoPlay = true }) => {
+  const play = ({ type, id, url, item, autoPlay = true, mediaOption = {}, drmConfig = {} }) => {
     const engine = engineRef.current;
     if (!engine || !url) {
       console.warn('[PlayerProvider] No hay engine o URL para reproducir');
@@ -126,27 +194,133 @@ export function PlayerProvider({ children }) {
       item,
       isPlaying: false,
       isLoading: true,
+      isSeeking: false,
       error: null,
       currentTime: 0,
       duration: 0,
+      liveInitialPlayerTime: null,
+      liveInitialServerMs: null,
+      liveSecondsLate: 0,
     }));
 
-    engine.load(url, { type, autoPlay });
+    engine.load(url, { type, autoPlay, mediaOption, drmConfig });
   };
 
   const pause = () => {
     engineRef.current?.pause();
   };
 
+  const stop = () => {
+    clearSeekTimeout();
+    engineRef.current?.stop?.();
+    setState((s) => ({
+      ...s,
+      isPlaying: false,
+      isLoading: false,
+      isSeeking: false,
+      currentTime: 0,
+    }));
+  };
+
+  const close = () => {
+    clearSeekTimeout();
+    try {
+      engineRef.current?.stop?.();
+    } catch {
+      // noop
+    }
+    setState({
+      type: null,
+      id: null,
+      url: null,
+      item: null,
+      isPlaying: false,
+      isLoading: false,
+      isSeeking: false,
+      currentTime: 0,
+      duration: 0,
+      liveInitialPlayerTime: null,
+      liveInitialServerMs: null,
+      liveSecondsLate: 0,
+      error: null,
+    });
+  };
+
   const seek = (seconds) => {
+    armSeekTimeout();
+    setState((s) => ({ ...s, isSeeking: true, isLoading: true }));
     engineRef.current?.seek(seconds);
+  };
+
+  const forward = (seconds = DEFAULT_SEEK_STEP_SECONDS) => {
+    armSeekTimeout();
+    setState((s) => ({ ...s, isSeeking: true, isLoading: true }));
+    engineRef.current?.forward?.(seconds);
+  };
+
+  const backward = (seconds = DEFAULT_SEEK_STEP_SECONDS) => {
+    armSeekTimeout();
+    setState((s) => ({ ...s, isSeeking: true, isLoading: true }));
+    engineRef.current?.backward?.(seconds);
+  };
+
+  const setPlaybackRate = (rate = 1) => {
+    engineRef.current?.setPlaybackRate?.(rate);
+  };
+
+  const getEstimatedLivePoint = () => {
+    const initialPlayer = Number.isFinite(state.liveInitialPlayerTime) ? state.liveInitialPlayerTime : null;
+    const initialServer = Number.isFinite(state.liveInitialServerMs) ? state.liveInitialServerMs : null;
+    if (initialPlayer == null || initialServer == null) return null;
+    return initialPlayer + (Date.now() - initialServer) / 1000;
+  };
+
+  const skipLiveBy = (seconds = 0) => {
+    if (state.type !== 'service') return false;
+    const delta = Number.isFinite(seconds) ? seconds : 0;
+    const livePoint = getEstimatedLivePoint();
+    if (!Number.isFinite(livePoint)) return false;
+
+    const current = Number.isFinite(state.currentTime) ? state.currentTime : livePoint;
+    const target = Math.max(0, Math.min(livePoint, current + delta));
+    const nextLate = Math.max(0, livePoint - target);
+
+    setState((s) => ({ ...s, liveSecondsLate: nextLate }));
+    seek(target);
+    return true;
+  };
+
+  const goLive = () => {
+    if (state.type !== 'service') return false;
+    const livePoint = getEstimatedLivePoint();
+    if (!Number.isFinite(livePoint)) return false;
+    setState((s) => ({ ...s, liveSecondsLate: 0 }));
+    seek(livePoint);
+    return true;
+  };
+
+  const mute = () => {
+    engineRef.current?.mute?.();
+  };
+
+  const unmute = () => {
+    engineRef.current?.unmute?.();
   };
 
   const value = {
     state,
     play,
     pause,
+    stop,
+    close,
     seek,
+    forward,
+    backward,
+    setPlaybackRate,
+    skipLiveBy,
+    goLive,
+    mute,
+    unmute,
     containerRef,
   };
 

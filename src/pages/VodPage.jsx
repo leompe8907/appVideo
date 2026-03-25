@@ -25,7 +25,7 @@ export function VodPage() {
   const navigate = useNavigate();
   const { vod, loadVOD } = usePreload();
   const { currentBrand } = useBrand();
-  const { play, containerRef, state: playerState } = usePlayer();
+  const { play } = usePlayer();
   const [detailItem, setDetailItem] = useState(null);
   const [categoryModal, setCategoryModal] = useState(null);
   const vodRetryOnEnterRef = useRef(false);
@@ -81,16 +81,6 @@ export function VodPage() {
   return (
     <div className="vod-page">
       <div className="vod-overlay" />
-      <div
-        className={`vod-player-video${playerState?.url ? ' vod-player-video--active' : ''}`}
-        ref={containerRef}
-      >
-        {playerState?.url && playerState?.isLoading && (
-          <div className="vod-player-loading">
-            <div className="vod-player-loading-spinner" />
-          </div>
-        )}
-      </div>
       <div className="vod-container">
         <header className="vod-header">
           <h1 className="vod-title">{t('vod.title')}</h1>

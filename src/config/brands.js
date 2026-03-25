@@ -116,6 +116,14 @@ export const BRANDS = [
       },
     },
 
+    // Player: control técnico de selección de engine por marca.
+    // nativeAdaptersEnabled=false mantiene WebEngine incluso en TV (modo seguro).
+    // enginePolicy: 'auto' | 'force-web' | 'force-lg' | 'force-samsung'
+    player: {
+      nativeAdaptersEnabled: false,
+      enginePolicy: 'auto',
+    },
+
     // Configuración de UI/Tema
     ui: {
       // Splash
@@ -230,6 +238,12 @@ export const BRANDS = [
       },
     },
 
+    // Player: control técnico de selección de engine por marca.
+    player: {
+      nativeAdaptersEnabled: false,
+      enginePolicy: 'auto',
+    },
+
     // Configuración de UI/Tema
     ui: {
       // Splash
@@ -271,7 +285,7 @@ export const BRANDS = [
       wsUrl: "", // Equivalente a wsUrl en 10foot
     },
     vod: {
-      layout: "classic", // "hero" | "classic"
+      layout: "hero", // "hero" | "classic"
       vodDetail: {
         descriptionMaxLength: 180, // Caracteres máximos de la descripción antes de "Leer más" (0 = sin límite)
         showReleaseYear: true, // Mostrar año de estreno en la metadata
@@ -342,6 +356,12 @@ export const BRANDS = [
         timeline: { enabled: true },
         netflix: { enabled: true },
       },
+    },
+
+    // Player: control técnico de selección de engine por marca.
+    player: {
+      nativeAdaptersEnabled: false,
+      enginePolicy: 'auto',
     },
 
     // Configuración de UI/Tema

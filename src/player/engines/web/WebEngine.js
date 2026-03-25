@@ -1,14 +1,18 @@
-export class WebEngine {
+import BaseEngine from '../base/BaseEngine';
+import {
+  DEFAULT_SEEK_STEP_SECONDS,
+  DEFAULT_TIMEUPDATE_THROTTLE_MS,
+  PLAYER_ENGINE_EVENTS,
+  PLAYER_ENGINE_STATES,
+} from '../contracts';
+
+export class WebEngine extends BaseEngine {
   constructor() {
+    super();
     this.video = null;
     this.container = null;
-    this.events = {
-      timeupdate: [],
-      durationchange: [],
-      ended: [],
-      error: [],
-      statechange: [],
-    };
+    this.lastTimeUpdateEmitMs = 0;
+    this.timeUpdateThrottleMs = DEFAULT_TIMEUPDATE_THROTTLE_MS;
   }
 
   init(container) {
@@ -35,50 +39,62 @@ export class WebEngine {
     const v = this.video;
 
     v.addEventListener('timeupdate', () => {
-      this.emit('timeupdate', {
+      const now = Date.now();
+      if (now - this.lastTimeUpdateEmitMs < this.timeUpdateThrottleMs) {
+        return;
+      }
+      this.lastTimeUpdateEmitMs = now;
+      this.emit(PLAYER_ENGINE_EVENTS.TIME_UPDATE, {
         currentTime: v.currentTime,
         duration: v.duration,
       });
     });
 
     v.addEventListener('durationchange', () => {
-      this.emit('durationchange', { duration: v.duration });
+      this.emit(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, { duration: v.duration });
     });
 
     v.addEventListener('ended', () => {
-      this.emit('ended');
-      this.emit('statechange', { state: 'ended' });
+      this.emit(PLAYER_ENGINE_EVENTS.ENDED);
+      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.ENDED });
     });
 
     v.addEventListener('play', () => {
-      this.emit('statechange', { state: 'playing' });
+      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
     });
 
     v.addEventListener('pause', () => {
-      this.emit('statechange', { state: 'paused' });
+      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
+    });
+
+    v.addEventListener('seeking', () => {
+      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.SEEKING });
+    });
+
+    v.addEventListener('seeked', () => {
+      this.emit(PLAYER_ENGINE_EVENTS.SEEK_END, { currentTime: v.currentTime });
+      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.SEEKED });
     });
 
     v.addEventListener('error', () => {
-      this.emit('error', v.error || new Error('Unknown video error'));
+      this.emit(PLAYER_ENGINE_EVENTS.ERROR, v.error || new Error('Unknown video error'));
     });
   }
 
-  load(url, { type, autoPlay = false }) {
+  load(url, { type, autoPlay = false } = {}) {
     if (!this.video || !url) return;
     const v = this.video;
-    this.emit('statechange', { state: 'loading', type });
+    this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADING, type });
 
     const onCanPlay = () => {
       v.removeEventListener('canplay', onCanPlay);
+      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADED, type });
       if (autoPlay) this.play();
     };
-    if (autoPlay) {
-      v.addEventListener('canplay', onCanPlay, { once: true });
-    }
+    v.addEventListener('canplay', onCanPlay, { once: true });
 
     v.src = url;
     v.load();
-    this.emit('statechange', { state: 'loaded', type });
   }
 
   play() {
@@ -86,7 +102,7 @@ export class WebEngine {
     this.video
       .play()
       .catch((err) => {
-        this.emit('error', err);
+        this.emit(PLAYER_ENGINE_EVENTS.ERROR, err);
       });
   }
 
@@ -95,10 +111,68 @@ export class WebEngine {
     this.video.pause();
   }
 
+  stop() {
+    if (!this.video) return;
+    this.video.pause();
+    this.video.currentTime = 0;
+    this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
+  }
+
   seek(seconds) {
     if (!this.video) return;
     const target = Number.isFinite(seconds) ? seconds : 0;
+    this.emit(PLAYER_ENGINE_EVENTS.SEEK_START, { target });
     this.video.currentTime = Math.max(0, target);
+  }
+
+  forward(seconds = DEFAULT_SEEK_STEP_SECONDS) {
+    if (!this.video) return;
+    const step = Number.isFinite(seconds) ? seconds : DEFAULT_SEEK_STEP_SECONDS;
+    this.seek((this.video.currentTime || 0) + step);
+  }
+
+  backward(seconds = DEFAULT_SEEK_STEP_SECONDS) {
+    if (!this.video) return;
+    const step = Number.isFinite(seconds) ? seconds : DEFAULT_SEEK_STEP_SECONDS;
+    this.seek((this.video.currentTime || 0) - step);
+  }
+
+  setPlaybackRate(rate = 1) {
+    if (!this.video) return;
+    const normalized = Number.isFinite(rate) ? rate : 1;
+    this.video.playbackRate = normalized;
+  }
+
+  setDimensions({ width, height, left, top } = {}) {
+    if (!this.video) return;
+    const style = this.video.style;
+    if (Number.isFinite(width)) style.width = `${width}px`;
+    if (Number.isFinite(height)) style.height = `${height}px`;
+    if (Number.isFinite(left) || Number.isFinite(top)) {
+      style.position = 'absolute';
+      if (Number.isFinite(left)) style.left = `${left}px`;
+      if (Number.isFinite(top)) style.top = `${top}px`;
+    }
+  }
+
+  show() {
+    if (!this.video) return;
+    this.video.style.visibility = 'visible';
+  }
+
+  hide() {
+    if (!this.video) return;
+    this.video.style.visibility = 'hidden';
+  }
+
+  mute() {
+    if (!this.video) return;
+    this.video.muted = true;
+  }
+
+  unmute() {
+    if (!this.video) return;
+    this.video.muted = false;
   }
 
   destroy() {
@@ -117,27 +191,6 @@ export class WebEngine {
 
     this.video = null;
     this.container = null;
-  }
-
-  on(event, cb) {
-    if (!this.events[event]) this.events[event] = [];
-    this.events[event].push(cb);
-  }
-
-  off(event, cb) {
-    if (!this.events[event]) return;
-    this.events[event] = this.events[event].filter((fn) => fn !== cb);
-  }
-
-  emit(event, payload) {
-    if (!this.events[event]) return;
-    this.events[event].forEach((fn) => {
-      try {
-        fn(payload);
-      } catch (e) {
-        console.error('[WebEngine] Error en handler', event, e);
-      }
-    });
   }
 }
 
