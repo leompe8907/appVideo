@@ -23,7 +23,100 @@ export function SpatialNavigationProvider({ children }) {
       return;
     }
 
+    // Puentes Tizen (deben estar en scope para cleanup)
+    let tizenKeydownBridge = null;
+    let tizenKeyupBridge = null;
+
     try {
+      // En algunos emuladores (especialmente Tizen) si no hay un elemento focuseado
+      // el runtime no entrega eventos de teclado/remote correctamente.
+      // Hacemos el root focuseable y forzamos focus al montar.
+      const rootEl = document.getElementById('root');
+      if (rootEl) {
+        if (!rootEl.hasAttribute('tabindex')) rootEl.setAttribute('tabindex', '-1');
+        // Intentar tomar foco sin scroll.
+        rootEl.focus?.({ preventScroll: true });
+      }
+      window.focus?.();
+
+      // Registrar teclas en Tizen cuando esté disponible (no rompe si no existe).
+      // (Algunas teclas especiales requieren registro para que el emulador las entregue).
+      try {
+        const tvInput = window?.tizen?.tvinputdevice;
+        if (tvInput?.registerKeyBatch) {
+          tvInput.registerKeyBatch(['Back', 'Exit', 'Return', 'Enter']);
+        } else if (tvInput?.registerKey) {
+          ['Back', 'Exit', 'Return', 'Enter'].forEach((k) => {
+            try {
+              tvInput.registerKey(k);
+            } catch (_) {
+              // ignore
+            }
+          });
+        }
+      } catch (_) {
+        // ignore
+      }
+
+      // Workaround Tizen Emulator:
+      // Algunos builds no disparan/propagan las teclas al listener interno de la librería.
+      // Capturamos keydown y delegamos explícitamente a SpatialNavigation.
+      const isTizen = typeof window !== 'undefined' && (!!window.tizen || !!window.webapis);
+      const snSingleton = SpatialNavigation.SpatialNavigation;
+      const snNavigate = SpatialNavigation.navigateByDirection || snSingleton?.navigateByDirection?.bind(snSingleton);
+      const snEnter = snSingleton?.onEnterPress?.bind(snSingleton);
+      const snEnterUp = snSingleton?.onEnterRelease?.bind(snSingleton);
+
+      const normalizeKey = (e) => {
+        const key = e?.key;
+        const code = e?.code;
+        const keyCode = e?.keyCode;
+        const which = e?.which;
+        const k = key || code || keyCode || which;
+        return { key, code, keyCode, which, k };
+      };
+
+      tizenKeydownBridge = (e) => {
+        if (!isTizen) return;
+        const { key, code, keyCode, which } = normalizeKey(e);
+        const numeric = Number(keyCode ?? which);
+
+        // Mapeos comunes Tizen: arrows/enter suelen ser estándar, pero emulador varía.
+        const isUp = key === 'ArrowUp' || code === 'ArrowUp' || numeric === 38 || numeric === 65362;
+        const isDown = key === 'ArrowDown' || code === 'ArrowDown' || numeric === 40 || numeric === 65364;
+        const isLeft = key === 'ArrowLeft' || code === 'ArrowLeft' || numeric === 37 || numeric === 65361;
+        const isRight = key === 'ArrowRight' || code === 'ArrowRight' || numeric === 39 || numeric === 65363;
+        const isEnter = key === 'Enter' || code === 'Enter' || numeric === 13 || numeric === 29443;
+
+        if (!(isUp || isDown || isLeft || isRight || isEnter)) return;
+
+        // Evitar que el foco nativo del input "trague" flechas/enter.
+        e.preventDefault?.();
+        e.stopPropagation?.();
+
+        if (isEnter) {
+          snEnter?.({ pressedKeys: {} });
+          return;
+        }
+        if (isUp) snNavigate?.('up', { event: e, nativeEvent: e });
+        else if (isDown) snNavigate?.('down', { event: e, nativeEvent: e });
+        else if (isLeft) snNavigate?.('left', { event: e, nativeEvent: e });
+        else if (isRight) snNavigate?.('right', { event: e, nativeEvent: e });
+      };
+
+      tizenKeyupBridge = (e) => {
+        if (!isTizen) return;
+        const numeric = Number(e?.keyCode ?? e?.which);
+        const isEnter = e?.key === 'Enter' || e?.code === 'Enter' || numeric === 13 || numeric === 29443;
+        if (!isEnter) return;
+        e.preventDefault?.();
+        e.stopPropagation?.();
+        snEnterUp?.();
+      };
+
+      window.addEventListener('keydown', tizenKeydownBridge, { capture: true });
+      window.addEventListener('keyup', tizenKeyupBridge, { capture: true });
+
       // Intentar inicializar navegación espacial
       // La librería puede tener diferentes formas de exportar estas funciones
       const initNav = SpatialNavigation.initNavigation || SpatialNavigation.init || SpatialNavigation.default?.initNavigation;
@@ -81,11 +174,12 @@ export function SpatialNavigationProvider({ children }) {
           setKeys({
             // Mapeo correcto de acuerdo a norigin-spatial-navigation:
             // Acción (up, down, left, right, enter) -> Arreglo de KeyCodes (números y strings)
-            up: [38, 211, 'ArrowUp'],
-            down: [40, 212, 'ArrowDown'],
-            left: [37, 214, 'ArrowLeft'],
-            right: [39, 213, 'ArrowRight'],
-            enter: [13, 29443, 'Enter', 'NumpadEnter']
+            // Incluimos variantes por emulador/firmware.
+            up: [38, 211, 'ArrowUp', 'Up'],
+            down: [40, 212, 'ArrowDown', 'Down'],
+            left: [37, 214, 'ArrowLeft', 'Left'],
+            right: [39, 213, 'ArrowRight', 'Right'],
+            enter: [13, 29443, 'Enter', 'NumpadEnter', 'OK', 'Select']
           });
         }
 
@@ -111,6 +205,12 @@ export function SpatialNavigationProvider({ children }) {
     // Cleanup: la librería no requiere cleanup explícito,
     // pero podemos agregar lógica aquí si es necesario en el futuro
     return () => {
+      try {
+        if (tizenKeydownBridge) window.removeEventListener('keydown', tizenKeydownBridge, { capture: true });
+        if (tizenKeyupBridge) window.removeEventListener('keyup', tizenKeyupBridge, { capture: true });
+      } catch (_) {
+        // ignore
+      }
       if (import.meta.env.DEV) {
         console.log('🎮 [SpatialNavigation] Desmontado');
       }

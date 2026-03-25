@@ -1,3 +1,4 @@
+import Hls from 'hls.js';
 import BaseEngine from '../base/BaseEngine';
 import {
   DEFAULT_SEEK_STEP_SECONDS,
@@ -5,19 +6,37 @@ import {
   PLAYER_ENGINE_EVENTS,
   PLAYER_ENGINE_STATES,
 } from '../contracts';
+import { isHlsUrl } from './hlsSupport';
 
 export class WebEngine extends BaseEngine {
   constructor() {
     super();
     this.video = null;
     this.container = null;
+    this.hls = null;
     this.lastTimeUpdateEmitMs = 0;
     this.timeUpdateThrottleMs = DEFAULT_TIMEUPDATE_THROTTLE_MS;
     this._handlers = null;
   }
 
+  _tearDownHls() {
+    if (!this.hls) return;
+    try {
+      this.hls.destroy();
+    } catch {
+      // noop
+    }
+    this.hls = null;
+  }
+
   init(container) {
     if (!container) return;
+    
+    // If we are moving to a new container or re-initializing, detach old events safely
+    if (this._handlers) {
+      this.detachEvents();
+    }
+    
     this.container = container;
 
     const video = document.createElement('video');
@@ -39,7 +58,9 @@ export class WebEngine extends BaseEngine {
     if (!this.video) return;
     const v = this.video;
 
-    if (this._handlers) return;
+    if (this._handlers) {
+      this.detachEvents();
+    }
 
     this._handlers = {
       onTimeUpdate: () => {
@@ -107,15 +128,70 @@ export class WebEngine extends BaseEngine {
     const v = this.video;
     this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADING, type });
 
-    const onCanPlay = () => {
-      v.removeEventListener('canplay', onCanPlay);
+    this._tearDownHls();
+    try {
+      v.removeAttribute('src');
+      if (v.srcObject) v.srcObject = null;
+      v.load();
+    } catch {
+      // noop
+    }
+
+    const emitLoadedAndMaybePlay = () => {
       this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADED, type });
       if (autoPlay) this.play();
     };
-    v.addEventListener('canplay', onCanPlay, { once: true });
 
-    v.src = url;
-    v.load();
+    if (!isHlsUrl(url)) {
+      const onCanPlay = () => {
+        v.removeEventListener('canplay', onCanPlay);
+        emitLoadedAndMaybePlay();
+      };
+      v.addEventListener('canplay', onCanPlay, { once: true });
+      v.src = url;
+      v.load();
+      return;
+    }
+
+    // HLS: Safari / iOS reproducen nativamente; Chrome/Firefox en escritorio necesitan hls.js (paridad 10foot + Video.js/hlsjs).
+    if (v.canPlayType('application/vnd.apple.mpegurl')) {
+      const onCanPlay = () => {
+        v.removeEventListener('canplay', onCanPlay);
+        emitLoadedAndMaybePlay();
+      };
+      v.addEventListener('canplay', onCanPlay, { once: true });
+      v.src = url;
+      v.load();
+      return;
+    }
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 600,
+      });
+      this.hls = hls;
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        emitLoadedAndMaybePlay();
+      });
+
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (!data?.fatal) return;
+        const msg = data.details || data.type || 'Error HLS';
+        this.emit(PLAYER_ENGINE_EVENTS.ERROR, new Error(String(msg)));
+      });
+
+      hls.loadSource(url);
+      hls.attachMedia(v);
+      return;
+    }
+
+    this.emit(
+      PLAYER_ENGINE_EVENTS.ERROR,
+      new Error('HLS no disponible: usa Safari o un navegador con Media Source Extensions.'),
+    );
   }
 
   play() {
@@ -198,10 +274,12 @@ export class WebEngine extends BaseEngine {
 
   destroy() {
     if (!this.video) return;
+    this._tearDownHls();
     this.detachEvents();
     try {
       this.video.pause();
       this.video.removeAttribute('src');
+      if (this.video.srcObject) this.video.srcObject = null;
       this.video.load();
     } catch {
       // ignore

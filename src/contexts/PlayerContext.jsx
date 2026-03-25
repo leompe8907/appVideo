@@ -174,8 +174,8 @@ export function PlayerProvider({ children }) {
       return;
     }
 
-    // Si el engine nunca se inicializó (container no existía al montar), inicializar ahora
-    if (!engine.video && containerRef.current) {
+    // Si el engine nunca se inicializó, o el nodo contenedor cambió (ej. remount), inicializar ahora
+    if (containerRef.current && (!engine.video || engine.container !== containerRef.current)) {
       engine.init(containerRef.current);
     }
 

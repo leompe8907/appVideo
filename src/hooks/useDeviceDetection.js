@@ -30,6 +30,18 @@ export function useDeviceDetection() {
       const innerWidth = window.innerWidth;
       const innerHeight = window.innerHeight;
 
+      // Señal 0 (muy fuerte): Runtime nativo expuesto (emuladores/hardware)
+      // En muchos emuladores el User-Agent puede verse como Chrome/desktop,
+      // pero estas APIs suelen estar presentes cuando realmente corre en webOS/Tizen.
+      const hasTizenRuntime = typeof window !== 'undefined' && !!window.tizen;
+      const hasSamsungWebApis = typeof window !== 'undefined' && !!window.webapis;
+      const hasWebOsRuntime =
+        typeof window !== 'undefined' &&
+        (!!window.webOS ||
+          !!window.PalmSystem ||
+          (typeof window.webOS?.service?.request === 'function'));
+      const hasTvRuntime = hasTizenRuntime || hasSamsungWebApis || hasWebOsRuntime;
+
       // Señal 1: User-Agent (TVs conocidas)
       const isTVUserAgent = 
         ua.includes('smart-tv') ||
@@ -72,10 +84,16 @@ export function useDeviceDetection() {
       let tvScore = 0;
       let detectionMethod = '';
 
+      // Runtime nativo es la señal más fuerte (peso 4)
+      if (hasTvRuntime) {
+        tvScore += 4;
+        detectionMethod = 'runtime';
+      }
+
       // User-Agent es la señal más fuerte (peso 3)
       if (isTVUserAgent) {
         tvScore += 3;
-        detectionMethod = 'user-agent';
+        if (!detectionMethod) detectionMethod = 'user-agent';
       }
 
       // Sin pointer es muy indicativo de TV (peso 2)

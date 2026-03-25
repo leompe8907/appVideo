@@ -24,7 +24,7 @@ import { useDevice } from '../../contexts/DeviceContext';
  */
 export function useSpatialNavigation(config = {}) {
   const { isTV } = useDevice();
-  
+
   // Extraer callbacks de la configuración
   const {
     onEnterPress,
@@ -36,59 +36,53 @@ export function useSpatialNavigation(config = {}) {
     ...restConfig
   } = config;
 
-  // En PC, retornar valores por defecto sin funcionalidad de navegación espacial
-  if (!isTV) {
-    const pcRef = useRef(null);
-    
-    return {
-      ref: pcRef,
-      focused: false,
-      focusSelf: () => {
-        // En PC, usar focus nativo si es necesario
-        if (pcRef.current) {
-          pcRef.current.focus();
-        }
-      },
-      hasFocusedChild: false,
-      isTV: false,
-    };
-  }
+  // Mantener el orden de hooks estable (React Rules of Hooks):
+  // siempre instanciamos useRef y useFocusable, y controlamos el comportamiento con flags.
+  const pcRef = useRef(null);
 
-  // En TV, usar la librería de navegación espacial
   const {
     ref,
     focused,
     focusSelf,
     hasFocusedChild,
   } = useFocusable({
-    // Solo activar si isFocusable es true
-    isFocusable: isFocusable !== false,
-    
-    // Callback cuando se presiona Enter/OK
-    onEnterPress: onEnterPress || undefined,
-    
-    // Callback cuando se presiona una flecha
-    onArrowPress: onArrowPress || undefined,
-    
-    // Callback cuando recibe focus
-    onFocus: onFocus || undefined,
-    
-    // Callback cuando pierde focus
-    onBlur: onBlur || undefined,
-    
-    // Clave única para identificar el elemento
-    focusKey: focusKey || undefined,
-    
-    // Pasar cualquier otra configuración adicional
+    // En PC desactivamos registro/focus para evitar interferir.
+    isFocusable: isTV && isFocusable !== false,
+    onEnterPress: isTV ? (onEnterPress || undefined) : undefined,
+    onArrowPress: isTV ? (onArrowPress || undefined) : undefined,
+    onFocus: isTV ? (onFocus || undefined) : undefined,
+    onBlur: isTV ? (onBlur || undefined) : undefined,
+    focusKey: isTV ? (focusKey || undefined) : undefined,
     ...restConfig,
   });
 
+  // `ref` de norigin suele ser un callback-ref. En PC queremos un ref real para focus nativo.
+  // Devolvemos un callback que alimenta ambos caminos.
+  const mergedRef = (node) => {
+    pcRef.current = node;
+    if (typeof ref === 'function') {
+      ref(node);
+      return;
+    }
+    // Fallback defensivo por si la librería expone ref como objeto mutable.
+    if (ref && typeof ref === 'object') {
+      // eslint-disable-next-line no-param-reassign
+      ref.current = node;
+    }
+  };
+
   return {
-    ref,
-    focused: focused || false,
-    focusSelf: focusSelf || (() => {}),
-    hasFocusedChild: hasFocusedChild || false,
-    isTV: true,
+    ref: mergedRef,
+    focused: isTV ? (focused || false) : false,
+    focusSelf: () => {
+      if (isTV) {
+        (focusSelf || (() => {}))();
+        return;
+      }
+      if (pcRef.current) pcRef.current.focus();
+    },
+    hasFocusedChild: isTV ? (hasFocusedChild || false) : false,
+    isTV,
   };
 }
 

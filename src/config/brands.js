@@ -317,7 +317,7 @@ export const BRANDS = [
     brand: "gigmax",
     appName: "Gigmax",
     drm: "https://cv10.panaccess.com/",
-    token: "NLdLsrJkgIgnxMIDurSI",
+    token: "DDXXHySyAfrKgBczmhBk",
     os: 'HTML5',
     appVersion: '1',
     branding: 'Panaccess',

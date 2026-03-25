@@ -1,3 +1,4 @@
+import { useLayoutEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { HomeShellContent } from '../components/ads/HomeShellContent';
@@ -19,13 +20,40 @@ export function HomePage() {
   const { containerRef, state: playerState } = usePlayer();
   const isPlayerActive = Boolean(playerState?.url);
 
+  // Evita el aviso "Blocked aria-hidden… descendant retained focus": no marcamos el shell
+  // con aria-hidden mientras el foco sigue en una tarjeta; movemos el foco al player.
+  useLayoutEffect(() => {
+    if (!isPlayerActive) return;
+    const player = containerRef.current;
+    if (!player) return;
+    const active = document.activeElement;
+    if (!active || !player.contains(active)) {
+      const shell = document.querySelector('.home-shell-ui');
+      if (shell?.contains(active)) {
+        player.focus({ preventScroll: true });
+      }
+    }
+  }, [isPlayerActive, containerRef]);
+
   if (pathname === '/home') {
     return <Navigate to="/home/bouquets" replace />;
   }
 
   return (
     <div className={`home-shell${isPlayerActive ? ' home-shell--player-active' : ''}`}>
-      <div className={`home-global-player${isPlayerActive ? ' home-global-player--active' : ''}`} ref={containerRef}>
+      <div className={`home-global-player${isPlayerActive ? ' home-global-player--active' : ''}`}>
+        {/*
+          El motor solo debe montar el <video> en un nodo que React no reordene.
+          Si ref + video comparten el mismo div que Spinner/PlayerHud, el reconciliador
+          puede quitar el video al actualizar hijos → pantalla negra con HUD visible.
+        */}
+        <div
+          className="home-global-player__media"
+          ref={containerRef}
+          tabIndex={isPlayerActive ? -1 : undefined}
+          role={isPlayerActive ? 'application' : undefined}
+          aria-label={isPlayerActive ? 'Reproductor' : undefined}
+        />
         {isPlayerActive && (playerState?.isLoading || playerState?.isSeeking) && (
           <div className="home-global-player-loading">
             <div className="home-global-player-loading-spinner" />
@@ -34,7 +62,7 @@ export function HomePage() {
         {isPlayerActive && !(playerState?.isLoading || playerState?.isSeeking) && <PlayerHud />}
       </div>
 
-      <div className={`home-shell-ui${isPlayerActive ? ' home-shell-ui--hidden' : ''}`} aria-hidden={isPlayerActive}>
+      <div className={`home-shell-ui${isPlayerActive ? ' home-shell-ui--hidden' : ''}`}>
         <Sidebar />
         <main className="home-content">
           <HomeShellContent />
