@@ -21,9 +21,6 @@ export class SamsungEngine extends BaseTvEngine {
       if (injectedAdapter && typeof injectedAdapter.open === 'function') {
         this.nativeAdapter = { type: 'injected', api: injectedAdapter };
         this.capabilities = this.detectCapabilities(injectedAdapter);
-        // #region agent log
-        fetch('http://127.0.0.1:7303/ingest/b7e0775d-94a7-44fd-88f2-84907bcf08ad',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'95a16d'},body:JSON.stringify({sessionId:'95a16d',runId:'initial',hypothesisId:'H3',location:'SamsungEngine.js:27',message:'Samsung adapter activated (injected)',data:{capabilities:this.capabilities},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return true;
       }
 
@@ -41,9 +38,6 @@ export class SamsungEngine extends BaseTvEngine {
         api: avplay,
       };
       this.capabilities = this.detectCapabilities(avplay);
-      // #region agent log
-      fetch('http://127.0.0.1:7303/ingest/b7e0775d-94a7-44fd-88f2-84907bcf08ad',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'95a16d'},body:JSON.stringify({sessionId:'95a16d',runId:'initial',hypothesisId:'H3',location:'SamsungEngine.js:45',message:'Samsung adapter activated (webapis.avplay)',data:{hasTizen,hasWebApi,capabilities:this.capabilities},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       return true;
     } catch {
       return false;
@@ -154,9 +148,6 @@ export class SamsungEngine extends BaseTvEngine {
       if (licenseUrl && caps?.hasSetStreamingProperty) {
         api.setStreamingProperty('LICENSE_SERVER', String(licenseUrl));
       }
-      // #region agent log
-      fetch('http://127.0.0.1:7303/ingest/b7e0775d-94a7-44fd-88f2-84907bcf08ad',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'95a16d'},body:JSON.stringify({sessionId:'95a16d',runId:'initial',hypothesisId:'H5',location:'SamsungEngine.js:158',message:'Samsung DRM config applied',data:{type,hasLicenseUrl:Boolean(licenseUrl),caps:{hasSetDrm:Boolean(caps?.hasSetDrm),hasSetDrmProperty:Boolean(caps?.hasSetDrmProperty),hasSetStreamingProperty:Boolean(caps?.hasSetStreamingProperty)}},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
     } catch (error) {
       this.emitNativeError(error);
     }

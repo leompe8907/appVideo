@@ -76,22 +76,16 @@ export function SpatialNavigationProvider({ children }) {
         });
 
         // Configurar mapeo de teclas del control remoto si está disponible
-        // Compatible con LG webOS 2019 y Samsung Tizen 2019
+        // Compatible con LG webOS 2019+ y Samsung Tizen 2019+
         if (setKeys && typeof setKeys === 'function') {
           setKeys({
-            // Flechas direccionales (estándar en todos los controles remotos)
-            ArrowUp: 'up',
-            ArrowDown: 'down',
-            ArrowLeft: 'left',
-            ArrowRight: 'right',
-            
-            // Tecla Enter/OK del control remoto
-            Enter: 'enter',
-            ' ': 'enter', // Espacio también actúa como Enter
-            
-            // Botón Back/Return del control remoto
-            Backspace: 'back',
-            Escape: 'back',
+            // Mapeo correcto de acuerdo a norigin-spatial-navigation:
+            // Acción (up, down, left, right, enter) -> Arreglo de KeyCodes (números y strings)
+            up: [38, 211, 'ArrowUp'],
+            down: [40, 212, 'ArrowDown'],
+            left: [37, 214, 'ArrowLeft'],
+            right: [39, 213, 'ArrowRight'],
+            enter: [13, 29443, 'Enter', 'NumpadEnter']
           });
         }
 

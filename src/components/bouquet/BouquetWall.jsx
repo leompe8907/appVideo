@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getBouquetsWithChannels } from '../../services/tvDataService';
-import { usePreload, mergeEpgIntoChannels } from '../../contexts/PreloadContext';
+import { usePreload } from '../../store/usePreload';
+import { mergeEpgIntoChannels } from '../../utils/epgMerge';
 import {
   BouquetRowCarousel,
   BouquetGridHorizontal,

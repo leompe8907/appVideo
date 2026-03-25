@@ -4,12 +4,12 @@
  * Al seleccionar un ítem (película o serie) se abre el modal de detalle; desde ahí se reproduce.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { usePreload } from '../contexts/PreloadContext';
 import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
+import { useVodQuery } from '../query/hooks/useVodQuery';
 import VodCard from '../components/vod/VodCard';
 import VodSeeMoreCard from '../components/vod/VodSeeMoreCard';
 import VodDetailModal from '../components/vod/VodDetailModal';
@@ -23,7 +23,6 @@ export function VodPage() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { vod, loadVOD } = usePreload();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
   const [detailItem, setDetailItem] = useState(null);
@@ -32,37 +31,33 @@ export function VodPage() {
 
   const baseUrl = currentBrand?.drm || '';
   const vodLayout = currentBrand?.vod?.layout === 'classic' ? 'classic' : 'hero';
-  const { status, categories, vodRecommended, error } = vod;
+  const vodQuery = useVodQuery(currentBrand, { enabled: !!currentBrand, t });
+  const status = vodQuery.isPending ? 'loading' : vodQuery.isError ? 'error' : vodQuery.isSuccess ? 'ready' : 'idle';
+  const categories = vodQuery.data?.categories || [];
+  const vodRecommended = vodQuery.data?.vodRecommended || [];
+  const allVods = useMemo(() => vodQuery.data?.allVods || [], [vodQuery.data]);
+  const error = vodQuery.error?.message || '';
 
   useEffect(() => {
     if (!currentBrand) return;
-
-    // Carga inicial normal
-    if (status === 'idle') {
-      loadVOD(currentBrand, { t });
-      return;
-    }
-
-    // Si venimos de un error previo guardado en memoria, reintentar una vez
-    // al entrar al módulo VOD para no dejar al usuario bloqueado con error viejo.
     if (status === 'error' && !vodRetryOnEnterRef.current) {
       vodRetryOnEnterRef.current = true;
-      loadVOD(currentBrand, { t, enableRetry: true });
+      vodQuery.refetch();
     }
-  }, [status, currentBrand, loadVOD, t]);
+  }, [status, currentBrand, vodQuery]);
 
   /** Abrir detalle VOD desde publicidad (genericData vod_id=) */
   useEffect(() => {
     const id = location.state?.adOpenVodId;
     if (id == null) return;
-    if (status !== 'ready' || !Array.isArray(vod.allVods)) return;
-    const item = vod.allVods.find((v) => String(v.id) === String(id));
+    if (status !== 'ready' || !Array.isArray(allVods)) return;
+    const item = allVods.find((v) => String(v.id) === String(id));
     const timer = setTimeout(() => {
       if (item) setDetailItem(item);
       navigate('/home/vod', { replace: true, state: {} });
     }, 0);
     return () => clearTimeout(timer);
-  }, [location.state, vod.allVods, status, navigate]);
+  }, [location.state, allVods, status, navigate]);
 
   const handleVodSelect = (item) => {
     if (!item?.id) return;
@@ -88,8 +83,13 @@ export function VodPage() {
 
         {status === 'loading' && (
           <div className="vod-loading">
-            <div className="vod-loading-spinner" />
-            <p>{t('vod.loading')}</p>
+            <div style={{ width: '60%', maxWidth: 520, marginBottom: 14 }}>
+              <div className="skeleton skeleton--text" />
+            </div>
+            <div style={{ width: '90%', maxWidth: 920, height: 180 }}>
+              <div className="skeleton skeleton--card" style={{ height: '100%' }} />
+            </div>
+            <p style={{ marginTop: 12 }}>{t('vod.loading')}</p>
           </div>
         )}
 

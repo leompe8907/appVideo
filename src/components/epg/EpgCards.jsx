@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
-import { usePreload } from '../../contexts/PreloadContext';
+import { usePreload } from '../../store/usePreload';
 import { useBrand } from '../../contexts/BrandContext';
 import { useNavigate } from 'react-router-dom';
 import panaccessService from '../../services/panaccessService';

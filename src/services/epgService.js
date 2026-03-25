@@ -5,6 +5,7 @@
 
 import CryptoJS from 'crypto-js';
 import { getEpgCdnUrl, getOperatorName } from '../utils/userSession';
+import { normalizeEpgInWorker } from '../workers/epgWorkerClient';
 
 const DEFAULT_EPG_HOURS_LIMIT = 12;
 const DEFAULT_EPG_DAYS_OFFSET = 2;
@@ -218,7 +219,10 @@ export async function loadEPGForChannels(channels, options = {}) {
     }
 
     const data = await fetchEPG(url);
-    channel.epgItems = filterAndEnrichEvents(data, epgHoursLimit);
+    // Optimización TV: normalización en Worker si está disponible.
+    const nowMs = Date.now();
+    const fromWorker = await normalizeEpgInWorker(data, { epgHoursLimit, nowMs }).catch(() => null);
+    channel.epgItems = fromWorker || filterAndEnrichEvents(data, epgHoursLimit);
     onProgress(index + 1, toProcess);
   }
 

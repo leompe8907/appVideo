@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
-import { usePreload } from '../contexts/PreloadContext';
+import { usePreload } from '../store/usePreload';
 import { usePlayer } from '../contexts/PlayerContext';
 import panaccessService from '../services/panaccessService';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';

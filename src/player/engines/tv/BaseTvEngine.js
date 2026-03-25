@@ -25,9 +25,6 @@ export class BaseTvEngine extends WebEngine {
   init(container) {
     super.init(container);
     this.isNativeActive = this.tryActivateNativeAdapter(container);
-    // #region agent log
-    fetch('http://127.0.0.1:7303/ingest/b7e0775d-94a7-44fd-88f2-84907bcf08ad',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'95a16d'},body:JSON.stringify({sessionId:'95a16d',runId:'initial',hypothesisId:'H3',location:'BaseTvEngine.js:29',message:'BaseTvEngine init native activation',data:{platformName:this.platformName,isNativeActive:this.isNativeActive},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     this.bindLifecycleHooks();
   }
 
@@ -45,9 +42,6 @@ export class BaseTvEngine extends WebEngine {
         type: options?.type,
       });
       const handled = this.nativeLoad(url, options);
-      // #region agent log
-      fetch('http://127.0.0.1:7303/ingest/b7e0775d-94a7-44fd-88f2-84907bcf08ad',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'95a16d'},body:JSON.stringify({sessionId:'95a16d',runId:'initial',hypothesisId:'H4',location:'BaseTvEngine.js:50',message:'BaseTvEngine nativeLoad handled result',data:{platformName:this.platformName,handled,type:options?.type,hasDrm:Boolean(options?.drmConfig&&options?.drmConfig?.type&&options?.drmConfig?.type!=='none')},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       if (handled === false) {
         throw new Error(`[${this.platformName}] nativeLoad not handled`);
       }
@@ -57,9 +51,6 @@ export class BaseTvEngine extends WebEngine {
       });
       if (options?.autoPlay) this.play();
     } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7303/ingest/b7e0775d-94a7-44fd-88f2-84907bcf08ad',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'95a16d'},body:JSON.stringify({sessionId:'95a16d',runId:'initial',hypothesisId:'H4',location:'BaseTvEngine.js:60',message:'BaseTvEngine fallback to web load',data:{platformName:this.platformName,error:String(error?.message||error)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       this.emit(PLAYER_ENGINE_EVENTS.ERROR, error);
       super.load(url, options);
     }

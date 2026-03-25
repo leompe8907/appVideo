@@ -8,7 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
-import { usePreload, mergeEpgIntoChannels } from '../../contexts/PreloadContext';
+import { usePreload } from '../../store/usePreload';
+import { mergeEpgIntoChannels } from '../../utils/epgMerge';
 import { getMainBouquets, getChannelsForBouquet, filterMainBouquets } from '../../services/tvDataService';
 
 /**

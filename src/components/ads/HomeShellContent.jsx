@@ -2,12 +2,13 @@
  * Contenido principal de Home: publicidad superior, Outlet de rutas, publicidad inferior.
  */
 
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { usePreload } from '../../contexts/PreloadContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import panaccessService from '../../services/panaccessService';
 import { AdZone } from './AdZone';
+import { useAdsQuery } from '../../query/hooks/useAdsQuery';
+import { usePreload } from '../../store/usePreload';
 
 function findStreamById(streams, id) {
   if (id == null || !Array.isArray(streams)) return null;
@@ -18,13 +19,8 @@ function findStreamById(streams, id) {
 export function HomeShellContent() {
   const navigate = useNavigate();
   const { play } = usePlayer();
-  const { epg, ads, loadAds } = usePreload();
-
-  useEffect(() => {
-    if (ads.status === 'idle') {
-      loadAds();
-    }
-  }, [ads.status, loadAds]);
+  const { epg } = usePreload();
+  const adsQuery = useAdsQuery({ enabled: true });
 
   const handleActivate = useCallback(
     (ad) => {
@@ -105,7 +101,7 @@ export function HomeShellContent() {
     [epg.streams, navigate, play]
   );
 
-  const { top, bottom } = ads;
+  const { top, bottom } = adsQuery.data || { top: [], bottom: [] };
   const hasTop = Array.isArray(top) && top.length > 0;
   const hasBottom = Array.isArray(bottom) && bottom.length > 0;
 

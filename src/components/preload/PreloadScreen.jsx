@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
-import { usePreload } from '../../contexts/PreloadContext';
+import { usePreload } from '../../store/usePreload';
 
 const TIPS_INTERVAL_MS = 4000;
 

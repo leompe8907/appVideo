@@ -13,15 +13,19 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
-import { usePreload } from '../contexts/PreloadContext';
+import { usePreload } from '../store/usePreload';
 import { PreloadScreen } from '../components/preload/PreloadScreen';
+import { useAdsQuery } from '../query/hooks/useAdsQuery';
+import { useVodQuery } from '../query/hooks/useVodQuery';
 
 export function PreloadDataPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { currentBrand } = useBrand();
-  const { epg, vod, ads, loadEPG, loadVOD, loadAds } = usePreload();
+  const { epg, loadEPG } = usePreload();
+  const vodQuery = useVodQuery(currentBrand, { enabled: !!currentBrand, t });
+  useAdsQuery({ enabled: true });
 
   // Disparar cargas iniciales centralizadas
   useEffect(() => {
@@ -30,20 +34,12 @@ export function PreloadDataPage() {
     if (epg.status === 'idle') {
       loadEPG(currentBrand);
     }
-
-    if (vod.status === 'idle') {
-      loadVOD(currentBrand, { t });
-    }
-
-    if (ads.status === 'idle') {
-      loadAds();
-    }
-  }, [currentBrand, epg.status, vod.status, ads.status, loadEPG, loadVOD, loadAds, t]);
+  }, [currentBrand, epg.status, loadEPG]);
 
   // Cuando EPG y VOD estén listos (o en error), redirigir a Home/Bouquets
   useEffect(() => {
     const epgReady = epg.status === 'ready' || epg.status === 'error';
-    const vodReady = vod.status === 'ready' || vod.status === 'error';
+    const vodReady = vodQuery.isSuccess || vodQuery.isError;
 
     if (epgReady && vodReady) {
       const params = new URLSearchParams(location.search);
@@ -54,7 +50,7 @@ export function PreloadDataPage() {
           : '/home/bouquets';
       navigate(safeTarget, { replace: true });
     }
-  }, [epg.status, vod.status, navigate, location.search]);
+  }, [epg.status, vodQuery.isSuccess, vodQuery.isError, navigate, location.search]);
 
   return <PreloadScreen />;
 }

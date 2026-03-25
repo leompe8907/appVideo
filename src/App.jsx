@@ -1,4 +1,4 @@
-import { useEffect, Suspense, lazy } from 'react';
+import { useEffect, useRef, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useViewport } from './hooks/useViewport';
@@ -6,8 +6,8 @@ import { useAuthValidator } from './hooks/useAuthValidator';
 import { SpatialNavigationProvider } from './components/navigation/SpatialNavigationProvider';
 import { isAuthenticated } from './utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
-import { PreloadProvider } from './contexts/PreloadContext';
 import { PreloadGate } from './components/preload/PreloadGate';
+import { SkeletonText, SkeletonCard } from './components/ui/Skeleton';
 
 // Lazy loading de páginas
 const SplashPage = lazy(() => import('./pages/SplashPage'));
@@ -26,7 +26,20 @@ const HomePlaceholderPage = lazy(() =>
 
 function Loading() {
   const { t } = useTranslation();
-  return <div className="loading">{t('common.loading')}</div>;
+  return (
+    <div className="loading">
+      <div style={{ width: 260, marginBottom: 12 }}>
+        <SkeletonText />
+      </div>
+      <div style={{ width: '70%', maxWidth: 520, marginBottom: 18 }}>
+        <SkeletonText />
+      </div>
+      <div style={{ width: '100%', height: 220, maxWidth: 980 }}>
+        <SkeletonCard style={{ height: '100%' }} />
+      </div>
+      <div style={{ marginTop: 10, opacity: 0.85 }}>{t('common.loading')}</div>
+    </div>
+  );
 }
 
 /** Valida/reactiva sesión en rutas protegidas; redirige a / si falla */
@@ -52,33 +65,55 @@ function ProtectedRoute({ children }) {
 
 function App() {
   const viewport = useViewport();
+  const lastViewportClassRef = useRef('');
+  const lastScaleRef = useRef(null);
+  const rafRef = useRef(0);
 
   // Aplicar clases de viewport al root
   useEffect(() => {
     const root = document.documentElement;
-    
-    // Escala CSS para pantallas grandes
-    root.style.setProperty('--viewport-scale', viewport.scale > 1.5 ? viewport.scale : '1');
 
-    // Clases según breakpoint
-    root.classList.remove('mobile', 'tablet', 'desktop', 'hd', 'fullhd', 'ultrahd', 'tv-4k', 'tv-8k');
-    
-    if (viewport.isMobile) root.classList.add('mobile');
-    if (viewport.isTablet) root.classList.add('tablet');
-    if (viewport.isDesktop) root.classList.add('desktop');
-    if (viewport.isHD) root.classList.add('hd');
-    if (viewport.isFullHD) root.classList.add('fullhd');
-    if (viewport.isUltraHD) root.classList.add('ultrahd');
-    if (viewport.is4K) root.classList.add('tv-4k');
-    if (viewport.is8K) root.classList.add('tv-8k');
+    // Evitar repintadas masivas en TV: agrupar en rAF y aplicar solo si cambió.
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0;
+
+      const scaleValue = viewport.scale > 1.5 ? viewport.scale : 1;
+      const prevScale = lastScaleRef.current;
+      if (prevScale == null || Math.abs(Number(prevScale) - Number(scaleValue)) > 0.01) {
+        root.style.setProperty('--viewport-scale', String(scaleValue));
+        lastScaleRef.current = scaleValue;
+      }
+
+      const classes = [];
+      if (viewport.isMobile) classes.push('mobile');
+      if (viewport.isTablet) classes.push('tablet');
+      if (viewport.isDesktop) classes.push('desktop');
+      if (viewport.isHD) classes.push('hd');
+      if (viewport.isFullHD) classes.push('fullhd');
+      if (viewport.isUltraHD) classes.push('ultrahd');
+      if (viewport.is4K) classes.push('tv-4k');
+      if (viewport.is8K) classes.push('tv-8k');
+
+      const classKey = classes.sort().join(' ');
+      if (classKey !== lastViewportClassRef.current) {
+        root.classList.remove('mobile', 'tablet', 'desktop', 'hd', 'fullhd', 'ultrahd', 'tv-4k', 'tv-8k');
+        classes.forEach((c) => root.classList.add(c));
+        lastViewportClassRef.current = classKey;
+      }
+    });
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    };
   }, [viewport]);
 
   return (
     <SpatialNavigationProvider>
       <PlayerProvider>
-        <PreloadProvider>
-          <div className="App">
-            <Routes>
+        <div className="App">
+          <Routes>
               {/* Rutas públicas */}
               <Route path="/" element={<Suspense fallback={<Loading />}><SplashPage /></Suspense>}/>
               <Route path="/login" element={<Suspense fallback={<Loading />}><LoginPage /></Suspense>}/>
@@ -100,9 +135,8 @@ function App() {
               </Route>
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </div>
-        </PreloadProvider>
+          </Routes>
+        </div>
       </PlayerProvider>
     </SpatialNavigationProvider>
   );

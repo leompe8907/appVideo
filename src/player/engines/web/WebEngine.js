@@ -13,6 +13,7 @@ export class WebEngine extends BaseEngine {
     this.container = null;
     this.lastTimeUpdateEmitMs = 0;
     this.timeUpdateThrottleMs = DEFAULT_TIMEUPDATE_THROTTLE_MS;
+    this._handlers = null;
   }
 
   init(container) {
@@ -38,7 +39,10 @@ export class WebEngine extends BaseEngine {
     if (!this.video) return;
     const v = this.video;
 
-    v.addEventListener('timeupdate', () => {
+    if (this._handlers) return;
+
+    this._handlers = {
+      onTimeUpdate: () => {
       const now = Date.now();
       if (now - this.lastTimeUpdateEmitMs < this.timeUpdateThrottleMs) {
         return;
@@ -48,37 +52,54 @@ export class WebEngine extends BaseEngine {
         currentTime: v.currentTime,
         duration: v.duration,
       });
-    });
+      },
+      onDurationChange: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, { duration: v.duration });
+      },
+      onEnded: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.ENDED);
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.ENDED });
+      },
+      onPlay: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
+      },
+      onPause: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
+      },
+      onSeeking: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.SEEKING });
+      },
+      onSeeked: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.SEEK_END, { currentTime: v.currentTime });
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.SEEKED });
+      },
+      onError: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.ERROR, v.error || new Error('Unknown video error'));
+      },
+    };
 
-    v.addEventListener('durationchange', () => {
-      this.emit(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, { duration: v.duration });
-    });
+    v.addEventListener('timeupdate', this._handlers.onTimeUpdate);
+    v.addEventListener('durationchange', this._handlers.onDurationChange);
+    v.addEventListener('ended', this._handlers.onEnded);
+    v.addEventListener('play', this._handlers.onPlay);
+    v.addEventListener('pause', this._handlers.onPause);
+    v.addEventListener('seeking', this._handlers.onSeeking);
+    v.addEventListener('seeked', this._handlers.onSeeked);
+    v.addEventListener('error', this._handlers.onError);
+  }
 
-    v.addEventListener('ended', () => {
-      this.emit(PLAYER_ENGINE_EVENTS.ENDED);
-      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.ENDED });
-    });
-
-    v.addEventListener('play', () => {
-      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
-    });
-
-    v.addEventListener('pause', () => {
-      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
-    });
-
-    v.addEventListener('seeking', () => {
-      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.SEEKING });
-    });
-
-    v.addEventListener('seeked', () => {
-      this.emit(PLAYER_ENGINE_EVENTS.SEEK_END, { currentTime: v.currentTime });
-      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.SEEKED });
-    });
-
-    v.addEventListener('error', () => {
-      this.emit(PLAYER_ENGINE_EVENTS.ERROR, v.error || new Error('Unknown video error'));
-    });
+  detachEvents() {
+    if (!this.video || !this._handlers) return;
+    const v = this.video;
+    v.removeEventListener('timeupdate', this._handlers.onTimeUpdate);
+    v.removeEventListener('durationchange', this._handlers.onDurationChange);
+    v.removeEventListener('ended', this._handlers.onEnded);
+    v.removeEventListener('play', this._handlers.onPlay);
+    v.removeEventListener('pause', this._handlers.onPause);
+    v.removeEventListener('seeking', this._handlers.onSeeking);
+    v.removeEventListener('seeked', this._handlers.onSeeked);
+    v.removeEventListener('error', this._handlers.onError);
+    this._handlers = null;
   }
 
   load(url, { type, autoPlay = false } = {}) {
@@ -177,6 +198,7 @@ export class WebEngine extends BaseEngine {
 
   destroy() {
     if (!this.video) return;
+    this.detachEvents();
     try {
       this.video.pause();
       this.video.removeAttribute('src');

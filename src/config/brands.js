@@ -166,6 +166,7 @@ export const BRANDS = [
     },
     vod: {
       layout: "hero",
+      add: true,
       vodDetail: {
         descriptionMaxLength: 180,
         showReleaseYear: true,

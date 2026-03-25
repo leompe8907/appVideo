@@ -60,9 +60,6 @@ function readDebugNativeAdaptersOverride() {
 
 export function resolveEnginePlatform(deviceInfo) {
   const forced = readForcedEngineFromUrl() || readForcedEngineFromStorage();
-  // #region agent log
-  fetch('http://127.0.0.1:7303/ingest/b7e0775d-94a7-44fd-88f2-84907bcf08ad',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'95a16d'},body:JSON.stringify({sessionId:'95a16d',runId:'initial',hypothesisId:'H1',location:'resolveEnginePlatform.js:42',message:'resolveEnginePlatform inputs',data:{forced,brandPlayerPolicy:deviceInfo?.brandPlayerPolicy,nativeAdaptersEnabled:deviceInfo?.nativeAdaptersEnabled,isTV:deviceInfo?.isTV,ua:String(deviceInfo?.userAgent||'').slice(0,120)},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   if (forced) return forced;
 
   const brandEnginePolicy = String(deviceInfo?.brandPlayerPolicy || ENGINE_POLICY.AUTO).toLowerCase();
@@ -79,9 +76,6 @@ export function resolveEnginePlatform(deviceInfo) {
       : debugNativeAdaptersOverride;
   const looksLikeLG = ua.includes('webos') || ua.includes('netcast') || (ua.includes('lg') && ua.includes('tv'));
   const looksLikeSamsung = ua.includes('tizen') || (ua.includes('samsung') && ua.includes('tv'));
-  // #region agent log
-  fetch('http://127.0.0.1:7303/ingest/b7e0775d-94a7-44fd-88f2-84907bcf08ad',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'95a16d'},body:JSON.stringify({sessionId:'95a16d',runId:'initial',hypothesisId:'H1',location:'resolveEnginePlatform.js:82',message:'resolveEnginePlatform detection flags',data:{looksLikeLG,looksLikeSamsung,nativeAdaptersEnabled,debugNativeAdaptersOverride,isTV,search:window.location.search},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
 
   if (nativeAdaptersEnabled && isTV && looksLikeLG) return ENGINE_PLATFORM.LG;
   if (nativeAdaptersEnabled && isTV && looksLikeSamsung) return ENGINE_PLATFORM.SAMSUNG;
