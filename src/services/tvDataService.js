@@ -161,13 +161,21 @@ function ensureStreamPlaybackUrl(stream) {
     if (!stream.url && (stream.streamUrl || stream.hlsUrl || stream.hls)) {
       stream.url = stream.streamUrl || stream.hlsUrl || stream.hls;
     }
+    // Paridad con legacy: si la URL trae sessionId viejo, actualizarla.
+    try {
+      stream.url = panaccessService.normalizePlaybackUrl(stream.url);
+    } catch (e) {
+      if (import.meta.env?.DEV) {
+        console.warn('[tvDataService] normalizePlaybackUrl:', e?.message || e);
+      }
+    }
     return stream;
   }
   const streamId = stream.id ?? stream.epgStreamId;
   if (streamId == null || streamId === '') return stream;
   try {
     const url = panaccessService.getStreamM3u8Url({ streamId });
-    if (url) stream.url = url;
+    if (url) stream.url = panaccessService.normalizePlaybackUrl(url);
   } catch (e) {
     if (import.meta.env?.DEV) {
       console.warn('[tvDataService] ensureStreamPlaybackUrl:', e?.message || e);

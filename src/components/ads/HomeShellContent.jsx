@@ -66,6 +66,11 @@ export function HomeShellContent() {
             if (import.meta.env?.DEV) console.warn('[HomeShellContent] getStreamM3u8Url', e);
           }
         }
+        try {
+          url = panaccessService.normalizePlaybackUrl(url);
+        } catch (e) {
+          if (import.meta.env?.DEV) console.warn('[HomeShellContent] normalizePlaybackUrl', e);
+        }
         if (url) {
           play({
             type: 'service',
@@ -82,7 +87,7 @@ export function HomeShellContent() {
         const id = parseInt(generic.split('=')[1], 10);
         if (Number.isNaN(id)) return;
         try {
-          const url = panaccessService.getCatchupM3u8Url({ catchupId: id });
+          const url = panaccessService.normalizePlaybackUrl(panaccessService.getCatchupM3u8Url({ catchupId: id }));
           if (url) {
             play({ type: 'catchup', id, url, item: { catchupId: id }, autoPlay: true });
           }

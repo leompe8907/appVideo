@@ -676,6 +676,43 @@ class PanaccessService {
   }
 
   /**
+   * Normaliza una URL de playback para asegurar que el sessionId sea el actual.
+   * Paridad con legacy: `home.js:updateUrlSessionIfNeeded`.
+   *
+   * - Si la URL ya trae `sessionId=...`, lo reemplaza por el actual.
+   * - Si NO trae sessionId, solo lo agrega para URLs tipo Panaccess `index.php?...&m3u8`
+   *   (para no romper CDNs/URLs .m3u8 "reales" que no requieren sesión).
+   *
+   * @param {string} url
+   * @returns {string}
+   */
+  normalizePlaybackUrl(url) {
+    if (!url || typeof url !== 'string') return url;
+    if (!this.client) return url;
+
+    const currentSessionId = localStorage.getItem('sessionId') || this.client.sessionId || '';
+    if (!currentSessionId) return url;
+
+    // Reemplazar sessionId si existe
+    if (url.includes('sessionId=')) {
+      return url.replace(/sessionId=([^&]+)/, `sessionId=${encodeURIComponent(currentSessionId)}`);
+    }
+
+    // Solo inyectar sessionId en URLs "function m3u8" típicas de Panaccess
+    const lower = url.toLowerCase();
+    const looksLikePanaccessFunction =
+      lower.includes('index.php') && lower.includes('requestmode=function') && /(?:^|[?&])m3u8(?:=|&|$)/i.test(url);
+
+    if (!looksLikePanaccessFunction) return url;
+
+    // Insertar antes de fragment si existiera
+    const [basePart, hashPart] = url.split('#');
+    const glue = basePart.includes('?') ? '&' : '?';
+    const normalized = `${basePart}${glue}sessionId=${encodeURIComponent(currentSessionId)}`;
+    return hashPart != null ? `${normalized}#${hashPart}` : normalized;
+  }
+
+  /**
    * Añadir tarea de grabación (catchup).
    * @param {Object} options - mode (ej. "4"), catchupId, enableRetry...
    * @returns {Promise<*>}

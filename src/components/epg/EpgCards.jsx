@@ -205,6 +205,13 @@ export function EpgCards({ onSelect }) {
         }
       }
     }
+    try {
+      url = panaccessService.normalizePlaybackUrl(url);
+    } catch (e) {
+      if (import.meta.env?.DEV) {
+        console.warn('[EpgCards] normalizePlaybackUrl error:', e?.message || e);
+      }
+    }
     return url || null;
   };
 
