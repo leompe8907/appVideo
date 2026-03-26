@@ -21,7 +21,7 @@ export function PreloadDataPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentBrand } = useBrand();
-  const { epg, vod, ads, loadEPG, loadVOD, loadAds } = usePreload();
+  const { epg, vod, catchup, ads, loadEPG, loadVOD, loadCatchup, loadAds } = usePreload();
 
   // Disparar cargas iniciales centralizadas
   useEffect(() => {
@@ -33,10 +33,25 @@ export function PreloadDataPage() {
     if (vod.status === 'idle') {
       loadVOD(currentBrand, { t });
     }
+    if (currentBrand?.catchup?.enabled !== false && catchup.status === 'idle') {
+      // Catchup no bloquea salida de preload; se carga en paralelo para decidir visibilidad en sidebar.
+      loadCatchup(currentBrand);
+    }
     if (ads.status === 'idle') {
       loadAds();
     }
-  }, [currentBrand, epg.status, vod.status, ads.status, loadEPG, loadVOD, loadAds, t]);
+  }, [
+    currentBrand,
+    epg.status,
+    vod.status,
+    catchup.status,
+    ads.status,
+    loadEPG,
+    loadVOD,
+    loadCatchup,
+    loadAds,
+    t,
+  ]);
 
   // Cuando EPG y VOD estén listos (o en error), redirigir a Home/Bouquets
   useEffect(() => {
