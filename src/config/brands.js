@@ -35,6 +35,10 @@
  *   @param {string} api.baseUrl - URL base del backend propio (ej. validación de UDID, auth, etc.).
  *   @param {string} api.wsUrl - URL de WebSocket asociado (si aplica) para esta marca.
  *
+ * @param {Object} qrRegister - Configuración de registro por QR en Login:
+ *   @param {boolean} qrRegister.enabled - Habilita/deshabilita el botón/modal de registro QR.
+ *   @param {string} qrRegister.url - URL destino codificada en el QR.
+ *
  * @param {boolean} hashPasswordBeforeLogin - true: hashear contraseña en cliente antes de enviar (ej. Panaccess);
  *   false: enviar contraseña en claro (ej. backends como intv).
  *
@@ -164,6 +168,10 @@ export const BRANDS = [
       baseUrl: "", // Equivalente a baseUrl en 10foot
       wsUrl: "", // Equivalente a wsUrl en 10foot
     },
+    qrRegister: {
+      enabled: true,
+      url: "https://shop.fotelka.tv/?c=customer&p=register",
+    },
     vod: {
       layout: "hero",
       add: true,
@@ -285,6 +293,10 @@ export const BRANDS = [
       baseUrl: "", // Equivalente a baseUrl en 10foot
       wsUrl: "", // Equivalente a wsUrl en 10foot
     },
+    qrRegister: {
+      enabled: true,
+      url: "https://shop.fotelka.tv/?c=customer&p=register",
+    },
     vod: {
       layout: "hero", // "hero" | "classic"
       vodDetail: {
@@ -404,6 +416,10 @@ export const BRANDS = [
     api: {
       baseUrl: "", // Equivalente a baseUrl en 10foot
       wsUrl: "", // Equivalente a wsUrl en 10foot
+    },
+    qrRegister: {
+      enabled: false,
+      url: "",
     },
     hashPasswordBeforeLogin: true,
     debug: {

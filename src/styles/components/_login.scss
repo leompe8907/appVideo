@@ -267,6 +267,117 @@
         }
       }
     }
+
+    .register-section {
+      margin-top: clamp(0.75rem, 1.2vw, 1rem);
+
+      .register-hint {
+        margin: 0 0 0.5rem;
+        font-size: clamp(0.8rem, 1vw, 0.9rem);
+        color: rgba(255, 255, 255, 0.75);
+        text-align: center;
+      }
+
+      .register-button {
+        @include button-base;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: white;
+        font-weight: 600;
+        padding: clamp(0.65rem, 1vw, 0.85rem);
+        transition: all $transition-normal;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+
+        &:focus {
+          outline: none;
+        }
+
+        &.focused {
+          border-color: var(--primary-color, #667eea);
+          box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.45);
+          background: rgba(255, 255, 255, 0.24);
+        }
+      }
+    }
+  }
+
+  .register-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    padding: 1rem;
+  }
+
+  .register-modal {
+    width: min(420px, 100%);
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    padding: 1.2rem;
+    text-align: center;
+    color: #fff;
+
+    h3 {
+      margin: 0 0 0.4rem;
+      font-size: 1.2rem;
+    }
+
+    p {
+      margin: 0 0 0.9rem;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 0.9rem;
+    }
+
+    .register-qr-image {
+      width: 256px;
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      background: #fff;
+      padding: 0.5rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .register-qr-placeholder {
+      min-height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      margin-bottom: 0.9rem;
+      padding: 0.8rem;
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    .register-close-button {
+      @include button-base;
+      width: 100%;
+      background: linear-gradient(
+        135deg,
+        var(--primary-color, #667eea) 0%,
+        var(--secondary-color, #764ba2) 100%
+      );
+      border: none;
+      color: #fff;
+      font-weight: 600;
+
+      &:focus {
+        outline: none;
+      }
+
+      &.focused {
+        box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55);
+      }
+    }
   }
 
   @keyframes logoFloat {

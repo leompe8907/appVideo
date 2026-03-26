@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import QRCode from 'qrcode';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { FocusableInput } from '../components/navigation/FocusableInput';
@@ -23,8 +24,22 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrImageSrc, setQrImageSrc] = useState('');
+  const [qrError, setQrError] = useState('');
 
   console.log(`🖥️ [DEVICE] Modo: ${isTV ? 'TV' : 'PC'}`);
+
+  const qrRegisterConfig = currentBrand?.qrRegister;
+  const qrRegisterEnabled = !!qrRegisterConfig?.enabled;
+  const qrRegisterUrl = typeof qrRegisterConfig?.url === 'string' ? qrRegisterConfig.url.trim() : '';
+  const canShowQrRegister = qrRegisterEnabled && qrRegisterUrl.length > 0;
+  const userAgent = (typeof navigator !== 'undefined' ? navigator.userAgent : '').toLowerCase();
+  const hasSamsungRuntime = typeof window !== 'undefined' && (!!window.tizen || !!window.webapis);
+  const hasLgRuntime = typeof window !== 'undefined' && (!!window.webOS || !!window.PalmSystem);
+  const isSamsungTv = isTV && (hasSamsungRuntime || userAgent.includes('tizen') || userAgent.includes('samsung'));
+  const isLgTv = isTV && (hasLgRuntime || userAgent.includes('webos') || userAgent.includes('netcast') || userAgent.includes('lg'));
+  const shouldShowQrModal = isSamsungTv || isLgTv;
 
   // Establecer focus inicial en TV al cargar la página
   useEffect(() => {
@@ -49,6 +64,68 @@ export function LoginPage() {
       return () => clearTimeout(timer);
     }
   }, [isTV]);
+
+  useEffect(() => {
+    if (!isQrModalOpen) return;
+    if (!canShowQrRegister) {
+      setQrError(t('login.registerUnavailable'));
+      setQrImageSrc('');
+      return;
+    }
+
+    let cancelled = false;
+    const buildQr = async () => {
+      try {
+        const dataUrl = await QRCode.toDataURL(qrRegisterUrl, {
+          width: 256,
+          margin: 1,
+        });
+        if (cancelled) return;
+        setQrImageSrc(dataUrl);
+        setQrError('');
+      } catch {
+        if (cancelled) return;
+        setQrImageSrc('');
+        setQrError(t('login.registerUnavailable'));
+      }
+    };
+
+    buildQr();
+    return () => {
+      cancelled = true;
+    };
+  }, [isQrModalOpen, canShowQrRegister, qrRegisterUrl, t]);
+
+  useEffect(() => {
+    if (!isTV || !isQrModalOpen) return;
+    const timer = setTimeout(() => {
+      const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
+      if (setFocus && typeof setFocus === 'function') {
+        setFocus('login-register-close');
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [isTV, isQrModalOpen]);
+
+  const handleOpenQrModal = () => {
+    if (!canShowQrRegister) return;
+    if (!shouldShowQrModal) {
+      window.location.assign(qrRegisterUrl);
+      return;
+    }
+    setQrError('');
+    setQrImageSrc('');
+    setIsQrModalOpen(true);
+  };
+
+  const handleCloseQrModal = () => {
+    setIsQrModalOpen(false);
+    if (!isTV) return;
+    const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
+    if (setFocus && typeof setFocus === 'function') {
+      setTimeout(() => setFocus('login-register'), 0);
+    }
+  };
 
   // ============================================
   // SUBMIT
@@ -191,8 +268,56 @@ export function LoginPage() {
           >
             {isSubmitting ? t('login.submitting') : t('login.submit')}
           </FocusableButton>
+
+          {qrRegisterEnabled && (
+            <div className="register-section">
+              <p className="register-hint">{t('login.registerHint')}</p>
+              <FocusableButton
+                type="button"
+                className="register-button"
+                focusKey="login-register"
+                onClick={handleOpenQrModal}
+                onEnterPress={() => {
+                  if (isTV) {
+                    handleOpenQrModal();
+                  }
+                }}
+              >
+                {t('login.register')}
+              </FocusableButton>
+            </div>
+          )}
         </form>
       </div>
+
+      {isQrModalOpen && (
+        <div className="register-modal-backdrop">
+          <div className="register-modal">
+            <h3>{t('login.registerTitle')}</h3>
+            <p>{t('login.registerHint')}</p>
+
+            {qrImageSrc ? (
+              <img src={qrImageSrc} alt={t('login.register')} className="register-qr-image" />
+            ) : (
+              <div className="register-qr-placeholder">{qrError || t('common.loading')}</div>
+            )}
+
+            <FocusableButton
+              type="button"
+              className="register-close-button"
+              focusKey="login-register-close"
+              onClick={handleCloseQrModal}
+              onEnterPress={() => {
+                if (isTV) {
+                  handleCloseQrModal();
+                }
+              }}
+            >
+              {t('common.close')}
+            </FocusableButton>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
