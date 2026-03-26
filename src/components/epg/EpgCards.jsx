@@ -391,24 +391,26 @@ export function EpgCards({ onSelect }) {
         })}
       </div>
 
-      <EpgEventModal
-        open={!!detail}
-        channel={detail?.channel}
-        event={detail?.event}
-        isLive={detail?.isLive}
-        canPlayLive={canPlayLive}
-        onClose={() => setDetail(null)}
-        onPlayLive={() => {
-          const started = handlePlayLive(detail?.channel);
-          if (started && closeModalOnPlayLive) {
-            setDetail(null);
-          }
-        }}
-        onWatchCatchup={(catchupId) => {
-          if (!catchupId) return;
-          navigate('/home/catchup', { state: { catchupId, from: 'epg' }, replace: false });
-        }}
-      />
+      {detail && (
+        <EpgEventModal
+          open
+          channel={detail.channel}
+          event={detail.event}
+          isLive={detail.isLive}
+          canPlayLive={canPlayLive}
+          onClose={() => setDetail(null)}
+          onPlayLive={() => {
+            const started = handlePlayLive(detail.channel);
+            if (started && closeModalOnPlayLive) {
+              setDetail(null);
+            }
+          }}
+          onWatchCatchup={(catchupId) => {
+            if (!catchupId) return;
+            navigate('/home/catchup', { state: { catchupId, from: 'epg' }, replace: false });
+          }}
+        />
+      )}
     </div>
   );
 }

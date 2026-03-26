@@ -9,7 +9,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
-import { useVodQuery } from '../query/hooks/useVodQuery';
+import { usePreload } from '../store/usePreload';
 import VodCard from '../components/vod/VodCard';
 import VodSeeMoreCard from '../components/vod/VodSeeMoreCard';
 import VodDetailModal from '../components/vod/VodDetailModal';
@@ -25,26 +25,30 @@ export function VodPage() {
   const navigate = useNavigate();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
+  const { vod, loadVOD } = usePreload();
   const [detailItem, setDetailItem] = useState(null);
   const [categoryModal, setCategoryModal] = useState(null);
   const vodRetryOnEnterRef = useRef(false);
 
   const baseUrl = currentBrand?.drm || '';
   const vodLayout = currentBrand?.vod?.layout === 'classic' ? 'classic' : 'hero';
-  const vodQuery = useVodQuery(currentBrand, { enabled: !!currentBrand, t });
-  const status = vodQuery.isPending ? 'loading' : vodQuery.isError ? 'error' : vodQuery.isSuccess ? 'ready' : 'idle';
-  const categories = vodQuery.data?.categories || [];
-  const vodRecommended = vodQuery.data?.vodRecommended || [];
-  const allVods = useMemo(() => vodQuery.data?.allVods || [], [vodQuery.data]);
-  const error = vodQuery.error?.message || '';
+  const status = vod.status;
+  const categories = vod.categories || [];
+  const vodRecommended = vod.vodRecommended || [];
+  const allVods = useMemo(() => vod.allVods || [], [vod.allVods]);
+  const error = vod.error || '';
 
   useEffect(() => {
     if (!currentBrand) return;
+    if (status === 'idle') {
+      loadVOD(currentBrand, { t });
+      return;
+    }
     if (status === 'error' && !vodRetryOnEnterRef.current) {
       vodRetryOnEnterRef.current = true;
-      vodQuery.refetch();
+      loadVOD(currentBrand, { t, force: true, enableRetry: true });
     }
-  }, [status, currentBrand, vodQuery]);
+  }, [status, currentBrand, loadVOD, t]);
 
   /** Abrir detalle VOD desde publicidad (genericData vod_id=) */
   useEffect(() => {

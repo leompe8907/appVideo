@@ -63,10 +63,19 @@ export const usePreloadStore = create((set, get) => {
     ads: adsInitialState,
     catchup: catchupInitialState,
 
-    loadEPG: async (brandConfig) => {
+    loadEPG: async (brandConfig, options = {}) => {
       if (!brandConfig) return;
+      const { force = false } = options;
       const { epg } = get();
       if (epg.status === 'loading') return;
+      if (
+        !force &&
+        epg.status === 'ready' &&
+        Array.isArray(epg.bouquetsWithChannels) &&
+        epg.bouquetsWithChannels.length > 0
+      ) {
+        return;
+      }
 
       set((state) => ({
         ...state,
@@ -192,6 +201,16 @@ export const usePreloadStore = create((set, get) => {
 
     loadVOD: async (brandConfig, options = {}) => {
       if (!brandConfig || vodLoading) return;
+      const { force = false, ...loadOptions } = options;
+      const currentVod = get().vod;
+      if (
+        !force &&
+        currentVod.status === 'ready' &&
+        Array.isArray(currentVod.allVods) &&
+        currentVod.allVods.length > 0
+      ) {
+        return;
+      }
       vodLoading = true;
       set((state) => ({
         ...state,
@@ -200,7 +219,7 @@ export const usePreloadStore = create((set, get) => {
 
       const runLoad = (extra = {}) =>
         loadVODData(brandConfig, {
-          ...options,
+          ...loadOptions,
           ...extra,
           onProgress: (loadedCount) => {
             set((state) => ({
@@ -254,8 +273,17 @@ export const usePreloadStore = create((set, get) => {
       }
     },
 
-    loadAds: async () => {
+    loadAds: async (options = {}) => {
       if (adsLoading) return;
+      const { force = false } = options;
+      const currentAds = get().ads;
+      const hasAdsData =
+        (currentAds.processed?.length ?? 0) > 0 ||
+        (currentAds.top?.length ?? 0) > 0 ||
+        (currentAds.bottom?.length ?? 0) > 0;
+      if (!force && currentAds.status === 'ready' && hasAdsData) {
+        return;
+      }
       adsLoading = true;
       set((state) => ({ ...state, ads: { ...state.ads, status: 'loading', error: null } }));
       try {
@@ -285,11 +313,19 @@ export const usePreloadStore = create((set, get) => {
       }
     },
 
-    loadCatchup: async (brandConfig) => {
+    loadCatchup: async (brandConfig, options = {}) => {
       if (!brandConfig) return;
+      const { force = false } = options;
       const { catchup } = get();
       if (catchup.status === 'loading') return;
       if (catchupLoading) return;
+      if (
+        !force &&
+        catchup.status === 'ready' &&
+        ((catchup.groups?.length ?? 0) > 0 || (catchup.recorded?.length ?? 0) > 0)
+      ) {
+        return;
+      }
       catchupLoading = true;
 
       set((state) => ({
