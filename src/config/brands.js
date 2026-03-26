@@ -39,6 +39,12 @@
  *   @param {boolean} qrRegister.enabled - Habilita/deshabilita el botón/modal de registro QR.
  *   @param {string} qrRegister.url - URL destino codificada en el QR.
  *
+ * @param {Object} udidLogin - Configuración de login por UDID:
+ *   @param {boolean} udidLogin.enabled - Habilita/deshabilita el login externo por UDID.
+ *   @param {string} udidLogin.baseUrl - Base del backend propio para request de UDID.
+ *   @param {string} udidLogin.requestPath - Path para solicitar código UDID (default recomendado: /udid/request-udid-manual/).
+ *   @param {string} udidLogin.wsUrl - WebSocket para esperar confirmación remota.
+ *
  * @param {boolean} hashPasswordBeforeLogin - true: hashear contraseña en cliente antes de enviar (ej. Panaccess);
  *   false: enviar contraseña en claro (ej. backends como intv).
  *
@@ -164,13 +170,21 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
-    api: {
-      baseUrl: "", // Equivalente a baseUrl en 10foot
-      wsUrl: "", // Equivalente a wsUrl en 10foot
-    },
     qrRegister: {
       enabled: true,
       url: "https://shop.fotelka.tv/?c=customer&p=register",
+    },
+    udidLogin: {
+      enabled: true,
+      baseUrl: "",
+      requestPath: "",
+      wsUrl: "",
+      appType: "10foot",
+      appVersion: "1.0",
+      maxReconnectAttempts: 3,
+      reconnectMs: [3000, 6000, 10000],
+      heartbeatMs: 30000,
+      privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
     },
     vod: {
       layout: "hero",
@@ -289,13 +303,21 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
-    api: {
-      baseUrl: "", // Equivalente a baseUrl en 10foot
-      wsUrl: "", // Equivalente a wsUrl en 10foot
-    },
     qrRegister: {
       enabled: true,
       url: "https://shop.fotelka.tv/?c=customer&p=register",
+    },
+    udidLogin: {
+      enabled: false,
+      baseUrl: "",
+      requestPath: "",
+      wsUrl: "",
+      appType: "10foot",
+      appVersion: "1.0",
+      maxReconnectAttempts: 3,
+      reconnectMs: [3000, 6000, 10000],
+      heartbeatMs: 30000,
+      privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
     },
     vod: {
       layout: "hero", // "hero" | "classic"
@@ -413,20 +435,22 @@ export const BRANDS = [
       showRating: false, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
-    api: {
-      baseUrl: "", // Equivalente a baseUrl en 10foot
-      wsUrl: "", // Equivalente a wsUrl en 10foot
-    },
     qrRegister: {
       enabled: false,
       url: "",
     },
-    hashPasswordBeforeLogin: true,
-    debug: {
-      spatialNav: false,
-      spatialNavVisual: false,
+    udidLogin: {
+      enabled: false,
+      baseUrl: "",
+      requestPath: "/udid/request-udid-manual/",
+      wsUrl: "",
+      appType: "10foot",
+      appVersion: "1.0",
+      maxReconnectAttempts: 3,
+      reconnectMs: [3000, 6000, 10000],
+      heartbeatMs: 30000,
+      privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
     },
-
     vod: {
       layout: "hero",
       vodDetail: {
@@ -447,6 +471,139 @@ export const BRANDS = [
         parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)",
         contentPosition: "bottom",
       },
+    },
+    hashPasswordBeforeLogin: true,
+    debug: {
+      spatialNav: false,
+      spatialNavVisual: false,
+    },
+  },
+  {
+    brand: "cableatlantico",
+    appName: "delancertv",
+    drm: "https://mw.cabledelancer.com/",
+    token: "ZteKaVByMTRHfqeHXtWK",
+    os: 'HTML5',
+    appVersion: '1',
+    branding: 'Cabledelancer',
+    developedBy: "Cabledelancer",
+    version: "1.0.2",
+
+    // EPG: parámetros generales para la API de guía de programación (mismo valor en todas las marcas)
+    epg: {
+      daysOffset: 2, // Días de offset para la API de guía de programación
+      rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
+      hoursLimit: 12, // Límite de horas para la API de guía de programación
+    },
+    
+    // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
+    epgCards: {
+      epgPast: true,
+      epgPagesPastEnabled: true,
+      epgCardsChannelActiveBg: "rgb(0 0 0)", // Color de fondo del canal activo
+      epgCardsProgramLiveProgressBg: "#6C8EB6",// Color de la barra de progreso (programa en vivo / "Ahora")
+      epgCardsLaterGlobal: true, // Mostrar programas pasados en la guía
+      epgCloseModalOnPlayLive: 'auto', // Control del cierre de modal al reproducir en vivo: true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
+    },
+
+    // Catchup: pantalla independiente con 3 diseños (Legacy / Timeline / Netflix).
+    catchup: {
+      enabled: true,
+      ui: {
+        activeLayout: 'legacy',
+        showAllLayouts: false,
+      },
+      layouts: {
+        legacy: { enabled: true },
+        timeline: { enabled: true },
+        netflix: { enabled: true },
+      },
+    },
+
+    // Player: control técnico de selección de engine por marca.
+    player: {
+      nativeAdaptersEnabled: false,
+      enginePolicy: 'auto',
+    },
+
+    // Configuración de UI/Tema
+    ui: {
+      // Splash
+      splashDuration: 3000, // Duración en milisegundos
+      splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      // Logo
+      logoPositionHome: "right", // "top" | "right" | "left" | "center"
+      showTime: false, // Si es true → muestra el tiempo, si es false → no muestra el tiempo
+      // EPG
+      epgLineColorTime: "#3333FF",
+      // Colores
+      primaryColor: "#3333FF",
+      secondaryColor: "#1a1aaa",
+      theme: "light",
+      // Fuente
+      fontFamily: "Roboto, sans-serif",
+      // Player loading overlay
+      playerLoading: {
+        premium: true,
+      },
+    },
+
+    // Configuración específica de bouquets
+    bouquets: {
+      timeshipColor: "#3333FF",
+    },
+    
+    // Features habilitadas/deshabilitadas
+    features: {
+      miniPlayer: true,
+      profiles: false,
+      seekbar: false, // Equivalente a seekbarEnabled en 10foot
+      logout: false, // Equivalente a logoutEnabled en 10foot
+      showRating: true, // Equivalente a showRating en 10foot
+      osms: false, // Equivalente a osmsEnabled en 10foot
+    },
+    qrRegister: {
+      enabled: true,
+      url: "https://shop.fotelka.tv/?c=customer&p=register",
+    },
+    udidLogin: {
+      enabled: true,
+      requestPath: "/udid/request-udid-manual/",
+      baseUrl: "https://bt-auth.cabledelancer.com",
+      wsUrl: "wss://bt-auth.cabledelancer.com/ws/auth/",
+      appType: "10foot",
+      appVersion: "1.0",
+      maxReconnectAttempts: 3,
+      reconnectMs: [3000, 6000, 10000],
+      heartbeatMs: 30000,
+      privateKeyUrl: "/cableatlantico/keys/private_key.pem",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+    },
+    vod: {
+      layout: "hero", // "hero" | "classic"
+      vodDetail: {
+        descriptionMaxLength: 180, // Caracteres máximos de la descripción antes de "Leer más" (0 = sin límite)
+        showReleaseYear: true, // Mostrar año de estreno en la metadata
+        showDuration: true, // Mostrar duración (min) en la metadata
+        showParentalRating: true, // Mostrar badge de clasificación por edades
+        showCategories: true, // Mostrar etiquetas de categorías
+        showStarRating: true, // Mostrar valoración en estrellas
+        showDescription: true, // Mostrar bloque de descripción
+        playButtonColor: null, // Color del botón Reproducir (hex/css)
+        starRatingColor: null, // Color de las estrellas rellenas (hex/css)
+        heroGradientOpacity: 0.95, // Opacidad del gradiente inferior del hero (0–1)    
+        posterWidthMin: 100, // Ancho mínimo del poster en px
+        posterWidthMax: 200, // Ancho máximo del poster en px
+        categoryTagBackground: "rgba(255, 255, 255, 0.12)", // Color/fondo de las etiquetas de categoría (css)
+        categoryTagBorderColor: "rgba(255, 255, 255, 0.2)", // Borde de las etiquetas de categoría (css)
+        parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)", // Borde del badge de clasificación por edades (css)
+        contentPosition: "middle", // "top" | "middle" | "bottom" - posición vertical del bloque poster + info
+      },
+    },
+    // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
+    hashPasswordBeforeLogin: false,
+    debug: {
+      spatialNav: false, // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
     },
   },
 ];

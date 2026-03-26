@@ -378,6 +378,29 @@
         box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55);
       }
     }
+
+    .udid-code {
+      margin: 0 auto 0.5rem;
+      padding: 0.5rem 0.75rem;
+      width: fit-content;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .udid-countdown {
+      margin-bottom: 0.75rem;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9rem;
+    }
+
+    .udid-modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
   }
 
   @keyframes logoFloat {

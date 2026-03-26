@@ -11,6 +11,7 @@ import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 import { loginAndActivateLicense } from '../services/loginFlow';
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
 import { getActiveLicense } from '../utils/userSession';
+import { useUdidLoginFlow } from '../hooks/useUdidLoginFlow';
 import '../styles/components/_login.scss';
 
 export function LoginPage() {
@@ -27,6 +28,8 @@ export function LoginPage() {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrImageSrc, setQrImageSrc] = useState('');
   const [qrError, setQrError] = useState('');
+  const [isUdidModalOpen, setIsUdidModalOpen] = useState(false);
+  const [udidQrImageSrc, setUdidQrImageSrc] = useState('');
 
   console.log(`🖥️ [DEVICE] Modo: ${isTV ? 'TV' : 'PC'}`);
 
@@ -40,6 +43,40 @@ export function LoginPage() {
   const isSamsungTv = isTV && (hasSamsungRuntime || userAgent.includes('tizen') || userAgent.includes('samsung'));
   const isLgTv = isTV && (hasLgRuntime || userAgent.includes('webos') || userAgent.includes('netcast') || userAgent.includes('lg'));
   const shouldShowQrModal = isSamsungTv || isLgTv;
+  const udidLoginConfig = currentBrand?.udidLogin;
+  const effectiveUdidConfig = {
+    ...udidLoginConfig,
+    baseUrl: udidLoginConfig?.baseUrl || currentBrand?.api?.baseUrl || '',
+    wsUrl: udidLoginConfig?.wsUrl || currentBrand?.api?.wsUrl || '',
+  };
+
+  const handleUdidCredentials = async (credentials) => {
+    await loginAndActivateLicense(currentBrand, {
+      username: credentials.username,
+      password: credentials.password,
+    }, {
+      autoActivateLicense: !credentials.licenseKey,
+      activationRecursive: true,
+      // Si la licencia ya está en uso, el legacy no falla.
+      failIfInUse: false,
+      storeClientConfig: true,
+      storeLicenses: true,
+      licenseKey: credentials.licenseKey || undefined,
+      pin: credentials.pin || undefined,
+    });
+
+    const active = getActiveLicense?.();
+    const hasActiveLicense = !!active?.licenseKey;
+    const skipSmartcard = !currentBrand?.features?.profiles && hasActiveLicense;
+    navigate(skipSmartcard ? '/home/bouquets' : getInitialRoute(currentBrand));
+  };
+
+  const udidFlow = useUdidLoginFlow({
+    config: effectiveUdidConfig,
+    appName,
+    onCredentials: handleUdidCredentials,
+    t,
+  });
 
   // Establecer focus inicial en TV al cargar la página
   useEffect(() => {
@@ -107,6 +144,40 @@ export function LoginPage() {
     return () => clearTimeout(timer);
   }, [isTV, isQrModalOpen]);
 
+  useEffect(() => {
+    if (!isUdidModalOpen || !isTV) return;
+    const timer = setTimeout(() => {
+      const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
+      if (setFocus && typeof setFocus === 'function') {
+        setFocus('login-udid-cancel');
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [isTV, isUdidModalOpen]);
+
+  useEffect(() => {
+    if (!isUdidModalOpen || !udidFlow.code) {
+      setUdidQrImageSrc('');
+      return;
+    }
+    let cancelled = false;
+    const buildUdidQr = async () => {
+      try {
+        const payload = `${appName}:${udidFlow.code}`;
+        const dataUrl = await QRCode.toDataURL(payload, { width: 200, margin: 1 });
+        if (cancelled) return;
+        setUdidQrImageSrc(dataUrl);
+      } catch {
+        if (cancelled) return;
+        setUdidQrImageSrc('');
+      }
+    };
+    buildUdidQr();
+    return () => {
+      cancelled = true;
+    };
+  }, [appName, isUdidModalOpen, udidFlow.code]);
+
   const handleOpenQrModal = () => {
     if (!canShowQrRegister) return;
     if (!shouldShowQrModal) {
@@ -125,6 +196,27 @@ export function LoginPage() {
     if (setFocus && typeof setFocus === 'function') {
       setTimeout(() => setFocus('login-register'), 0);
     }
+  };
+
+  const handleOpenUdidModal = () => {
+    setIsUdidModalOpen(true);
+    udidFlow.start();
+  };
+
+  const handleCloseUdidModal = () => {
+    udidFlow.cancel();
+    setIsUdidModalOpen(false);
+    if (!isTV) return;
+    const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
+    if (setFocus && typeof setFocus === 'function') {
+      setTimeout(() => setFocus('login-udid'), 0);
+    }
+  };
+
+  const formatRemaining = (seconds) => {
+    const mm = Math.floor(Math.max(0, seconds) / 60);
+    const ss = Math.max(0, seconds) % 60;
+    return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
   };
 
   // ============================================
@@ -287,6 +379,25 @@ export function LoginPage() {
               </FocusableButton>
             </div>
           )}
+
+          {effectiveUdidConfig?.enabled && (
+            <div className="register-section">
+              <p className="register-hint">{t('login.udidHint')}</p>
+              <FocusableButton
+                type="button"
+                className="register-button"
+                focusKey="login-udid"
+                onClick={handleOpenUdidModal}
+                onEnterPress={() => {
+                  if (isTV) {
+                    handleOpenUdidModal();
+                  }
+                }}
+              >
+                {t('login.udidButton')}
+              </FocusableButton>
+            </div>
+          )}
         </form>
       </div>
 
@@ -315,6 +426,68 @@ export function LoginPage() {
             >
               {t('common.close')}
             </FocusableButton>
+          </div>
+        </div>
+      )}
+
+      {isUdidModalOpen && (
+        <div className="register-modal-backdrop">
+          <div className="register-modal">
+            <h3>{t('login.udidTitle')}</h3>
+            <p>{t('login.udidHint')}</p>
+
+            {!!udidFlow.code && (
+              <>
+                <div className="udid-code">{udidFlow.code}</div>
+                <div className="udid-countdown">{formatRemaining(udidFlow.remainingSeconds)}</div>
+                {udidQrImageSrc && (
+                  <img src={udidQrImageSrc} alt={t('login.udidButton')} className="register-qr-image" />
+                )}
+              </>
+            )}
+
+            {udidFlow.status === 'requesting_code' && (
+              <div className="register-qr-placeholder">{t('login.udidRequesting')}</div>
+            )}
+
+            {udidFlow.status === 'reconnecting' && (
+              <div className="register-qr-placeholder">{t('login.udidReconnecting')}</div>
+            )}
+
+            {(udidFlow.status === 'error' || udidFlow.status === 'expired' || udidFlow.status === 'rate_limited') && (
+              <div className="register-qr-placeholder">{udidFlow.error || t('login.udidErrorGeneric')}</div>
+            )}
+
+            {udidFlow.status === 'logging_in' && (
+              <div className="register-qr-placeholder">{t('login.udidLoggingIn')}</div>
+            )}
+
+            <div className="udid-modal-actions">
+              {(udidFlow.status === 'error' || udidFlow.status === 'expired' || udidFlow.status === 'rate_limited') && (
+                <FocusableButton
+                  type="button"
+                  className="register-button"
+                  focusKey="login-udid-retry"
+                  onClick={udidFlow.retry}
+                >
+                  {t('login.udidRetry')}
+                </FocusableButton>
+              )}
+
+              <FocusableButton
+                type="button"
+                className="register-close-button"
+                focusKey="login-udid-cancel"
+                onClick={handleCloseUdidModal}
+                onEnterPress={() => {
+                  if (isTV) {
+                    handleCloseUdidModal();
+                  }
+                }}
+              >
+                {t('common.close')}
+              </FocusableButton>
+            </div>
           </div>
         </div>
       )}
