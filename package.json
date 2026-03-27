@@ -23,7 +23,7 @@
     "crypto-js": "^4.2.0",
     "hls.js": "^1.6.15",
     "i18next": "^24.2.3",
-    "node-forge": "^1.4.0",
+    "node-forge": "^1.0.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

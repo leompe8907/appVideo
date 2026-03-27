@@ -1,5 +1,3 @@
-import forge from 'node-forge';
-
 const UDID_DEBUG =
   import.meta.env.DEV ||
   (typeof localStorage !== 'undefined' && localStorage.getItem('udid_debug') === '1');
@@ -9,96 +7,62 @@ function udidLog(...args) {
   console.log('[UDID]', ...args);
 }
 
-function pkcs7Unpad(dataStr) {
-  if (!dataStr || dataStr.length === 0) {
-    throw new Error('Empty plaintext');
-  }
-
-  const padLen = dataStr.charCodeAt(dataStr.length - 1);
-
-  let isValidPkcs7 = true;
-  let errorMsg = '';
-
-  // padding length debe estar entre 1 y 16
-  if (padLen < 1 || padLen > 16) {
-    isValidPkcs7 = false;
-    errorMsg = `Padding length fuera de rango: ${padLen}`;
-  }
-
-  // no puede ser mayor que el buffer
-  if (isValidPkcs7 && padLen > dataStr.length) {
-    isValidPkcs7 = false;
-    errorMsg = `Padding length mayor que buffer: ${padLen} > ${dataStr.length}`;
-  }
-
-  // bytes del padding deben ser iguales al padLen
-  if (isValidPkcs7) {
-    for (let i = 1; i <= padLen; i++) {
-      if (dataStr.charCodeAt(dataStr.length - i) !== padLen) {
-        isValidPkcs7 = false;
-        errorMsg = `Byte de padding inconsistente en posición ${dataStr.length - i}`;
-        break;
-      }
-    }
-  }
-
-  if (isValidPkcs7) {
-    return dataStr.substring(0, dataStr.length - padLen);
-  }
-
-  // Fallback (como legacy): si parece terminar como JSON completo, devolvemos tal cual.
-  const lastChar = dataStr.charAt(dataStr.length - 1);
-  if (lastChar === '}' || lastChar === ']' || lastChar === '"') {
-    return dataStr;
-  }
-
-  throw new Error(`Padding PKCS#7 inválido: ${errorMsg}`);
+function normalizeBase64(b64) {
+  let s = String(b64 ?? '').trim();
+  // Soportar base64url: '-' -> '+', '_' -> '/'
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  // Asegurar padding '=' múltiplo de 4
+  const padLen = (4 - (s.length % 4)) % 4;
+  if (padLen > 0) s += '='.repeat(padLen);
+  return s;
 }
 
-let cachedPrivateKeyForge = null;
+function base64ToBytes(b64) {
+  const cleaned = normalizeBase64(b64).replace(/\s+/g, '');
+  const bin = atob(cleaned);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function pemPkcs8ToDer(pem) {
+  const b64 = String(pem)
+    .replace(/-----BEGIN [^-]+-----/g, '')
+    .replace(/-----END [^-]+-----/g, '')
+    .replace(/\s+/g, '');
+  return base64ToBytes(b64).buffer;
+}
+
+let cachedPrivateKeyDer = null;
 let cachedPrivateKeyUrl = null;
 
-function loadPrivateKey(privateKeyUrl) {
+async function loadPrivateKeyDer(privateKeyUrl) {
   const url = String(privateKeyUrl || '').trim();
-  if (!url) return Promise.reject(new Error('privateKeyUrl is required'));
+  if (!url) throw new Error('privateKeyUrl is required');
 
-  if (cachedPrivateKeyForge && cachedPrivateKeyUrl === url) {
-    return Promise.resolve(cachedPrivateKeyForge);
-  }
+  if (cachedPrivateKeyDer && cachedPrivateKeyUrl === url) return cachedPrivateKeyDer;
 
   udidLog('UDID crypto: loading private key', { privateKeyUrl: url });
+  const resp = await fetch(url, { method: 'GET' });
+  if (!resp.ok) throw new Error(`Failed to load private key: ${resp.status}`);
 
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState !== 4) return;
-      if (xhr.status !== 200) {
-        reject(new Error(`Failed to load private key (${xhr.status})`));
-        return;
-      }
+  const pemText = await resp.text();
+  if (!/BEGIN PRIVATE KEY/.test(pemText)) {
+    throw new Error('Clave debe ser PKCS#8 (-----BEGIN PRIVATE KEY-----)');
+  }
 
-      const pemText = xhr.responseText;
-      if (!/BEGIN PRIVATE KEY/.test(pemText)) {
-        reject(new Error('Clave debe ser PKCS#8 (-----BEGIN PRIVATE KEY-----)'));
-        return;
-      }
-
-      const privateKey = forge.pki.privateKeyFromPem(pemText);
-      cachedPrivateKeyForge = privateKey;
-      cachedPrivateKeyUrl = url;
-      udidLog('UDID crypto: private key loaded');
-      resolve(privateKey);
-    };
-    xhr.send();
-  });
+  const der = pemPkcs8ToDer(pemText);
+  cachedPrivateKeyDer = der;
+  cachedPrivateKeyUrl = url;
+  udidLog('UDID crypto: private key der loaded');
+  return der;
 }
 
 /**
- * Descifra el payload híbrido (RSA-OAEP + AES-CBC) como en legacy LoginUdid.js.
- * @param {object} encryptedCredentials encrypted_credentials
- * @param {string} privateKeyUrl URL pública donde está private_key.pem
- * @returns {Promise<object>} decryptedData (login1, password, sn, pin...)
+ * Descifra `encrypted_credentials` usando WebCrypto:
+ * - RSA-OAEP SHA-256 (decrypt encrypted_key)
+ * - AES-CBC (decrypt encrypted_data)
+ * - plaintext es JSON (backend hizo json.dumps(...))
  */
 export async function decryptEncryptedCredentials(encryptedUdid, privateKeyUrl) {
   if (!encryptedUdid || typeof encryptedUdid !== 'object') {
@@ -108,7 +72,7 @@ export async function decryptEncryptedCredentials(encryptedUdid, privateKeyUrl) 
   const creds =
     encryptedUdid && encryptedUdid.encrypted_credentials ? encryptedUdid.encrypted_credentials : {};
 
-  // Si alguien pasa directamente el payload "creds", lo soportamos como mejora.
+  // Soportar el caso donde te pasan directamente creds (en vez del wrapper)
   const normalizedCreds =
     creds && creds.encrypted_data && creds.encrypted_key && creds.iv ? creds : encryptedUdid;
 
@@ -116,7 +80,7 @@ export async function decryptEncryptedCredentials(encryptedUdid, privateKeyUrl) 
   const encryptedAESKeyB64 = normalizedCreds.encrypted_key;
   const ivB64 = normalizedCreds.iv;
 
-  udidLog('UDID crypto: decryptHybridCBC inputs', {
+  udidLog('UDID crypto: decryptEncryptedCredentials inputs', {
     hasEncryptedData: !!encryptedDataB64,
     hasEncryptedKey: !!encryptedAESKeyB64,
     hasIv: !!ivB64,
@@ -126,53 +90,83 @@ export async function decryptEncryptedCredentials(encryptedUdid, privateKeyUrl) 
     throw new Error('Payload incompleto');
   }
 
-  const privateKey = await loadPrivateKey(privateKeyUrl);
+  const privateKeyDer = await loadPrivateKeyDer(privateKeyUrl);
 
-  // Decodificar base64 usando forge
-  const iv = forge.util.decode64(ivB64);
-  const encryptedAESKey = forge.util.decode64(encryptedAESKeyB64);
-  const encryptedData = forge.util.decode64(encryptedDataB64);
+  // Decodifica inputs base64 (base64/base64url)
+  const encryptedKeyBytes = base64ToBytes(encryptedAESKeyB64);
+  const ivBytes = base64ToBytes(ivB64);
+  const encryptedDataBytes = base64ToBytes(encryptedDataB64);
 
-  if (iv.length !== 16) {
-    throw new Error(`IV inválido - longitud: ${iv.length}`);
+  if (ivBytes.length !== 16) {
+    throw new Error(`IV inválido - longitud: ${ivBytes.length}`);
   }
 
-  // 1) RSA-OAEP (SHA-256) → clave AES usando node-forge
-  let aesKeyRaw;
-  try {
-    aesKeyRaw = privateKey.decrypt(encryptedAESKey, 'RSA-OAEP', {
-      md: forge.md.sha256.create(),
-    });
-  } catch (e) {
-    throw new Error('Error descifrando AES key (RSA-OAEP): ' + (e?.message || e));
-  }
+  // 1) RSA-OAEP -> AES key raw 32 bytes
+  udidLog('UDID crypto: WebCrypto RSA-OAEP decrypt start', {
+    encryptedKeyBytesLen: encryptedKeyBytes.length,
+  });
+  let aesKeyRaw = null;
+  const rsaAttempts = [
+    { name: 'RSA-OAEP', hash: 'SHA-256', label: undefined },
+    { name: 'RSA-OAEP', hash: 'SHA-1', label: undefined },
+  ];
 
-  if (aesKeyRaw.length !== 32) {
-    throw new Error('Clave AES inválida - longitud: ' + aesKeyRaw.length);
-  }
+  let lastRsaErr = null;
+  for (const attempt of rsaAttempts) {
+    try {
+      udidLog('UDID crypto: WebCrypto importKey', { hash: attempt.hash });
+      const rsaPrivateKey = await crypto.subtle.importKey(
+        'pkcs8',
+        privateKeyDer,
+        { name: 'RSA-OAEP', hash: attempt.hash },
+        false,
+        ['decrypt'],
+      );
 
-  // 2) AES-CBC → plaintext con padding usando node-forge
-  let paddedPlain;
-  try {
-    const decipher = forge.cipher.createDecipher('AES-CBC', aesKeyRaw);
-    decipher.start({ iv });
-    decipher.update(forge.util.createBuffer(encryptedData));
-    const success = decipher.finish();
-    if (!success) {
-      throw new Error('Error en descifrado AES-CBC');
+      // Nota: algunos navegadores soportan {name:'RSA-OAEP', label: Uint8Array}
+      // pero el backend indica label=None (equivalente a vacío), y por defecto es vacío.
+      aesKeyRaw = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, rsaPrivateKey, encryptedKeyBytes);
+      udidLog('UDID crypto: WebCrypto RSA-OAEP decrypt success', {
+        hash: attempt.hash,
+        aesKeyLen: aesKeyRaw?.byteLength,
+      });
+      break;
+    } catch (e) {
+      lastRsaErr = e;
+      udidLog('UDID crypto: WebCrypto RSA-OAEP decrypt failed', {
+        hash: attempt.hash,
+        name: e?.name,
+        message: e?.message,
+      });
     }
-    paddedPlain = decipher.output.getBytes();
-  } catch (e) {
-    throw new Error(e?.message || e);
   }
 
-  // 3) Unpad + JSON
-  try {
-    const unpadded = pkcs7Unpad(paddedPlain);
-    const result = JSON.parse(unpadded);
-    return result;
-  } catch (e) {
-    throw new Error(e?.message || e);
+  if (!aesKeyRaw) {
+    throw new Error(
+      `RSA-OAEP decrypt failed: ${lastRsaErr?.name || ''} ${lastRsaErr?.message || ''}`.trim()
+    );
   }
+
+  if (aesKeyRaw.byteLength !== 32) {
+    throw new Error(`Clave AES inválida - longitud: ${aesKeyRaw.byteLength}`);
+  }
+
+  const aesKey = await crypto.subtle.importKey('raw', aesKeyRaw, { name: 'AES-CBC' }, false, [
+    'decrypt',
+  ]);
+
+  // 2) AES-CBC -> plaintext (WebCrypto quita padding)
+  let plaintextBuf;
+  try {
+    plaintextBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: ivBytes }, aesKey, encryptedDataBytes);
+  } catch (e) {
+    udidLog('UDID crypto: WebCrypto AES-CBC decrypt failed', { name: e?.name, message: e?.message });
+    throw new Error(`AES-CBC decrypt failed: ${e?.name || ''} ${e?.message || ''}`.trim());
+  }
+
+  const plaintext = new TextDecoder('utf-8').decode(plaintextBuf);
+  udidLog('UDID crypto: WebCrypto plaintext obtained', { plaintextPrefix: plaintext.slice(0, 80) });
+
+  return JSON.parse(plaintext);
 }
 

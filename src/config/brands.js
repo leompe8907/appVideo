@@ -481,8 +481,8 @@ export const BRANDS = [
   {
     brand: "cableatlantico",
     appName: "delancertv",
-    drm: "https://mw.cabledelancer.com/",
-    token: "ZteKaVByMTRHfqeHXtWK",
+    drm: 'https://cv01.panaccess.com/', //"https://mw.cabledelancer.com/",
+    token: "gQposTlrMIOYQVdYBNYC", //"ZteKaVByMTRHfqeHXtWK",
     os: 'HTML5',
     appVersion: '1',
     branding: 'Cabledelancer',
@@ -569,8 +569,8 @@ export const BRANDS = [
     udidLogin: {
       enabled: true,
       requestPath: "/udid/request-udid-manual/",
-      baseUrl: "https://bt-auth.cabledelancer.com",
-      wsUrl: "wss://bt-auth.cabledelancer.com/ws/auth/",
+      baseUrl: "http://127.0.0.1:8000", //"https://bt-auth.cabledelancer.com",
+      wsUrl: "ws://127.0.0.1:8000/ws/auth/", //"wss://bt-auth.cabledelancer.com/ws/auth/",
       appType: "10foot",
       appVersion: "1.0",
       maxReconnectAttempts: 3,
