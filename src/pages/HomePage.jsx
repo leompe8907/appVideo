@@ -4,6 +4,8 @@ import { Sidebar } from '../components/Sidebar';
 import { HomeShellContent } from '../components/ads/HomeShellContent';
 import { usePlayer } from '../contexts/PlayerContext';
 import PlayerHud from '../components/player/PlayerHud';
+import ConfirmModal from '../components/ConfirmModal';
+import { useTranslation } from 'react-i18next';
 import '../styles/pages/_home-shell.scss';
 
 export function HomePlaceholderPage({ title, description }) {
@@ -16,8 +18,9 @@ export function HomePlaceholderPage({ title, description }) {
 }
 
 export function HomePage() {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
-  const { containerRef, state: playerState } = usePlayer();
+  const { containerRef, state: playerState, licenseInUsePrompt, confirmLicenseInUse, close } = usePlayer();
   const isPlayerActive = Boolean(playerState?.url);
 
   // Evita el aviso "Blocked aria-hidden… descendant retained focus": no marcamos el shell
@@ -41,6 +44,18 @@ export function HomePage() {
 
   return (
     <div className={`home-shell${isPlayerActive ? ' home-shell--player-active' : ''}`}>
+      <ConfirmModal
+        open={!!licenseInUsePrompt}
+        title={t('smartcard.licenseInUseConfirm')}
+        message=""
+        confirmText={t('smartcard.licenseInUseYes')}
+        cancelText={t('smartcard.licenseInUseNo')}
+        onConfirm={() => confirmLicenseInUse(true)}
+        onCancel={() => {
+          confirmLicenseInUse(false);
+          close();
+        }}
+      />
       <div className={`home-global-player${isPlayerActive ? ' home-global-player--active' : ''}`}>
         {/*
           El motor solo debe montar el <video> en un nodo que React no reordene.

@@ -5,6 +5,7 @@ import { useBrand } from '../contexts/BrandContext';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import { MessageModal } from '../components/MessageModal';
 import panaccessService from '../services/panaccessService';
+import { isLicenseInUseError } from '../utils/licenseInUse';
 import {
   setLoggedOut,
   setLicenses as storeLicenses,
@@ -139,42 +140,6 @@ export function SmartCardPage() {
     navigate('/login');
   };
 
-  const isLicenseInUseError = (err) => {
-    // panaccessService.envuelve el error real dentro de `cause`,
-    // así que aquí inspeccionamos también los mensajes anidados.
-    const collect = (e) => {
-      const parts = [];
-      let cur = e;
-      let depth = 0;
-      while (cur && depth < 6) {
-        if (typeof cur?.message === 'string') parts.push(cur.message);
-        if (typeof cur?.userMessage === 'string') parts.push(cur.userMessage);
-        if (typeof cur?.errorInfo?.userMessage === 'string') parts.push(cur.errorInfo.userMessage);
-        if (typeof cur?.errorInfo?.message === 'string') parts.push(cur.errorInfo.message);
-        if (typeof cur?.originalError?.message === 'string') parts.push(cur.originalError.message);
-        cur = cur.cause;
-        depth += 1;
-      }
-      return parts.join(' | ');
-    };
-
-    const msg = collect(err).toLowerCase();
-    const code =
-      err?.errorCode ||
-      err?.code ||
-      err?.errorInfo?.code ||
-      err?.cause?.errorCode ||
-      err?.cause?.code ||
-      '';
-
-    return (
-      msg.includes('already in use') ||
-      msg.includes('en uso') ||
-      msg.includes('license_already_in_use') ||
-      code === 'license_already_in_use'
-    );
-  };
-
   const handleLicenseSelect = async (license, failIfInUse = true) => {
     if (isSettingLicense) return;
     const licenseKey = license.KEY || license.key || license.licenseKey || license.Key || '';
@@ -192,7 +157,8 @@ export function SmartCardPage() {
 
       await panaccessService.setStreamingLicense({ licenseKey, pin, failIfInUse });
       setActiveLicense({ licenseKey, pin });
-      setResultModal({ type: 'success', text: t('smartcard.success') });
+      // Al seleccionar una tarjeta, se debe ingresar directamente (sin modal de bienvenida).
+      navigate('/home/bouquets', { replace: true });
     } catch (err) {
       console.error('[SMARTCARD] Error al establecer licencia:', err);
       if (failIfInUse && isLicenseInUseError(err)) {
@@ -227,14 +193,12 @@ export function SmartCardPage() {
       className="smartcard-page"
       style={backgroundPath ? { backgroundImage: `url(${backgroundPath})` } : {}}
     >
-      {resultModal && (
+      {resultModal?.type === 'error' && (
         <MessageModal
           type={resultModal.type}
           message={resultModal.text}
           onClose={() => {
-            const wasSuccess = resultModal.type === 'success';
             setResultModal(null);
-            if (wasSuccess) navigate('/home/bouquets');
           }}
         />
       )}

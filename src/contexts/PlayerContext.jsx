@@ -1,7 +1,11 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useDevice } from './DeviceContext';
+import { useBrand } from './BrandContext';
 import { createEngine } from '../player/engines/createEngine';
 import { DEFAULT_SEEK_STEP_SECONDS, PLAYER_ENGINE_EVENTS } from '../player/engines/contracts';
+import panaccessService from '../services/panaccessService';
+import * as userSession from '../utils/userSession';
+import { isLicenseInUseError } from '../utils/licenseInUse';
 
 const PlayerContext = createContext(null);
 
@@ -17,15 +21,19 @@ export function usePlayer() {
 
 export function PlayerProvider({ children }) {
   const deviceInfo = useDevice();
+  const { currentBrand } = useBrand();
   const containerRef = useRef(null);
   const engineRef = useRef(null);
   const seekTimeoutRef = useRef(null);
+  const recoveryRef = useRef({ inProgress: false, lastKey: '' });
 
   const [state, setState] = useState({
     type: null, // 'service' | 'vod' | 'catchup'
     id: null,
     url: null,
     item: null,
+    mediaOption: {},
+    drmConfig: {},
     isPlaying: false,
     isLoading: false,
     isSeeking: false,
@@ -37,21 +45,23 @@ export function PlayerProvider({ children }) {
     error: null,
   });
 
-  const clearSeekTimeout = () => {
+  const [licenseInUsePrompt, setLicenseInUsePrompt] = useState(null);
+
+  const clearSeekTimeout = useCallback(() => {
     if (seekTimeoutRef.current) {
       clearTimeout(seekTimeoutRef.current);
       seekTimeoutRef.current = null;
     }
-  };
+  }, []);
 
-  const armSeekTimeout = () => {
+  const armSeekTimeout = useCallback(() => {
     clearSeekTimeout();
     // Paridad con legacy: no dejar el estado "seeking" colgado indefinidamente.
     seekTimeoutRef.current = setTimeout(() => {
       setState((s) => ({ ...s, isSeeking: false, isLoading: false }));
       seekTimeoutRef.current = null;
     }, 20000);
-  };
+  }, [clearSeekTimeout]);
 
   // Inicializar engine una vez según el dispositivo
   useEffect(() => {
@@ -107,15 +117,81 @@ export function PlayerProvider({ children }) {
       }));
     };
 
+    const tryRecoverAfterError = async (err, snapshot) => {
+      if (!currentBrand) return false;
+      if (!snapshot?.url) return false;
+
+      const active = userSession.getActiveLicense?.();
+      const licenseKey = active?.licenseKey ? String(active.licenseKey).trim() : '';
+      const pin = active?.pin != null ? String(active.pin) : '';
+      if (!licenseKey) return false;
+
+      // Evitar loops de recuperación sobre el mismo contenido.
+      const recoveryKey = `${snapshot.type || ''}::${snapshot.id || ''}::${snapshot.url || ''}`;
+      if (recoveryRef.current.inProgress) return false;
+      if (recoveryRef.current.lastKey === recoveryKey) return false;
+
+      recoveryRef.current.inProgress = true;
+      recoveryRef.current.lastKey = recoveryKey;
+
+      try {
+        if (!panaccessService.client) {
+          await panaccessService.initialize(currentBrand);
+        }
+
+        // Intento 1 (legacy): fallar si está en uso, para saber si hay takeover.
+        await panaccessService.setStreamingLicense({ licenseKey, pin, failIfInUse: true });
+
+        // Si la licencia reactivó bien, reintentar playback del mismo contenido.
+        engineRef.current?.load?.(snapshot.url, {
+          type: snapshot.type,
+          autoPlay: true,
+          mediaOption: snapshot.mediaOption || {},
+          drmConfig: snapshot.drmConfig || {},
+        });
+
+        return true;
+      } catch (e) {
+        if (isLicenseInUseError(e)) {
+          // Mostrar confirm “continuar aquí” (takeover).
+          setLicenseInUsePrompt({
+            licenseKey,
+            pin,
+            snapshot,
+          });
+          return true;
+        }
+        return false;
+      } finally {
+        recoveryRef.current.inProgress = false;
+      }
+    };
+
     const handleError = (err) => {
       clearSeekTimeout();
-      setState((s) => ({
-        ...s,
-        isPlaying: false,
-        isLoading: false,
-        isSeeking: false,
-        error: err,
-      }));
+      setState((s) => {
+        const snapshot = {
+          type: s.type,
+          id: s.id,
+          url: s.url,
+          item: s.item,
+          mediaOption: s.mediaOption,
+          drmConfig: s.drmConfig,
+        };
+
+        // Recuperación async sin bloquear el setState.
+        Promise.resolve().then(() => {
+          tryRecoverAfterError(err, snapshot);
+        });
+
+        return {
+          ...s,
+          isPlaying: false,
+          isLoading: false,
+          isSeeking: false,
+          error: err,
+        };
+      });
     };
 
     const handleStateChange = ({ state }) => {
@@ -165,7 +241,7 @@ export function PlayerProvider({ children }) {
       engine.destroy();
       engineRef.current = null;
     };
-  }, [deviceInfo]);
+  }, [deviceInfo, currentBrand]);
 
   const play = ({ type, id, url, item, autoPlay = true, mediaOption = {}, drmConfig = {} }) => {
     const engine = engineRef.current;
@@ -192,6 +268,8 @@ export function PlayerProvider({ children }) {
       id,
       url,
       item,
+      mediaOption,
+      drmConfig,
       isPlaying: false,
       isLoading: true,
       isSeeking: false,
@@ -234,6 +312,8 @@ export function PlayerProvider({ children }) {
       id: null,
       url: null,
       item: null,
+      mediaOption: {},
+      drmConfig: {},
       isPlaying: false,
       isLoading: false,
       isSeeking: false,
@@ -322,6 +402,37 @@ export function PlayerProvider({ children }) {
     mute,
     unmute,
     containerRef,
+    licenseInUsePrompt,
+    confirmLicenseInUse: async (accept) => {
+      const prompt = licenseInUsePrompt;
+      setLicenseInUsePrompt(null);
+      if (!accept || !prompt?.licenseKey) return false;
+      if (!currentBrand) return false;
+
+      try {
+        if (!panaccessService.client) {
+          await panaccessService.initialize(currentBrand);
+        }
+        await panaccessService.setStreamingLicense({
+          licenseKey: prompt.licenseKey,
+          pin: prompt.pin,
+          failIfInUse: false,
+        });
+        // Reintentar playback después del takeover.
+        const snap = prompt.snapshot;
+        if (snap?.url) {
+          engineRef.current?.load?.(snap.url, {
+            type: snap.type,
+            autoPlay: true,
+            mediaOption: snap.mediaOption || {},
+            drmConfig: snap.drmConfig || {},
+          });
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    },
   };
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
