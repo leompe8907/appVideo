@@ -1,0 +1,296 @@
+import Hls from 'hls.js';
+import BaseEngine from '../base/BaseEngine';
+import {
+  DEFAULT_SEEK_STEP_SECONDS,
+  DEFAULT_TIMEUPDATE_THROTTLE_MS,
+  PLAYER_ENGINE_EVENTS,
+  PLAYER_ENGINE_STATES,
+} from '../contracts';
+import { isHlsUrl } from './hlsSupport';
+
+export class WebEngine extends BaseEngine {
+  constructor() {
+    super();
+    this.video = null;
+    this.container = null;
+    this.hls = null;
+    this.lastTimeUpdateEmitMs = 0;
+    this.timeUpdateThrottleMs = DEFAULT_TIMEUPDATE_THROTTLE_MS;
+    this._handlers = null;
+  }
+
+  _tearDownHls() {
+    if (!this.hls) return;
+    try {
+      this.hls.destroy();
+    } catch {
+      // noop
+    }
+    this.hls = null;
+  }
+
+  init(container) {
+    if (!container) return;
+    
+    // If we are moving to a new container or re-initializing, detach old events safely
+    if (this._handlers) {
+      this.detachEvents();
+    }
+    
+    this.container = container;
+
+    const video = document.createElement('video');
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.autoplay = false;
+    video.controls = false;
+    video.style.width = '100%';
+    video.style.height = '100%';
+
+    container.innerHTML = '';
+    container.appendChild(video);
+    this.video = video;
+
+    this.attachEvents();
+  }
+
+  attachEvents() {
+    if (!this.video) return;
+    const v = this.video;
+
+    if (this._handlers) {
+      this.detachEvents();
+    }
+
+    this._handlers = {
+      onTimeUpdate: () => {
+      const now = Date.now();
+      if (now - this.lastTimeUpdateEmitMs < this.timeUpdateThrottleMs) {
+        return;
+      }
+      this.lastTimeUpdateEmitMs = now;
+      this.emit(PLAYER_ENGINE_EVENTS.TIME_UPDATE, {
+        currentTime: v.currentTime,
+        duration: v.duration,
+      });
+      },
+      onDurationChange: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, { duration: v.duration });
+      },
+      onEnded: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.ENDED);
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.ENDED });
+      },
+      onPlay: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
+      },
+      onPause: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
+      },
+      onSeeking: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.SEEKING });
+      },
+      onSeeked: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.SEEK_END, { currentTime: v.currentTime });
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.SEEKED });
+      },
+      onError: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.ERROR, v.error || new Error('Unknown video error'));
+      },
+    };
+
+    v.addEventListener('timeupdate', this._handlers.onTimeUpdate);
+    v.addEventListener('durationchange', this._handlers.onDurationChange);
+    v.addEventListener('ended', this._handlers.onEnded);
+    v.addEventListener('play', this._handlers.onPlay);
+    v.addEventListener('pause', this._handlers.onPause);
+    v.addEventListener('seeking', this._handlers.onSeeking);
+    v.addEventListener('seeked', this._handlers.onSeeked);
+    v.addEventListener('error', this._handlers.onError);
+  }
+
+  detachEvents() {
+    if (!this.video || !this._handlers) return;
+    const v = this.video;
+    v.removeEventListener('timeupdate', this._handlers.onTimeUpdate);
+    v.removeEventListener('durationchange', this._handlers.onDurationChange);
+    v.removeEventListener('ended', this._handlers.onEnded);
+    v.removeEventListener('play', this._handlers.onPlay);
+    v.removeEventListener('pause', this._handlers.onPause);
+    v.removeEventListener('seeking', this._handlers.onSeeking);
+    v.removeEventListener('seeked', this._handlers.onSeeked);
+    v.removeEventListener('error', this._handlers.onError);
+    this._handlers = null;
+  }
+
+  load(url, { type, autoPlay = false } = {}) {
+    if (!this.video || !url) return;
+    const v = this.video;
+    this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADING, type });
+
+    this._tearDownHls();
+    try {
+      v.removeAttribute('src');
+      if (v.srcObject) v.srcObject = null;
+      v.load();
+    } catch {
+      // noop
+    }
+
+    const emitLoadedAndMaybePlay = () => {
+      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADED, type });
+      if (autoPlay) this.play();
+    };
+
+    if (!isHlsUrl(url)) {
+      const onCanPlay = () => {
+        v.removeEventListener('canplay', onCanPlay);
+        emitLoadedAndMaybePlay();
+      };
+      v.addEventListener('canplay', onCanPlay, { once: true });
+      v.src = url;
+      v.load();
+      return;
+    }
+
+    // HLS: Safari / iOS reproducen nativamente; Chrome/Firefox en escritorio necesitan hls.js (paridad 10foot + Video.js/hlsjs).
+    if (v.canPlayType('application/vnd.apple.mpegurl')) {
+      const onCanPlay = () => {
+        v.removeEventListener('canplay', onCanPlay);
+        emitLoadedAndMaybePlay();
+      };
+      v.addEventListener('canplay', onCanPlay, { once: true });
+      v.src = url;
+      v.load();
+      return;
+    }
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 600,
+      });
+      this.hls = hls;
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        emitLoadedAndMaybePlay();
+      });
+
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (!data?.fatal) return;
+        const msg = data.details || data.type || 'Error HLS';
+        this.emit(PLAYER_ENGINE_EVENTS.ERROR, new Error(String(msg)));
+      });
+
+      hls.loadSource(url);
+      hls.attachMedia(v);
+      return;
+    }
+
+    this.emit(
+      PLAYER_ENGINE_EVENTS.ERROR,
+      new Error('HLS no disponible: usa Safari o un navegador con Media Source Extensions.'),
+    );
+  }
+
+  play() {
+    if (!this.video) return;
+    this.video
+      .play()
+      .catch((err) => {
+        this.emit(PLAYER_ENGINE_EVENTS.ERROR, err);
+      });
+  }
+
+  pause() {
+    if (!this.video) return;
+    this.video.pause();
+  }
+
+  stop() {
+    if (!this.video) return;
+    this.video.pause();
+    this.video.currentTime = 0;
+    this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
+  }
+
+  seek(seconds) {
+    if (!this.video) return;
+    const target = Number.isFinite(seconds) ? seconds : 0;
+    this.emit(PLAYER_ENGINE_EVENTS.SEEK_START, { target });
+    this.video.currentTime = Math.max(0, target);
+  }
+
+  forward(seconds = DEFAULT_SEEK_STEP_SECONDS) {
+    if (!this.video) return;
+    const step = Number.isFinite(seconds) ? seconds : DEFAULT_SEEK_STEP_SECONDS;
+    this.seek((this.video.currentTime || 0) + step);
+  }
+
+  backward(seconds = DEFAULT_SEEK_STEP_SECONDS) {
+    if (!this.video) return;
+    const step = Number.isFinite(seconds) ? seconds : DEFAULT_SEEK_STEP_SECONDS;
+    this.seek((this.video.currentTime || 0) - step);
+  }
+
+  setPlaybackRate(rate = 1) {
+    if (!this.video) return;
+    const normalized = Number.isFinite(rate) ? rate : 1;
+    this.video.playbackRate = normalized;
+  }
+
+  setDimensions({ width, height, left, top } = {}) {
+    if (!this.video) return;
+    const style = this.video.style;
+    if (Number.isFinite(width)) style.width = `${width}px`;
+    if (Number.isFinite(height)) style.height = `${height}px`;
+    if (Number.isFinite(left) || Number.isFinite(top)) {
+      style.position = 'absolute';
+      if (Number.isFinite(left)) style.left = `${left}px`;
+      if (Number.isFinite(top)) style.top = `${top}px`;
+    }
+  }
+
+  show() {
+    if (!this.video) return;
+    this.video.style.visibility = 'visible';
+  }
+
+  hide() {
+    if (!this.video) return;
+    this.video.style.visibility = 'hidden';
+  }
+
+  mute() {
+    if (!this.video) return;
+    this.video.muted = true;
+  }
+
+  unmute() {
+    if (!this.video) return;
+    this.video.muted = false;
+  }
+
+  destroy() {
+    if (!this.video) return;
+    this._tearDownHls();
+    this.detachEvents();
+    try {
+      this.video.pause();
+      this.video.removeAttribute('src');
+      if (this.video.srcObject) this.video.srcObject = null;
+      this.video.load();
+    } catch {
+      // ignore
+    }
+
+    if (this.container) {
+      this.container.innerHTML = '';
+    }
+
+    this.video = null;
+    this.container = null;
+  }
+}
+

@@ -14,13 +14,7 @@ export function isFeatureEnabled(brandConfig, featureName) {
     return false;
   }
 
-  const isEnabled = brandConfig.features[featureName] === true;
-  
-  if (isEnabled) {
-    console.log(`[Features] ✓ ${featureName} habilitada para ${brandConfig.brand}`);
-  }
-  
-  return isEnabled;
+  return brandConfig.features[featureName] === true;
 }
 
 /**

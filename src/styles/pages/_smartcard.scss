@@ -1,0 +1,516 @@
+/**
+ * Estilos de SmartCard Page
+ * Diseño minimalista tipo Netflix/OTT - Compacto y sin scroll
+ */
+
+@use '../variables' as *;
+@use '../mixins' as *;
+
+.smartcard-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // Overlay oscuro sutil
+  .smartcard-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+  }
+
+  .smartcard-container {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1rem, 2vw, 2rem);
+    box-sizing: border-box;
+  }
+
+  .smartcard-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(0.75rem, 1.5vw, 1.25rem);
+    overflow: hidden;
+    max-height: 100vh;
+  }
+
+  // Vista lista tipo 10foot: instrucciones + lista scrollable
+  .smartcard-content-list {
+    max-width: 560px;
+    width: 100%;
+  }
+
+  .smartcard-instructions {
+    margin: 0 0 0.75rem;
+    font-size: clamp(0.9rem, 1.2vw, 1rem);
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.95);
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .licenses-list {
+    margin: 0;
+    padding: 1rem;
+    height: 20em;
+    width: 100%;
+    max-height: 50vh;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    @include scrollbar-hidden;
+  }
+
+  .license-list-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    background: rgba(42, 42, 42, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #fff;
+    font-size: clamp(0.8rem, 1vw, 0.95rem);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+
+    b {
+      display: block;
+      font-weight: 600;
+    }
+
+    .license-list-products {
+      margin: 0.25rem 0 0;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 0.9em;
+    }
+
+    .license-list-name {
+      margin-top: 0.2rem;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+
+    &:hover:not(.disabled) {
+      border-color: rgba(255, 255, 255, 0.5);
+      background: rgba(42, 42, 42, 0.85);
+    }
+
+    &.focused {
+      border-color: #e50914;
+      background: rgba(42, 42, 42, 0.9);
+      box-shadow: 0 0 0 1px #e50914 inset, 0 0 12px rgba(229, 9, 20, 0.4);
+    }
+
+    &.disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+  }
+
+  .license-list-item-logout {
+    text-align: center;
+    margin-top: 0.5rem;
+  }
+
+  // Modal confirmación "Smartcard en uso"
+  .confirm-in-use-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 100;
+    @include flex-center;
+    padding: 1rem;
+  }
+
+  .confirm-in-use-modal {
+    background: rgba(42, 42, 42, 0.95);
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    padding: clamp(1.25rem, 2vw, 1.5rem);
+    max-width: 400px;
+    width: 100%;
+  }
+
+  .confirm-in-use-title {
+    margin: 0 0 1rem;
+    font-size: clamp(0.95rem, 1.2vw, 1.05rem);
+    font-weight: 500;
+    color: #fff;
+    text-align: center;
+  }
+
+  .confirm-in-use-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .confirm-in-use-btn {
+    @include button-base;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.95rem;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover,
+    &.focused {
+      background: rgba(229, 9, 20, 0.8);
+      border-color: #e50914;
+    }
+  }
+
+  // Grid de licencias - compacto y centrado
+  .licenses-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(0.75rem, 1.5vw, 1.25rem);
+    width: 100%;
+    overflow: hidden;
+    max-height: calc(100vh - 120px);
+  }
+
+  // Tarjeta de licencia - estilo Netflix minimalista
+  .license-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    width: clamp(180px, 18vw, 240px);
+    min-width: 0;
+    max-width: 100%;
+    flex: 0 0 auto;
+    background: rgba(42, 42, 42, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    padding: clamp(0.875rem, 1.2vw, 1.25rem);
+    backdrop-filter: blur(10px);
+    outline: none;
+    box-sizing: border-box;
+    min-height: clamp(160px, 20vh, 220px);
+    max-height: 100%;
+    align-self: center;
+
+    // Efecto hover/focus estilo Netflix
+    &:hover,
+    &.focused {
+      transform: scale(1.03);
+      transform-origin: center center;
+      border-color: rgba(255, 255, 255, 0.9);
+      background: rgba(42, 42, 42, 0.8);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.3),
+                  0 0 40px rgba(255, 255, 255, 0.1);
+    }
+
+    // Estilo cuando está enfocado - rojo Netflix
+    &.focused {
+      outline: none !important;
+      border: 2px solid #e50914 !important;
+      box-shadow: 0 0 0 1px #e50914 inset,
+                  0 0 20px rgba(229, 9, 20, 0.5),
+                  0 0 40px rgba(229, 9, 20, 0.3),
+                  inset 0 0 25px rgba(229, 9, 20, 0.15) !important;
+      transform: scale(1.03) !important;
+      transform-origin: center center !important;
+      animation: focusPulse 2s ease-in-out infinite;
+    }
+
+    // Animación de pulso para el foco
+    @keyframes focusPulse {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(229, 9, 20, 0.5),
+                    0 0 40px rgba(229, 9, 20, 0.3),
+                    inset 0 0 25px rgba(229, 9, 20, 0.15);
+      }
+      50% {
+        box-shadow: 0 0 25px rgba(229, 9, 20, 0.6),
+                    0 0 50px rgba(229, 9, 20, 0.4),
+                    inset 0 0 30px rgba(229, 9, 20, 0.2);
+      }
+    }
+
+    &.license-card-full {
+      width: clamp(280px, 35vw, 450px);
+    }
+
+    .license-card-header {
+      width: 100%;
+      text-align: center;
+      margin-bottom: clamp(0.75rem, 1vw, 1rem);
+      flex-shrink: 0;
+
+      h3 {
+        margin: 0;
+        font-size: clamp(0.875rem, 1.2vw, 1rem);
+        font-weight: 400;
+        letter-spacing: 0.05em;
+        color: #fff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        @include text-truncate;
+      }
+    }
+
+    .license-card-body {
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
+  // Campos de licencia - minimalista
+  .license-fields {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.5rem, 0.8vw, 0.75rem);
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .license-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: clamp(0.5rem, 0.8vw, 0.75rem) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .license-label {
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: clamp(0.65rem, 0.9vw, 0.75rem);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .license-value {
+      color: #fff;
+      font-size: clamp(0.75rem, 1vw, 0.875rem);
+      word-break: break-word;
+      line-height: 1.4;
+      font-weight: 300;
+    }
+  }
+
+  // JSON formateado - compacto
+  .license-json {
+    background: rgba(0, 0, 0, 0.4);
+    color: #fff;
+    padding: clamp(0.75rem, 1vw, 1rem);
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(0.65rem, 0.9vw, 0.75rem);
+    line-height: 1.4;
+    overflow: auto;
+    @include scrollbar-hidden;
+    margin: 0;
+    flex: 1;
+    min-height: 0;
+  }
+
+  // Estados de carga y error - minimalista
+  .loading-container,
+  .error-container,
+  .no-data-container {
+    @include flex-center;
+    flex-direction: column;
+    text-align: center;
+    padding: clamp(2rem, 4vw, 3rem);
+    background: rgba(42, 42, 42, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    max-width: 400px;
+    width: 100%;
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: clamp(1rem, 2vw, 1.5rem);
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .loading-text {
+    font-size: clamp(0.875rem, 1.2vw, 1rem);
+    color: #fff;
+    margin: 0;
+    font-weight: 300;
+  }
+
+  .error-icon {
+    font-size: 2.5rem;
+    margin-bottom: clamp(1rem, 2vw, 1.5rem);
+  }
+
+  .error-text {
+    font-size: clamp(0.875rem, 1.2vw, 1rem);
+    color: #fff;
+    margin-bottom: clamp(1rem, 2vw, 1.5rem);
+    font-weight: 300;
+  }
+
+  // Mensaje de éxito al establecer licencia
+  .success-message {
+    @include flex-center;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: clamp(1rem, 2vw, 1.5rem) clamp(1.5rem, 3vw, 2rem);
+    background: rgba(34, 139, 34, 0.85);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
+
+    .success-icon {
+      font-size: 1.75rem;
+      color: #fff;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .success-text {
+      font-size: clamp(0.875rem, 1.2vw, 1rem);
+      color: #fff;
+      margin: 0;
+      font-weight: 400;
+    }
+  }
+
+  .no-licenses {
+    font-size: clamp(0.875rem, 1.2vw, 1rem);
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+    font-weight: 300;
+  }
+
+  // Overlay de carga al establecer licencia
+  .setting-license-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    @include flex-center;
+    flex-direction: column;
+    z-index: 10;
+    border-radius: 8px;
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: $spacing-lg;
+    }
+
+    .loading-text {
+      font-size: clamp(0.875rem, 1.2vw, 1rem);
+      color: #fff;
+      margin: 0;
+      font-weight: 300;
+    }
+  }
+
+  // Estado deshabilitado de tarjeta
+  .license-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  // Botón de volver - minimalista estilo Netflix
+  .back-button {
+    @include button-base;
+    background: rgba(42, 42, 42, 0.8);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    padding: clamp(0.75rem, 1vw, 1rem) clamp(1.5rem, 2vw, 2rem);
+    font-size: clamp(0.875rem, 1.2vw, 1rem);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    align-self: center;
+    flex-shrink: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      background: rgba(42, 42, 42, 0.95);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &:focus,
+    &:focus-visible {
+      outline: none;
+      border-color: #e50914;
+      box-shadow: 0 0 20px rgba(229, 9, 20, 0.5);
+    }
+  }
+}

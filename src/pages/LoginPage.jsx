@@ -1,26 +1,23 @@
-/**
- * Página de Login
- */
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import QRCode from 'qrcode';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { FocusableInput } from '../components/navigation/FocusableInput';
 import { FocusableButton } from '../components/navigation/FocusableButton';
 import { getInitialRoute } from '../utils/navigation';
 import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
-import panaccessService from '../services/panaccessService';
-import getUdid from '../api/cv/udid';
-import CryptoJS from 'crypto-js';
-import { classifyError, ERROR_TYPES } from '../api/cv/errorClassifier';
+import { loginAndActivateLicense } from '../services/loginFlow';
+import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
+import { getActiveLicense } from '../utils/userSession';
+import { useUdidLoginFlow } from '../hooks/useUdidLoginFlow';
 import '../styles/components/_login.scss';
 
-const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
-
 export function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const { currentBrand, token, appName, isLoading, getImage } = useBrand();
+  const { currentBrand, appName, isLoading, getImage } = useBrand();
   const { isTV } = useDevice();
   
   const [username, setUsername] = useState('');
@@ -28,8 +25,58 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrImageSrc, setQrImageSrc] = useState('');
+  const [qrError, setQrError] = useState('');
+  const [isUdidModalOpen, setIsUdidModalOpen] = useState(false);
+  const [udidQrImageSrc, setUdidQrImageSrc] = useState('');
 
   console.log(`🖥️ [DEVICE] Modo: ${isTV ? 'TV' : 'PC'}`);
+
+  const qrRegisterConfig = currentBrand?.qrRegister;
+  const qrRegisterEnabled = !!qrRegisterConfig?.enabled;
+  const qrRegisterUrl = typeof qrRegisterConfig?.url === 'string' ? qrRegisterConfig.url.trim() : '';
+  const canShowQrRegister = qrRegisterEnabled && qrRegisterUrl.length > 0;
+  const userAgent = (typeof navigator !== 'undefined' ? navigator.userAgent : '').toLowerCase();
+  const hasSamsungRuntime = typeof window !== 'undefined' && (!!window.tizen || !!window.webapis);
+  const hasLgRuntime = typeof window !== 'undefined' && (!!window.webOS || !!window.PalmSystem);
+  const isSamsungTv = isTV && (hasSamsungRuntime || userAgent.includes('tizen') || userAgent.includes('samsung'));
+  const isLgTv = isTV && (hasLgRuntime || userAgent.includes('webos') || userAgent.includes('netcast') || userAgent.includes('lg'));
+  const shouldShowQrModal = isSamsungTv || isLgTv;
+  const udidLoginConfig = currentBrand?.udidLogin;
+  const effectiveUdidConfig = {
+    ...udidLoginConfig,
+    baseUrl: udidLoginConfig?.baseUrl || currentBrand?.api?.baseUrl || '',
+    wsUrl: udidLoginConfig?.wsUrl || currentBrand?.api?.wsUrl || '',
+  };
+
+  const handleUdidCredentials = async (credentials) => {
+    await loginAndActivateLicense(currentBrand, {
+      username: credentials.username,
+      password: credentials.password,
+    }, {
+      autoActivateLicense: !credentials.licenseKey,
+      activationRecursive: true,
+      // Si la licencia ya está en uso, el legacy no falla.
+      failIfInUse: false,
+      storeClientConfig: true,
+      storeLicenses: true,
+      licenseKey: credentials.licenseKey || undefined,
+      pin: credentials.pin || undefined,
+    });
+
+    const active = getActiveLicense?.();
+    const hasActiveLicense = !!active?.licenseKey;
+    const skipSmartcard = !currentBrand?.features?.profiles && hasActiveLicense;
+    navigate(skipSmartcard ? '/home/bouquets' : getInitialRoute(currentBrand));
+  };
+
+  const udidFlow = useUdidLoginFlow({
+    config: effectiveUdidConfig,
+    appName,
+    onCredentials: handleUdidCredentials,
+    t,
+  });
 
   // Establecer focus inicial en TV al cargar la página
   useEffect(() => {
@@ -55,6 +102,123 @@ export function LoginPage() {
     }
   }, [isTV]);
 
+  useEffect(() => {
+    if (!isQrModalOpen) return;
+    if (!canShowQrRegister) {
+      setQrError(t('login.registerUnavailable'));
+      setQrImageSrc('');
+      return;
+    }
+
+    let cancelled = false;
+    const buildQr = async () => {
+      try {
+        const dataUrl = await QRCode.toDataURL(qrRegisterUrl, {
+          width: 256,
+          margin: 1,
+        });
+        if (cancelled) return;
+        setQrImageSrc(dataUrl);
+        setQrError('');
+      } catch {
+        if (cancelled) return;
+        setQrImageSrc('');
+        setQrError(t('login.registerUnavailable'));
+      }
+    };
+
+    buildQr();
+    return () => {
+      cancelled = true;
+    };
+  }, [isQrModalOpen, canShowQrRegister, qrRegisterUrl, t]);
+
+  useEffect(() => {
+    if (!isTV || !isQrModalOpen) return;
+    const timer = setTimeout(() => {
+      const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
+      if (setFocus && typeof setFocus === 'function') {
+        setFocus('login-register-close');
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [isTV, isQrModalOpen]);
+
+  useEffect(() => {
+    if (!isUdidModalOpen || !isTV) return;
+    const timer = setTimeout(() => {
+      const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
+      if (setFocus && typeof setFocus === 'function') {
+        setFocus('login-udid-cancel');
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [isTV, isUdidModalOpen]);
+
+  useEffect(() => {
+    if (!isUdidModalOpen || !udidFlow.code) {
+      setUdidQrImageSrc('');
+      return;
+    }
+    let cancelled = false;
+    const buildUdidQr = async () => {
+      try {
+        const payload = `${appName}:${udidFlow.code}`;
+        const dataUrl = await QRCode.toDataURL(payload, { width: 200, margin: 1 });
+        if (cancelled) return;
+        setUdidQrImageSrc(dataUrl);
+      } catch {
+        if (cancelled) return;
+        setUdidQrImageSrc('');
+      }
+    };
+    buildUdidQr();
+    return () => {
+      cancelled = true;
+    };
+  }, [appName, isUdidModalOpen, udidFlow.code]);
+
+  const handleOpenQrModal = () => {
+    if (!canShowQrRegister) return;
+    if (!shouldShowQrModal) {
+      window.location.assign(qrRegisterUrl);
+      return;
+    }
+    setQrError('');
+    setQrImageSrc('');
+    setIsQrModalOpen(true);
+  };
+
+  const handleCloseQrModal = () => {
+    setIsQrModalOpen(false);
+    if (!isTV) return;
+    const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
+    if (setFocus && typeof setFocus === 'function') {
+      setTimeout(() => setFocus('login-register'), 0);
+    }
+  };
+
+  const handleOpenUdidModal = () => {
+    setIsUdidModalOpen(true);
+    udidFlow.start();
+  };
+
+  const handleCloseUdidModal = () => {
+    udidFlow.cancel();
+    setIsUdidModalOpen(false);
+    if (!isTV) return;
+    const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
+    if (setFocus && typeof setFocus === 'function') {
+      setTimeout(() => setFocus('login-udid'), 0);
+    }
+  };
+
+  const formatRemaining = (seconds) => {
+    const mm = Math.floor(Math.max(0, seconds) / 60);
+    const ss = Math.max(0, seconds) % 60;
+    return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+  };
+
   // ============================================
   // SUBMIT
   // ============================================
@@ -62,59 +226,52 @@ export function LoginPage() {
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (isSubmitting || !currentBrand) return;
-    
+
     setIsSubmitting(true);
     setError('');
 
     try {
-      let udid = localStorage.getItem("udid");
-      if (!udid) {
-        udid = getUdid();
-      }
-
-      const sessionId = await panaccessService.login("clientLogin", {
-        apiToken: token,
-        clientId: username,
-        pwd: password,
-        udid: udid,
+      await loginAndActivateLicense(currentBrand, {
+        username: username.trim(),
+        password: password.trim(),
+      }, {
+        autoActivateLicense: true,
+        // Si la tarjeta está en uso, intenta activar otra disponible.
+        failIfInUse: true,
+        activationRecursive: true,
+        storeClientConfig: true,
+        storeLicenses: true,
       });
-
-      const encryptedUsername = CryptoJS.AES.encrypt(username, SECRET_KEY).toString();
-      const encryptedPassword = CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
-
-      localStorage.setItem('username', encryptedUsername);
-      localStorage.setItem('password', encryptedPassword);
-      localStorage.setItem('sessionId', sessionId);
-      localStorage.setItem('udid', udid);
 
       setTimeout(() => {
         setIsSubmitting(false);
-        // Navegar según la configuración del brand (profile o smartcard)
-        const initialRoute = getInitialRoute(currentBrand);
-        navigate(initialRoute);
-      }, 1000);
+        const active = getActiveLicense?.();
+        const hasActiveLicense = !!active?.licenseKey;
+        const skipSmartcard = !currentBrand?.features?.profiles && hasActiveLicense;
+        navigate(skipSmartcard ? '/home/bouquets' : getInitialRoute(currentBrand));
+      }, 400);
 
     } catch (err) {
       setTimeout(() => {
         setIsSubmitting(false);
         const errorInfo = err.errorInfo || classifyError(err);
-        let messageToShow = 'Error al iniciar sesión';
+        let messageToShow = t('login.errorGeneric');
 
         switch (errorInfo.type) {
           case ERROR_TYPES.NETWORK:
-            messageToShow = 'Sin conexión a internet.';
+            messageToShow = t('login.errorNetwork');
             break;
           case ERROR_TYPES.TIMEOUT:
-            messageToShow = 'Conexión lenta. Intenta de nuevo.';
+            messageToShow = t('login.errorTimeout');
             break;
           case ERROR_TYPES.SERVER:
-            messageToShow = 'Error del servidor.';
+            messageToShow = t('login.errorServer');
             break;
           case ERROR_TYPES.AUTH:
-            messageToShow = 'Credenciales inválidas.';
+            messageToShow = t('login.errorAuth');
             break;
           default:
-            messageToShow = errorInfo.userMessage || err.message || 'Error al iniciar sesión';
+            messageToShow = errorInfo.userMessage || err.message || t('login.errorGeneric');
         }
         setError(messageToShow);
       }, 1000);
@@ -126,7 +283,7 @@ export function LoginPage() {
   // ============================================
 
   if (isLoading || !currentBrand) {
-    return <div className="loading">Cargando...</div>;
+    return <div className="loading">{t('common.loading')}</div>;
   }
 
   const logoPath = getImage('logo.png');
@@ -142,18 +299,18 @@ export function LoginPage() {
       </div>
 
       <div className="login-card">
-        <h2>Iniciar Sesión</h2>
+        <h2>{t('login.title')}</h2>
 
         <form onSubmit={handleSubmit}>
           {/* Username */}
           <div className="form-group">
-            <label htmlFor="username">Usuario</label>
+            <label htmlFor="username">{t('login.user')}</label>
             <FocusableInput
               id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Tu usuario"
+              placeholder={t('login.userPlaceholder')}
               disabled={isSubmitting}
               autoComplete="username"
               required
@@ -163,14 +320,14 @@ export function LoginPage() {
 
           {/* Password */}
           <div className="form-group">
-            <label htmlFor="password">Contraseña</label>
+            <label htmlFor="password">{t('login.password')}</label>
             <div className="password-row">
               <FocusableInput
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Tu contraseña"
+                placeholder={t('login.passwordPlaceholder')}
                 disabled={isSubmitting}
                 autoComplete="current-password"
                 required
@@ -201,10 +358,139 @@ export function LoginPage() {
               }
             }}
           >
-            {isSubmitting ? 'Conectando...' : 'Entrar'}
+            {isSubmitting ? t('login.submitting') : t('login.submit')}
           </FocusableButton>
+
+          {qrRegisterEnabled && (
+            <div className="register-section">
+              <p className="register-hint">{t('login.registerHint')}</p>
+              <FocusableButton
+                type="button"
+                className="register-button"
+                focusKey="login-register"
+                onClick={handleOpenQrModal}
+                onEnterPress={() => {
+                  if (isTV) {
+                    handleOpenQrModal();
+                  }
+                }}
+              >
+                {t('login.register')}
+              </FocusableButton>
+            </div>
+          )}
+
+          {effectiveUdidConfig?.enabled && (
+            <div className="register-section">
+              <p className="register-hint">{t('login.udidHint')}</p>
+              <FocusableButton
+                type="button"
+                className="register-button"
+                focusKey="login-udid"
+                onClick={handleOpenUdidModal}
+                onEnterPress={() => {
+                  if (isTV) {
+                    handleOpenUdidModal();
+                  }
+                }}
+              >
+                {t('login.udidButton')}
+              </FocusableButton>
+            </div>
+          )}
         </form>
       </div>
+
+      {isQrModalOpen && (
+        <div className="register-modal-backdrop">
+          <div className="register-modal">
+            <h3>{t('login.registerTitle')}</h3>
+            <p>{t('login.registerHint')}</p>
+
+            {qrImageSrc ? (
+              <img src={qrImageSrc} alt={t('login.register')} className="register-qr-image" />
+            ) : (
+              <div className="register-qr-placeholder">{qrError || t('common.loading')}</div>
+            )}
+
+            <FocusableButton
+              type="button"
+              className="register-close-button"
+              focusKey="login-register-close"
+              onClick={handleCloseQrModal}
+              onEnterPress={() => {
+                if (isTV) {
+                  handleCloseQrModal();
+                }
+              }}
+            >
+              {t('common.close')}
+            </FocusableButton>
+          </div>
+        </div>
+      )}
+
+      {isUdidModalOpen && (
+        <div className="register-modal-backdrop">
+          <div className="register-modal">
+            <h3>{t('login.udidTitle')}</h3>
+            <p>{t('login.udidHint')}</p>
+
+            {!!udidFlow.code && (
+              <>
+                <div className="udid-code">{udidFlow.code}</div>
+                <div className="udid-countdown">{formatRemaining(udidFlow.remainingSeconds)}</div>
+                {udidQrImageSrc && (
+                  <img src={udidQrImageSrc} alt={t('login.udidButton')} className="register-qr-image" />
+                )}
+              </>
+            )}
+
+            {udidFlow.status === 'requesting_code' && (
+              <div className="register-qr-placeholder">{t('login.udidRequesting')}</div>
+            )}
+
+            {udidFlow.status === 'reconnecting' && (
+              <div className="register-qr-placeholder">{t('login.udidReconnecting')}</div>
+            )}
+
+            {(udidFlow.status === 'error' || udidFlow.status === 'expired' || udidFlow.status === 'rate_limited') && (
+              <div className="register-qr-placeholder">{udidFlow.error || t('login.udidErrorGeneric')}</div>
+            )}
+
+            {udidFlow.status === 'logging_in' && (
+              <div className="register-qr-placeholder">{t('login.udidLoggingIn')}</div>
+            )}
+
+            <div className="udid-modal-actions">
+              {(udidFlow.status === 'error' || udidFlow.status === 'expired' || udidFlow.status === 'rate_limited') && (
+                <FocusableButton
+                  type="button"
+                  className="register-button"
+                  focusKey="login-udid-retry"
+                  onClick={udidFlow.retry}
+                >
+                  {t('login.udidRetry')}
+                </FocusableButton>
+              )}
+
+              <FocusableButton
+                type="button"
+                className="register-close-button"
+                focusKey="login-udid-cancel"
+                onClick={handleCloseUdidModal}
+                onEnterPress={() => {
+                  if (isTV) {
+                    handleCloseUdidModal();
+                  }
+                }}
+              >
+                {t('common.close')}
+              </FocusableButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

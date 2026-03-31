@@ -1,0 +1,629 @@
+/**
+ * Estilos de la página Bouquet
+ * 100% ancho, sin scroll; solo muro de bouquets con canales.
+ */
+
+@use '../variables' as *;
+@use '../mixins' as *;
+
+.bouquet-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  // Fondo compartido provisto por Home (.home-content). Este módulo solo conserva el overlay.
+  background: transparent;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  overflow: hidden;
+
+  .bouquet-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1;
+    pointer-events: none; /* no interceptar clics; que lleguen al contenido */
+  }
+
+  /**
+   * Zona donde se monta el video al reproducir (sin player-shell).
+   * Por defecto colapsada para no bloquear clics/scroll (p. ej. al cambiar de monitor).
+   * Solo cubre la pantalla cuando hay stream activo (--active).
+   */
+  .bouquet-player-video {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .bouquet-player-video--active {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    z-index: 1;
+  }
+
+  .bouquet-player-video video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+
+  .bouquet-player-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--player-loading-background, rgba(0, 0, 0, 0.28));
+    backdrop-filter: var(--player-loading-backdrop-filter, none);
+    -webkit-backdrop-filter: var(--player-loading-backdrop-filter, none);
+    z-index: 2;
+    pointer-events: none;
+    animation: bouquet-player-fade-in 160ms ease-out;
+  }
+
+  .bouquet-player-loading-spinner {
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #fff;
+    box-shadow:
+      0 0 0 7px rgba(255, 255, 255, 0.05),
+      var(--player-loading-spinner-glow, none);
+    animation:
+      bouquet-player-spin 0.85s linear infinite,
+      bouquet-player-pulse 1.25s ease-in-out infinite;
+  }
+
+  @keyframes bouquet-player-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes bouquet-player-pulse {
+    0%, 100% { opacity: 0.82; }
+    50% { opacity: 1; }
+  }
+
+  @keyframes bouquet-player-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .bouquet-container {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: none;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .bouquet-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /**
+   * BouquetWall: filas de bouquets con canales; scroll vertical sin barra visible
+   */
+  .bouquet-wall {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0.75rem 0;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .bouquet-grid-horizontal {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .bouquet-heading {
+      flex-shrink: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 0 0 0.35rem;
+      padding: 0 0.25rem;
+    }
+
+    .bouquet-grid-horizontal-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .horizontal-slide--grid-row {
+      margin: 0;
+      width: 100%;
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0 0.25rem;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-behavior: smooth;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+  }
+
+  .bouquet-grid-vertical {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .bouquet-heading {
+      flex-shrink: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 0 0 0.35rem;
+      padding: 0 0.25rem;
+    }
+
+    .bouquet-grid-vertical-content {
+      display: grid;
+      grid-auto-rows: minmax(10em, auto);
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 0.35rem;
+      padding: 0 0.25rem;
+    }
+  }
+
+  // Columnas por dispositivo usando clases del root (configuradas en App/useViewport)
+  :root.mobile & .bouquet-grid-vertical .bouquet-grid-vertical-content {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  :root.tablet & .bouquet-grid-vertical .bouquet-grid-vertical-content {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  :root.desktop & .bouquet-grid-vertical .bouquet-grid-vertical-content,
+  :root.hd & .bouquet-grid-vertical .bouquet-grid-vertical-content,
+  :root.fullhd & .bouquet-grid-vertical .bouquet-grid-vertical-content {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .bouquet-row-carousel {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .bouquet-heading {
+      flex-shrink: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 0 0 0.35rem;
+      padding: 0 0.25rem;
+    }
+
+    .horizontal-slide {
+      margin: 0;
+      width: 100%;
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 0 0.25rem;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-behavior: smooth;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+  }
+
+  .channel-card {
+    flex-shrink: 0;
+    width: 14em;
+    height: 13em;
+    border-radius: $border-radius-sm;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.04);
+    border: 2px solid transparent;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0.8);
+    transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out,
+      transform 0.1s ease-out;
+    cursor: pointer;
+
+    .channel-card-img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+    }
+
+    &.channel-card--event_line .channel-card-img {
+      width: 100%;
+      height: 100%;
+    }
+
+    &.channel-card--event_and_logo {
+      display: flex;
+      flex-direction: column;
+      height: 15rem;
+      min-height: 15rem;
+      background: transparent;
+      background-color: transparent;
+
+      .channel-card-frame {
+        flex: 0 0 auto;
+        border: 2px solid #fff;
+        border-radius: 0.25em;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .channel-card-logo-top {
+        flex-shrink: 0;
+        padding: 0.25em 0.5em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 3em;
+        background-color: #0a0a0a;
+
+        .channel-card-logo-img {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+        }
+      }
+
+      /* Altura fija del cuadro de imagen: no depende del texto y es igual en todas las tarjetas */
+      .channel-card-event-block {
+        position: relative;
+        flex: 0 0 auto;
+        width: 100%;
+        height: 8rem;
+        min-height: 8rem;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        .channel-card-event-img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          position: absolute;
+          top: 0;
+          left: 0;
+          object-fit: cover;
+        }
+
+        .channel-card-event-info {
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          flex-shrink: 0;
+          padding: 0.35em 0.5em 0.4em;
+          background: black;
+          color: #fff;
+        }
+
+        .channel-card-event-meta {
+          display: flex;
+          flex-direction: column;
+          gap: 0.15em;
+          margin-bottom: 0.35em;
+        }
+
+        .channel-card-event-time {
+          font-size: 0.75rem;
+          opacity: 0.9;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .channel-card-event-title {
+          font-size: 0.8rem;
+          font-weight: 500;
+          line-height: 1.2;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .channel-timeship {
+          height: 0.25em;
+          background: rgba(255, 255, 255, 0.25);
+          border-radius: 999px;
+          overflow: hidden;
+
+          .channel-timeship-progress {
+            height: 100%;
+            border-radius: inherit;
+            background: var(--bouquet-timeship-color, var(--epg-line-color, #3333ff));
+            transition: width 0.8s linear;
+          }
+        }
+      }
+
+      /* Hora y nombre del evento por fuera, debajo del cuadro (altura fija para que todas las tarjetas sean iguales) */
+      .channel-card-event-time-below {
+        flex: 0 0 auto;
+        height: auto;
+        min-height: auto;
+        padding: 0.3em 0.5em 0.4em;
+        color: #fcfafa;
+        background: transparent;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15em;
+        overflow: hidden;
+        justify-content: center;
+
+        .channel-card-event-time {
+          font-size: 0.8rem;
+          opacity: 0.9;
+          font-variant-numeric: tabular-nums;
+          flex-shrink: 0;
+        }
+
+        .channel-card-event-title {
+          font-size: 0.9rem;
+          font-weight: 600;
+          line-height: 1.2;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          flex: 1;
+          min-height: 0;
+        }
+      }
+    }
+
+    /* Duplicado del diseño event_and_logo: mismo aspecto para service_layout_event_and_logo_overlay */
+    &.channel-card--event_and_logo_overlay {
+      display: flex;
+      flex-direction: column;
+
+      .channel-card-logo-top {
+        flex-shrink: 0;
+        padding: 0.25em 0.5em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 3em;
+        background-color: #0a0a0a;
+
+        .channel-card-logo-img {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+        }
+      }
+
+      .channel-card-event-block {
+        position: relative;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+
+        .channel-card-event-img {
+          display: block;
+          width: 100%;
+          flex: 1;
+          min-height: 0;
+          object-fit: cover;
+        }
+
+        .channel-card-event-info {
+          flex-shrink: 0;
+          padding: 0.35em 0.5em 0.4em;
+          background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.6));
+          color: #fff;
+        }
+
+        .channel-card-event-meta {
+          display: flex;
+          flex-direction: column;
+          gap: 0.15em;
+          margin-bottom: 0.35em;
+        }
+
+        .channel-card-event-time {
+          font-size: 0.75rem;
+          opacity: 0.9;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .channel-card-event-title {
+          font-size: 0.8rem;
+          font-weight: 500;
+          line-height: 1.2;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .channel-timeship {
+          height: 0.25em;
+          background: rgba(255, 255, 255, 0.25);
+          border-radius: 999px;
+          overflow: hidden;
+
+          .channel-timeship-progress {
+            height: 100%;
+            border-radius: inherit;
+            background: var(--bouquet-timeship-color, var(--epg-line-color, #3333ff));
+            transition: width 0.8s linear;
+          }
+        }
+      }
+    }
+
+    &.focused {
+      border-color: #ffffff;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+      transform: translateY(-2px);
+    }
+
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.6);
+    }
+  }
+
+  @media screen and (min-width: 1792px) {
+    .channel-card .channel-card-img {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  .bouquet-list {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    padding: $spacing-xl 0;
+  }
+
+  .bouquet-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-md $spacing-lg;
+    border-radius: $border-radius-md;
+    background: rgba(42, 42, 42, 0.7);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease-out;
+
+    .bouquet-row-content {
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .bouquet-row-main {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-xs;
+    }
+
+    .bouquet-row-name {
+      font-size: $font-size-lg;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    &:hover,
+    &.focused {
+      border-color: rgba(255, 255, 255, 0.6);
+      transform: translateY(-2px);
+
+      .bouquet-row-name {
+        color: #ffffff;
+      }
+    }
+
+    &:focus-visible {
+      outline: 3px solid $primary-color;
+      outline-offset: 4px;
+    }
+  }
+
+  .bouquet-loading,
+  .bouquet-error,
+  .bouquet-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xxl;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .bouquet-loading-text,
+  .bouquet-error-text,
+  .bouquet-empty-text {
+    margin-top: $spacing-md;
+    font-size: 1rem;
+  }
+
+  .bouquet-error-text {
+    color: #f8d7da;
+  }
+
+  .bouquet-streams-info {
+    margin-top: $spacing-md;
+    text-align: center;
+
+    .bouquet-streams-count {
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.85);
+    }
+  }
+
+  .bouquet-footer {
+    margin-top: auto;
+  }
+
+  .bouquet-back-button {
+    padding: $spacing-md $spacing-xl;
+    border-radius: $border-radius-md;
+    font-size: 1rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+  }
+}

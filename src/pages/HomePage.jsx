@@ -1,59 +1,91 @@
-/**
- * Página Home / Dashboard
- */
+import { useLayoutEffect } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { Sidebar } from '../components/Sidebar';
+import { HomeShellContent } from '../components/ads/HomeShellContent';
+import { usePlayer } from '../contexts/PlayerContext';
+import PlayerHud from '../components/player/PlayerHud';
+import ConfirmModal from '../components/ConfirmModal';
+import { useTranslation } from 'react-i18next';
+import '../styles/pages/_home-shell.scss';
 
-import { useNavigate } from 'react-router-dom';
-import { useBrand } from '../contexts/BrandContext';
-import { useDevice } from '../contexts/DeviceContext';
-
-/**
- * Card de navegación
- */
-function NavCard({ icon, label, path }) {
-  const navigate = useNavigate();
-
+export function HomePlaceholderPage({ title, description }) {
   return (
-    <div
-      className="nav-card"
-      onClick={() => navigate(path)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') navigate(path);
-      }}
-    >
-      <span className="icon">{icon}</span>
-      <span className="label">{label}</span>
-    </div>
+    <section className="home-placeholder" aria-label={title}>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </section>
   );
 }
 
 export function HomePage() {
-  const { appName, currentBrand } = useBrand();
-  const { isTV, deviceType } = useDevice();
+  const { t } = useTranslation();
+  const { pathname } = useLocation();
+  const { containerRef, state: playerState, licenseInUsePrompt, confirmLicenseInUse, close } = usePlayer();
+  const isPlayerActive = Boolean(playerState?.url);
 
-  console.log(`🖥️ [HOME] Modo: ${isTV ? 'TV' : 'PC'}`);
+  // Evita el aviso "Blocked aria-hidden… descendant retained focus": no marcamos el shell
+  // con aria-hidden mientras el foco sigue en una tarjeta; movemos el foco al player.
+  useLayoutEffect(() => {
+    if (!isPlayerActive) return;
+    const player = containerRef.current;
+    if (!player) return;
+    const active = document.activeElement;
+    if (!active || !player.contains(active)) {
+      const shell = document.querySelector('.home-shell-ui');
+      if (shell?.contains(active)) {
+        player.focus({ preventScroll: true });
+      }
+    }
+  }, [isPlayerActive, containerRef]);
+
+  if (pathname === '/home') {
+    return <Navigate to="/home/bouquets" replace />;
+  }
 
   return (
-    <div className="home-page">
-      <header className="home-header">
-        <h1>{appName}</h1>
-        <span className="device-badge">
-          {isTV ? '📺 TV' : '💻 PC'} ({deviceType})
-        </span>
-      </header>
+    <div className={`home-shell${isPlayerActive ? ' home-shell--player-active' : ''}`}>
+      <ConfirmModal
+        open={!!licenseInUsePrompt}
+        title={t('smartcard.licenseInUseConfirm')}
+        message=""
+        confirmText={t('smartcard.licenseInUseYes')}
+        cancelText={t('smartcard.licenseInUseNo')}
+        onConfirm={() => confirmLicenseInUse(true)}
+        onCancel={() => {
+          confirmLicenseInUse(false);
+          close();
+        }}
+      />
+      <div className={`home-global-player${isPlayerActive ? ' home-global-player--active' : ''}`}>
+        {/*
+          El motor solo debe montar el <video> en un nodo que React no reordene.
+          Si ref + video comparten el mismo div que Spinner/PlayerHud, el reconciliador
+          puede quitar el video al actualizar hijos → pantalla negra con HUD visible.
+        */}
+        <div
+          className="home-global-player__media"
+          ref={containerRef}
+          tabIndex={isPlayerActive ? -1 : undefined}
+          role={isPlayerActive ? 'application' : undefined}
+          aria-label={isPlayerActive ? 'Reproductor' : undefined}
+        />
+        {isPlayerActive && (playerState?.isLoading || playerState?.isSeeking) && (
+          <div className="home-global-player-loading">
+            <div className="home-global-player-loading-spinner" />
+          </div>
+        )}
+        {isPlayerActive && !(playerState?.isLoading || playerState?.isSeeking) && <PlayerHud />}
+      </div>
 
-      <nav className="home-nav">
-        <NavCard icon="📺" label="Canales" path="/channels" />
-        <NavCard icon="🎬" label="VOD" path="/vod" />
-        <NavCard icon="📅" label="EPG" path="/epg" />
-      </nav>
-
-      <footer className="home-footer">
-        <p>{appName} v{currentBrand?.version || '1.0.0'}</p>
-      </footer>
+      <div className={`home-shell-ui${isPlayerActive ? ' home-shell-ui--hidden' : ''}`}>
+        <Sidebar />
+        <main className="home-content">
+          <HomeShellContent />
+        </main>
+      </div>
     </div>
   );
 }
 
 export default HomePage;
+

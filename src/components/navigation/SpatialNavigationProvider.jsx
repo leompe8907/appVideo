@@ -23,7 +23,75 @@ export function SpatialNavigationProvider({ children }) {
       return;
     }
 
+    // Puentes Tizen (deben estar en scope para cleanup)
+    let tizenKeydownBridge = null;
+    let tizenKeyupBridge = null;
+
     try {
+      // En algunos emuladores (especialmente Tizen) si no hay un elemento focuseado
+      // el runtime no entrega eventos de teclado/remote correctamente.
+      // Hacemos el root focuseable y forzamos focus al montar.
+      const rootEl = document.getElementById('root');
+      if (rootEl) {
+        if (!rootEl.hasAttribute('tabindex')) rootEl.setAttribute('tabindex', '-1');
+        // Intentar tomar foco sin scroll.
+        rootEl.focus?.({ preventScroll: true });
+      }
+      window.focus?.();
+
+      // Registrar teclas en Tizen cuando esté disponible (no rompe si no existe).
+      // (Algunas teclas especiales requieren registro para que el emulador las entregue).
+      try {
+        const tvInput = window?.tizen?.tvinputdevice;
+        if (tvInput?.registerKeyBatch) {
+          tvInput.registerKeyBatch(['Back', 'Exit', 'Return', 'Enter']);
+        } else if (tvInput?.registerKey) {
+          ['Back', 'Exit', 'Return', 'Enter'].forEach((k) => {
+            try {
+              tvInput.registerKey(k);
+            } catch (_) {
+              // ignore
+            }
+          });
+        }
+      } catch (_) {
+        // ignore
+      }
+
+      const normalizeKey = (e) => {
+        const key = e?.key;
+        const code = e?.code;
+        const keyCode = e?.keyCode;
+        const which = e?.which;
+        const k = key || code || keyCode || which;
+        return { key, code, keyCode, which, k };
+      };
+
+      // Interceptor global para teclados virtuales en TV (Tizen y WebOS)
+      // SpatialNavigation normalmente previene el comportamiento por defecto de la tecla Enter.
+      // Cuando estamos en un input, queremos evitar que SpatialNavigation la intercepte
+      // para que el evento del DOM desencadene la apertura nativa del teclado en la TV.
+      tizenKeydownBridge = (e) => {
+        const { key, code, keyCode, which } = normalizeKey(e);
+        const numeric = Number(keyCode ?? which);
+        const isEnter = key === 'Enter' || code === 'Enter' || numeric === 13 || numeric === 29443;
+
+        if (isEnter) {
+          const activeElement = document.activeElement;
+          const isInput = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
+
+          if (isInput) {
+            // Detenemos la propagación para que norigin-spatial-navigation
+            // no vea el Enter y no llame a su e.preventDefault()
+            e.stopPropagation?.();
+          }
+        }
+      };
+
+      tizenKeyupBridge = () => {};
+
+      window.addEventListener('keydown', tizenKeydownBridge, { capture: true });
+
       // Intentar inicializar navegación espacial
       // La librería puede tener diferentes formas de exportar estas funciones
       const initNav = SpatialNavigation.initNavigation || SpatialNavigation.init || SpatialNavigation.default?.initNavigation;
@@ -76,22 +144,17 @@ export function SpatialNavigationProvider({ children }) {
         });
 
         // Configurar mapeo de teclas del control remoto si está disponible
-        // Compatible con LG webOS 2019 y Samsung Tizen 2019
+        // Compatible con LG webOS 2019+ y Samsung Tizen 2019+
         if (setKeys && typeof setKeys === 'function') {
           setKeys({
-            // Flechas direccionales (estándar en todos los controles remotos)
-            ArrowUp: 'up',
-            ArrowDown: 'down',
-            ArrowLeft: 'left',
-            ArrowRight: 'right',
-            
-            // Tecla Enter/OK del control remoto
-            Enter: 'enter',
-            ' ': 'enter', // Espacio también actúa como Enter
-            
-            // Botón Back/Return del control remoto
-            Backspace: 'back',
-            Escape: 'back',
+            // Mapeo correcto de acuerdo a norigin-spatial-navigation:
+            // Acción (up, down, left, right, enter) -> Arreglo de KeyCodes (números y strings)
+            // Incluimos variantes por emulador/firmware.
+            up: [38, 211, 'ArrowUp', 'Up'],
+            down: [40, 212, 'ArrowDown', 'Down'],
+            left: [37, 214, 'ArrowLeft', 'Left'],
+            right: [39, 213, 'ArrowRight', 'Right'],
+            enter: [13, 29443, 'Enter', 'NumpadEnter', 'OK', 'Select']
           });
         }
 
@@ -117,6 +180,12 @@ export function SpatialNavigationProvider({ children }) {
     // Cleanup: la librería no requiere cleanup explícito,
     // pero podemos agregar lógica aquí si es necesario en el futuro
     return () => {
+      try {
+        if (tizenKeydownBridge) window.removeEventListener('keydown', tizenKeydownBridge, { capture: true });
+        if (tizenKeyupBridge) window.removeEventListener('keyup', tizenKeyupBridge, { capture: true });
+      } catch (_) {
+        // ignore
+      }
       if (import.meta.env.DEV) {
         console.log('🎮 [SpatialNavigation] Desmontado');
       }

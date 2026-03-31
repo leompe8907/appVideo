@@ -1,0 +1,220 @@
+/**
+ * Estilos de la pantalla de precarga (EPG, etc.)
+ * Diseño similar al loading del proyecto EPG (scene-loading).
+ */
+
+.scene-preload {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 1);
+}
+
+.preload-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preload-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.3;
+  z-index: 1;
+}
+
+.preload-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.preload-logo-container {
+  margin-bottom: 3em;
+}
+
+.preload-logo {
+  max-width: 300px;
+  max-height: 150px;
+  width: auto;
+  height: auto;
+  animation: preload-logo-pulse 2s ease-in-out infinite;
+}
+
+@keyframes preload-logo-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(0.98);
+  }
+}
+
+.preload-spinner-container {
+  margin-bottom: 2em;
+}
+
+.preload-spinner {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  margin: 0 auto;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    border: 4px solid transparent;
+    border-top-color: #3498db;
+    animation: preload-spin 1.5s linear infinite reverse;
+    opacity: 0.5;
+  }
+}
+
+.spinner-inner {
+  width: 100%;
+  height: 100%;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #3498db;
+  border-right-color: #2ecc71;
+  border-radius: 50%;
+  animation: preload-spin 1s linear infinite;
+}
+
+@keyframes preload-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Barra de progreso */
+.preload-progress-container {
+  width: 400px;
+  max-width: 80%;
+  margin: 2em 0;
+}
+
+.preload-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.preload-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3498db, #2ecc71);
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.3s ease;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    animation: preload-shimmer 2s infinite;
+  }
+}
+
+@keyframes preload-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.preload-progress-text {
+  color: #fff;
+  font-size: 0.9em;
+  margin-top: 0.5em;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.preload-text {
+  color: #fff;
+  font-size: 1.5em;
+  font-weight: 300;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.preload-message {
+  margin: 0;
+  padding: 0;
+  letter-spacing: 2px;
+}
+
+.preload-submessage {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9em;
+  margin-top: 0.5em;
+  min-height: 1.5em;
+}
+
+.preload-tips-container {
+  margin-top: 3em;
+  max-width: 500px;
+  padding: 0 2em;
+}
+
+.preload-tip {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.5em;
+  text-align: center;
+  line-height: 1.6;
+  animation: preload-tip-fade 4s ease-in-out infinite;
+}
+
+@keyframes preload-tip-fade {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}

@@ -1,161 +1,208 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
-import { getInitialRoute } from '../utils/navigation';
 import panaccessService from '../services/panaccessService';
-import CryptoJS from 'crypto-js';
-import getUdid from '../api/cv/udid';
+import { loginAndActivateLicense, reactivateLicense } from '../services/loginFlow';
+import * as userSession from '../utils/userSession';
 import '../styles/components/_splash.scss';
 
-const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
-
 export function SplashPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { currentBrand, splashDuration, isLoading, getImage, appName } = useBrand();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Nota: se mantiene el mismo splash visual; no usamos un estado adicional.
 
   useEffect(() => {
-    // Esperar a que el brand se cargue
     if (isLoading) return;
-    
     if (!currentBrand) {
-      // Esperar tiempo mínimo y redirigir a login
       setTimeout(() => navigate('/login'), 3000);
       return;
     }
 
-    const initializeAndLogin = async () => {
+    const run = async () => {
       try {
-        // El BrandContext ya inicializó panaccessService, pero verificamos
-        // Si no está inicializado, lo inicializamos
         if (!panaccessService.client) {
           await panaccessService.initialize(currentBrand);
         }
 
-        // 3. Verificar si hay sesión activa
-        const savedSessionId = localStorage.getItem('cvSessionId') || localStorage.getItem('sessionId');
-        if (savedSessionId) {
+        if (userSession.getSessionId()) {
           try {
             const isValid = await panaccessService.validateSession();
             if (isValid) {
-              setIsAuthenticated(true);
-              // Esperar tiempo del splash y redirigir según configuración del brand
-              const initialRoute = getInitialRoute(currentBrand);
-              setTimeout(() => navigate(initialRoute), splashDuration);
+              const active = userSession.getActiveLicense?.();
+              const hasActiveLicense = !!active?.licenseKey;
+              let reactivatedOk = false;
+
+              if (hasActiveLicense) {
+                try {
+                  // Re-activar licencia:
+                  // - si está "in use", que falle para poder intentar otra disponible
+                  reactivatedOk = await reactivateLicense(currentBrand, true);
+                } catch {
+                  reactivatedOk = false;
+                }
+              }
+
+              const profilesEnabled = !!currentBrand?.features?.profiles;
+
+              // Caso 1: reactivación OK -> saltamos smartcard (si no usan profiles).
+              if (hasActiveLicense && reactivatedOk) {
+                const target = profilesEnabled ? '/profile' : '/home/bouquets';
+                setTimeout(() => navigate(target), splashDuration);
+                return;
+              }
+
+              // Caso 2: la licencia activa está en uso o no existe -> intentamos auto-activar otra libre
+              const credentials =
+                userSession.getCredentials() ??
+                userSession.getCredentialsWithFallback(currentBrand?.token);
+
+              if (!credentials) {
+                setTimeout(() => navigate('/login'), splashDuration);
+                return;
+              }
+
+              await loginAndActivateLicense(currentBrand, credentials, {
+                autoActivateLicense: true,
+                activationRecursive: true,
+                failIfInUse: true,
+                storeClientConfig: true,
+                storeLicenses: true,
+              });
+
+              const activeAfter = userSession.getActiveLicense?.();
+              const hasActiveAfter = !!activeAfter?.licenseKey;
+              const target = hasActiveAfter
+                ? profilesEnabled
+                  ? '/profile'
+                  : '/home/bouquets'
+                : '/smartcard';
+              setTimeout(() => navigate(target), splashDuration);
               return;
             }
-          } catch (error) {
-            console.warn('[Splash] Sesión inválida:', error);
-            // Continuar con auto-login
+          } catch (err) {
+            if (import.meta.env.DEV) console.warn('[Splash] Sesión inválida:', err.message);
           }
         }
 
-        // 4. Intentar auto-login con credenciales guardadas
-        const encryptedUsername = localStorage.getItem('username');
-        const encryptedPassword = localStorage.getItem('password');
+        // Helper equivalente a goToLoginOrHome del proyecto 10foot
+        const goToLoginOrHome = async () => {
+          const credentials =
+            userSession.getCredentials() ??
+            userSession.getCredentialsWithFallback(currentBrand?.token);
 
-        if (!encryptedUsername || !encryptedPassword) {
-          // No hay credenciales, esperar tiempo del splash y redirigir a login
-          setTimeout(() => navigate('/login'), splashDuration);
+          if (!credentials) {
+            setTimeout(() => navigate('/login'), splashDuration);
+            return;
+          }
+
+          await loginAndActivateLicense(currentBrand, credentials, {
+            autoActivateLicense: true,
+            activationRecursive: true,
+            // Si una smartcard está "in use", buscamos otra disponible.
+            failIfInUse: true,
+            storeClientConfig: true,
+            storeLicenses: true,
+          });
+
+          const activeAfter = userSession.getActiveLicense?.();
+          const hasActiveAfter = !!activeAfter?.licenseKey;
+          const profilesEnabled = !!currentBrand?.features?.profiles;
+          const target = hasActiveAfter
+            ? profilesEnabled
+              ? '/profile'
+              : '/home/bouquets'
+            : '/smartcard';
+
+          setTimeout(() => navigate(target), splashDuration);
+        };
+
+        const apiBaseUrl = currentBrand?.api?.baseUrl;
+        const hasApiBase = typeof apiBaseUrl === 'string' && apiBaseUrl.trim() !== '';
+
+        // Si no hay backend propio configurado, usar el flujo clásico
+        if (!hasApiBase) {
+          await goToLoginOrHome();
           return;
         }
 
-        // 5. Desencriptar credenciales
-        let username, password;
-        let decryptionSuccess = false;
-        
-        // Intentar desencriptar con SECRET_KEY (clave actual)
-        try {
-          const decryptedUsername = CryptoJS.AES.decrypt(encryptedUsername, SECRET_KEY);
-          const decryptedPassword = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY);
-          
-          username = decryptedUsername.toString(CryptoJS.enc.Utf8);
-          password = decryptedPassword.toString(CryptoJS.enc.Utf8);
-          
-          // Verificar que la desencriptación fue exitosa
-          if (username && password && username.length > 0 && password.length > 0) {
-            decryptionSuccess = true;
-          }
-        } catch (error) {
-          console.warn('[Splash] Error desencriptando con SECRET_KEY:', error.message);
-        }
-        
-        // Si falló, intentar con token del brand (para credenciales viejas)
-        if (!decryptionSuccess && currentBrand?.token) {
-          try {
-            const decryptedUsername = CryptoJS.AES.decrypt(encryptedUsername, currentBrand.token);
-            const decryptedPassword = CryptoJS.AES.decrypt(encryptedPassword, currentBrand.token);
-            
-            username = decryptedUsername.toString(CryptoJS.enc.Utf8);
-            password = decryptedPassword.toString(CryptoJS.enc.Utf8);
-            
-            if (username && password && username.length > 0 && password.length > 0) {
-              decryptionSuccess = true;
-              console.info('[Splash] Credenciales desencriptadas con token del brand (migración automática)');
-              // Re-encriptar con SECRET_KEY para futuras sesiones
-              const newEncryptedUsername = CryptoJS.AES.encrypt(username, SECRET_KEY).toString();
-              const newEncryptedPassword = CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
-              localStorage.setItem('username', newEncryptedUsername);
-              localStorage.setItem('password', newEncryptedPassword);
-            }
-          } catch (error) {
-            console.warn('[Splash] Error desencriptando con token del brand:', error.message);
-          }
-        }
-        
-        // Si ambas fallaron, limpiar y redirigir
-        if (!decryptionSuccess) {
-          console.error('[Splash] No se pudieron desencriptar las credenciales. Limpiando...');
-          
-          // Limpiar credenciales inválidas
-          localStorage.removeItem('username');
-          localStorage.removeItem('password');
-          localStorage.removeItem('cvSessionId');
-          localStorage.removeItem('sessionId');
-          
-          // Esperar tiempo del splash y redirigir a login
-          setTimeout(() => navigate('/login'), splashDuration);
-          return;
-        }
+        const udid = userSession.getUdidOrCreate();
 
-        // 6. Hacer login automático
-        let udid = localStorage.getItem('udid');
+        // Si no hay UDID almacenado, ir al flujo normal de login/autologin
         if (!udid) {
-          udid = getUdid();
-          localStorage.setItem('udid', udid);
+          await goToLoginOrHome();
+          return;
         }
 
-        const sessionId = await panaccessService.login('clientLogin', {
-          apiToken: currentBrand.token,
-          clientId: username,
-          pwd: password,
-          udid: udid,
-        });
+        // Validación de UDID contra backend propio: GET {baseUrl}/udid/validate/?udid=...
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-        if (sessionId) {
-          localStorage.setItem('sessionId', sessionId);
-          localStorage.setItem('udid', udid);
-          setIsAuthenticated(true);
-          // Esperar tiempo del splash y redirigir según configuración del brand
-          const initialRoute = getInitialRoute(currentBrand);
-          setTimeout(() => navigate(initialRoute), splashDuration);
-        } else {
-          throw new Error('No se recibió sessionId');
+        try {
+          const base = apiBaseUrl.replace(/\/$/, '');
+          const url = `${base}/udid/validate/?udid=${encodeURIComponent(udid)}`;
+
+          const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+            },
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            // Aproximación a la lógica original: sólo limpiar si no parece error de servidor
+            const serverUnavailable = response.status >= 500;
+            if (!serverUnavailable) {
+              userSession.setLoggedOut();
+            }
+            await goToLoginOrHome();
+            return;
+          }
+
+          const data = await response.json().catch(() => ({}));
+          const status = data && data.status;
+          const validatedUdid = data && data.udid;
+
+          if (import.meta.env.DEV) {
+            console.log('[Splash] UDID validado', { status, validatedUdid });
+          }
+
+          if (status === 'used' && validatedUdid && validatedUdid === udid) {
+            // UDID válido y ya usado → intentar login automático
+            await goToLoginOrHome();
+          } else if (status === 'revoked') {
+            // UDID revocado → limpiar credenciales y seguir flujo normal
+            userSession.setLoggedOut();
+            await goToLoginOrHome();
+          } else if (status === 'pending') {
+            // UDID pendiente → ir directo a login
+            setTimeout(() => navigate('/login'), splashDuration);
+          } else {
+            // Cualquier otro caso inesperado → limpiar y flujo normal
+            userSession.setLoggedOut();
+            await goToLoginOrHome();
+          }
+        } catch (err) {
+          clearTimeout(timeoutId);
+          if (import.meta.env.DEV) {
+            console.error('[Splash] Error validando UDID:', err);
+          }
+
+          // Error de red/timeout: considerar backend caído, no limpiar credenciales
+          await goToLoginOrHome();
         }
-
-      } catch (error) {
-        console.error('[Splash] Error en auto-login:', error);
-        
-        // Limpiar credenciales inválidas
-        localStorage.removeItem('cvSessionId');
-        localStorage.removeItem('sessionId');
-        
-        // Esperar tiempo del splash y redirigir a login
+      } catch (err) {
+        if (import.meta.env.DEV) console.error('[Splash] Auto-login falló:', err);
+        userSession.setLoggedOut();
         setTimeout(() => navigate('/login'), splashDuration);
       }
     };
 
-    initializeAndLogin();
+    run();
   }, [navigate, currentBrand, isLoading, splashDuration]);
 
   // Mostrar loading mientras carga el brand
@@ -178,7 +225,7 @@ export function SplashPage() {
         {splashImage && (
           <img 
             src={splashImage} 
-            alt={`${appName} Splash`}
+            alt={t('splash.alt', { appName })}
             className="splash-image"
           />
         )}

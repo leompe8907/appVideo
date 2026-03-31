@@ -1,73 +1,58 @@
-/**
- * Hook para validar sesión automáticamente
- */
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CryptoJS from 'crypto-js';
-import panaccessService from '../services/panaccessService';
+import { useBrand } from '../contexts/BrandContext';
+import * as userSession from '../utils/userSession';
+import { checkSessionAndReactivateIfNeeded } from '../services/loginFlow';
 
-const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
-
+/**
+ * Valida la sesión en rutas protegidas. Si no hay sesión o es inválida,
+ * intenta reactivar (re-login + licencia). Si falla, redirige a splash/login.
+ */
 export function useAuthValidator() {
   const navigate = useNavigate();
+  const { currentBrand } = useBrand();
 
   useEffect(() => {
-    const validateSession = async () => {
-      try {
-        const sessionId = localStorage.getItem('cvSessionId');
+    let cancelled = false;
 
-        // Si no existe sessionId, redirigir a login
-        if (!sessionId) {
-          console.log('[AuthValidator] No existe sessionId. Redirigiendo a Login...');
-          navigate('/');
-          return;
-        }
+    const validate = async () => {
+      if (cancelled) return;
 
-        // Validar sessionId con el servicio
-        const isValid = await panaccessService.validateSession();
+      if (!userSession.isAuthenticated()) {
+        if (import.meta.env.DEV) console.log('[AuthValidator] No hay sessionId. Redirigiendo...');
+        navigate('/', { replace: true });
+        return;
+      }
 
-        if (isValid) {
-          console.log('[AuthValidator] SessionId válido');
-          return;
-        }
+      if (!currentBrand?.token) {
+        if (import.meta.env.DEV) console.warn('[AuthValidator] Sin brand config, esperando...');
+        return;
+      }
 
-        // Si la validación falla, intentar login automático con credenciales guardadas
-        const encryptedUsername = localStorage.getItem('encrypted_username');
-        const encryptedPassword = localStorage.getItem('encrypted_password');
+      const ok = await checkSessionAndReactivateIfNeeded(currentBrand, {
+        reactivateLicenseIfValid: false,
+      });
 
-        if (!encryptedUsername || !encryptedPassword) {
-          console.log('[AuthValidator] No hay credenciales guardadas. Redirigiendo a Login...');
-          navigate('/');
-          return;
-        }
-
-        // Desencriptar credenciales
-        const username = CryptoJS.AES.decrypt(encryptedUsername, SECRET_KEY).toString(CryptoJS.enc.Utf8);
-        const password = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY).toString(CryptoJS.enc.Utf8);
-
-        if (!username || !password) {
-          console.log('[AuthValidator] Credenciales corruptas. Redirigiendo a Login...');
-          navigate('/');
-          return;
-        }
-
-        console.log('[AuthValidator] Intentando login automático...');
-        await panaccessService.login(username, password);
-        console.log('[AuthValidator] Login automático exitoso');
-
-      } catch (error) {
-        console.error('[AuthValidator] Error en validación:', error);
-        // Limpiar storage y redirigir a login
-        localStorage.removeItem('cvSessionId');
-        localStorage.removeItem('encrypted_username');
-        localStorage.removeItem('encrypted_password');
-        navigate('/');
+      if (!ok) {
+        if (import.meta.env.DEV) console.warn('[AuthValidator] Sesión inválida o reactivación fallida.');
+        userSession.setLoggedOut();
+        navigate('/', { replace: true });
       }
     };
 
-    validateSession();
-  }, [navigate]);
+    // Validar inmediatamente al entrar en la ruta
+    validate();
+
+    // Validar periódicamente mientras la ruta esté activa (cada 5 minutos)
+    const intervalId = window.setInterval(() => {
+      validate();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [navigate, currentBrand]);
 
   return null;
 }

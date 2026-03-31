@@ -59,17 +59,66 @@ export function applyTheme(brandConfig) {
 
   const root = document.documentElement;
   const ui = brandConfig.ui;
+  const bouquets = brandConfig.bouquets || {};
+  const epgCards = brandConfig.epgCards || {};
+  const assets = brandConfig.assets || {};
+  const playerLoading = ui.playerLoading || {};
+  const playerLoadingPremium = playerLoading.premium !== false;
 
   // Aplicar variables CSS
   root.style.setProperty('--primary-color', ui.primaryColor);
   root.style.setProperty('--secondary-color', ui.secondaryColor);
   root.style.setProperty('--epg-line-color', ui.epgLineColorTime);
+  root.style.setProperty(
+    '--bouquet-timeship-color',
+    bouquets.timeshipColor || ui.epgLineColorTime
+  );
+  // EPG (cards)
+  root.style.setProperty(
+    '--epg-cards-channel-active-bg',
+    epgCards.epgCardsChannelActiveBg || '#0A4385'
+  );
+  root.style.setProperty(
+    '--epg-cards-program-live-bg',
+    epgCards.epgCardsProgramLiveBg || '#6C8EB6'
+  );
+  root.style.setProperty(
+    '--epg-cards-program-live-progress-bg',
+    epgCards.epgCardsProgramLiveProgressBg || epgCards.epgCardsProgramLiveBg || '#6C8EB6'
+  );
+  root.style.setProperty(
+    '--player-loading-background',
+    playerLoadingPremium
+      ? 'radial-gradient(circle at center, rgba(9, 14, 22, 0.18) 0%, rgba(9, 14, 22, 0.62) 78%), linear-gradient(180deg, rgba(4, 8, 14, 0.22), rgba(4, 8, 14, 0.48))'
+      : 'rgba(0, 0, 0, 0.28)'
+  );
+  root.style.setProperty(
+    '--player-loading-backdrop-filter',
+    playerLoadingPremium ? 'blur(5px) saturate(1.05)' : 'none'
+  );
+  root.style.setProperty(
+    '--player-loading-spinner-glow',
+    playerLoadingPremium ? '0 0 36px rgba(120, 170, 255, 0.32)' : 'none'
+  );
   root.style.setProperty('--font-family', ui.fontFamily);
+
+  // Background compartido Home (sin tocar sidebar).
+  // Probamos varias extensiones manteniendo el mismo nombre base `background.*`.
+  // Ponemos `png` primero para que sea idéntico al usado por Login (background.png)
+  // y caiga a otros formatos si no existe.
+  const bgExts = ['png', 'webp', 'jpg', 'jpeg', 'svg'];
+  const bgUrls = bgExts
+    .map((ext) => (assets.get ? assets.get(`background.${ext}`) : null))
+    .filter(Boolean)
+    .map((u) => `url("${u}")`);
+  root.style.setProperty('--home-background-image', bgUrls.join(', ') || 'none');
   
   // Aplicar clase de tema
   root.setAttribute('data-theme', ui.theme);
-  
-  console.log(`[Theme] Aplicado tema ${ui.theme} para ${brandConfig.brand}`);
+
+  if (import.meta.env.DEV) {
+    console.log(`[Theme] Aplicado tema ${ui.theme} para ${brandConfig.brand}`);
+  }
 }
 
 /**

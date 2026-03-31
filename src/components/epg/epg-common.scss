@@ -1,0 +1,400 @@
+/* Estilos comunes EPG (modal + layout cards).
+   Se mantienen aquí porque el módulo EPGcards aún no está 100% migrado desde el legacy. */
+
+.epg-event-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.epg-event-modal {
+  width: 60vw;
+  height: 80vh;
+  border-radius: 16px;
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.epg-event-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 18px 12px;
+}
+
+.epg-event-modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.epg-event-modal-channel {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  align-items: center;
+}
+
+.epg-event-modal-channel-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.epg-event-modal-lcn {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 1.5em;
+  font-weight: 700;
+}
+
+.epg-event-modal-name {
+  color: #fff;
+  font-size: 2.5em;
+  font-weight: 700;
+}
+
+.epg-event-modal-channel-logo {
+  width: 12em;
+  height: 10em;
+  object-fit: contain;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.epg-event-modal-rating {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.epg-event-modal-meta-row {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.epg-event-modal-meta-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.epg-event-modal-meta-time {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 1.5em;
+  font-weight: 700;
+}
+
+.epg-event-modal-meta-duration {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 1.5em;
+  font-weight: 700;
+}
+
+.epg-event-modal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.epg-event-modal-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.epg-event-modal-close.focused {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.epg-event-modal-body {
+  padding: 0 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.epg-event-modal-title {
+  margin: 0;
+  color: #fff;
+  font-size: 2.5em;
+  font-weight: 700;
+}
+
+.epg-event-modal-time {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+}
+
+.epg-event-modal-live-badge {
+  align-self: flex-start;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 1em;
+}
+
+.epg-event-modal-duration {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+}
+
+.epg-event-modal-event-img {
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  display: block;
+}
+
+// Cuando la imagen del evento vive en el header del modal (altura similar a la de la X/Cerrar).
+.epg-event-modal-header-right > .epg-event-modal-event-img {
+  width: 180px;
+  max-height: 110px;
+  flex: 0 0 auto;
+}
+
+.epg-event-modal-description {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 1.3em;
+  line-height: 1.5;
+  overflow: auto;
+}
+
+.epg-event-modal-footer {
+  padding: 14px 18px 18px;
+  display: flex;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.epg-event-modal-primary {
+  background: var(--primary-color, #2CE308);
+  color: #000;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.epg-event-modal-primary.focused {
+  filter: brightness(1.1);
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.epg-event-modal-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+
+.epg-event-modal-secondary.focused {
+  filter: brightness(1.1);
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.epg-event-modal-secondary--disabled {
+  opacity: 0.5;
+}
+
+.epg-cards-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  color: #fff;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.epg-cards-header {
+  padding: 18px 18px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.epg-cards-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.epg-cards-subtitle {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
+.epg-cards-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0px 12px 0px;
+  touch-action: pan-y;
+}
+
+.epg-cards-table-header {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 14px;
+  padding: 0 0 10px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgb(0, 0, 0);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  height: 5em;
+  align-items: center;
+  text-align: center;
+}
+
+.epg-cards-table-header-channel {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 2em;
+  font-weight: 700;
+  padding-top: 6px;
+}
+
+.epg-cards-row-cards--header {
+  align-items: start;
+  margin-top: 0;
+}
+
+.epg-cards-slot-header {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 2em;
+  font-weight: 700;
+  padding: 6px 0 0;
+  white-space: nowrap;
+}
+
+.epg-cards-row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.epg-cards-channel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.epg-cards-channel-lcn {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.5em;
+}
+
+.epg-cards-channel-name {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.5em;
+}
+
+.epg-cards-channel-logo {
+  width: 8em;
+  height: 6em;
+  object-fit: contain;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.epg-cards-channel-rating {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+}
+
+.epg-cards-row-cards {
+  display: grid;
+  grid-template-columns: repeat(var(--epg-cards-cols, 3), minmax(0, 1fr));
+  gap: 12px;
+}
+
+.epg-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 92px;
+  user-select: none;
+}
+
+.epg-card--live-now {
+  background: var(--epg-cards-program-live-bg, #6C8EB6);
+}
+
+.epg-card--live-now.focused {
+  background: var(--epg-cards-program-live-bg, #6C8EB6);
+}
+
+.epg-card.focused {
+  outline: 2px solid rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.epg-card.disabled {
+  opacity: 0.35;
+}
+
+.epg-card-slot-title {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.5em;
+  line-height: 1.2;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.epg-card-slot-time {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 1em;
+}
+
+.epg-card-live-progress {
+  margin-top: auto;
+  height: 0.6em;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.epg-card-live-progress-fill {
+  height: 100%;
+  background: var(--epg-cards-program-live-progress-bg, #6C8EB6);
+}
+

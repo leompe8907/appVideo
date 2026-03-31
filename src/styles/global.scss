@@ -47,6 +47,19 @@ body {
   min-height: 100vh;
 }
 
+/* Sin barras de scroll en ninguna área de la aplicación */
+html,
+body,
+.App {
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Links */
 a {
   font-weight: 500;
