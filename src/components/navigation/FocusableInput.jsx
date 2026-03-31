@@ -35,27 +35,30 @@ export const FocusableInput = forwardRef(function FocusableInput(
       if (onEnterPress) {
         onEnterPress();
       } else {
-        // En TV, cuando se presiona Enter en un input, abrir el teclado virtual
-        // haciendo que el input reciba focus nativo del DOM
+        // En TV, cuando se presiona Enter en un input, el teclado virtual debería
+        // abrirse de forma nativa gracias al interceptor en SpatialNavigationProvider
+        // que detiene la captura de la librería. Si por alguna razón llega aquí,
+        // aseguramos de hacer click nativo.
         if (isTV && inputElementRef.current) {
-          // Forzar blur primero para asegurar que el input pueda recibir focus de nuevo
-          // Esto resuelve el problema cuando el teclado se cierra pero el input mantiene focus virtual
-          inputElementRef.current.blur();
-          
-          // Pequeño delay para asegurar que el blur se complete
-          setTimeout(() => {
-            if (inputElementRef.current) {
-              // Hacer que el input reciba focus nativo para abrir el teclado virtual
-              inputElementRef.current.focus();
-              // También intentar hacer click para asegurar que se active
-              inputElementRef.current.click();
-            }
-          }, 50);
+          inputElementRef.current.click();
         }
       }
     },
     focusKey: focusKey || inputProps.id || `input-${inputProps.name || 'default'}`,
   });
+
+  // Sincronizar el foco espacial con el foco nativo del DOM
+  // Fundamental para que el OS de la TV sepa qué elemento está activo y
+  // el interceptor global funcione.
+  useEffect(() => {
+    if (isTV && focused && inputElementRef.current) {
+      // Tomar foco nativamente
+      inputElementRef.current.focus({ preventScroll: true });
+    } else if (isTV && !focused && inputElementRef.current && document.activeElement === inputElementRef.current) {
+      // Perder foco nativamente si lo teníamos
+      inputElementRef.current.blur();
+    }
+  }, [focused, isTV]);
 
   // Combinar refs: el ref externo (si existe) y el ref de navegación espacial
   const combinedRef = (node) => {
