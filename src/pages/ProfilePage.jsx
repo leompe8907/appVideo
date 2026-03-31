@@ -153,7 +153,8 @@ export function ProfilePage() {
         failIfInUse: false,
         pin,
       });
-      setProfileMessage({ type: 'success', text: `Perfil "${profile.name}" activado correctamente.` });
+      // Ingreso directo: no mostrar modal de bienvenida en éxito.
+      navigate('/home/bouquets', { replace: true });
     } catch (err) {
       console.error('[PROFILE] Error al activar perfil:', err);
       const message = err?.errorInfo?.userMessage || err?.message || 'Error al activar el perfil.';
@@ -204,14 +205,12 @@ export function ProfilePage() {
           onSuccess={handleDeleteSuccess}
         />
       )}
-      {profileMessage && (
+      {profileMessage?.type === 'error' && (
         <MessageModal
           type={profileMessage.type}
           message={profileMessage.text}
           onClose={() => {
-            const wasSuccess = profileMessage.type === 'success';
             setProfileMessage(null);
-            if (wasSuccess) navigate('/home/bouquets');
           }}
         />
       )}

@@ -57,8 +57,10 @@ export function LoginPage() {
     }, {
       autoActivateLicense: !credentials.licenseKey,
       activationRecursive: true,
-      // Si la licencia ya está en uso, el legacy no falla.
-      failIfInUse: false,
+      // Si está en uso, fallar para poder:
+      // - intentar otra licencia libre (autoActivate)
+      // - si no hay ninguna libre, caer a /smartcard
+      failIfInUse: true,
       storeClientConfig: true,
       storeLicenses: true,
       licenseKey: credentials.licenseKey || undefined,
@@ -67,6 +69,10 @@ export function LoginPage() {
 
     const active = getActiveLicense?.();
     const hasActiveLicense = !!active?.licenseKey;
+    if (!hasActiveLicense) {
+      navigate('/smartcard');
+      return;
+    }
     const skipSmartcard = !currentBrand?.features?.profiles && hasActiveLicense;
     navigate(skipSmartcard ? '/home/bouquets' : getInitialRoute(currentBrand));
   };
