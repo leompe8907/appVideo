@@ -20,6 +20,12 @@
  *   @param {string} ui.secondaryColor - Color secundario (hover, fondos, etc.).
  *   @param {string} ui.theme - Tema global: "dark" o "light".
  *   @param {string} ui.fontFamily - Familia de fuentes CSS (ej. "Arial, sans-serif", "Roboto, sans-serif").
+ *   @param {Object} ui.sidebar - Configuración visual del sidebar Home.
+ *     @param {string} ui.sidebar.backgroundColor - Fondo del sidebar.
+ *     @param {string} ui.sidebar.textColor - Color del texto del sidebar.
+ *     @param {string} ui.sidebar.submenuBackgroundColor - Fondo del submenú desplegable.
+ *     @param {string} ui.sidebar.submenuTextColor - Color del texto del submenú desplegable.
+ *     @param {boolean} ui.sidebar.fixed - true: sidebar sticky/fijo; false: normal (fluye con layout).
  *   @param {Object} ui.playerLoading - Estilo del overlay de carga de reproducción.
  *     @param {boolean} ui.playerLoading.premium - true: overlay premium (blur + gradientes + glow); false: overlay simple.
  *
@@ -143,6 +149,7 @@ export const BRANDS = [
       logoPositionHome: "top", // "top" | "right" | "left" | "center"
       showTime: true, // Si es true → muestra el tiempo, si es false → no muestra el tiempo
       // EPG
+      epgLineColorTime: "#2CE308",
       // Colores
       primaryColor: "#2CE308", // Color principal de la marca (botones, acentos, etc.)
       secondaryColor: "#1a8a05", // Color secundario (hover, fondos, etc.)
@@ -152,6 +159,14 @@ export const BRANDS = [
       // Player loading overlay
       playerLoading: {
         premium: true,
+      },
+      // Sidebar Home
+      sidebar: {
+        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+        textColor: 'rgba(255, 255, 255, 0.82)',
+        submenuBackgroundColor: 'rgba(0, 0, 0, 0.55)',
+        submenuTextColor: 'rgba(255, 255, 255, 0.85)',
+        fixed: true,
       },
     },
 
@@ -287,6 +302,14 @@ export const BRANDS = [
       playerLoading: {
         premium: true,
       },
+      // Sidebar Home (estructura uniforme entre marcas)
+      sidebar: {
+        backgroundColor: 'rgb(0, 0, 0)',
+        textColor: 'rgba(255, 255, 255, 0.82)',
+        submenuBackgroundColor: 'rgba(0, 0, 0, 0.55)',
+        submenuTextColor: 'rgba(255, 255, 255, 0.85)',
+        fixed: true,
+      },
     },
 
     // Configuración específica de bouquets
@@ -321,6 +344,7 @@ export const BRANDS = [
     },
     vod: {
       layout: "hero", // "hero" | "classic"
+      add: true,
       vodDetail: {
         descriptionMaxLength: 180, // Caracteres máximos de la descripción antes de "Leer más" (0 = sin límite)
         showReleaseYear: true, // Mostrar año de estreno en la metadata
@@ -419,6 +443,14 @@ export const BRANDS = [
       playerLoading: {
         premium: true,
       },
+      // Sidebar Home (estructura uniforme entre marcas)
+      sidebar: {
+        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+        textColor: 'rgba(255, 255, 255, 0.82)',
+        submenuBackgroundColor: 'rgba(0, 0, 0, 0.55)',
+        submenuTextColor: 'rgba(255, 255, 255, 0.85)',
+        fixed: true,
+      },
     },
 
     // Configuración específica de bouquets
@@ -453,6 +485,7 @@ export const BRANDS = [
     },
     vod: {
       layout: "hero",
+      add: true,
       vodDetail: {
         descriptionMaxLength: 180,
         showReleaseYear: true,
@@ -546,6 +579,14 @@ export const BRANDS = [
       playerLoading: {
         premium: true,
       },
+      // Sidebar Home (estructura uniforme entre marcas)
+      sidebar: {
+        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+        textColor: 'rgba(255, 255, 255, 0.82)',
+        submenuBackgroundColor: 'rgba(0, 0, 0, 0.55)',
+        submenuTextColor: 'rgba(255, 255, 255, 0.85)',
+        fixed: true,
+      },
     },
 
     // Configuración específica de bouquets
@@ -580,6 +621,7 @@ export const BRANDS = [
     },
     vod: {
       layout: "hero", // "hero" | "classic"
+      add: true,
       vodDetail: {
         descriptionMaxLength: 180, // Caracteres máximos de la descripción antes de "Leer más" (0 = sin límite)
         showReleaseYear: true, // Mostrar año de estreno en la metadata

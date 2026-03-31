@@ -59,6 +59,7 @@ export function applyTheme(brandConfig) {
 
   const root = document.documentElement;
   const ui = brandConfig.ui;
+  const sidebar = ui.sidebar || {};
   const bouquets = brandConfig.bouquets || {};
   const epgCards = brandConfig.epgCards || {};
   const assets = brandConfig.assets || {};
@@ -101,6 +102,12 @@ export function applyTheme(brandConfig) {
     playerLoadingPremium ? '0 0 36px rgba(120, 170, 255, 0.32)' : 'none'
   );
   root.style.setProperty('--font-family', ui.fontFamily);
+
+  // Sidebar (Home)
+  root.style.setProperty('--sidebar-bg', sidebar.backgroundColor || 'rgba(0, 0, 0, 0.45)');
+  root.style.setProperty('--sidebar-text', sidebar.textColor || 'rgba(255, 255, 255, 0.82)');
+  root.style.setProperty('--sidebar-submenu-bg', sidebar.submenuBackgroundColor || 'rgba(0, 0, 0, 0.55)');
+  root.style.setProperty('--sidebar-submenu-text', sidebar.submenuTextColor || 'rgba(255, 255, 255, 0.85)');
 
   // Background compartido Home (sin tocar sidebar).
   // Probamos varias extensiones manteniendo el mismo nombre base `background.*`.

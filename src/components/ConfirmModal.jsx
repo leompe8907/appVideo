@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export function ConfirmModal({
   open,
@@ -20,7 +21,9 @@ export function ConfirmModal({
 
   if (!open) return null;
 
-  return (
+  const showCancel = typeof onCancel === 'function';
+
+  return createPortal(
     <div className="confirm-modal-overlay" role="dialog" aria-modal="true">
       <div className="confirm-modal">
         {title ? <h4 className="confirm-modal__title">{title}</h4> : null}
@@ -29,12 +32,15 @@ export function ConfirmModal({
           <button type="button" className="confirm-modal__btn confirm-modal__btn--primary" onClick={onConfirm}>
             {confirmText || 'Aceptar'}
           </button>
-          <button type="button" className="confirm-modal__btn" onClick={onCancel}>
-            {cancelText || 'Cancelar'}
-          </button>
+          {showCancel && (
+            <button type="button" className="confirm-modal__btn" onClick={onCancel}>
+              {cancelText || 'Cancelar'}
+            </button>
+          )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

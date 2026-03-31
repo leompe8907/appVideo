@@ -5,7 +5,31 @@
     "success": "Sucesso",
     "error": "Erro",
     "close": "Fechar",
-    "navigation": "Navegação"
+    "navigation": "Navegação",
+    "settings": "Configurações",
+    "about": "Sobre",
+    "refresh": "Atualizar",
+    "logout": "Sair",
+    "exit": "Sair"
+  },
+  "settings": {
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "about": {
+      "title": "Sobre",
+      "app": "App",
+      "brand": "Marca",
+      "version": "Versão",
+      "username": "Usuário",
+      "smartcard": "Smartcard"
+      ,
+      "developedBy": "Desenvolvido por",
+      "timezone": "Fuso horário"
+    },
+    "logoutConfirmTitle": "Sair",
+    "logoutConfirmMessage": "Deseja sair desta conta neste dispositivo?",
+    "exitConfirmTitle": "Sair",
+    "exitConfirmMessage": "Deseja sair do aplicativo?"
   },
   "login": {
     "title": "Entrar",

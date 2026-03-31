@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { HomeShellContent } from '../components/ads/HomeShellContent';
@@ -22,6 +22,7 @@ export function HomePage() {
   const { pathname } = useLocation();
   const { containerRef, state: playerState, licenseInUsePrompt, confirmLicenseInUse, close } = usePlayer();
   const isPlayerActive = Boolean(playerState?.url);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
   // Evita el aviso "Blocked aria-hidden… descendant retained focus": no marcamos el shell
   // con aria-hidden mientras el foco sigue en una tarjeta; movemos el foco al player.
@@ -77,8 +78,15 @@ export function HomePage() {
         {isPlayerActive && !(playerState?.isLoading || playerState?.isSeeking) && <PlayerHud />}
       </div>
 
-      <div className={`home-shell-ui${isPlayerActive ? ' home-shell-ui--hidden' : ''}`}>
-        <Sidebar />
+      <div
+        className={[
+          'home-shell-ui',
+          isPlayerActive ? 'home-shell-ui--hidden' : '',
+          sidebarExpanded ? '' : 'home-shell-ui--sidebar-collapsed',
+        ].filter(Boolean).join(' ')}
+      >
+        {!isPlayerActive && sidebarExpanded && <div className="home-shell-dim" aria-hidden="true" />}
+        <Sidebar expanded={sidebarExpanded} onExpandedChange={setSidebarExpanded} />
         <main className="home-content">
           <HomeShellContent />
         </main>

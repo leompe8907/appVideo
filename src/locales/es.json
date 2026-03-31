@@ -5,7 +5,31 @@
     "success": "Éxito",
     "error": "Error",
     "close": "Cerrar",
-    "navigation": "Navegación"
+    "navigation": "Navegación",
+    "settings": "Configuración",
+    "about": "Acerca de",
+    "refresh": "Refrescar",
+    "logout": "Cerrar sesión",
+    "exit": "Salir"
+  },
+  "settings": {
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "about": {
+      "title": "Acerca de",
+      "app": "App",
+      "brand": "Marca",
+      "version": "Versión",
+      "username": "Usuario",
+      "smartcard": "Smartcard"
+      ,
+      "developedBy": "Desarrollado por",
+      "timezone": "Zona horaria"
+    },
+    "logoutConfirmTitle": "Cerrar sesión",
+    "logoutConfirmMessage": "¿Deseas cerrar sesión en este dispositivo?",
+    "exitConfirmTitle": "Salir",
+    "exitConfirmMessage": "¿Deseas salir de la aplicación?"
   },
   "login": {
     "title": "Iniciar Sesión",

@@ -5,7 +5,31 @@
     "success": "Success",
     "error": "Error",
     "close": "Close",
-    "navigation": "Navigation"
+    "navigation": "Navigation",
+    "settings": "Settings",
+    "about": "About",
+    "refresh": "Refresh",
+    "logout": "Log out",
+    "exit": "Exit"
+  },
+  "settings": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "about": {
+      "title": "About",
+      "app": "App",
+      "brand": "Brand",
+      "version": "Version",
+      "username": "Username",
+      "smartcard": "Smartcard"
+      ,
+      "developedBy": "Developed by",
+      "timezone": "Timezone"
+    },
+    "logoutConfirmTitle": "Log out",
+    "logoutConfirmMessage": "Do you want to log out on this device?",
+    "exitConfirmTitle": "Exit",
+    "exitConfirmMessage": "Do you want to exit the application?"
   },
   "login": {
     "title": "Sign In",
