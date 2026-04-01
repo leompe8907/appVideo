@@ -12,6 +12,16 @@
     "logout": "Log out",
     "exit": "Exit"
   },
+  "sidebar": {
+    "menu": "Menu",
+    "bouquets": "Home",
+    "movies": "Movies",
+    "channelGuide": "Channel guide",
+    "tvRadioServices": "TV and radio services",
+    "tvRadioPlaceholder": "Module in preparation for TV and radio services.",
+    "catchup": "Catch-up",
+    "osms": "OSMS"
+  },
   "settings": {
     "confirm": "Confirm",
     "cancel": "Cancel",

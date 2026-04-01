@@ -64,6 +64,7 @@ function ProtectedRoute({ children }) {
 }
 
 function App() {
+  const { t } = useTranslation();
   const viewport = useViewport();
   const lastViewportClassRef = useRef('');
   const lastScaleRef = useRef(null);
@@ -121,17 +122,17 @@ function App() {
               <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<Loading />}><ProfilePage /></Suspense></ProtectedRoute>}/>
               <Route path="/smartcard" element={<ProtectedRoute><Suspense fallback={<Loading />}><SmartCardPage /></Suspense></ProtectedRoute>}/>
               <Route path="/preload" element={<ProtectedRoute><Suspense fallback={<Loading />}><PreloadDataPage /></Suspense></ProtectedRoute>}/>
-              <Route path="/bouquets" element={<Navigate to="/home/bouquets" replace />}/>
+              <Route path="/inicio" element={<Navigate to="/home/inicio" replace />}/>
               <Route path="/vod" element={<Navigate to="/home/vod" replace />}/>
               <Route path="/epg" element={<Navigate to="/home/epg" replace />}/>
               <Route path="/home" element={<ProtectedRoute><Suspense fallback={<Loading />}><HomePage /></Suspense></ProtectedRoute>}>
-                <Route path="inicio" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="Inicio" description="Modulo en preparacion para el modulo Inicio." /></Suspense>}/>
-                <Route path="bouquets" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><BouquetPage /></Suspense></PreloadGate>}/>
+                <Route path="inicio" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><BouquetPage /></Suspense></PreloadGate>}/>
+                <Route path="servicios-tv-radio" element={<Suspense fallback={<Loading />}> <HomePlaceholderPage title="Inicio" description="Modulo en preparacion para el modulo Inicio." /></Suspense>} />
                 <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>}/>
                 <Route path="epg" element={<PreloadGate required="epg"> <Suspense fallback={<Loading />}> <EpgCardsPage /></Suspense></PreloadGate>}/>
                 <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>}/>
                 <Route path="osms" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="OSMS" description="Modulo en preparacion para mensajes del sistema." /></Suspense>}/>
-                <Route path="*" element={<Navigate to="/home/bouquets" replace />} />
+                <Route path="*" element={<Navigate to="/home/inicio" replace />} />
               </Route>
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />

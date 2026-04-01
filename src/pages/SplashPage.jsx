@@ -48,7 +48,7 @@ export function SplashPage() {
 
               // Caso 1: reactivación OK -> saltamos smartcard (si no usan profiles).
               if (hasActiveLicense && reactivatedOk) {
-                const target = profilesEnabled ? '/profile' : '/home/bouquets';
+                const target = profilesEnabled ? '/profile' : '/home/inicio';
                 setTimeout(() => navigate(target), splashDuration);
                 return;
               }
@@ -76,7 +76,7 @@ export function SplashPage() {
               const target = hasActiveAfter
                 ? profilesEnabled
                   ? '/profile'
-                  : '/home/bouquets'
+                  : '/home/inicio'
                 : '/smartcard';
               setTimeout(() => navigate(target), splashDuration);
               return;
@@ -112,7 +112,7 @@ export function SplashPage() {
           const target = hasActiveAfter
             ? profilesEnabled
               ? '/profile'
-              : '/home/bouquets'
+              : '/home/inicio'
             : '/smartcard';
 
           setTimeout(() => navigate(target), splashDuration);

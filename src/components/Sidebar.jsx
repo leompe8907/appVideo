@@ -149,7 +149,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   }, [appName, currentBrand, t]);
 
   const handleRefresh = () => {
-    const redirect = location.pathname?.startsWith('/home/') ? location.pathname : '/home/bouquets';
+    const redirect = location.pathname?.startsWith('/home/') ? location.pathname : '/home/inicio';
     navigate(`/preload?redirect=${encodeURIComponent(redirect)}`);
   };
 
@@ -227,7 +227,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
         expanded ? '' : 'home-sidebar--collapsed',
         sidebarFixed ? 'home-sidebar--fixed' : '',
       ].filter(Boolean).join(' ')}
-      aria-label={t('common.menu', { defaultValue: 'Menu' })}
+      aria-label={t('sidebar.menu')}
       onFocusCapture={() => setExpandedSafe(true)}
       onBlurCapture={scheduleCollapseIfOutside}
       onMouseEnter={() => setExpandedSafe(true)}
@@ -268,15 +268,15 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       />
       <div className="home-sidebar-header">{appName || 'App'}</div>
       <nav className="home-sidebar-nav">
-        <SidebarLink to="/home/bouquets" label="Canales" icon="channels" />
-        {showVod && <SidebarLink to="/home/vod" label="Peliculas" icon="movies" />}
-        <SidebarLink to="/home/epg" label={t('epg.title', { defaultValue: 'Channel guide' })} icon="guide" />
-        <SidebarLink to="/home/inicio" label="Inicio" icon="home" />
+        <SidebarLink to="/home/inicio" label={t('sidebar.bouquets')} icon="home" />
+        {showVod && <SidebarLink to="/home/vod" label={t('sidebar.movies')} icon="movies" />}
+        <SidebarLink to="/home/epg" label={t('sidebar.channelGuide')} icon="guide" />
+        <SidebarLink to="/home/servicios-tv-radio" label={t('sidebar.tvRadioServices')} icon="channels" />
         {showCatchup && (
-          <SidebarLink to="/home/catchup" label={t('common.catchup', { defaultValue: 'Catchup' })} />
+          <SidebarLink to="/home/catchup" label={t('sidebar.catchup')} />
         )}
         {currentBrand?.features?.osms && (
-          <SidebarLink to="/home/osms" label={t('common.osms', { defaultValue: 'OSMS' })} />
+          <SidebarLink to="/home/osms" label={t('sidebar.osms')} />
         )}
 
         <div className="home-sidebar-settings">

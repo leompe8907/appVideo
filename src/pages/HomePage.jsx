@@ -40,7 +40,7 @@ export function HomePage() {
   }, [isPlayerActive, containerRef]);
 
   if (pathname === '/home') {
-    return <Navigate to="/home/bouquets" replace />;
+    return <Navigate to="/home/inicio" replace />;
   }
 
   return (

@@ -214,6 +214,8 @@ $home-sidebar-duration: 380ms;
 .home-sidebar-icon {
   flex: 0 0 auto;
   opacity: 0.92;
+  height: 2em;
+  width: 2em;
 }
 
 .home-sidebar-label {
@@ -270,7 +272,7 @@ $home-sidebar-duration: 380ms;
   border-left: none;
   padding: 0.55rem;
   border-radius: 12px;
-  background: var(--sidebar-submenu-bg, rgba(0, 0, 0, 0.55));
+  background: var(--sidebar-submenu-bg, rgb(0, 0, 0));
   border: 1px solid rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(6px);
   min-width: 220px;

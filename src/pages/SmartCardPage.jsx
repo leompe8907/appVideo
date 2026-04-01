@@ -118,7 +118,7 @@ export function SmartCardPage() {
         setActiveLicense({ licenseKey: activeKey, pin: activePin });
 
         // Para esta ruta esperamos que las marcas sin profiles vayan directo a home/bouquets.
-        navigate('/home/bouquets');
+        navigate('/home/inicio');
       } catch (err) {
         console.error('[SMARTCARD] Auto-activate error:', err);
         if (isLicenseInUseError(err)) {
@@ -158,7 +158,7 @@ export function SmartCardPage() {
       await panaccessService.setStreamingLicense({ licenseKey, pin, failIfInUse });
       setActiveLicense({ licenseKey, pin });
       // Al seleccionar una tarjeta, se debe ingresar directamente (sin modal de bienvenida).
-      navigate('/home/bouquets', { replace: true });
+      navigate('/home/inicio', { replace: true });
     } catch (err) {
       console.error('[SMARTCARD] Error al establecer licencia:', err);
       if (failIfInUse && isLicenseInUseError(err)) {

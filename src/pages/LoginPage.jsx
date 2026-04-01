@@ -74,7 +74,7 @@ export function LoginPage() {
       return;
     }
     const skipSmartcard = !currentBrand?.features?.profiles && hasActiveLicense;
-    navigate(skipSmartcard ? '/home/bouquets' : getInitialRoute(currentBrand));
+    navigate(skipSmartcard ? '/home/inicio' : getInitialRoute(currentBrand));
   };
 
   const udidFlow = useUdidLoginFlow({
@@ -254,7 +254,7 @@ export function LoginPage() {
         const active = getActiveLicense?.();
         const hasActiveLicense = !!active?.licenseKey;
         const skipSmartcard = !currentBrand?.features?.profiles && hasActiveLicense;
-        navigate(skipSmartcard ? '/home/bouquets' : getInitialRoute(currentBrand));
+        navigate(skipSmartcard ? '/home/inicio' : getInitialRoute(currentBrand));
       }, 400);
 
     } catch (err) {

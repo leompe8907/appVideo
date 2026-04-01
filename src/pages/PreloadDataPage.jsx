@@ -64,7 +64,7 @@ export function PreloadDataPage() {
       const safeTarget =
         redirect && redirect.startsWith('/home/')
           ? redirect
-          : '/home/bouquets';
+          : '/home/inicio';
       navigate(safeTarget, { replace: true });
     }
   }, [epg.status, vod.status, navigate, location.search]);

@@ -12,6 +12,16 @@
     "logout": "Sair",
     "exit": "Sair"
   },
+  "sidebar": {
+    "menu": "Menu",
+    "bouquets": "Início",
+    "movies": "Filmes",
+    "channelGuide": "Guia de canais",
+    "tvRadioServices": "Serviços de TV e rádio",
+    "tvRadioPlaceholder": "Módulo em preparação para serviços de TV e rádio.",
+    "catchup": "Catchup",
+    "osms": "OSMS"
+  },
   "settings": {
     "confirm": "Confirmar",
     "cancel": "Cancelar",

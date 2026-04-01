@@ -154,7 +154,7 @@ export function ProfilePage() {
         pin,
       });
       // Ingreso directo: no mostrar modal de bienvenida en éxito.
-      navigate('/home/bouquets', { replace: true });
+      navigate('/home/inicio', { replace: true });
     } catch (err) {
       console.error('[PROFILE] Error al activar perfil:', err);
       const message = err?.errorInfo?.userMessage || err?.message || 'Error al activar el perfil.';

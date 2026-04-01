@@ -306,7 +306,7 @@ export const BRANDS = [
       sidebar: {
         backgroundColor: 'rgb(0, 0, 0)',
         textColor: 'rgba(255, 255, 255, 0.82)',
-        submenuBackgroundColor: 'rgba(0, 0, 0, 0.55)',
+        submenuBackgroundColor: 'rgb(0, 0, 0)',
         submenuTextColor: 'rgba(255, 255, 255, 0.85)',
         fixed: true,
       },

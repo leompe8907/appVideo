@@ -12,6 +12,16 @@
     "logout": "Cerrar sesión",
     "exit": "Salir"
   },
+  "sidebar": {
+    "menu": "Menú",
+    "bouquets": "Inicio",
+    "movies": "Películas",
+    "channelGuide": "Guía de canales",
+    "tvRadioServices": "Servicios de TV y radio",
+    "tvRadioPlaceholder": "Módulo en preparación para servicios de TV y radio.",
+    "catchup": "Catchup",
+    "osms": "OSMS"
+  },
   "settings": {
     "confirm": "Confirmar",
     "cancel": "Cancelar",
