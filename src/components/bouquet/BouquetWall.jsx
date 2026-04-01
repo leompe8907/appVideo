@@ -1,6 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getBouquetsWithChannels } from '../../services/tvDataService';
+import {
+  getBouquetsWithChannels,
+  filterBouquetsForInicio,
+  filterBouquetsForTvRadioServices,
+} from '../../services/tvDataService';
 import { usePreload } from '../../store/usePreload';
 import { mergeEpgIntoChannels } from '../../utils/epgMerge';
 import {
@@ -13,19 +17,24 @@ import {
  * BouquetWall: filas de canales por bouquet (home 10foot).
  * Con precarga EPG lista: usa `epg.bouquetsWithChannels` del PreloadContext (sin repetir getBouquets/getAvailableStreams).
  * Solo pide red si el preload de EPG falló.
+ *
+ * @param {'inicio' | 'servicios'} variant - inicio: isMain !== false explícito; servicios: solo isMain=false.
  */
-export function BouquetWall({ onChannelSelect }) {
+export function BouquetWall({ onChannelSelect, variant = 'inicio' }) {
   const { t } = useTranslation();
   const { epg } = usePreload();
 
   const bouquetsFromPreload = useMemo(() => {
     if (epg.status !== 'ready') return null;
     const list = epg.bouquetsWithChannels || [];
-    return list.map((b) => ({
+    const merged = list.map((b) => ({
       ...b,
       items: mergeEpgIntoChannels(b.items || [], epg.streams),
     }));
-  }, [epg.status, epg.bouquetsWithChannels, epg.streams]);
+    return variant === 'servicios'
+      ? filterBouquetsForTvRadioServices(merged)
+      : filterBouquetsForInicio(merged);
+  }, [epg.status, epg.bouquetsWithChannels, epg.streams, variant]);
 
   const [fallbackBouquets, setFallbackBouquets] = useState([]);
   const [fallbackLoading, setFallbackLoading] = useState(false);
@@ -51,7 +60,9 @@ export function BouquetWall({ onChannelSelect }) {
           ...b,
           items: mergeEpgIntoChannels(b.items || [], epg.streams),
         }));
-        setFallbackBouquets(withEpg);
+        setFallbackBouquets(
+          variant === 'servicios' ? filterBouquetsForTvRadioServices(withEpg) : filterBouquetsForInicio(withEpg)
+        );
       } catch (err) {
         if (!isMounted) return;
         console.error('[BouquetWall] Error al cargar bouquets con canales:', err);
@@ -68,7 +79,7 @@ export function BouquetWall({ onChannelSelect }) {
     return () => {
       isMounted = false;
     };
-  }, [bouquetsFromPreload, epg.status, epg.streams, t]);
+  }, [bouquetsFromPreload, epg.status, epg.streams, t, variant]);
 
   const bouquets = bouquetsFromPreload !== null ? bouquetsFromPreload : fallbackBouquets;
   const isLoading = bouquetsFromPreload !== null ? false : fallbackLoading;

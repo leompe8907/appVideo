@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useBrand } from '../contexts/BrandContext';
 import { usePreload } from '../store/usePreload';
 import panaccessService from '../services/panaccessService';
+import { hasTvRadioServiceBouquets } from '../services/tvDataService';
 import { setLoggedOut, getActiveLicense, getCredentials } from '../utils/userSession';
 import MessageModal from './MessageModal';
 import ConfirmModal from './ConfirmModal';
@@ -105,7 +106,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   const location = useLocation();
   const rootRef = useRef(null);
   const { appName, currentBrand } = useBrand();
-  const { vod, catchup } = usePreload();
+  const { vod, catchup, epg } = usePreload();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aboutModal, setAboutModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null); // 'logout' | 'exit' | null
@@ -126,6 +127,9 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   const showVod = !vodIsEmptyAfterLoad;
   const catchupEnabledByBrand = currentBrand?.catchup?.enabled !== false;
   const showCatchup = catchupEnabledByBrand && !catchupIsEmptyAfterLoad;
+
+  const showTvRadioServices =
+    epg.status === 'ready' && hasTvRadioServiceBouquets(epg.bouquetsWithChannels || []);
 
   const aboutMessage = useMemo(() => {
     const cred = getCredentials();
@@ -271,7 +275,9 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
         <SidebarLink to="/home/inicio" label={t('sidebar.bouquets')} icon="home" />
         {showVod && <SidebarLink to="/home/vod" label={t('sidebar.movies')} icon="movies" />}
         <SidebarLink to="/home/epg" label={t('sidebar.channelGuide')} icon="guide" />
-        <SidebarLink to="/home/servicios-tv-radio" label={t('sidebar.tvRadioServices')} icon="channels" />
+        {showTvRadioServices && (
+          <SidebarLink to="/home/servicios-tv-radio" label={t('sidebar.tvRadioServices')} icon="channels" />
+        )}
         {showCatchup && (
           <SidebarLink to="/home/catchup" label={t('sidebar.catchup')} />
         )}

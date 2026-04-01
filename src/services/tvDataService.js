@@ -210,6 +210,53 @@ export function filterMainBouquets(bouquets) {
   return mainBouquets;
 }
 
+function resolveBouquetMainRaw(bouquet) {
+  return bouquet?.isMain ?? bouquet?.ismain ?? bouquet?.main;
+}
+
+/**
+ * Bouquet con isMain=false explícito (TV/Radio). Cadenas "false", "0", "no" cuentan como false.
+ */
+export function isBouquetExplicitlyNonMain(bouquet) {
+  const raw = resolveBouquetMainRaw(bouquet);
+  if (typeof raw === 'boolean') return raw === false;
+  if (typeof raw === 'string') {
+    const v = raw.toLowerCase();
+    return v === 'false' || v === '0' || v === 'no';
+  }
+  return false;
+}
+
+/**
+ * Indica si existe al menos un bouquet secundario para mostrar "Servicios TV y Radio" en el sidebar.
+ */
+export function hasTvRadioServiceBouquets(bouquets) {
+  if (!Array.isArray(bouquets)) return false;
+  return bouquets.some(isBouquetExplicitlyNonMain);
+}
+
+/**
+ * Inicio: bouquets que no están marcados con isMain=false (true o sin flag siguen en inicio).
+ */
+export function filterBouquetsForInicio(bouquets) {
+  if (!Array.isArray(bouquets)) return [];
+  return bouquets.filter((b) => !isBouquetExplicitlyNonMain(b));
+}
+
+/**
+ * Servicios TV y Radio: solo bouquets con isMain=false, ordenados por prioridad.
+ */
+export function filterBouquetsForTvRadioServices(bouquets) {
+  if (!Array.isArray(bouquets)) return [];
+  const filtered = bouquets.filter(isBouquetExplicitlyNonMain);
+  filtered.sort((a, b) => {
+    const pa = Number(a.priority ?? a.Priority ?? 0);
+    const pb = Number(b.priority ?? b.Priority ?? 0);
+    return pa - pb;
+  });
+  return filtered;
+}
+
 /**
  * Obtiene y normaliza los bouquets "principales" (isMain) ordenados por prioridad.
  * Equivalente a parte de la lógica de AppData.getDataForServicesTV en 10foot.

@@ -1,22 +1,22 @@
 /**
- * Página de Bouquets.
- * Solo muestra el muro de bouquets con canales (sin header/footer; resto configurable en Home).
- * La URL de reproducción se toma del backend o se construye con getStreamM3u8 (lógica 10foot).
+ * Servicios TV y Radio: muro de bouquets con isMain=false (excluidos de Inicio).
  */
 
+import { Navigate } from 'react-router-dom';
 import { usePlayer } from '../contexts/PlayerContext';
 import BouquetWall from '../components/bouquet/BouquetWall';
-import VodRecommendedHomeRail from '../components/vod/VodRecommendedHomeRail';
+import { usePreload } from '../store/usePreload';
+import { hasTvRadioServiceBouquets } from '../services/tvDataService';
 import panaccessService from '../services/panaccessService';
 import '../styles/pages/_bouquet.scss';
 
-export function BouquetPage() {
-  // El background común lo maneja Home (.home-content)
+export function TvRadioServicesPage() {
   const { play } = usePlayer();
+  const { epg } = usePreload();
 
   const handleChannelSelect = (channel) => {
     if (import.meta.env?.DEV) {
-      console.log('[BouquetPage] handleChannelSelect', channel?.id ?? channel?.lcn, channel);
+      console.log('[TvRadioServicesPage] handleChannelSelect', channel?.id ?? channel?.lcn, channel);
     }
     if (!channel) return;
 
@@ -34,14 +34,14 @@ export function BouquetPage() {
           url = panaccessService.getStreamM3u8Url({ streamId });
         } catch (e) {
           if (import.meta.env?.DEV) {
-            console.warn('[BouquetPage] getStreamM3u8Url fallback:', e?.message || e);
+            console.warn('[TvRadioServicesPage] getStreamM3u8Url fallback:', e?.message || e);
           }
         }
       }
     }
 
     if (!url) {
-      console.warn('[BouquetPage] Canal sin URL de streaming', channel);
+      console.warn('[TvRadioServicesPage] Canal sin URL de streaming', channel);
       return;
     }
 
@@ -54,14 +54,20 @@ export function BouquetPage() {
     });
   };
 
+  if (
+    epg.status === 'ready' &&
+    !hasTvRadioServiceBouquets(epg.bouquetsWithChannels || [])
+  ) {
+    return <Navigate to="/home/inicio" replace />;
+  }
+
   return (
     <div className="bouquet-page">
       <div className="bouquet-overlay" />
       <div className="bouquet-container">
         <div className="bouquet-content">
           <div className="bouquet-inicio-scroll">
-            <BouquetWall variant="inicio" onChannelSelect={handleChannelSelect} />
-            <VodRecommendedHomeRail />
+            <BouquetWall variant="servicios" onChannelSelect={handleChannelSelect} />
           </div>
         </div>
       </div>
@@ -69,4 +75,4 @@ export function BouquetPage() {
   );
 }
 
-export default BouquetPage;
+export default TvRadioServicesPage;
