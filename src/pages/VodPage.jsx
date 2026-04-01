@@ -1,5 +1,5 @@
 /**
- * Página VOD: categorías y recomendados desde PreloadContext.
+ * Página VOD: categorías desde PreloadContext (recomendados solo en Inicio).
  * Por género: 9 ítems + "Ver más" que abre modal con todo el género.
  * Al seleccionar un ítem (película o serie) se abre el modal de detalle; desde ahí se reproduce.
  */
@@ -34,7 +34,6 @@ export function VodPage() {
   const vodLayout = currentBrand?.vod?.layout === 'classic' ? 'classic' : 'hero';
   const status = vod.status;
   const categories = vod.categories || [];
-  const vodRecommended = vod.vodRecommended || [];
   const allVods = useMemo(() => vod.allVods || [], [vod.allVods]);
   const error = vod.error || '';
 
@@ -112,29 +111,6 @@ export function VodPage() {
 
         {status === 'ready' && (
           <div className="vod-content">
-            {vodRecommended?.length > 0 && (
-              <section className="vod-row" aria-label={t('vod.recommended')}>
-                <h2 className="vod-row-title">{t('vod.recommended')}</h2>
-                <div className="vod-row-cards">
-                  {vodRecommended.slice(0, ITEMS_PER_ROW).map((v, i) => (
-                    <VodCard
-                      key={v.id ?? i}
-                      item={v}
-                      index={i}
-                      onSelect={handleVodSelect}
-                      focusKeyPrefix="vod-rec"
-                      baseUrl={baseUrl}
-                    />
-                  ))}
-                  {vodRecommended.length > ITEMS_PER_ROW && (
-                    <VodSeeMoreCard
-                      focusKeyPrefix="vod-rec"
-                      onSelect={() => openCategoryModal(t('vod.recommended'), vodRecommended)}
-                    />
-                  )}
-                </div>
-              </section>
-            )}
             {categories?.map((cat, catIndex) => {
               const catVods = cat.vods || [];
               return (
@@ -165,9 +141,10 @@ export function VodPage() {
                 </section>
               );
             })}
-            {status === 'ready' && (!categories?.length || categories.every((c) => !(c.vods?.length))) && !vodRecommended?.length && (
-              <p className="vod-no-content">{t('vod.noContent')}</p>
-            )}
+            {status === 'ready' &&
+              (!categories?.length || categories.every((c) => !(c.vods?.length))) && (
+                <p className="vod-no-content">{t('vod.noContent')}</p>
+              )}
           </div>
         )}
       </div>

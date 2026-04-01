@@ -6,6 +6,7 @@
 
 import { usePlayer } from '../contexts/PlayerContext';
 import BouquetWall from '../components/bouquet/BouquetWall';
+import VodRecommendedHomeRail from '../components/vod/VodRecommendedHomeRail';
 import panaccessService from '../services/panaccessService';
 import '../styles/pages/_bouquet.scss';
 
@@ -58,7 +59,10 @@ export function BouquetPage() {
       <div className="bouquet-overlay" />
       <div className="bouquet-container">
         <div className="bouquet-content">
-          <BouquetWall onChannelSelect={handleChannelSelect} />
+          <div className="bouquet-inicio-scroll">
+            <BouquetWall onChannelSelect={handleChannelSelect} />
+            <VodRecommendedHomeRail />
+          </div>
         </div>
       </div>
     </div>

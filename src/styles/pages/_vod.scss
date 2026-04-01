@@ -961,6 +961,22 @@
     border-color: #e50914;
     background: rgba(229, 9, 20, 0.15);
   }
+
+  &.vod-see-more-card--poster-text {
+    .vod-see-more-poster {
+      padding: 0.5rem 0.6rem;
+    }
+
+    .vod-see-more-poster-label {
+      font-size: clamp(0.68rem, 1.05vw, 0.88rem);
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.95);
+      line-height: 1.3;
+      text-align: center;
+      white-space: normal;
+      max-width: 100%;
+    }
+  }
 }
 
 // VodCategoryModal (todas las películas del género)
