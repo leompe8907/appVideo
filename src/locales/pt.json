@@ -12,6 +12,9 @@
     "logout": "Sair",
     "exit": "Sair"
   },
+  "inicio": {
+    "header": "Cabeçalho do início"
+  },
   "sidebar": {
     "menu": "Menu",
     "bouquets": "Início",

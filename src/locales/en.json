@@ -12,6 +12,9 @@
     "logout": "Log out",
     "exit": "Exit"
   },
+  "inicio": {
+    "header": "Home header"
+  },
   "sidebar": {
     "menu": "Menu",
     "bouquets": "Home",

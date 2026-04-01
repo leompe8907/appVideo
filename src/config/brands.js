@@ -57,6 +57,8 @@
  * @param {Object} bouquets - Configuración visual específica para bouquets:
  *   @param {string} bouquets.timeshipColor - Color (hex) de la barra de progreso (timeship) en los bouquets.
  *
+ * @param {Object} header - Cabecera de la pantalla Inicio (tres zonas horizontales: izquierda, centro, derecha). Objeto reservado para configuración por marca (p. ej. logos, widgets); puede ir vacío al inicio.
+ *
  * @param {Object} debug - Opciones de depuración (normalmente solo en desarrollo):
  *   @param {boolean} debug.spatialNav - true: activa logs en consola de la navegación espacial.
  *   @param {boolean} debug.spatialNavVisual - true: muestra marcos rojos de debug para la navegación espacial.
@@ -175,6 +177,9 @@ export const BRANDS = [
       // Color de la barra de progreso (timeship) en diseños event_and_logo, etc.
       timeshipColor: "#2CE308",
     },
+
+    // Cabecera Inicio (tres columnas); contenido por marca (vacío hasta definir).
+    header: {},
     
     // Features habilitadas/deshabilitadas
     features: {
@@ -316,6 +321,9 @@ export const BRANDS = [
     bouquets: {
       timeshipColor: "#3333FF",
     },
+
+    // Cabecera Inicio (tres columnas); contenido por marca (vacío hasta definir).
+    header: {},
     
     // Features habilitadas/deshabilitadas
     features: {
@@ -457,6 +465,9 @@ export const BRANDS = [
     bouquets: {
       timeshipColor: "#2CE308",
     },
+
+    // Cabecera Inicio (tres columnas); contenido por marca (vacío hasta definir).
+    header: {},
     
     // Features habilitadas/deshabilitadas
     features: {
@@ -593,6 +604,9 @@ export const BRANDS = [
     bouquets: {
       timeshipColor: "#3333FF",
     },
+
+    // Cabecera Inicio (tres columnas); contenido por marca (vacío hasta definir).
+    header: {},
     
     // Features habilitadas/deshabilitadas
     features: {

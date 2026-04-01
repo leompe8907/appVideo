@@ -12,6 +12,9 @@
     "logout": "Cerrar sesión",
     "exit": "Salir"
   },
+  "inicio": {
+    "header": "Cabecera de inicio"
+  },
   "sidebar": {
     "menu": "Menú",
     "bouquets": "Inicio",
