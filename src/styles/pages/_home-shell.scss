@@ -1,5 +1,15 @@
 @use '../variables' as *;
 
+// Permite interpolar `--home-sidebar-width` (overlays VOD alineados al rail).
+@property --home-sidebar-width {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 240px;
+}
+
+$home-sidebar-ease: cubic-bezier(0.4, 0, 0.2, 1);
+$home-sidebar-duration: 380ms;
+
 .home-shell {
   display: block;
   min-height: 100vh;
@@ -8,10 +18,20 @@
 }
 
 .home-shell-ui {
+  // Ancho de la primera columna (sidebar); los overlays fijos (p. ej. detalle VOD) heredan y
+  // usan `left` para alinearse con el área principal sin tapar el rail.
+  --home-sidebar-width: 240px;
+  --home-sidebar-transition-duration: #{$home-sidebar-duration};
+  --home-sidebar-transition-ease: #{$home-sidebar-ease};
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
   min-height: 100vh;
-  transition: opacity 200ms ease, transform 220ms ease, visibility 220ms ease;
+  transition:
+    grid-template-columns var(--home-sidebar-transition-duration) var(--home-sidebar-transition-ease),
+    --home-sidebar-width var(--home-sidebar-transition-duration) var(--home-sidebar-transition-ease),
+    opacity 200ms ease,
+    transform 220ms ease,
+    visibility 220ms ease;
   position: relative;
 }
 
@@ -24,6 +44,7 @@
 }
 
 .home-shell-ui--sidebar-collapsed {
+  --home-sidebar-width: 84px;
   grid-template-columns: 84px minmax(0, 1fr);
 }
 
@@ -118,6 +139,7 @@
   padding: 1rem 0.75rem;
   position: relative;
   z-index: 10; // asegurar que flyouts queden sobre el contenido
+  transition: padding $home-sidebar-duration $home-sidebar-ease;
 }
 
 .home-sidebar--fixed {
@@ -128,14 +150,6 @@
 
 .home-sidebar--collapsed {
   padding-inline: 0.5rem;
-}
-
-.home-sidebar--collapsed .home-sidebar-header {
-  display: none;
-}
-
-.home-sidebar--collapsed .home-sidebar-label {
-  display: none;
 }
 
 .home-sidebar--collapsed .home-sidebar-link {
@@ -153,6 +167,23 @@
   font-weight: 700;
   padding: 0.75rem 0.9rem 1rem;
   letter-spacing: 0.02em;
+  transition:
+    opacity $home-sidebar-duration $home-sidebar-ease,
+    max-height $home-sidebar-duration $home-sidebar-ease,
+    margin $home-sidebar-duration $home-sidebar-ease,
+    padding $home-sidebar-duration $home-sidebar-ease;
+  overflow: hidden;
+  max-height: 5rem;
+}
+
+.home-sidebar--collapsed .home-sidebar-header {
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .home-sidebar-nav {
@@ -174,7 +205,10 @@
   font-size: 0.95rem;
   border-radius: 10px;
   padding: 0.68rem 0.8rem;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    padding $home-sidebar-duration $home-sidebar-ease;
 }
 
 .home-sidebar-icon {
@@ -185,6 +219,16 @@
 .home-sidebar-label {
   flex: 1 1 auto;
   min-width: 0;
+  transition: opacity 0.28s ease, max-width $home-sidebar-duration $home-sidebar-ease;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 14rem;
+}
+
+.home-sidebar--collapsed .home-sidebar-label {
+  opacity: 0;
+  max-width: 0;
+  pointer-events: none;
 }
 
 .home-sidebar-settings-btn {
@@ -312,6 +356,29 @@
 .home-placeholder p {
   margin: 0;
   color: rgba(255, 255, 255, 0.78);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-shell-ui {
+    --home-sidebar-transition-duration: 0ms;
+    transition: opacity 200ms ease, transform 220ms ease, visibility 220ms ease;
+  }
+
+  .home-sidebar {
+    transition: none;
+  }
+
+  .home-sidebar-header {
+    transition: none;
+  }
+
+  .home-sidebar-label {
+    transition: none;
+  }
+
+  .home-sidebar-link {
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
 }
 
 @media (max-width: 1024px) {

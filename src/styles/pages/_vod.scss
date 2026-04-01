@@ -265,7 +265,10 @@
 // VodDetailModal — Hero + capas (estilo Netflix/Disney+)
 .vod-detail-overlay {
   position: fixed;
-  inset: 0;
+  left: var(--home-sidebar-width, 0);
+  top: 0;
+  right: 0;
+  bottom: 0;
   z-index: 100;
   display: flex;
   align-items: center;
@@ -963,7 +966,10 @@
 // VodCategoryModal (todas las películas del género)
 .vod-category-overlay {
   position: fixed;
-  inset: 0;
+  left: var(--home-sidebar-width, 0);
+  top: 0;
+  right: 0;
+  bottom: 0;
   z-index: 100;
   @include flex-center;
   padding: $spacing-md;
