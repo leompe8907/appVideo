@@ -6,8 +6,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
-import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 import { usePreload } from '../../store/usePreload';
 import { mergeEpgIntoChannels } from '../../utils/epgMerge';
 import { getMainBouquets, getChannelsForBouquet, filterMainBouquets } from '../../services/tvDataService';
@@ -80,13 +78,8 @@ export function Bouquet() {
   useEffect(() => {
     if (isTV && bouquets.length > 0) {
       const timer = setTimeout(() => {
-        const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
-        if (setFocus && typeof setFocus === 'function') {
-          setFocus('bouquet-0');
-        } else {
-          const el = document.querySelector('[data-focus-key="bouquet-0"]');
-          if (el) el.focus();
-        }
+        const el = document.querySelector('[data-focus-key="bouquet-0"]');
+        if (el) el.focus();
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -198,12 +191,6 @@ function BouquetRow({ bouquet, index, onSelect }) {
     ...(textColor ? { color: textColor } : {}),
   };
 
-  const { ref, focused } = useSpatialNavigation({
-    focusKey: `bouquet-${index}`,
-    isFocusable: true,
-    onEnterPress: () => onSelect?.(bouquet),
-  });
-
   const handleClick = () => {
     onSelect?.(bouquet);
   };
@@ -217,12 +204,11 @@ function BouquetRow({ bouquet, index, onSelect }) {
 
   return (
     <div
-      ref={ref}
-      className={`bouquet-row ${focused ? 'focused' : ''}`}
+      className="bouquet-row"
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="button"
-      tabIndex={isTV ? -1 : 0}
+      tabIndex={0}
       aria-label={t('bouquet.bouquetAria', { name })}
       data-focus-key={`bouquet-${index}`}
       style={style}

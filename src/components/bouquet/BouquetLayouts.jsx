@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
 
 // --- Helpers EPG para layout event_and_logo ---
@@ -167,10 +166,6 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, layoutType }) {
  */
 function ChannelCard({ channel, index, layoutType, onSelect }) {
   const { isTV } = useDevice();
-  const { ref, focused } = useSpatialNavigation({
-    focusKey: `channel-${channel.id ?? index}`,
-    isFocusable: true,
-  });
 
   const bgColor = normalizeColor(channel.backgroundColor ?? channel.bgColor);
   const variant = getChannelLayoutVariant(layoutType);
@@ -255,12 +250,11 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
 
   return (
     <div
-      ref={ref}
-      className={`channel-card channel-card--${variant} ${focused ? 'focused' : ''}`}
+      className={`channel-card channel-card--${variant}`}
       style={style}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      tabIndex={isTV ? -1 : 0}
+      tabIndex={0}
       role="button"
       data-lcn={channel.lcn}
       data-id={channel.id}

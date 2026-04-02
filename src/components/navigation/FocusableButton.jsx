@@ -3,7 +3,6 @@
  * Botón navegable que funciona con controles remotos de TV y mouse/teclado de PC
  */
 
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { useDevice } from '../../contexts/DeviceContext';
 
 /**
@@ -50,13 +49,6 @@ export function FocusableButton({
     }
   };
 
-  // Usar el hook de navegación espacial
-  const { ref, focused } = useSpatialNavigation({
-    onEnterPress: handleEnterPress,
-    focusKey: focusKey || `button-${type}`,
-    isFocusable: !disabled, // No focusable si está deshabilitado
-  });
-
   // Handler para click
   const handleClick = (e) => {
     if (onClick && !disabled) {
@@ -79,7 +71,6 @@ export function FocusableButton({
   // Construir clases CSS
   const buttonClasses = [
     className,
-    focused ? 'focused' : '',
     disabled ? 'disabled' : '',
   ]
     .filter(Boolean)
@@ -87,13 +78,12 @@ export function FocusableButton({
 
   return (
     <button
-      ref={ref}
       type={type}
       className={buttonClasses}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       disabled={disabled}
-      tabIndex={isTV ? -1 : 0} // En TV, el focus lo maneja la librería (tabIndex -1)
+      tabIndex={disabled ? -1 : 0}
       {...restProps}
     >
       {children}

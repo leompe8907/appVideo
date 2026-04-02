@@ -3,7 +3,6 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { useDevice } from '../../contexts/DeviceContext';
 import { getDisplayTimeMs, isVideoUrl } from '../../utils/adsData';
 
@@ -72,22 +71,16 @@ export function AdZone({ zoneKey, ads, onActivate }) {
     if (currentAd) onActivate?.(currentAd);
   };
 
-  const { ref, focused } = useSpatialNavigation({
-    focusKey: `home-ad-zone-${zoneKey}`,
-    isFocusable: count > 0 && !dismissed,
-    onEnterPress: handleActivate,
-    onArrowPress: (direction) => {
-      if (count <= 1) return;
-      if (direction === 'left') go(-1);
-      if (direction === 'right') go(1);
-    },
-  });
+
 
   const handleKeyDown = (e) => {
-    if (isTV) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleActivate();
+    } else if (e.key === 'ArrowLeft') {
+      go(-1);
+    } else if (e.key === 'ArrowRight') {
+      go(1);
     }
   };
 
@@ -97,9 +90,9 @@ export function AdZone({ zoneKey, ads, onActivate }) {
 
   return (
     <div
-      ref={ref}
-      className={`home-ad-zone home-ad-zone--${zoneKey}${focused ? ' home-ad-zone--focused' : ''}`}
+      className={`home-ad-zone home-ad-zone--${zoneKey}`}
       data-ad-zone={zoneKey}
+      tabIndex={dismissed ? -1 : 0}
       role="region"
       aria-label={zoneKey === 'top' ? 'Publicidad superior' : 'Publicidad inferior'}
       onClick={handleActivate}

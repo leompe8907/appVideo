@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { useDevice } from '../../contexts/DeviceContext';
 import '../epg/epg-common.scss';
 
@@ -78,24 +77,6 @@ export function EpgEventModal({
   const catchupId = event?.catchupId ?? event?.catchup_id ?? event?.catchupEventId ?? null;
   const canWatch = !!catchupId;
 
-  const { ref: closeRef, focused: closeFocused } = useSpatialNavigation({
-    focusKey: 'epg-modal-close',
-    isFocusable: !!open && !isTV,
-    onEnterPress: () => onClose?.(),
-  });
-
-  const { ref: playRef, focused: playFocused } = useSpatialNavigation({
-    focusKey: 'epg-modal-play',
-    isFocusable: !!open && !!canPlayLive,
-    onEnterPress: canPlayLive ? () => onPlayLive?.() : undefined,
-  });
-
-  const { ref: watchRef, focused: watchFocused } = useSpatialNavigation({
-    focusKey: 'epg-modal-watch',
-    isFocusable: !!open && !!canWatch,
-    onEnterPress: canWatch ? () => onWatchCatchup?.(catchupId, event) : undefined,
-  });
-
   if (!open) return null;
 
   return (
@@ -163,11 +144,10 @@ export function EpgEventModal({
 
             {!isTV && (
               <button
-                ref={closeRef}
-                className={`epg-event-modal-close ${closeFocused ? 'focused' : ''}`}
+                className="epg-event-modal-close"
                 onClick={() => onClose?.()}
                 type="button"
-                tabIndex={-1}
+                tabIndex={0}
               >
                 {t('common.close', { defaultValue: 'Cerrar' })}
               </button>
@@ -197,24 +177,20 @@ export function EpgEventModal({
 
         <div className="epg-event-modal-footer">
           <button
-            ref={playRef}
-            className={`epg-event-modal-primary ${playFocused ? 'focused' : ''}`}
+            className="epg-event-modal-primary"
             onClick={() => onPlayLive?.()}
             type="button"
             disabled={!canPlayLive}
-            tabIndex={-1}
+            tabIndex={canPlayLive ? 0 : -1}
           >
             {t('epg.playLiveChannel', { defaultValue: 'Reproducir canal (en vivo)' })}
           </button>
 
           <button
-            ref={watchRef}
-            className={`epg-event-modal-secondary ${!canWatch ? 'epg-event-modal-secondary--disabled' : ''} ${
-              watchFocused ? 'focused' : ''
-            }`}
+            className={`epg-event-modal-secondary ${!canWatch ? 'epg-event-modal-secondary--disabled' : ''}`}
             type="button"
             disabled={!canWatch}
-            tabIndex={-1}
+            tabIndex={canWatch ? 0 : -1}
             onClick={() => {
               if (!canWatch) return;
               onWatchCatchup?.(catchupId, event);

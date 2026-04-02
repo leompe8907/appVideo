@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+
 import { useDevice } from '../../contexts/DeviceContext';
 import panaccessService from '../../services/panaccessService';
 import { getVodImageUrl } from '../../services/vodService';
@@ -243,11 +243,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
 }
 
 function EpisodeItem({ episode, index, baseUrl, onPlay }) {
-  const { ref, focused } = useSpatialNavigation({
-    onEnterPress: onPlay,
-    focusKey: `vod-episode-${index}`,
-    isFocusable: true,
-  });
+
   const name = episode.name ?? episode.title ?? episode.episodeTitle ?? `Episode ${index + 1}`;
   const thumbUrl =
     episode.posterListURL ??
@@ -257,11 +253,10 @@ function EpisodeItem({ episode, index, baseUrl, onPlay }) {
   return (
     <li className="vod-episode-item">
       <button
-        ref={ref}
         type="button"
-        className={`vod-episode-btn ${focused ? 'focused' : ''}`}
+        className="vod-episode-btn"
         onClick={onPlay}
-        tabIndex={-1}
+        tabIndex={0}
       >
         <div className="vod-episode-thumb">
           {thumbUrl ? (

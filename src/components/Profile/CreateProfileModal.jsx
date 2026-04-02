@@ -7,10 +7,10 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+
 import { FocusableInput } from '../navigation/FocusableInput';
 import { FocusableButton } from '../navigation/FocusableButton';
-import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
+
 import panaccessService from '../../services/panaccessService';
 import Img from '../../constants/images';
 
@@ -35,10 +35,8 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
   useEffect(() => {
     if (isTV) {
       const timer = setTimeout(() => {
-        const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
-        if (setFocus && typeof setFocus === 'function') {
-          setFocus('create-profile-name');
-        }
+        const input = document.getElementById('create-profile-name');
+        if (input) input.focus();
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -152,11 +150,7 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
 }
 
 function AvatarOption({ img, selected, onSelect, disabled }) {
-  const { ref, focused } = useSpatialNavigation({
-    onEnterPress: disabled ? undefined : () => onSelect(),
-    focusKey: `create-profile-avatar-${img.id}`,
-    isFocusable: !disabled,
-  });
+
 
   const handleClick = () => {
     if (!disabled) onSelect();
@@ -171,10 +165,9 @@ function AvatarOption({ img, selected, onSelect, disabled }) {
 
   return (
     <div
-      ref={ref}
       role="button"
-      tabIndex={-1}
-      className={`create-profile-avatar-option ${selected ? 'selected' : ''} ${focused ? 'focused' : ''} ${disabled ? 'disabled' : ''}`}
+      tabIndex={isTV ? -1 : 0}
+      className={`create-profile-avatar-option ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       aria-label={img.id.toString()}

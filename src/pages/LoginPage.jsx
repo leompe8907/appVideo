@@ -7,7 +7,6 @@ import { useDevice } from '../contexts/DeviceContext';
 import { FocusableInput } from '../components/navigation/FocusableInput';
 import { FocusableButton } from '../components/navigation/FocusableButton';
 import { getInitialRoute } from '../utils/navigation';
-import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 import { loginAndActivateLicense } from '../services/loginFlow';
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
 import { getActiveLicense } from '../utils/userSession';
@@ -87,20 +86,11 @@ export function LoginPage() {
   // Establecer focus inicial en TV al cargar la página
   useEffect(() => {
     if (isTV) {
-      // Pequeño delay para asegurar que todos los componentes estén montados y registrados
+      // Pequeño delay
       const timer = setTimeout(() => {
-        // Usar la API de la librería para establecer focus en el primer input
-        const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
-        
-        if (setFocus && typeof setFocus === 'function') {
-          // Establecer focus en el primer input usando su focusKey
-          setFocus('login-username');
-        } else {
-          // Si no hay setFocus, intentar usar focus nativo del DOM
-          const usernameInput = document.getElementById('username');
-          if (usernameInput) {
-            usernameInput.focus();
-          }
+        const usernameInput = document.getElementById('username');
+        if (usernameInput) {
+          usernameInput.focus();
         }
       }, 300);
 
@@ -141,24 +131,10 @@ export function LoginPage() {
 
   useEffect(() => {
     if (!isTV || !isQrModalOpen) return;
-    const timer = setTimeout(() => {
-      const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
-      if (setFocus && typeof setFocus === 'function') {
-        setFocus('login-register-close');
-      }
-    }, 150);
-    return () => clearTimeout(timer);
   }, [isTV, isQrModalOpen]);
 
   useEffect(() => {
     if (!isUdidModalOpen || !isTV) return;
-    const timer = setTimeout(() => {
-      const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
-      if (setFocus && typeof setFocus === 'function') {
-        setFocus('login-udid-cancel');
-      }
-    }, 150);
-    return () => clearTimeout(timer);
   }, [isTV, isUdidModalOpen]);
 
   useEffect(() => {
@@ -197,11 +173,6 @@ export function LoginPage() {
 
   const handleCloseQrModal = () => {
     setIsQrModalOpen(false);
-    if (!isTV) return;
-    const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
-    if (setFocus && typeof setFocus === 'function') {
-      setTimeout(() => setFocus('login-register'), 0);
-    }
   };
 
   const handleOpenUdidModal = () => {
@@ -212,11 +183,6 @@ export function LoginPage() {
   const handleCloseUdidModal = () => {
     udidFlow.cancel();
     setIsUdidModalOpen(false);
-    if (!isTV) return;
-    const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
-    if (setFocus && typeof setFocus === 'function') {
-      setTimeout(() => setFocus('login-udid'), 0);
-    }
   };
 
   const formatRemaining = (seconds) => {

@@ -5,7 +5,6 @@ import { useBrand } from '../contexts/BrandContext';
 import { usePreload } from '../store/usePreload';
 import { usePlayer } from '../contexts/PlayerContext';
 import panaccessService from '../services/panaccessService';
-import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import '../styles/pages/_catchup.scss';
 
 function fmtHHmm(ms) {
@@ -53,26 +52,18 @@ function getEventStartMs(event) {
 }
 
 function CatchupEventButton({
-  focusKey,
   disabled,
   onEnter,
   title,
   timeText,
   imageUrl,
 }) {
-  const { ref, focused } = useSpatialNavigation({
-    focusKey,
-    isFocusable: !disabled,
-    onEnterPress: disabled ? undefined : onEnter,
-  });
-
   return (
     <button
-      ref={ref}
-      className={`catchup-event-card ${focused ? 'focused' : ''} ${disabled ? 'disabled' : ''}`}
+      className={`catchup-event-card ${disabled ? 'disabled' : ''}`}
       type="button"
       disabled={disabled}
-      tabIndex={-1}
+      tabIndex={0}
       onClick={() => {
         if (disabled) return;
         onEnter?.();
@@ -103,7 +94,6 @@ function LegacyCatchupLayout({ groups, onPlayCatchup }) {
               return (
                 <CatchupEventButton
                   key={catchupId ?? timeText}
-                  focusKey={`catchup-legacy-${String(group.catchupGroupId ?? group.id ?? '')}-${String(catchupId ?? timeText)}`}
                   disabled={!catchupId}
                   onEnter={() => onPlayCatchup(catchupId, event)}
                   title={getEventTitle(event)}
@@ -147,7 +137,6 @@ function TimelineCatchupLayout({ events, onPlayCatchup }) {
               return (
                 <CatchupEventButton
                   key={catchupId ?? `${block.label}-${timeText}`}
-                  focusKey={`catchup-timeline-${block.label}-${String(catchupId ?? timeText)}`}
                   disabled={!catchupId}
                   onEnter={() => onPlayCatchup(catchupId, event)}
                   title={getEventTitle(event)}
@@ -178,7 +167,6 @@ function NetflixCatchupLayout({ recorded, recommended, onPlayCatchup }) {
             return (
               <CatchupEventButton
                 key={catchupId ?? task?.recordingTaskId ?? timeText}
-                focusKey={`catchup-netflix-recorded-${String(catchupId ?? task?.recordingTaskId ?? '')}`}
                 disabled={!catchupId}
                 onEnter={() => onPlayCatchup(catchupId, event)}
                 title={getEventTitle(event) || task?.catchupName || '—'}
@@ -201,7 +189,6 @@ function NetflixCatchupLayout({ recorded, recommended, onPlayCatchup }) {
             return (
               <CatchupEventButton
                 key={catchupId ?? timeText}
-                focusKey={`catchup-netflix-rec-${String(catchupId ?? timeText)}`}
                 disabled={!catchupId}
                 onEnter={() => onPlayCatchup(catchupId, event)}
                 title={getEventTitle(event)}

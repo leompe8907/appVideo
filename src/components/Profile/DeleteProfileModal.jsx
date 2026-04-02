@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
+
 import panaccessService from '../../services/panaccessService';
 
 export function DeleteProfileModal({ profile, onClose, onSuccess }) {
@@ -20,10 +20,7 @@ export function DeleteProfileModal({ profile, onClose, onSuccess }) {
   useEffect(() => {
     if (isTV) {
       const timer = setTimeout(() => {
-        const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
-        if (setFocus && typeof setFocus === 'function') {
-          setFocus('delete-profile-cancel');
-        }
+        // Enfoque inicial
       }, 300);
       return () => clearTimeout(timer);
     }

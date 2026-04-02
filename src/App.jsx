@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useViewport } from './hooks/useViewport';
 import { useAuthValidator } from './hooks/useAuthValidator';
-import { SpatialNavigationProvider } from './components/navigation/SpatialNavigationProvider';
+
 import { isAuthenticated } from './utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
 import { PreloadGate } from './components/preload/PreloadGate';
@@ -112,7 +112,7 @@ function App() {
   }, [viewport]);
 
   return (
-    <SpatialNavigationProvider>
+    <>
       <PlayerProvider>
         <div className="App">
           <Routes>
@@ -140,7 +140,7 @@ function App() {
           </Routes>
         </div>
       </PlayerProvider>
-    </SpatialNavigationProvider>
+    </>
   );
 }
 

@@ -4,7 +4,6 @@
  */
 
 import { useNavigate } from 'react-router-dom';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { useDevice } from '../../contexts/DeviceContext';
 
 /**
@@ -39,12 +38,6 @@ export function FocusableCard({
     }
   };
 
-  // Usar el hook de navegación espacial
-  const { ref, focused } = useSpatialNavigation({
-    onEnterPress: handleEnterPress,
-    focusKey: focusKey || `nav-card-${label}`,
-  });
-
   // Handler para click (solo en PC)
   const handleClick = () => {
     if (!isTV && path) {
@@ -67,7 +60,6 @@ export function FocusableCard({
   // Construir clases CSS
   const cardClasses = [
     'nav-card',
-    focused ? 'focused' : '',
     className,
   ]
     .filter(Boolean)
@@ -75,12 +67,11 @@ export function FocusableCard({
 
   return (
     <div
-      ref={ref}
       className={cardClasses}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="button"
-      tabIndex={isTV ? -1 : 0} // En TV, el focus lo maneja la librería (tabIndex -1)
+      tabIndex={0}
       aria-label={label}
       {...restProps}
     >

@@ -3,7 +3,7 @@
  * Imagen: posterListURL/posterInfoURL (de prepareDataForVOD) o fallback 10foot con image1Id + baseUrl.
  */
 
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+
 import { getVodImageUrl } from '../../services/vodService';
 
 export function VodCard({ item, index, onSelect, focusKeyPrefix = 'vod-card', baseUrl }) {
@@ -13,11 +13,7 @@ export function VodCard({ item, index, onSelect, focusKeyPrefix = 'vod-card', ba
     (item.image1Id != null && baseUrl ? getVodImageUrl(baseUrl, item.image1Id, 'posterList') : null);
   const title = item.name || item.title || '';
 
-  const { ref, focused } = useSpatialNavigation({
-    onEnterPress: () => onSelect?.(item),
-    focusKey: `${focusKeyPrefix}-${index}`,
-    isFocusable: true,
-  });
+
 
   const handleClick = () => onSelect?.(item);
   const handleKeyDown = (e) => {
@@ -29,12 +25,11 @@ export function VodCard({ item, index, onSelect, focusKeyPrefix = 'vod-card', ba
 
   return (
     <button
-      ref={ref}
       type="button"
-      className={`vod-card ${focused ? 'focused' : ''}`}
+      className="vod-card"
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      tabIndex={-1}
+      tabIndex={0}
       aria-label={title}
     >
       <div className="vod-card-poster">

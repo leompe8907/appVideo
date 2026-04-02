@@ -4,7 +4,6 @@
  */
 
 import { forwardRef, useRef, useEffect } from 'react';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { useDevice } from '../../contexts/DeviceContext';
 
 /**
@@ -29,37 +28,7 @@ export const FocusableInput = forwardRef(function FocusableInput(
   // Ref para acceder al elemento del input
   const inputElementRef = useRef(null);
 
-  // Usar el hook de navegación espacial
-  const { ref: spatialRef, focused } = useSpatialNavigation({
-    onEnterPress: () => {
-      if (onEnterPress) {
-        onEnterPress();
-      } else {
-        // En TV, cuando se presiona Enter en un input, el teclado virtual debería
-        // abrirse de forma nativa gracias al interceptor en SpatialNavigationProvider
-        // que detiene la captura de la librería. Si por alguna razón llega aquí,
-        // aseguramos de hacer click nativo.
-        if (isTV && inputElementRef.current) {
-          inputElementRef.current.click();
-        }
-      }
-    },
-    focusKey: focusKey || inputProps.id || `input-${inputProps.name || 'default'}`,
-  });
-
   // Sincronizar el foco espacial con el foco nativo del DOM
-  // Fundamental para que el OS de la TV sepa qué elemento está activo y
-  // el interceptor global funcione.
-  useEffect(() => {
-    if (isTV && focused && inputElementRef.current) {
-      // Tomar foco nativamente
-      inputElementRef.current.focus({ preventScroll: true });
-    } else if (isTV && !focused && inputElementRef.current && document.activeElement === inputElementRef.current) {
-      // Perder foco nativamente si lo teníamos
-      inputElementRef.current.blur();
-    }
-  }, [focused, isTV]);
-
   // Combinar refs: el ref externo (si existe) y el ref de navegación espacial
   const combinedRef = (node) => {
     // Guardar referencia al elemento para poder accederlo
@@ -71,14 +40,6 @@ export const FocusableInput = forwardRef(function FocusableInput(
         externalRef(node);
       } else if (externalRef) {
         externalRef.current = node;
-      }
-    }
-    // Asignar al ref de navegación espacial
-    if (spatialRef) {
-      if (typeof spatialRef === 'function') {
-        spatialRef(node);
-      } else if (spatialRef) {
-        spatialRef.current = node;
       }
     }
   };

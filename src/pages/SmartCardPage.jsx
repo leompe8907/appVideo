@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
-import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import { MessageModal } from '../components/MessageModal';
 import panaccessService from '../services/panaccessService';
 import { isLicenseInUseError } from '../utils/licenseInUse';
@@ -210,13 +209,11 @@ export function SmartCardPage() {
             <div className="confirm-in-use-actions">
               <FocusableConfirmButton
                 onClick={() => handleConfirmLicenseInUse(true)}
-                focusKey="confirm-in-use-yes"
               >
                 {t('smartcard.licenseInUseYes')}
               </FocusableConfirmButton>
               <FocusableConfirmButton
                 onClick={() => handleConfirmLicenseInUse(false)}
-                focusKey="confirm-in-use-no"
               >
                 {t('smartcard.licenseInUseNo')}
               </FocusableConfirmButton>
@@ -283,19 +280,13 @@ export function SmartCardPage() {
   );
 }
 
-function FocusableConfirmButton({ children, onClick, focusKey }) {
-  const { ref, focused } = useSpatialNavigation({
-    onEnterPress: onClick,
-    focusKey,
-    isFocusable: true,
-  });
+function FocusableConfirmButton({ children, onClick }) {
   return (
     <button
-      ref={ref}
       type="button"
-      className={`confirm-in-use-btn ${focused ? 'focused' : ''}`}
+      className="confirm-in-use-btn"
       onClick={onClick}
-      tabIndex={-1}
+      tabIndex={0}
     >
       {children}
     </button>
@@ -305,11 +296,6 @@ function FocusableConfirmButton({ children, onClick, focusKey }) {
 function LicenseListItem({ license, index, onSelect, isSettingLicense }) {
   const { t } = useTranslation();
   const norm = normalizeLicense(license);
-  const { ref, focused } = useSpatialNavigation({
-    onEnterPress: () => !isSettingLicense && onSelect(),
-    focusKey: `license-item-${index}`,
-    isFocusable: !isSettingLicense,
-  });
 
   const handleClick = () => {
     if (!isSettingLicense) onSelect();
@@ -324,12 +310,11 @@ function LicenseListItem({ license, index, onSelect, isSettingLicense }) {
 
   return (
     <button
-      ref={ref}
       type="button"
-      className={`license-list-item ${focused ? 'focused' : ''} ${isSettingLicense ? 'disabled' : ''}`}
+      className={`license-list-item ${isSettingLicense ? 'disabled' : ''}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      tabIndex={-1}
+      tabIndex={0}
       role="listitem"
       aria-label={t('smartcard.selectLicense', { title: norm.key || t('smartcard.licenseNumber', { index: index + 1 }) })}
     >
@@ -342,17 +327,11 @@ function LicenseListItem({ license, index, onSelect, isSettingLicense }) {
 
 function LicenseListLogoutItem({ onLogout, isSettingLicense }) {
   const { t } = useTranslation();
-  const { ref, focused } = useSpatialNavigation({
-    onEnterPress: () => !isSettingLicense && onLogout(),
-    focusKey: 'license-item-logout',
-    isFocusable: !isSettingLicense,
-  });
 
   return (
     <button
-      ref={ref}
       type="button"
-      className={`license-list-item license-list-item-logout ${focused ? 'focused' : ''} ${isSettingLicense ? 'disabled' : ''}`}
+      className={`license-list-item license-list-item-logout ${isSettingLicense ? 'disabled' : ''}`}
       onClick={() => !isSettingLicense && onLogout()}
       onKeyDown={(e) => {
         if ((e.key === 'Enter' || e.key === ' ') && !isSettingLicense) {
@@ -360,7 +339,7 @@ function LicenseListLogoutItem({ onLogout, isSettingLicense }) {
           onLogout();
         }
       }}
-      tabIndex={-1}
+      tabIndex={0}
       role="listitem"
       aria-label={t('smartcard.logout')}
     >

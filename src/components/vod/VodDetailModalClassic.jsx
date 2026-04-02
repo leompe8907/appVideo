@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+
 import { useDevice } from '../../contexts/DeviceContext';
 import panaccessService from '../../services/panaccessService';
 import { getVodImageUrl } from '../../services/vodService';
@@ -89,11 +89,7 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
     }
   };
 
-  const { ref: playRef, focused: playFocused } = useSpatialNavigation({
-    onEnterPress: handlePlayCurrent,
-    focusKey: 'vod-classic-play',
-    isFocusable: true,
-  });
+
 
   return (
     <div className="vod-detail-overlay vod-detail-overlay--classic" role="dialog" aria-modal="true" aria-labelledby="vod-detail-classic-title">
@@ -113,11 +109,10 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
                   {posterUrl ? <img src={posterUrl} alt="" className="vod-classic-picture" /> : <div className="vod-detail-poster-placeholder" />}
                 </div>
                 <button
-                  ref={playRef}
                   type="button"
-                  className={`vod-classic-play ${playFocused ? 'focused' : ''}`}
+                  className="vod-classic-play"
                   onClick={handlePlayCurrent}
-                  tabIndex={-1}
+                  tabIndex={0}
                   aria-label={t('vod.play')}
                 >
                   <i className="vod-classic-play-icon" aria-hidden>▶</i>
@@ -193,11 +188,9 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
 }
 
 function ClassicEpisodeItem({ episode, index, onPlay }) {
-  const { ref, focused } = useSpatialNavigation({ onEnterPress: onPlay, focusKey: `vod-classic-ep-${index}`, isFocusable: true });
-  const name = episode.name ?? episode.title ?? episode.episodeTitle ?? `Episode ${index + 1}`;
   return (
     <li className="vod-classic-episode-item">
-      <button ref={ref} type="button" className={`vod-classic-episode-btn ${focused ? 'focused' : ''}`} onClick={onPlay} tabIndex={-1}>
+      <button type="button" className="vod-classic-episode-btn" onClick={onPlay} tabIndex={0}>
         <span className="vod-classic-episode-play" aria-hidden>▶</span>
         <span className="vod-classic-episode-name">{name}</span>
       </button>

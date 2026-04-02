@@ -7,23 +7,10 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../contexts/DeviceContext';
 import { FocusableButton } from './navigation/FocusableButton';
-import * as SpatialNavigation from '@noriginmedia/norigin-spatial-navigation';
 
 export function MessageModal({ type = 'success', message, onClose }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
-
-  useEffect(() => {
-    if (isTV) {
-      const timer = setTimeout(() => {
-        const setFocus = SpatialNavigation.setFocus || SpatialNavigation.focus || SpatialNavigation.default?.setFocus;
-        if (setFocus && typeof setFocus === 'function') {
-          setFocus('message-modal-close');
-        }
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isTV]);
 
   if (!message) return null;
 
@@ -46,7 +33,6 @@ export function MessageModal({ type = 'success', message, onClose }) {
             type="button"
             onClick={onClose}
             onEnterPress={onClose}
-            focusKey="message-modal-close"
             className="create-profile-btn create-profile-btn-primary"
           >
             {t('common.close')}

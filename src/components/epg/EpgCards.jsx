@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { usePreload } from '../../store/usePreload';
@@ -82,7 +81,6 @@ function computeSlots(epgItems, { nowMs, epgPastEnabled = false } = {}) {
 }
 
 function Card({
-  focusKey,
   onEnter,
   title,
   timeText,
@@ -90,23 +88,14 @@ function Card({
   progressPercent,
   disabled,
 }) {
-  const { ref: focusRef, focused } = useSpatialNavigation({
-    focusKey,
-    isFocusable: !disabled,
-    onEnterPress: disabled ? undefined : onEnter,
-  });
-
-  // Cuando el foco cambia (TV/remote), aseguramos que la tarjeta sea visible.
-  // Esto evita el "scroll roto" si la grilla no se desplaza automáticamente.
   const localElRef = useRef(null);
-  useEffect(() => {
-    if (!focused) return;
+
+  const handleFocus = () => {
     const el = localElRef.current;
     const container = el?.closest?.('.epg-cards-grid') || null;
 
     if (!el) return;
 
-    // Ajuste directo del scroll en el contenedor (más robusto que scrollIntoView).
     if (container) {
       const cTop = container.getBoundingClientRect().top;
       const cBottom = cTop + container.clientHeight;
@@ -124,22 +113,24 @@ function Card({
     if (typeof el.scrollIntoView === 'function') {
       el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
-  }, [focused]);
+  };
 
   return (
     <div
-      ref={(node) => {
-        localElRef.current = node;
-        if (typeof focusRef === 'function') {
-          focusRef(node);
-        }
-      }}
-      className={`epg-card ${focused ? 'focused' : ''} ${disabled ? 'disabled' : ''} ${isLive ? 'epg-card--live-now' : ''}`}
+      ref={localElRef}
+      className={`epg-card ${disabled ? 'disabled' : ''} ${isLive ? 'epg-card--live-now' : ''}`}
       role="button"
-      tabIndex={-1}
+      tabIndex={disabled ? -1 : 0}
+      onFocus={handleFocus}
       onClick={() => {
         if (disabled) return;
         onEnter?.();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (!disabled) onEnter?.();
+        }
       }}
     >
       <div className="epg-card-slot-title">{title || '—'}</div>
@@ -340,7 +331,6 @@ export function EpgCards({ onSelect }) {
               <div className="epg-cards-row-cards" style={{ ['--epg-cards-cols']: epgPastEnabled ? 4 : 3 }}>
                 {epgPastEnabled && (
                   <Card
-                    focusKey={`epg-${channel.id ?? channel.lcn}-before`}
                     disabled={!before}
                     onEnter={() => {
                       setDetail({ channel, event: before, isLive: false });
@@ -352,7 +342,6 @@ export function EpgCards({ onSelect }) {
                   />
                 )}
                 <Card
-                  focusKey={`epg-${channel.id ?? channel.lcn}-now`}
                   disabled={!now}
                   onEnter={() => {
                     setDetail({ channel, event: now, isLive });
@@ -364,7 +353,6 @@ export function EpgCards({ onSelect }) {
                   progressPercent={nowProgress}
                 />
                 <Card
-                  focusKey={`epg-${channel.id ?? channel.lcn}-next`}
                   disabled={!next}
                   onEnter={() => {
                     setDetail({ channel, event: next, isLive: false });
@@ -375,7 +363,6 @@ export function EpgCards({ onSelect }) {
                   isLive={false}
                 />
                 <Card
-                  focusKey={`epg-${channel.id ?? channel.lcn}-later`}
                   disabled={!later}
                   onEnter={() => {
                     setDetail({ channel, event: later, isLive: false });
