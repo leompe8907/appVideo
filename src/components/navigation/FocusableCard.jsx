@@ -5,6 +5,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import { useDevice } from '../../contexts/DeviceContext';
+import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
 /**
  * Card navegable compatible con TV y PC
@@ -19,9 +20,9 @@ import { useDevice } from '../../contexts/DeviceContext';
  */
 export function FocusableCard({ 
   icon, 
-  label, 
   path, 
   onEnterPress,
+  onArrowPress,
   className = '',
   focusKey,
   ...restProps 
@@ -37,6 +38,12 @@ export function FocusableCard({
       navigate(path);
     }
   };
+
+  const { ref, focused } = useSpatialNavigation({
+    onEnterPress: handleEnterPress,
+    onArrowPress,
+    focusKey: focusKey || undefined,
+  });
 
   // Handler para click (solo en PC)
   const handleClick = () => {
@@ -60,6 +67,7 @@ export function FocusableCard({
   // Construir clases CSS
   const cardClasses = [
     'nav-card',
+    focused ? 'focused' : '',
     className,
   ]
     .filter(Boolean)
@@ -67,11 +75,12 @@ export function FocusableCard({
 
   return (
     <div
+      ref={ref}
       className={cardClasses}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="button"
-      tabIndex={0}
+      tabIndex={isTV ? -1 : 0}
       aria-label={label}
       {...restProps}
     >

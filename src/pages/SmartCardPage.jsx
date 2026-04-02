@@ -8,9 +8,11 @@ import { isLicenseInUseError } from '../utils/licenseInUse';
 import {
   setLoggedOut,
   setLicenses as storeLicenses,
-  setActiveLicense,
   getActiveLicense,
+  setActiveLicense,
 } from '../utils/userSession';
+import { useDevice } from '../contexts/DeviceContext';
+import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import '../styles/pages/_smartcard.scss';
 
 // Normaliza la estructura de una licencia (alineado con 10foot)
@@ -55,6 +57,8 @@ export function SmartCardPage() {
   // Backstop: si ya existe una licencia activa en storage, activarla automáticamente
   // para que el usuario no quede atascado en esta pantalla.
   const autoActivateAttemptedRef = useRef(false);
+  const { isTV } = useDevice();
+  const { setFocus } = useSpatialNavigation();
 
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
 
@@ -73,6 +77,15 @@ export function SmartCardPage() {
         setLicenses(filtered);
         if (filtered.length > 0) {
           storeLicenses(filtered);
+        }
+        
+        // Asignar primer foco si estamos en TV
+        if (isTV) {
+          setTimeout(() => {
+            if (typeof setFocus === 'function') {
+              setFocus('license-list-item-0');
+            }
+          }, 400);
         }
       } catch (err) {
         console.error('[SMARTCARD] Error:', err);
@@ -209,11 +222,13 @@ export function SmartCardPage() {
             <div className="confirm-in-use-actions">
               <FocusableConfirmButton
                 onClick={() => handleConfirmLicenseInUse(true)}
+                focusKey="smartcard-confirm-yes"
               >
                 {t('smartcard.licenseInUseYes')}
               </FocusableConfirmButton>
               <FocusableConfirmButton
                 onClick={() => handleConfirmLicenseInUse(false)}
+                focusKey="smartcard-confirm-no"
               >
                 {t('smartcard.licenseInUseNo')}
               </FocusableConfirmButton>
@@ -280,13 +295,21 @@ export function SmartCardPage() {
   );
 }
 
-function FocusableConfirmButton({ children, onClick }) {
+function FocusableConfirmButton({ children, onClick, focusKey }) {
+  const { isTV } = useDevice();
+  const { ref, focused } = useSpatialNavigation({
+    focusKey: focusKey || undefined,
+    onEnterPress: onClick,
+    isFocusable: true,
+  });
+
   return (
     <button
+      ref={ref}
       type="button"
-      className="confirm-in-use-btn"
+      className={`confirm-in-use-btn ${focused ? 'focused' : ''}`}
       onClick={onClick}
-      tabIndex={0}
+      tabIndex={isTV ? -1 : 0}
     >
       {children}
     </button>
@@ -295,7 +318,16 @@ function FocusableConfirmButton({ children, onClick }) {
 
 function LicenseListItem({ license, index, onSelect, isSettingLicense }) {
   const { t } = useTranslation();
+  const { isTV } = useDevice();
   const norm = normalizeLicense(license);
+
+  const { ref, focused } = useSpatialNavigation({
+    focusKey: `license-list-item-${index}`,
+    onEnterPress: () => {
+      if (!isSettingLicense) onSelect();
+    },
+    isFocusable: !isSettingLicense,
+  });
 
   const handleClick = () => {
     if (!isSettingLicense) onSelect();
@@ -310,11 +342,12 @@ function LicenseListItem({ license, index, onSelect, isSettingLicense }) {
 
   return (
     <button
+      ref={ref}
       type="button"
-      className={`license-list-item ${isSettingLicense ? 'disabled' : ''}`}
+      className={`license-list-item ${focused ? 'focused' : ''} ${isSettingLicense ? 'disabled' : ''}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      tabIndex={0}
+      tabIndex={isTV ? -1 : 0}
       role="listitem"
       aria-label={t('smartcard.selectLicense', { title: norm.key || t('smartcard.licenseNumber', { index: index + 1 }) })}
     >
@@ -327,11 +360,20 @@ function LicenseListItem({ license, index, onSelect, isSettingLicense }) {
 
 function LicenseListLogoutItem({ onLogout, isSettingLicense }) {
   const { t } = useTranslation();
+  const { isTV } = useDevice();
+  const { ref, focused } = useSpatialNavigation({
+    focusKey: 'license-list-item-logout',
+    onEnterPress: () => {
+      if (!isSettingLicense) onLogout();
+    },
+    isFocusable: !isSettingLicense,
+  });
 
   return (
     <button
+      ref={ref}
       type="button"
-      className={`license-list-item license-list-item-logout ${isSettingLicense ? 'disabled' : ''}`}
+      className={`license-list-item license-list-item-logout ${focused ? 'focused' : ''} ${isSettingLicense ? 'disabled' : ''}`}
       onClick={() => !isSettingLicense && onLogout()}
       onKeyDown={(e) => {
         if ((e.key === 'Enter' || e.key === ' ') && !isSettingLicense) {
@@ -339,7 +381,7 @@ function LicenseListLogoutItem({ onLogout, isSettingLicense }) {
           onLogout();
         }
       }}
-      tabIndex={0}
+      tabIndex={isTV ? -1 : 0}
       role="listitem"
       aria-label={t('smartcard.logout')}
     >

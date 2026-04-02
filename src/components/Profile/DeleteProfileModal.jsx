@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
+import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
 import panaccessService from '../../services/panaccessService';
 
@@ -16,15 +17,17 @@ export function DeleteProfileModal({ profile, onClose, onSuccess }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  
+  const { setFocus } = useSpatialNavigation();
 
   useEffect(() => {
     if (isTV) {
       const timer = setTimeout(() => {
-        // Enfoque inicial
+        if (typeof setFocus === 'function') setFocus('delete-profile-cancel');
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [isTV]);
+  }, [isTV, setFocus]);
 
   const handleConfirm = async (e) => {
     if (e) e.preventDefault();
@@ -69,6 +72,7 @@ export function DeleteProfileModal({ profile, onClose, onSuccess }) {
             onClick={handleConfirm}
             onEnterPress={handleConfirm}
             disabled={isDeleting}
+            onArrowPress={(direction) => (direction === 'left' || direction === 'right')}
             focusKey="delete-profile-confirm"
             className="create-profile-btn delete-profile-btn-confirm"
           >
@@ -79,6 +83,7 @@ export function DeleteProfileModal({ profile, onClose, onSuccess }) {
             onClick={onClose}
             onEnterPress={onClose}
             disabled={isDeleting}
+            onArrowPress={(direction) => (direction === 'left' || direction === 'right')}
             focusKey="delete-profile-cancel"
             className="create-profile-btn create-profile-btn-secondary"
           >

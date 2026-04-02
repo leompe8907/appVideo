@@ -10,6 +10,8 @@ import { useDevice } from '../../contexts/DeviceContext';
 import panaccessService from '../../services/panaccessService';
 import { getVodImageUrl } from '../../services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
+import { FocusableButton } from '../navigation/FocusableButton';
+import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
 const DESCRIPTION_MAX_LENGTH = 180;
 
@@ -22,6 +24,17 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
   const [loading, setLoading] = useState(!!item?.isSeries);
   const [error, setError] = useState(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+
+  const { setFocus } = useSpatialNavigation();
+
+  useEffect(() => {
+    if (isTV && !loading) {
+      const t = setTimeout(() => {
+        if (typeof setFocus === 'function') setFocus('vod-detail-play');
+      }, 400);
+      return () => clearTimeout(t);
+    }
+  }, [isTV, loading, setFocus]);
 
   const vodDetailConfig = currentBrand?.vod?.vodDetail || {};
   const contentPosition = vodDetailConfig.contentPosition === 'top' || vodDetailConfig.contentPosition === 'middle'
@@ -182,27 +195,29 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
                 <div className="vod-detail-description-wrap">
                   <p className="vod-detail-description">{descriptionToShow}</p>
                   {hasLongDescription && (
-                    <button
+                    <FocusableButton
                       type="button"
                       className="vod-detail-read-more"
                       onClick={() => setDescriptionExpanded((v) => !v)}
+                      focusKey="vod-detail-read-more"
                     >
                       {descriptionExpanded ? t('vod.readLess') : t('vod.readMore')}
-                    </button>
+                    </FocusableButton>
                   )}
                 </div>
               )}
               {error && <p className="vod-detail-error">{error}</p>}
               {loading && <p className="vod-detail-loading">{t('vod.loading')}</p>}
               <div className="vod-detail-actions">
-                <button
+                <FocusableButton
                   type="button"
                   className="vod-detail-play-btn"
                   onClick={handlePlayCurrent}
+                  focusKey="vod-detail-play"
                 >
                   <span className="vod-detail-play-icon" aria-hidden>▶</span>
                   {t('vod.play')}
-                </button>
+                </FocusableButton>
               </div>
             </div>
           </div>
@@ -226,14 +241,15 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
           )}
           {isSeries && !loading && seriesInfo && (!seriesInfo.episodes || seriesInfo.episodes.length === 0) && (
             <div className="vod-detail-actions vod-detail-actions-fallback">
-              <button
+              <FocusableButton
                 type="button"
                 className="vod-detail-play-btn"
                 onClick={handlePlayCurrent}
+                focusKey="vod-detail-play-fallback"
               >
                 <span className="vod-detail-play-icon" aria-hidden>▶</span>
                 {t('vod.play')}
-              </button>
+              </FocusableButton>
             </div>
           )}
         </div>
@@ -252,11 +268,11 @@ function EpisodeItem({ episode, index, baseUrl, onPlay }) {
 
   return (
     <li className="vod-episode-item">
-      <button
+      <FocusableButton
         type="button"
         className="vod-episode-btn"
         onClick={onPlay}
-        tabIndex={0}
+        focusKey={`vod-episode-${index}`}
       >
         <div className="vod-episode-thumb">
           {thumbUrl ? (
@@ -272,7 +288,7 @@ function EpisodeItem({ episode, index, baseUrl, onPlay }) {
             <span className="vod-episode-duration">{duration} min</span>
           )}
         </div>
-      </button>
+      </FocusableButton>
     </li>
   );
 }

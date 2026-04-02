@@ -5,6 +5,7 @@
 
 import { forwardRef, useRef, useEffect } from 'react';
 import { useDevice } from '../../contexts/DeviceContext';
+import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
 /**
  * Input navegable compatible con TV y PC
@@ -17,6 +18,7 @@ import { useDevice } from '../../contexts/DeviceContext';
 export const FocusableInput = forwardRef(function FocusableInput(
   { 
     onEnterPress,
+    onArrowPress,
     focusKey,
     className = '',
     ...inputProps 
@@ -28,7 +30,29 @@ export const FocusableInput = forwardRef(function FocusableInput(
   // Ref para acceder al elemento del input
   const inputElementRef = useRef(null);
 
-  // Sincronizar el foco espacial con el foco nativo del DOM
+  const { ref: spatialRef, focused } = useSpatialNavigation({
+    onEnterPress: onEnterPress || (() => {
+      // En TV, cuando la librería recibe el Enter virtual y redirige aquí,
+      // nosotros podemos hacer foco nativo o click.
+      if (isTV && inputElementRef.current) {
+        inputElementRef.current.focus({ preventScroll: true });
+        inputElementRef.current.click();
+      }
+    }),
+    onArrowPress,
+    focusKey: focusKey || undefined,
+  });
+
+  // Cuando la librería le da el "foco virtual" al wrapper, forzamos el foco nativo al input.
+  // Así el teclado en pantalla de Tizen/webOS sabe de quién es el evento.
+  useEffect(() => {
+    if (isTV && focused && inputElementRef.current) {
+      inputElementRef.current.focus({ preventScroll: true });
+    } else if (isTV && !focused && inputElementRef.current && document.activeElement === inputElementRef.current) {
+      inputElementRef.current.blur();
+    }
+  }, [focused, isTV]);
+
   // Combinar refs: el ref externo (si existe) y el ref de navegación espacial
   const combinedRef = (node) => {
     // Guardar referencia al elemento para poder accederlo
@@ -40,6 +64,14 @@ export const FocusableInput = forwardRef(function FocusableInput(
         externalRef(node);
       } else if (externalRef) {
         externalRef.current = node;
+      }
+    }
+    // Asignar al ref de navegación
+    if (spatialRef) {
+      if (typeof spatialRef === 'function') {
+        spatialRef(node);
+      } else if (spatialRef) {
+        spatialRef.current = node;
       }
     }
   };
@@ -56,7 +88,7 @@ export const FocusableInput = forwardRef(function FocusableInput(
     <input
       ref={combinedRef}
       className={inputClasses}
-      tabIndex={isTV ? -1 : 0} // En TV, el focus lo maneja la librería (tabIndex -1)
+      tabIndex={isTV ? -1 : 0}
       {...inputProps}
     />
   );

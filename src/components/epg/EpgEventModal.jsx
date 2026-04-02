@@ -1,6 +1,8 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
+import { FocusableButton } from '../navigation/FocusableButton';
+import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import '../epg/epg-common.scss';
 
 function fmtHHmm(ms) {
@@ -29,6 +31,19 @@ export function EpgEventModal({
 }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
+  const { setFocus } = useSpatialNavigation();
+
+  useEffect(() => {
+    if (isTV && open) {
+      const t = setTimeout(() => {
+        if (typeof setFocus === 'function') {
+          // Si canPlayLive es false, se podría hacer fallback a watchCatchup o close
+          setFocus(canPlayLive ? 'epg-event-play-live' : 'epg-event-watch-catchup');
+        }
+      }, 400);
+      return () => clearTimeout(t);
+    }
+  }, [isTV, open, canPlayLive, setFocus]);
 
   const eventTitle = event?.languages?.[0]?.title || event?.title || '';
   const eventDescription =
@@ -176,28 +191,29 @@ export function EpgEventModal({
         </div>
 
         <div className="epg-event-modal-footer">
-          <button
+          <FocusableButton
             className="epg-event-modal-primary"
             onClick={() => onPlayLive?.()}
             type="button"
             disabled={!canPlayLive}
-            tabIndex={canPlayLive ? 0 : -1}
+            focusKey="epg-event-play-live"
+            onArrowPress={() => {}} // Catch para evitar salir si queremos trap, o dejar libre
           >
             {t('epg.playLiveChannel', { defaultValue: 'Reproducir canal (en vivo)' })}
-          </button>
+          </FocusableButton>
 
-          <button
+          <FocusableButton
             className={`epg-event-modal-secondary ${!canWatch ? 'epg-event-modal-secondary--disabled' : ''}`}
             type="button"
             disabled={!canWatch}
-            tabIndex={canWatch ? 0 : -1}
             onClick={() => {
               if (!canWatch) return;
               onWatchCatchup?.(catchupId, event);
             }}
+            focusKey="epg-event-watch-catchup"
           >
             {t('epg.watchCatchup', { defaultValue: 'Watch / Catchup (no disponible)' })}
-          </button>
+          </FocusableButton>
         </div>
       </div>
     </div>

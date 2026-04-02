@@ -7,10 +7,21 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../contexts/DeviceContext';
 import { FocusableButton } from './navigation/FocusableButton';
+import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 
 export function MessageModal({ type = 'success', message, onClose }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
+  const { setFocus } = useSpatialNavigation();
+
+  useEffect(() => {
+    if (isTV) {
+      const timer = setTimeout(() => {
+        if (typeof setFocus === 'function') setFocus('message-modal-close');
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isTV, setFocus]);
 
   if (!message) return null;
 
@@ -33,6 +44,8 @@ export function MessageModal({ type = 'success', message, onClose }) {
             type="button"
             onClick={onClose}
             onEnterPress={onClose}
+            onArrowPress={() => false}
+            focusKey="message-modal-close"
             className="create-profile-btn create-profile-btn-primary"
           >
             {t('common.close')}

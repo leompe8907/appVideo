@@ -8,10 +8,9 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
-import { FocusableButton } from '../components/navigation/FocusableButton';
-import { CreateProfileModal } from '../components/profile/CreateProfileModal';
 import { DeleteProfileModal } from '../components/profile/DeleteProfileModal';
 import { MessageModal } from '../components/MessageModal';
+import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import panaccessService from '../services/panaccessService';
 import { setLoggedOut } from '../utils/userSession';
 import Img from '../constants/images';
@@ -39,9 +38,10 @@ export function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [profileMessage, setProfileMessage] = useState(null);
-  const [isActivating, setIsActivating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState(null);
+
+  const { setFocus } = useSpatialNavigation();
 
   // Si esta marca no tiene perfiles, redirigir a smartcard (evita acceso directo por URL)
   const profilesFeatureEnabled = currentBrand ? isFeatureEnabled('profiles') : true;
@@ -121,14 +121,18 @@ export function ProfilePage() {
 
   // Establecer focus inicial en TV
   useEffect(() => {
-    if (isTV && profiles.length > 0) {
+    if (isTV && (profiles.length > 0 || smartCards.length > 0)) {
       const timer = setTimeout(() => {
-        const firstProfile = document.querySelector('[data-focus-key="profile-0"]');
-        if (firstProfile) firstProfile.focus();
+        if (typeof setFocus === 'function') {
+          setFocus('profile-0');
+        } else {
+          const firstProfile = document.querySelector('[data-focus-key="profile-0"]');
+          if (firstProfile) firstProfile.focus();
+        }
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [isTV, profiles.length]);
+  }, [isTV, profiles.length, smartCards.length, setFocus]);
 
   const handleProfileSelect = async (profile) => {
     if (isActivating) return;
@@ -288,6 +292,18 @@ function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled 
   const { t } = useTranslation();
   const { isTV } = useDevice();
 
+  const { ref, focused } = useSpatialNavigation({
+    focusKey: `profile-${index}`,
+    onEnterPress: () => { if (!disabled) onSelect(); },
+    isFocusable: !disabled,
+  });
+
+  const { ref: deleteRef, focused: deleteFocused } = useSpatialNavigation({
+    focusKey: `profile-${index}-delete`,
+    onEnterPress: () => { if (!disabled) onDelete?.(profile); },
+    isFocusable: !disabled && !!onDelete,
+  });
+
   const handleClick = (e) => {
     if (disabled) return;
     if (!isTV) onSelect();
@@ -312,11 +328,12 @@ function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled 
       className={`profile-card ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
     >
       <div
-        className="profile-card-select"
+        ref={ref}
+        className={`profile-card-select ${focused ? 'focused' : ''}`}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         role="button"
-        tabIndex={0}
+        tabIndex={isTV ? -1 : 0}
         aria-label={t('profile.profileAria', { name: profile.name })}
         data-focus-key={`profile-${index}`}
       >
@@ -347,8 +364,9 @@ function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled 
       </div>
       {onDelete && (
         <button
+          ref={deleteRef}
           type="button"
-          className="profile-card-delete"
+          className={`profile-card-delete ${deleteFocused ? 'focused' : ''}`}
           onClick={handleDeleteClick}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -357,7 +375,7 @@ function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled 
               onDelete(profile);
             }
           }}
-          tabIndex={0}
+          tabIndex={isTV ? -1 : 0}
           aria-label={t('profile.deleteProfileAria', { name: profile.name })}
           data-focus-key={`profile-${index}-delete`}
         >
@@ -375,6 +393,12 @@ function AddProfileCard({ index, onAdd }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
 
+  const { ref, focused } = useSpatialNavigation({
+    focusKey: `profile-add-${index}`,
+    onEnterPress: onAdd,
+    isFocusable: true,
+  });
+
   const handleClick = () => {
     if (!isTV) {
       onAdd();
@@ -390,11 +414,12 @@ function AddProfileCard({ index, onAdd }) {
 
   return (
     <div
-      className="profile-card profile-card-add"
+      ref={ref}
+      className={`profile-card profile-card-add ${focused ? 'focused' : ''}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="button"
-      tabIndex={0}
+      tabIndex={isTV ? -1 : 0}
       aria-label={t('profile.addProfileAria')}
       data-focus-key={`profile-add-${index}`}
     >

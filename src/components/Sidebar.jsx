@@ -6,7 +6,6 @@ import { usePreload } from '../store/usePreload';
 import panaccessService from '../services/panaccessService';
 import { hasTvRadioServiceBouquets } from '../services/tvDataService';
 import { setLoggedOut, getActiveLicense, getCredentials } from '../utils/userSession';
-import MessageModal from './MessageModal';
 import ConfirmModal from './ConfirmModal';
 
 function SidebarIcon({ name }) {
@@ -111,7 +110,10 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   const [aboutModal, setAboutModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null); // 'logout' | 'exit' | null
   const blurTimerRef = useRef(null);
+  /** Evita colapsar el rail cuando hay modal en portal (foco fuera del aside). */
+  const blockCollapseForOverlayRef = useRef(false);
   const sidebarFixed = currentBrand?.ui?.sidebar?.fixed !== false;
+  blockCollapseForOverlayRef.current = Boolean(aboutModal || confirmAction);
 
   const vodIsEmptyAfterLoad =
     vod.status === 'ready' &&
@@ -194,6 +196,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   const scheduleCollapseIfOutside = () => {
     if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
     blurTimerRef.current = setTimeout(() => {
+      if (blockCollapseForOverlayRef.current) return;
       const root = rootRef.current;
       const active = document.activeElement;
       if (!root || !active) {
@@ -215,12 +218,10 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     };
   }, []);
 
-  // Si el sidebar se colapsa, cerrar cualquier desplegable asociado.
+  // Si el sidebar se colapsa, cerrar el submenú (los modales van en portal: no tocarlos).
   useEffect(() => {
     if (expanded) return;
     setSettingsOpen(false);
-    setAboutModal(false);
-    setConfirmAction(null);
   }, [expanded]);
 
   return (

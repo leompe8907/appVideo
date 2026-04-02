@@ -4,6 +4,7 @@
  */
 
 import { useDevice } from '../../contexts/DeviceContext';
+import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
 /**
  * Botón navegable compatible con TV y PC
@@ -21,6 +22,7 @@ export function FocusableButton({
   children,
   onClick,
   onEnterPress,
+  onArrowPress,
   className = '',
   focusKey,
   type = 'button',
@@ -37,8 +39,8 @@ export function FocusableButton({
       onEnterPress();
     } else {
       // Si es tipo submit, ejecutar el submit del formulario
-      if (type === 'submit' && ref?.current) {
-        const form = ref.current.closest('form');
+      if (type === 'submit') {
+        const form = document.activeElement?.closest?.('form');
         if (form) {
           form.requestSubmit();
         }
@@ -48,6 +50,13 @@ export function FocusableButton({
       }
     }
   };
+
+  const { ref, focused } = useSpatialNavigation({
+    onEnterPress: handleEnterPress,
+    onArrowPress,
+    focusKey: focusKey || undefined,
+    isFocusable: !disabled,
+  });
 
   // Handler para click
   const handleClick = (e) => {
@@ -71,6 +80,7 @@ export function FocusableButton({
   // Construir clases CSS
   const buttonClasses = [
     className,
+    focused ? 'focused' : '',
     disabled ? 'disabled' : '',
   ]
     .filter(Boolean)
@@ -78,12 +88,13 @@ export function FocusableButton({
 
   return (
     <button
+      ref={ref}
       type={type}
       className={buttonClasses}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       disabled={disabled}
-      tabIndex={disabled ? -1 : 0}
+      tabIndex={isTV ? -1 : 0}
       {...restProps}
     >
       {children}

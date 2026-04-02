@@ -4,6 +4,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useDevice } from '../../contexts/DeviceContext';
+import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { getDisplayTimeMs, isVideoUrl } from '../../utils/adsData';
 
 function AdMedia({ ad, className = '' }) {
@@ -71,7 +72,23 @@ export function AdZone({ zoneKey, ads, onActivate }) {
     if (currentAd) onActivate?.(currentAd);
   };
 
-
+  const { ref, focused } = useSpatialNavigation({
+    focusKey: `ad-zone-${zoneKey}`,
+    onEnterPress: handleActivate,
+    isFocusable: !dismissed && count > 0,
+    onArrowPress: (direction) => {
+      // Intercept left/right arrows to slide the carousel
+      if (direction === 'left') {
+        go(-1);
+        return false;
+      }
+      if (direction === 'right') {
+        go(1);
+        return false;
+      }
+      return true;
+    }
+  });
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -90,9 +107,10 @@ export function AdZone({ zoneKey, ads, onActivate }) {
 
   return (
     <div
-      className={`home-ad-zone home-ad-zone--${zoneKey}`}
+      ref={ref}
+      className={`home-ad-zone home-ad-zone--${zoneKey} ${focused ? 'focused' : ''}`}
       data-ad-zone={zoneKey}
-      tabIndex={dismissed ? -1 : 0}
+      tabIndex={isTV ? -1 : (dismissed ? -1 : 0)}
       role="region"
       aria-label={zoneKey === 'top' ? 'Publicidad superior' : 'Publicidad inferior'}
       onClick={handleActivate}

@@ -7,6 +7,7 @@ import { useBrand } from '../../contexts/BrandContext';
 import { useNavigate } from 'react-router-dom';
 import panaccessService from '../../services/panaccessService';
 import EpgEventModal from './EpgEventModal';
+import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import '../epg/epg-common.scss';
 
 function asMs(dateLike) {
@@ -87,11 +88,17 @@ function Card({
   isLive,
   progressPercent,
   disabled,
+  focusKey,
 }) {
-  const localElRef = useRef(null);
+  const { isTV } = useDevice();
+  const { ref, focused } = useSpatialNavigation({
+    focusKey,
+    onEnterPress: onEnter,
+    isFocusable: !disabled,
+  });
 
   const handleFocus = () => {
-    const el = localElRef.current;
+    const el = ref.current;
     const container = el?.closest?.('.epg-cards-grid') || null;
 
     if (!el) return;
@@ -115,12 +122,17 @@ function Card({
     }
   };
 
+  useEffect(() => {
+    if (focused && isTV) handleFocus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focused, isTV]);
+
   return (
     <div
-      ref={localElRef}
-      className={`epg-card ${disabled ? 'disabled' : ''} ${isLive ? 'epg-card--live-now' : ''}`}
+      ref={ref}
+      className={`epg-card ${disabled ? 'disabled' : ''} ${isLive ? 'epg-card--live-now' : ''} ${focused ? 'focused' : ''}`}
       role="button"
-      tabIndex={disabled ? -1 : 0}
+      tabIndex={isTV ? -1 : (disabled ? -1 : 0)}
       onFocus={handleFocus}
       onClick={() => {
         if (disabled) return;
@@ -339,6 +351,7 @@ export function EpgCards({ onSelect }) {
                     title={beforeTitle}
                     timeText={beforeTime}
                     isLive={false}
+                    focusKey={`epg-card-${channel.id ?? channel.lcn}-before`}
                   />
                 )}
                 <Card
@@ -351,6 +364,7 @@ export function EpgCards({ onSelect }) {
                   timeText={nowTime}
                   isLive={isLive}
                   progressPercent={nowProgress}
+                  focusKey={`epg-card-${channel.id ?? channel.lcn}-now`}
                 />
                 <Card
                   disabled={!next}
@@ -361,6 +375,7 @@ export function EpgCards({ onSelect }) {
                   title={nextTitle}
                   timeText={nextTime}
                   isLive={false}
+                  focusKey={`epg-card-${channel.id ?? channel.lcn}-next`}
                 />
                 <Card
                   disabled={!later}
@@ -371,6 +386,7 @@ export function EpgCards({ onSelect }) {
                   title={laterTitle}
                   timeText={laterTime}
                   isLive={false}
+                  focusKey={`epg-card-${channel.id ?? channel.lcn}-later`}
                 />
               </div>
             </div>

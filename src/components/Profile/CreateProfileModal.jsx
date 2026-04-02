@@ -10,6 +10,7 @@ import { useDevice } from '../../contexts/DeviceContext';
 
 import { FocusableInput } from '../navigation/FocusableInput';
 import { FocusableButton } from '../navigation/FocusableButton';
+import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
 import panaccessService from '../../services/panaccessService';
 import Img from '../../constants/images';
@@ -31,16 +32,22 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
     (card) => !profiles.some((profile) => profile.sn === getCardKey(card))
   );
 
+  const { setFocus } = useSpatialNavigation();
+
   // Focus inicial en TV
   useEffect(() => {
     if (isTV) {
       const timer = setTimeout(() => {
-        const input = document.getElementById('create-profile-name');
-        if (input) input.focus();
+        if (typeof setFocus === 'function') {
+          setFocus('create-profile-name');
+        } else {
+          const input = document.getElementById('create-profile-name');
+          if (input) input.focus();
+        }
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [isTV]);
+  }, [isTV, setFocus]);
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -99,6 +106,10 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
               placeholder={t('profile.createNamePlaceholder')}
               disabled={isSubmitting}
               focusKey="create-profile-name"
+              onArrowPress={(direction) => {
+                if (direction === 'up' || direction === 'left') return false; // Trap on top/left
+                return true;
+              }}
               maxLength={50}
               autoComplete="off"
             />
@@ -138,6 +149,10 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
               onEnterPress={onClose}
               disabled={isSubmitting}
               focusKey="create-profile-cancel"
+              onArrowPress={(direction) => {
+                if (direction === 'down' || direction === 'right') return false; // Trap on bottom/right
+                return true;
+              }}
               className="create-profile-btn create-profile-btn-secondary"
             >
               {t('profile.createCancel')}
@@ -150,7 +165,14 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
 }
 
 function AvatarOption({ img, selected, onSelect, disabled }) {
-
+  const { isTV } = useDevice();
+  const { ref, focused } = useSpatialNavigation({
+    focusKey: `create-profile-avatar-${img.id}`,
+    isFocusable: !disabled,
+    onEnterPress: () => {
+      if (!disabled) onSelect();
+    }
+  });
 
   const handleClick = () => {
     if (!disabled) onSelect();
@@ -165,9 +187,10 @@ function AvatarOption({ img, selected, onSelect, disabled }) {
 
   return (
     <div
+      ref={ref}
       role="button"
       tabIndex={isTV ? -1 : 0}
-      className={`create-profile-avatar-option ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
+      className={`create-profile-avatar-option ${focused ? 'focused' : ''} ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       aria-label={img.id.toString()}

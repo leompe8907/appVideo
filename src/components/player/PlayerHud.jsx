@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlayer } from '../../contexts/PlayerContext';
+import { useDevice } from '../../contexts/DeviceContext';
+import { FocusableButton } from '../navigation/FocusableButton';
+import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { resolveLiveWindowFromEpgItems } from '../../utils/epgCurrentEvent';
 
 function clamp(v, min, max) {
@@ -60,7 +63,9 @@ function resolveLiveWindow(item) {
 
 export function PlayerHud({ className = '' }) {
   const { t } = useTranslation();
+  const { isTV } = useDevice();
   const { state, pause, play, stop, close, forward, backward, skipLiveBy, goLive } = usePlayer();
+  const { setFocus } = useSpatialNavigation();
   const [visible, setVisible] = useState(true);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const hideTimeoutRef = useRef(null);
@@ -114,6 +119,11 @@ export function PlayerHud({ className = '' }) {
   const wakeHud = () => {
     setVisible(true);
     armAutoHide();
+    if (isTV && !visible) {
+      setTimeout(() => {
+        if (typeof setFocus === 'function') setFocus('hud-play-pause');
+      }, 100);
+    }
   };
 
   useEffect(() => {
@@ -181,36 +191,64 @@ export function PlayerHud({ className = '' }) {
         </div>
 
         <div className="player-hud__controls">
-          <button
+          <FocusableButton
             type="button"
             className="player-hud__btn"
             onClick={() => (isLiveWithWindow ? skipLiveBy(-10) : backward(10))}
+            focusKey="hud-rewind"
+            isFocusable={visible}
           >
             {t('player.rewind10', { defaultValue: '-10s' })}
-          </button>
-          <button type="button" className="player-hud__btn player-hud__btn--primary" onClick={handlePlayPause}>
+          </FocusableButton>
+          <FocusableButton
+            type="button"
+            className="player-hud__btn player-hud__btn--primary"
+            onClick={handlePlayPause}
+            focusKey="hud-play-pause"
+            isFocusable={visible}
+          >
             {state?.isPlaying
               ? t('player.pause', { defaultValue: 'Pausar' })
               : t('player.play', { defaultValue: 'Reproducir' })}
-          </button>
-          <button
+          </FocusableButton>
+          <FocusableButton
             type="button"
             className="player-hud__btn"
             onClick={() => (isLiveWithWindow ? skipLiveBy(10) : forward(10))}
+            focusKey="hud-forward"
+            isFocusable={visible}
           >
             {t('player.forward10', { defaultValue: '+10s' })}
-          </button>
+          </FocusableButton>
           {isLiveWithWindow && (
-            <button type="button" className="player-hud__btn player-hud__btn--live" onClick={goLive}>
+            <FocusableButton
+              type="button"
+              className="player-hud__btn player-hud__btn--live"
+              onClick={goLive}
+              focusKey="hud-live"
+              isFocusable={visible}
+            >
               {t('player.goLive', { defaultValue: 'En vivo' })}
-            </button>
+            </FocusableButton>
           )}
-          <button type="button" className="player-hud__btn player-hud__btn--danger" onClick={stop}>
+          <FocusableButton
+            type="button"
+            className="player-hud__btn player-hud__btn--danger"
+            onClick={stop}
+            focusKey="hud-stop"
+            isFocusable={visible}
+          >
             {t('player.stop', { defaultValue: 'Detener' })}
-          </button>
-          <button type="button" className="player-hud__btn player-hud__btn--exit" onClick={close}>
+          </FocusableButton>
+          <FocusableButton
+            type="button"
+            className="player-hud__btn player-hud__btn--exit"
+            onClick={close}
+            focusKey="hud-exit"
+            isFocusable={visible}
+          >
             {t('player.exit', { defaultValue: 'Salir' })}
-          </button>
+          </FocusableButton>
         </div>
 
         <div className="player-hud__progress">
