@@ -31,6 +31,7 @@
     "clear": "Limpar",
     "tabAll": "Todos",
     "tabServices": "Serviços",
+    "tabEpg": "EPG",
     "tabs": "Abas de busca",
     "typeToSearch": "Digite para buscar",
     "noResults": "Nenhum resultado encontrado.",
@@ -38,7 +39,8 @@
     "results": "resultados",
     "sectionServices": "Serviços",
     "sectionVod": "VOD",
-    "sectionCatchup": "Catchup"
+    "sectionCatchup": "Catchup",
+    "sectionEpg": "EPG"
   },
   "settings": {
     "confirm": "Confirmar",

@@ -33,25 +33,73 @@ function ResultItem({ item, index, onSelect }) {
     onEnterPress: () => onSelect?.(item),
   });
 
+  const [imgSrc, setImgSrc] = useState(item.logo || '');
+  useEffect(() => {
+    setImgSrc(item.logo || '');
+  }, [item.logo]);
+
+  const timeText = (() => {
+    if (item.type !== 'epg') return '';
+    const startMs = item?.startMs ?? (item?.raw?.event?.startDate?.valueOf?.() ?? new Date(item?.raw?.event?.start).getTime());
+    const endMs = item?.endMs ?? (item?.raw?.event?.endDate?.valueOf?.() ?? new Date(item?.raw?.event?.end).getTime());
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return '';
+    const start = new Date(startMs);
+    const end = new Date(endMs);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
+
+    const date = start.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const hhmm = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `${date} ${hhmm(start)} - ${hhmm(end)}`;
+  })();
+
+  const isEpg = item.type === 'epg';
+
   return (
     <button
       ref={ref}
       type="button"
-      className={`search-result${focused ? ' focused' : ''}`}
+      className={`search-result${isEpg ? ' search-result--epg' : ''}${focused ? ' focused' : ''}`}
       onClick={() => onSelect?.(item)}
       onMouseEnter={!isTV ? () => {} : undefined}
     >
-      {item.logo
-        ? <img className="search-result__img" src={item.logo} alt={item.name} />
-        : <div className="search-result__img--placeholder" />
-      }
-      <div className="search-result__name">
-        {item.type === 'service' && item.lcn != null
-          ? <span className="search-result__lcn">{item.lcn}</span>
-          : null
-        }
-        {item.name}
-      </div>
+      {imgSrc ? (
+        <img
+          className={`search-result__img${isEpg ? ' search-result__img--epg' : ''}`}
+          src={imgSrc}
+          alt={item.name}
+          onError={() => {
+            // Fallback: si la imagen del evento falla, mostrar la del canal
+            if (item.type === 'epg' && item.channelLogo && imgSrc !== item.channelLogo) {
+              setImgSrc(item.channelLogo);
+              return;
+            }
+            // Último recurso: placeholder
+            if (imgSrc) setImgSrc('');
+          }}
+        />
+      ) : (
+        <div className={`search-result__img--placeholder${isEpg ? ' search-result__img--epg' : ''}`} />
+      )}
+      {isEpg ? (
+        <>
+          {(item.lcn != null || (item.channelName && String(item.channelName).trim())) ? (
+            <div className="search-result__channel">
+              {item.lcn != null ? <span className="search-result__lcn">{item.lcn}</span> : null}
+              {item.channelName ? <span className="search-result__channel-name">{item.channelName}</span> : null}
+            </div>
+          ) : null}
+          <div className="search-result__event-title">{item.name}</div>
+          {timeText ? <div className="search-result__time">{timeText}</div> : null}
+        </>
+      ) : (
+        <div className="search-result__name">
+          {item.type === 'service' && item.lcn != null
+            ? <span className="search-result__lcn">{item.lcn}</span>
+            : null
+          }
+          {item.name}
+        </div>
+      )}
     </button>
   );
 }
@@ -83,7 +131,7 @@ export function SearchPage() {
   const { epg, vod, catchup, loadVOD, loadCatchup } = usePreload();
 
   const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('all'); // all | service | vod | catchup
+  const [activeTab, setActiveTab] = useState('all'); // all | service | vod | catchup | epg
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const inputRef = useRef(null);
   // Ref para que el efecto de carga siempre use la función t más reciente
@@ -136,31 +184,36 @@ export function SearchPage() {
     const services = [];
     const vods = [];
     const catchups = [];
+    const epgEvents = [];
     resultsAll.forEach((r) => {
       if (r.type === 'service') services.push(r);
       else if (r.type === 'vod') vods.push(r);
       else if (r.type === 'catchup') catchups.push(r);
+      else if (r.type === 'epg') epgEvents.push(r);
     });
-    return { services, vods, catchups };
+    return { services, vods, catchups, epgEvents };
   }, [resultsAll]);
 
   const isEmptyQuery = !debouncedQuery || debouncedQuery.trim().length === 0;
   const hideVodTab = !isEmptyQuery && grouped.vods.length === 0;
   const hideCatchupTab = !isEmptyQuery && grouped.catchups.length === 0;
+  const hideEpgTab = !isEmptyQuery && grouped.epgEvents.length === 0;
   const hasServices = (epg.streams?.length ?? 0) > 0;
 
   // Tab efectivo: si el tab activo queda sin resultados, hacer fallback a 'all'
   const effectiveTab = useMemo(() => {
     if (activeTab === 'vod' && hideVodTab) return 'all';
     if (activeTab === 'catchup' && hideCatchupTab) return 'all';
+    if (activeTab === 'epg' && hideEpgTab) return 'all';
     return activeTab;
-  }, [activeTab, hideVodTab, hideCatchupTab]);
+  }, [activeTab, hideVodTab, hideCatchupTab, hideEpgTab]);
 
   const visibleCount = useMemo(() => {
-    if (effectiveTab === 'all') return grouped.services.length + grouped.vods.length + grouped.catchups.length;
+    if (effectiveTab === 'all') return grouped.services.length + grouped.vods.length + grouped.catchups.length + grouped.epgEvents.length;
     if (effectiveTab === 'service') return grouped.services.length;
     if (effectiveTab === 'vod') return grouped.vods.length;
     if (effectiveTab === 'catchup') return grouped.catchups.length;
+    if (effectiveTab === 'epg') return grouped.epgEvents.length;
     return 0;
   }, [effectiveTab, grouped]);
 
@@ -217,6 +270,37 @@ export function SearchPage() {
       if (!url) return;
       play({ type: 'service', id: channel.id ?? channel.lcn ?? undefined, url, item: channel, autoPlay: true });
     }
+
+    if (item.type === 'epg') {
+      const channel = item?.raw?.channel;
+      if (!channel) return;
+      let url =
+        channel.url ||
+        channel.streamUrl ||
+        channel.hlsUrl ||
+        channel.hls ||
+        null;
+
+      if (!url) {
+        const streamId = channel.id ?? channel.epgStreamId;
+        if (streamId != null && streamId !== '') {
+          try {
+            url = panaccessService.getStreamM3u8Url({ streamId });
+          } catch {
+            // noop
+          }
+        }
+      }
+
+      if (!url) return;
+      try {
+        url = panaccessService.normalizePlaybackUrl(url);
+      } catch {
+        // noop
+      }
+      if (!url) return;
+      play({ type: 'service', id: channel.id ?? channel.lcn ?? undefined, url, item: channel, autoPlay: true });
+    }
   };
 
   return (
@@ -245,6 +329,7 @@ export function SearchPage() {
         <div className="search-tabs" role="tablist" aria-label={t('search.tabs', { defaultValue: 'Tabs de búsqueda' })}>
           <SearchTab id="all" label={t('search.tabAll', { defaultValue: 'Todos' })} active={activeTab === 'all'} onSelect={setActiveTab} />
           <SearchTab id="service" label={t('search.tabServices', { defaultValue: 'Servicios' })} active={activeTab === 'service'} hidden={!hasServices} onSelect={setActiveTab} />
+          <SearchTab id="epg" label={t('search.tabEpg', { defaultValue: 'EPG' })} active={activeTab === 'epg'} hidden={hideEpgTab} onSelect={setActiveTab} />
           <SearchTab id="vod" label="VOD" active={activeTab === 'vod'} hidden={hideVodTab} onSelect={setActiveTab} />
           <SearchTab id="catchup" label="Catchup" active={activeTab === 'catchup'} hidden={hideCatchupTab} onSelect={setActiveTab} />
         </div>
@@ -280,12 +365,19 @@ export function SearchPage() {
                     baseIndex={grouped.services.length + grouped.vods.length}
                     onSelect={handleSelect}
                   />
+                  <SearchSection
+                    title={t('search.sectionEpg', { defaultValue: 'EPG' })}
+                    items={grouped.epgEvents}
+                    baseIndex={grouped.services.length + grouped.vods.length + grouped.catchups.length}
+                    onSelect={handleSelect}
+                  />
                 </>
               ) : (
                 <div className="search-list">
                   {(effectiveTab === 'service' ? grouped.services
                     : effectiveTab === 'vod' ? grouped.vods
-                    : grouped.catchups
+                    : effectiveTab === 'catchup' ? grouped.catchups
+                    : grouped.epgEvents
                   ).map((r, i) => (
                     <ResultItem
                       key={`${r.type}-${r.id ?? r.name ?? i}`}

@@ -58,6 +58,72 @@ function getAllCatchupEvents(groups) {
   return out;
 }
 
+function getEpgEventTitle(ev) {
+  return ev?.languages?.[0]?.title || ev?.title || ev?.name || '';
+}
+
+function getEpgEventImageUrl(ev) {
+  if (!ev) return '';
+  // Heurística: distintos backends usan distintos campos.
+  const direct =
+    ev.imageUrl ||
+    ev.image ||
+    ev.img ||
+    ev.icon ||
+    ev.posterUrl ||
+    ev.coverUrl ||
+    ev.thumbnailUrl ||
+    ev.backgroundImageURL ||
+    ev.posterInfoURL ||
+    ev.posterListURL ||
+    '';
+  if (direct) return direct;
+
+  const fromImagesArray =
+    (Array.isArray(ev.images) && (ev.images[0]?.url || ev.images[0]?.src || ev.images[0]?.href)) ||
+    null;
+  if (fromImagesArray) return fromImagesArray;
+
+  const fromLanguages =
+    ev?.languages?.[0]?.imageUrl ||
+    ev?.languages?.[0]?.img ||
+    ev?.languages?.[0]?.posterUrl ||
+    '';
+  return fromLanguages || '';
+}
+
+function getMs(v) {
+  if (v == null) return NaN;
+  if (typeof v?.valueOf === 'function') return v.valueOf();
+  const ms = new Date(v).getTime();
+  return ms;
+}
+
+function getAllEpgEventsFromStreams(services, { nowMs } = {}) {
+  const list = Array.isArray(services) ? services : [];
+  const out = [];
+  const now = Number.isFinite(nowMs) ? nowMs : Date.now();
+
+  for (const ch of list) {
+    const epgItems = ch?.epgItems;
+    if (!Array.isArray(epgItems) || epgItems.length === 0) continue;
+
+    for (const ev of epgItems) {
+      const title = getEpgEventTitle(ev);
+      if (!title) continue;
+
+      const endMs = getMs(ev?.endDate ?? ev?.end);
+      if (!Number.isFinite(endMs)) continue;
+      // “de la fecha hacia adelante”: incluir eventos actuales (en curso) y futuros
+      if (endMs < now) continue;
+
+      out.push({ channel: ch, event: ev, title, endMs });
+    }
+  }
+
+  return out;
+}
+
 function normalizeResult(item, type) {
   const name = item?.name ?? item?.title ?? item?.Name ?? item?.Title ?? '';
   if (!name) return null;
@@ -79,6 +145,16 @@ function normalizeResult(item, type) {
   } else if (type === 'catchup') {
     normalized.logo = item?.imageUrl || item?.imageUrl2 || item?.catchupImageUrl || item?.img || item?.posterUrl || '';
     normalized.catchupId = item?.catchupId ?? item?.id ?? null;
+  } else if (type === 'epg') {
+    // item esperado: { channel, event, title }
+    const startMs = getMs(item?.event?.startDate ?? item?.event?.start);
+    const endMs = getMs(item?.event?.endDate ?? item?.event?.end);
+    normalized.logo = getEpgEventImageUrl(item?.event) || item?.channel?.img || item?.channel?.logo || '';
+    normalized.channelLogo = item?.channel?.img || item?.channel?.logo || '';
+    normalized.lcn = item?.channel?.lcn ?? item?.channel?.LCN ?? null;
+    normalized.channelName = item?.channel?.name ?? item?.channel?.title ?? '';
+    normalized.startMs = Number.isFinite(startMs) ? startMs : null;
+    normalized.endMs = Number.isFinite(endMs) ? endMs : null;
   }
 
   return normalized;
@@ -132,6 +208,24 @@ export function searchAll({ query, services = [], vods = [], catchupGroups = [] 
     const normalized = normalizeResult(ev, 'catchup');
     if (!normalized) return;
     normalized.relevance = calculateRelevance(name, trimmed);
+    allResults.push(normalized);
+  });
+
+  // EPG: eventos (desde ahora en adelante) aplanados por canal
+  const epgEvents = getAllEpgEventsFromStreams(services, { nowMs: Date.now() });
+  epgEvents.forEach(({ channel, event, title }) => {
+    if (normalizeStr(title).indexOf(lowerQuery) === -1) return;
+    const normalized = normalizeResult(
+      {
+        id: `${channel?.id ?? channel?.epgStreamId ?? 'ch'}-${event?.id ?? event?.eventId ?? event?.start ?? title}`,
+        name: title,
+        channel,
+        event,
+      },
+      'epg'
+    );
+    if (!normalized) return;
+    normalized.relevance = calculateRelevance(title, trimmed);
     allResults.push(normalized);
   });
 
