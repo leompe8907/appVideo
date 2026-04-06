@@ -24,16 +24,7 @@ function getEventTitle(event) {
 }
 
 function getEventDescription(event) {
-  return (
-    event?.languages?.[0]?.description ||
-    event?.languages?.[0]?.summary ||
-    event?.description ||
-    event?.summary ||
-    event?.plot ||
-    event?.synopsis ||
-    event?.details ||
-    ''
-  );
+  return event?.languages?.[0]?.description || event?.description || event?.summary || '';
 }
 
 function resolveJustify(align) {
@@ -65,7 +56,7 @@ function getNextEpgEvent(epgItems, currentEvent) {
   return best;
 }
 
-export function InicioHeader() {
+export function InicioHeader({ sectionKey = null }) {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
   const { focusedChannel } = useHomeHeader();
@@ -125,6 +116,9 @@ export function InicioHeader() {
     const current = getCurrentEpgEvent(epgItems);
     const next = getNextEpgEvent(epgItems, current);
 
+    const channelLcn = focusedChannel?.lcn ?? focusedChannel?.LCN ?? '';
+    const channelName = focusedChannel?.name ?? focusedChannel?.Name ?? '';
+
     const currentTitle = getEventTitle(current);
     const currentDesc = getEventDescription(current);
     const currentTime = current ? `${fmtHHmm(current.start)} – ${fmtHHmm(current.end)}`.trim() : '';
@@ -146,6 +140,12 @@ export function InicioHeader() {
 
     return (
       <div className="inicio-service-info">
+        {(channelLcn || channelName) ? (
+          <div className="inicio-service-info__channel" title={`${channelLcn ? `${channelLcn} ` : ''}${channelName}`.trim()}>
+            {channelLcn ? <span className="inicio-service-info__channel-lcn">{channelLcn}</span> : null}
+            {channelName ? <span className="inicio-service-info__channel-name">{channelName}</span> : null}
+          </div>
+        ) : null}
         {current ? (
           <div className="inicio-service-info__block">
             <div className="inicio-service-info__label">
@@ -153,9 +153,7 @@ export function InicioHeader() {
               {currentTime ? <span className="inicio-service-info__time">{currentTime}</span> : null}
             </div>
             <div className="inicio-service-info__title" title={currentTitle}>{currentTitle || '—'}</div>
-            <div className="inicio-service-info__desc" title={currentDesc}>
-              {currentDesc || t('inicio.serviceInfo.noDescription', { defaultValue: 'Sin descripción.' })}
-            </div>
+            {currentDesc ? <div className="inicio-service-info__desc" title={currentDesc}>{currentDesc}</div> : null}
           </div>
         ) : null}
         {next ? (
@@ -197,11 +195,13 @@ export function InicioHeader() {
         {renderArea(center, 'center')}
         {renderArea(right, 'right')}
       </header>
-      <div className="inicio-subheader" aria-label={t('inicio.subheader', { defaultValue: 'Subcabecera' })}>
-        {renderSubArea(subLeft, 'left')}
-        {renderSubArea(subCenter, 'center')}
-        {renderSubArea(subRight, 'right')}
-      </div>
+      {sectionKey === 'inicio' && (
+        <div className="inicio-subheader" aria-label={t('inicio.subheader', { defaultValue: 'Subcabecera' })}>
+          {renderSubArea(subLeft, 'left')}
+          {renderSubArea(subCenter, 'center')}
+          {renderSubArea(subRight, 'right')}
+        </div>
+      )}
     </div>
   );
 }

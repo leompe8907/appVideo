@@ -135,6 +135,29 @@ $home-sidebar-duration: 380ms;
   min-width: 0;
 }
 
+.inicio-service-info__channel {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.1;
+  min-width: 0;
+}
+
+.inicio-service-info__channel-lcn {
+  opacity: 0.95;
+  flex-shrink: 0;
+}
+
+.inicio-service-info__channel-name {
+  opacity: 0.92;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .inicio-service-info--empty {
   opacity: 0.85;
   font-size: 0.95rem;

@@ -147,6 +147,7 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, l
         {items.map((channel, index) => (
           <ChannelCard
             key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
+            focusKey={`bouquet-${bouquet.bouquetId ?? bouquet.id ?? 'x'}-channel-${channel.id ?? index}`}
             channel={channel}
             index={index}
             layoutType={layoutType}
@@ -166,11 +167,11 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, l
  * - event_and_logo: logo arriba + imagen de evento abajo + barra de tiempo (timeship)
  * - event_line: igual que event pero con tamaño mayor
  */
-function ChannelCard({ channel, index, layoutType, onSelect, onFocus }) {
+function ChannelCard({ channel, index, layoutType, onSelect, onFocus, focusKey }) {
   const { isTV } = useDevice();
   
   const { ref, focused } = useSpatialNavigation({
-    focusKey: `channel-${channel.id ?? index}`,
+    focusKey: focusKey || `channel-${channel.id ?? index}`,
     onEnterPress: onSelect,
     isFocusable: true,
   });
@@ -269,6 +270,8 @@ function ChannelCard({ channel, index, layoutType, onSelect, onFocus }) {
       ref={ref}
       className={`channel-card channel-card--${variant} ${focused ? 'focused' : ''}`}
       style={style}
+      onMouseEnter={() => onFocus?.()}
+      onFocus={() => onFocus?.()}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       tabIndex={isTV ? -1 : 0}
@@ -429,6 +432,7 @@ export function BouquetGridHorizontal({ bouquet, onChannelSelect, onChannelFocus
             {row.map(({ channel, index }) => (
               <ChannelCard
                 key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
+                focusKey={`bouquet-${bouquet.bouquetId ?? bouquet.id ?? 'x'}-channel-${channel.id ?? index}`}
                 channel={channel}
                 index={index}
                 layoutType={layoutType}
@@ -469,6 +473,7 @@ export function BouquetGridVertical({ bouquet, onChannelSelect, onChannelFocus, 
         {items.map((channel, index) => (
           <ChannelCard
             key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
+            focusKey={`bouquet-${bouquet.bouquetId ?? bouquet.id ?? 'x'}-channel-${channel.id ?? index}`}
             channel={channel}
             index={index}
             layoutType={layoutType}

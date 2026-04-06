@@ -383,7 +383,7 @@ export const BRANDS = [
       areas: {
         left: { 
           enabled: true, 
-          showLogo: false, 
+          showLogo: true, 
           showTime: false,
           contentAlign: 'left'
         },
@@ -404,12 +404,12 @@ export const BRANDS = [
         areas: {
           left: { 
             enabled: true, 
-            showServiceInfo: false,
+            showServiceInfo: true,
             contentAlign: 'left'
           },
           center: { 
             enabled: true, 
-            showServiceInfo: true,
+            showServiceInfo: false,
             contentAlign: 'right'
           },
           right: { 

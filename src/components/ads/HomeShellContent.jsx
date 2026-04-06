@@ -142,7 +142,7 @@ export function HomeShellContent() {
   return (
     <HomeHeaderProvider>
       <div className="home-content-stack">
-        {headerEnabled && <InicioHeader />}
+        {headerEnabled && <InicioHeader sectionKey={sectionKey} />}
         {adsEnabled && hasTop && (
           <AdZone
             key={`top-${top.map((a) => a.id).join('-')}`}
