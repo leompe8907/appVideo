@@ -57,7 +57,27 @@
  * @param {Object} bouquets - Configuración visual específica para bouquets:
  *   @param {string} bouquets.timeshipColor - Color (hex) de la barra de progreso (timeship) en los bouquets.
  *
- * @param {Object} header - Cabecera de la pantalla Inicio (tres zonas horizontales: izquierda, centro, derecha). Objeto reservado para configuración por marca (p. ej. logos, widgets); puede ir vacío al inicio.
+ * @param {Object} header - Cabecera de la pantalla Inicio (tres zonas horizontales: izquierda, centro, derecha).
+ *   @param {Object} header.areas - Configuración por área (izq/centro/der).
+ *     @param {Object} header.areas.left
+ *     @param {Object} header.areas.center
+ *     @param {Object} header.areas.right
+ *       @param {boolean} header.areas.<area>.enabled - Habilita el área.
+ *       @param {boolean} header.areas.<area>.showLogo - Muestra logo de la marca.
+ *       @param {boolean} header.areas.<area>.showTime - Muestra hora del dispositivo.
+ *
+ * @param {Object} homeShell - Flags de UI por sección dentro de /home:
+ *   @param {Object} homeShell.header - Habilita/deshabilita el header por módulo.
+ *     @param {boolean} homeShell.header.inicio
+ *     @param {boolean} homeShell.header.serviciosTvRadio
+ *     @param {boolean} homeShell.header.vod
+ *     @param {boolean} homeShell.header.catchup
+ *   @param {Object} homeShell.ads - Habilita/deshabilita publicidad por módulo.
+ *     Nota: por requerimiento actual, por defecto solo se activa en Inicio.
+ *     @param {boolean} homeShell.ads.inicio
+ *     @param {boolean} homeShell.ads.serviciosTvRadio
+ *     @param {boolean} homeShell.ads.vod
+ *     @param {boolean} homeShell.ads.catchup
  *
  * @param {Object} debug - Opciones de depuración (normalmente solo en desarrollo):
  *   @param {boolean} debug.spatialNav - true: activa logs en consola de la navegación espacial.
@@ -178,8 +198,30 @@ export const BRANDS = [
       timeshipColor: "#2CE308",
     },
 
-    // Cabecera Inicio (tres columnas); contenido por marca (vacío hasta definir).
-    header: {},
+    // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    header: {
+      areas: {
+        left: { enabled: true, showLogo: true, showTime: false },
+        center: { enabled: true, showLogo: false, showTime: false },
+        right: { enabled: true, showLogo: false, showTime: true },
+      },
+    },
+
+    // Flags de HomeShell (header + ads por sección)
+    homeShell: {
+      header: {
+        inicio: true,
+        serviciosTvRadio: true,
+        vod: true,
+        catchup: true,
+      },
+      ads: {
+        inicio: true,
+        serviciosTvRadio: false,
+        vod: false,
+        catchup: false,
+      },
+    },
     
     // Features habilitadas/deshabilitadas
     features: {
@@ -322,8 +364,30 @@ export const BRANDS = [
       timeshipColor: "#3333FF",
     },
 
-    // Cabecera Inicio (tres columnas); contenido por marca (vacío hasta definir).
-    header: {},
+    // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    header: {
+      areas: {
+        left: { enabled: true, showLogo: false, showTime: false },
+        center: { enabled: true, showLogo: false, showTime: false },
+        right: { enabled: true, showLogo: false, showTime: true },
+      },
+    },
+
+    // Flags de HomeShell (header + ads por sección)
+    homeShell: {
+      header: {
+        inicio: true,
+        serviciosTvRadio: true,
+        vod: true,
+        catchup: true,
+      },
+      ads: {
+        inicio: true,
+        serviciosTvRadio: false,
+        vod: false,
+        catchup: false,
+      },
+    },
     
     // Features habilitadas/deshabilitadas
     features: {
@@ -466,8 +530,30 @@ export const BRANDS = [
       timeshipColor: "#2CE308",
     },
 
-    // Cabecera Inicio (tres columnas); contenido por marca (vacío hasta definir).
-    header: {},
+    // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    header: {
+      areas: {
+        left: { enabled: true, showLogo: true, showTime: false },
+        center: { enabled: true, showLogo: false, showTime: false },
+        right: { enabled: true, showLogo: false, showTime: true },
+      },
+    },
+
+    // Flags de HomeShell (header + ads por sección)
+    homeShell: {
+      header: {
+        inicio: true,
+        serviciosTvRadio: true,
+        vod: true,
+        catchup: true,
+      },
+      ads: {
+        inicio: true,
+        serviciosTvRadio: false,
+        vod: false,
+        catchup: false,
+      },
+    },
     
     // Features habilitadas/deshabilitadas
     features: {
@@ -605,8 +691,30 @@ export const BRANDS = [
       timeshipColor: "#3333FF",
     },
 
-    // Cabecera Inicio (tres columnas); contenido por marca (vacío hasta definir).
-    header: {},
+    // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    header: {
+      areas: {
+        left: { enabled: true, showLogo: true, showTime: false },
+        center: { enabled: true, showLogo: false, showTime: false },
+        right: { enabled: true, showLogo: false, showTime: true },
+      },
+    },
+
+    // Flags de HomeShell (header + ads por sección)
+    homeShell: {
+      header: {
+        inicio: true,
+        serviciosTvRadio: true,
+        vod: true,
+        catchup: true,
+      },
+      ads: {
+        inicio: true,
+        serviciosTvRadio: false,
+        vod: false,
+        catchup: false,
+      },
+    },
     
     // Features habilitadas/deshabilitadas
     features: {

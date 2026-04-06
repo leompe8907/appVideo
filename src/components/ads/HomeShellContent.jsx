@@ -3,11 +3,13 @@
  */
 
 import { useCallback, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { usePlayer } from '../../contexts/PlayerContext';
 import panaccessService from '../../services/panaccessService';
 import { AdZone } from './AdZone';
 import { usePreload } from '../../store/usePreload';
+import InicioHeader from '../home/InicioHeader';
+import { useBrand } from '../../contexts/BrandContext';
 
 function findStreamById(streams, id) {
   if (id == null || !Array.isArray(streams)) return null;
@@ -17,14 +19,36 @@ function findStreamById(streams, id) {
 
 export function HomeShellContent() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { play } = usePlayer();
+  const { currentBrand } = useBrand();
   const { epg, ads, loadAds } = usePreload();
 
+  const sectionKey = (() => {
+    const p = location.pathname || '';
+    if (p === '/home/inicio') return 'inicio';
+    if (p === '/home/servicios-tv-radio') return 'serviciosTvRadio';
+    if (p === '/home/vod') return 'vod';
+    if (p === '/home/catchup') return 'catchup';
+    return null;
+  })();
+
+  const headerEnabled =
+    sectionKey &&
+    (currentBrand?.homeShell?.header?.[sectionKey] ??
+      // fallback seguro: si no está configurado, mantener el header activo en estas 4 secciones
+      (sectionKey === 'inicio' || sectionKey === 'serviciosTvRadio' || sectionKey === 'vod' || sectionKey === 'catchup'));
+
+  const adsEnabled =
+    sectionKey &&
+    Boolean(currentBrand?.homeShell?.ads?.[sectionKey] ?? (sectionKey === 'inicio'));
+
   useEffect(() => {
+    if (!adsEnabled) return;
     if (ads.status === 'idle') {
       loadAds();
     }
-  }, [ads.status, loadAds]);
+  }, [ads.status, loadAds, adsEnabled]);
 
   const handleActivate = useCallback(
     (ad) => {
@@ -116,7 +140,8 @@ export function HomeShellContent() {
 
   return (
     <div className="home-content-stack">
-      {hasTop && (
+      {headerEnabled && <InicioHeader />}
+      {adsEnabled && hasTop && (
         <AdZone
           key={`top-${top.map((a) => a.id).join('-')}`}
           zoneKey="top"
@@ -127,7 +152,7 @@ export function HomeShellContent() {
       <div className="home-content-outlet">
         <Outlet />
       </div>
-      {hasBottom && (
+      {adsEnabled && hasBottom && (
         <AdZone
           key={`bottom-${bottom.map((a) => a.id).join('-')}`}
           zoneKey="bottom"
