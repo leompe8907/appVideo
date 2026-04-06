@@ -1,3 +1,5 @@
+import { getVodImageUrl } from './vodService';
+
 const DEBOUNCE_DELAY_MS = 300;
 const MIN_QUERY_LENGTH = 1;
 
@@ -124,7 +126,74 @@ function getAllEpgEventsFromStreams(services, { nowMs } = {}) {
   return out;
 }
 
-function normalizeResult(item, type) {
+/**
+ * Misma prioridad que VodCard / detalle: URLs preparadas + fallback por image1Id/2/3 + drm.
+ */
+function resolveVodPosterUrl(item, drmBaseUrl) {
+  const direct =
+    item?.backgroundImageURL ||
+    item?.posterInfoURL ||
+    item?.posterListURL ||
+    item?.extraImageURL ||
+    item?.img ||
+    '';
+  if (direct) return direct;
+
+  const base = String(drmBaseUrl || '').replace(/\/?$/, '');
+  if (!base) return '';
+
+  if (item?.image1Id != null) {
+    const u = getVodImageUrl(base, item.image1Id, 'posterList');
+    if (u) return u;
+  }
+  if (item?.image2Id != null) {
+    const u = getVodImageUrl(base, item.image2Id, 'original');
+    if (u) return u;
+  }
+  if (item?.image3Id != null) {
+    const u = getVodImageUrl(base, item.image3Id, 'original');
+    if (u) return u;
+  }
+  return '';
+}
+
+/**
+ * Series: primero background (o image3 → original); si falta o falla la carga, posterInfo (o image1 → posterInfo).
+ * Devuelve `vodPosterFallback` solo cuando hay una URL secundaria distinta de la principal (para onError en UI).
+ */
+function resolveVodSeriesPosters(item, drmBaseUrl) {
+  const base = String(drmBaseUrl || '').replace(/\/?$/, '');
+
+  const background =
+    item?.backgroundImageURL ||
+    (base && item?.image3Id != null ? getVodImageUrl(base, item.image3Id, 'original') : '') ||
+    '';
+
+  let posterInfo =
+    item?.posterInfoURL ||
+    (base && item?.image1Id != null ? getVodImageUrl(base, item.image1Id, 'posterInfo') : '') ||
+    '';
+
+  if (!posterInfo && base && item?.image1Id != null) {
+    posterInfo = getVodImageUrl(base, item.image1Id, 'posterList') || '';
+  }
+
+  if (background && posterInfo && background !== posterInfo) {
+    return { logo: background, vodPosterFallback: posterInfo };
+  }
+
+  if (background) {
+    return { logo: background, vodPosterFallback: '' };
+  }
+
+  if (posterInfo) {
+    return { logo: posterInfo, vodPosterFallback: '' };
+  }
+
+  return { logo: resolveVodPosterUrl(item, drmBaseUrl), vodPosterFallback: '' };
+}
+
+function normalizeResult(item, type, ctx = {}) {
   const name = item?.name ?? item?.title ?? item?.Name ?? item?.Title ?? '';
   if (!name) return null;
 
@@ -141,7 +210,13 @@ function normalizeResult(item, type) {
     normalized.logo = item?.img || item?.logo || '';
     normalized.lcn = item?.lcn ?? item?.LCN ?? null;
   } else if (type === 'vod') {
-    normalized.logo = item?.backgroundImageURL || item?.posterInfoURL || item?.posterListURL || item?.img || '';
+    if (item?.isSeries === true) {
+      const { logo, vodPosterFallback } = resolveVodSeriesPosters(item, ctx.vodDrmBaseUrl);
+      normalized.logo = logo;
+      if (vodPosterFallback) normalized.vodPosterFallback = vodPosterFallback;
+    } else {
+      normalized.logo = resolveVodPosterUrl(item, ctx.vodDrmBaseUrl);
+    }
   } else if (type === 'catchup') {
     normalized.logo = item?.imageUrl || item?.imageUrl2 || item?.catchupImageUrl || item?.img || item?.posterUrl || '';
     normalized.catchupId = item?.catchupId ?? item?.id ?? null;
@@ -164,7 +239,13 @@ function normalizeResult(item, type) {
  * Busca sobre datos ya cargados (EPG/services, VOD, Catchup).
  * Retorna resultados normalizados ordenados por relevancia (desc).
  */
-export function searchAll({ query, services = [], vods = [], catchupGroups = [] }) {
+export function searchAll({
+  query,
+  services = [],
+  vods = [],
+  catchupGroups = [],
+  vodDrmBaseUrl = '',
+} = {}) {
   const results = [];
   if (!query || typeof query !== 'string') return results;
   const trimmed = query.trim();
@@ -193,7 +274,7 @@ export function searchAll({ query, services = [], vods = [], catchupGroups = [] 
     const name = vod?.name;
     if (!name) return;
     if (normalizeStr(name).indexOf(lowerQuery) === -1) return;
-    const normalized = normalizeResult(vod, 'vod');
+    const normalized = normalizeResult(vod, 'vod', { vodDrmBaseUrl });
     if (!normalized) return;
     normalized.relevance = calculateRelevance(name, trimmed);
     allResults.push(normalized);

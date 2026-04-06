@@ -36,7 +36,7 @@ function ResultItem({ item, index, onSelect }) {
   const [imgSrc, setImgSrc] = useState(item.logo || '');
   useEffect(() => {
     setImgSrc(item.logo || '');
-  }, [item.logo]);
+  }, [item.logo, item.vodPosterFallback]);
 
   const timeText = (() => {
     if (item.type !== 'epg') return '';
@@ -71,6 +71,11 @@ function ResultItem({ item, index, onSelect }) {
             // Fallback: si la imagen del evento falla, mostrar la del canal
             if (item.type === 'epg' && item.channelLogo && imgSrc !== item.channelLogo) {
               setImgSrc(item.channelLogo);
+              return;
+            }
+            // Series VOD: background → posterInfo si la URL principal falla
+            if (item.type === 'vod' && item.vodPosterFallback && imgSrc !== item.vodPosterFallback) {
+              setImgSrc(item.vodPosterFallback);
               return;
             }
             // Último recurso: placeholder
@@ -177,8 +182,9 @@ export function SearchPage() {
       services: epg.streams || [],
       vods: vod.allVods || [],
       catchupGroups: catchup.groups || [],
+      vodDrmBaseUrl: currentBrand?.drm ?? '',
     });
-  }, [debouncedQuery, epg.streams, vod.allVods, catchup.groups]);
+  }, [debouncedQuery, epg.streams, vod.allVods, catchup.groups, currentBrand?.drm]);
 
   const grouped = useMemo(() => {
     const services = [];
