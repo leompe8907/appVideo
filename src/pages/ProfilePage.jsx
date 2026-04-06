@@ -10,6 +10,7 @@ import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { DeleteProfileModal } from '../components/profile/DeleteProfileModal';
 import { MessageModal } from '../components/MessageModal';
+import { FocusableButton } from '../components/navigation/FocusableButton';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import panaccessService from '../services/panaccessService';
 import { setLoggedOut } from '../utils/userSession';
@@ -35,6 +36,7 @@ export function ProfilePage() {
   const [profiles, setProfiles] = useState([]);
   const [smartCards, setSmartCards] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState(null);
+  const [isActivating, setIsActivating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [profileMessage, setProfileMessage] = useState(null);
@@ -304,7 +306,7 @@ function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled 
     isFocusable: !disabled && !!onDelete,
   });
 
-  const handleClick = (e) => {
+  const handleClick = () => {
     if (disabled) return;
     if (!isTV) onSelect();
   };

@@ -440,14 +440,14 @@ export const BRANDS = [
     // Features habilitadas/deshabilitadas
     features: {
       miniPlayer: true,
-      profiles: false,
+      profiles: true,
       seekbar: false, // Equivalente a seekbarEnabled en 10foot
       logout: false, // Equivalente a logoutEnabled en 10foot
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
     qrRegister: {
-      enabled: true,
+      enabled: false,
       url: "https://shop.fotelka.tv/?c=customer&p=register",
     },
     udidLogin: {

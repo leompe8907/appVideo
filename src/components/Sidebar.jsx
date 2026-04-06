@@ -21,6 +21,22 @@ function SidebarIcon({ name }) {
   };
 
   switch (name) {
+    case 'search':
+      return (
+        <svg {...common}>
+          <path
+            d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+          <path
+            d="M16.5 16.5 21 21"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
     case 'channels':
       return (
         <svg {...common}>
@@ -283,6 +299,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       <div className="home-sidebar-header">{appName || 'App'}</div>
       <nav className="home-sidebar-nav">
         <SidebarLink to="/home/inicio" label={t('sidebar.bouquets')} icon="home" onSelect={collapseSidebar} />
+        <SidebarLink to="/home/buscador" label={t('sidebar.search', { defaultValue: 'Buscador' })} icon="search" onSelect={collapseSidebar} />
         {showVod && <SidebarLink to="/home/vod" label={t('sidebar.movies')} icon="movies" onSelect={collapseSidebar} />}
         <SidebarLink to="/home/epg" label={t('sidebar.channelGuide')} icon="guide" onSelect={collapseSidebar} />
         {showTvRadioServices && (

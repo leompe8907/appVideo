@@ -18,6 +18,7 @@ const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
 const BouquetPage = lazy(() => import('./pages/BouquetPage'));
 const TvRadioServicesPage = lazy(() => import('./pages/TvRadioServicesPage'));
 const VodPage = lazy(() => import('./pages/VodPage'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
 const PreloadDataPage = lazy(() => import('./pages/PreloadDataPage'));
 const HomePage = lazy(() => import('./pages/HomePage'));
 const EpgCardsPage = lazy(() => import('./pages/EpgCardsPage'));
@@ -66,7 +67,6 @@ function ProtectedRoute({ children }) {
 }
 
 function App() {
-  const { t } = useTranslation();
   const viewport = useViewport();
   const lastViewportClassRef = useRef('');
   const lastScaleRef = useRef(null);
@@ -130,6 +130,7 @@ function App() {
                 <Route path="/epg" element={<Navigate to="/home/epg" replace />}/>
                 <Route path="/home" element={<ProtectedRoute><Suspense fallback={<Loading />}><HomePage /></Suspense></ProtectedRoute>}>
                   <Route path="inicio" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><BouquetPage /></Suspense></PreloadGate>}/>
+                  <Route path="buscador" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><SearchPage /></Suspense></PreloadGate>}/>
                   <Route path="servicios-tv-radio"element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><TvRadioServicesPage /></Suspense></PreloadGate>}/>
                   <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>}/>
                   <Route path="epg" element={<PreloadGate required="epg"> <Suspense fallback={<Loading />}> <EpgCardsPage /></Suspense></PreloadGate>}/>

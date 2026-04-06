@@ -18,12 +18,24 @@
   "sidebar": {
     "menu": "Menú",
     "bouquets": "Inicio",
+    "search": "Buscador",
     "movies": "Películas",
     "channelGuide": "Guía de canales",
     "tvRadioServices": "Servicios de TV y radio",
     "tvRadioPlaceholder": "Módulo en preparación para servicios de TV y radio.",
     "catchup": "Catchup",
     "osms": "OSMS"
+  },
+  "search": {
+    "placeholder": "Buscar...",
+    "clear": "Limpiar",
+    "tabAll": "Todos",
+    "tabServices": "Servicios",
+    "tabs": "Tabs de búsqueda",
+    "typeToSearch": "Escribe para buscar",
+    "noResults": "No se encontraron resultados.",
+    "result": "resultado",
+    "results": "resultados"
   },
   "settings": {
     "confirm": "Confirmar",
