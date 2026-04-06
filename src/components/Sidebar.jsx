@@ -83,11 +83,12 @@ function SidebarIcon({ name }) {
   }
 }
 
-function SidebarLink({ to, label, icon }) {
+function SidebarLink({ to, label, icon, onSelect }) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) => `home-sidebar-link${isActive ? ' active' : ''}`}
+      onClick={() => onSelect?.()}
     >
       {icon ? <SidebarIcon name={icon} /> : null}
       <span className="home-sidebar-label">{label}</span>
@@ -193,6 +194,8 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     }
   };
 
+  const collapseSidebar = () => setExpandedSafe(false);
+
   const scheduleCollapseIfOutside = () => {
     if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
     blurTimerRef.current = setTimeout(() => {
@@ -223,6 +226,12 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     if (expanded) return;
     setSettingsOpen(false);
   }, [expanded]);
+
+  // Si la ruta cambia (navegación desde cualquier origen), colapsar el sidebar.
+  useEffect(() => {
+    collapseSidebar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   return (
     <aside
@@ -273,17 +282,17 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       />
       <div className="home-sidebar-header">{appName || 'App'}</div>
       <nav className="home-sidebar-nav">
-        <SidebarLink to="/home/inicio" label={t('sidebar.bouquets')} icon="home" />
-        {showVod && <SidebarLink to="/home/vod" label={t('sidebar.movies')} icon="movies" />}
-        <SidebarLink to="/home/epg" label={t('sidebar.channelGuide')} icon="guide" />
+        <SidebarLink to="/home/inicio" label={t('sidebar.bouquets')} icon="home" onSelect={collapseSidebar} />
+        {showVod && <SidebarLink to="/home/vod" label={t('sidebar.movies')} icon="movies" onSelect={collapseSidebar} />}
+        <SidebarLink to="/home/epg" label={t('sidebar.channelGuide')} icon="guide" onSelect={collapseSidebar} />
         {showTvRadioServices && (
-          <SidebarLink to="/home/servicios-tv-radio" label={t('sidebar.tvRadioServices')} icon="channels" />
+          <SidebarLink to="/home/servicios-tv-radio" label={t('sidebar.tvRadioServices')} icon="channels" onSelect={collapseSidebar} />
         )}
         {showCatchup && (
-          <SidebarLink to="/home/catchup" label={t('sidebar.catchup')} />
+          <SidebarLink to="/home/catchup" label={t('sidebar.catchup')} onSelect={collapseSidebar} />
         )}
         {currentBrand?.features?.osms && (
-          <SidebarLink to="/home/osms" label={t('sidebar.osms')} />
+          <SidebarLink to="/home/osms" label={t('sidebar.osms')} onSelect={collapseSidebar} />
         )}
 
         <div className="home-sidebar-settings">
@@ -303,16 +312,44 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
               role="group"
               aria-label={t('common.settings', { defaultValue: 'Configuración' })}
             >
-              <button type="button" className="home-sidebar-sublink" onClick={() => setAboutModal(true)}>
+              <button
+                type="button"
+                className="home-sidebar-sublink"
+                onClick={() => {
+                  setAboutModal(true);
+                  collapseSidebar();
+                }}
+              >
                 {t('common.about', { defaultValue: 'Acerca de' })}
               </button>
-              <button type="button" className="home-sidebar-sublink" onClick={handleRefresh}>
+              <button
+                type="button"
+                className="home-sidebar-sublink"
+                onClick={() => {
+                  handleRefresh();
+                  collapseSidebar();
+                }}
+              >
                 {t('common.refresh', { defaultValue: 'Refrescar' })}
               </button>
-              <button type="button" className="home-sidebar-sublink" onClick={() => setConfirmAction('logout')}>
+              <button
+                type="button"
+                className="home-sidebar-sublink"
+                onClick={() => {
+                  setConfirmAction('logout');
+                  collapseSidebar();
+                }}
+              >
                 {t('common.logout', { defaultValue: 'Cerrar sesión' })}
               </button>
-              <button type="button" className="home-sidebar-sublink home-sidebar-sublink--danger" onClick={() => setConfirmAction('exit')}>
+              <button
+                type="button"
+                className="home-sidebar-sublink home-sidebar-sublink--danger"
+                onClick={() => {
+                  setConfirmAction('exit');
+                  collapseSidebar();
+                }}
+              >
                 {t('common.exit', { defaultValue: 'Salir' })}
               </button>
             </div>
