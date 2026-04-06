@@ -35,7 +35,10 @@
     "typeToSearch": "Digite para buscar",
     "noResults": "Nenhum resultado encontrado.",
     "result": "resultado",
-    "results": "resultados"
+    "results": "resultados",
+    "sectionServices": "Serviços",
+    "sectionVod": "VOD",
+    "sectionCatchup": "Catchup"
   },
   "settings": {
     "confirm": "Confirmar",

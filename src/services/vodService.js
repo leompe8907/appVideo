@@ -72,7 +72,16 @@ function buildVodImageUrls(vod, baseUrl, templates = {}) {
  */
 export function prepareDataForVOD(vods, categories, vodRecommendedId, baseUrl, imageTemplates = {}, t = (x) => x) {
   const allVods = [];
+  const seenIds = new Set();
   const templates = imageTemplates || {};
+
+  const pushUnique = (vod) => {
+    if (vod.id != null) {
+      if (seenIds.has(vod.id)) return;
+      seenIds.add(vod.id);
+    }
+    allVods.push(vod);
+  };
 
   categories.forEach((category, index) => {
     const filtered = (vods || []).filter((vod) =>
@@ -83,14 +92,14 @@ export function prepareDataForVOD(vods, categories, vodRecommendedId, baseUrl, i
       Object.assign(filtered[i], urls);
     });
     categories[index].vods = filtered;
-    allVods.push(...filtered);
+    filtered.forEach(pushUnique);
   });
 
   const series = (vods || []).filter((vod) => vod.isSeries === true);
   if (series.length > 0 && categories.length > 0) {
     series.sort((a, b) => (a.name != null && b.name != null ? (a.name > b.name ? 1 : a.name < b.name ? -1 : 0) : 0));
     categories.push({ id: 0, name: t('vod.seriesCategory') || 'Séries', vods: series });
-    allVods.push(...series);
+    series.forEach(pushUnique);
   }
 
   let vodRecommended = [];

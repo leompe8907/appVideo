@@ -135,8 +135,18 @@ export function searchAll({ query, services = [], vods = [], catchupGroups = [] 
     allResults.push(normalized);
   });
 
-  allResults.sort((a, b) => Number(b.relevance || 0) - Number(a.relevance || 0));
-  return allResults;
+  // Deduplicar por tipo+id por si la fuente de datos tiene duplicados
+  const seen = new Set();
+  const deduped = allResults.filter((r) => {
+    if (r.id == null) return true;
+    const key = `${r.type}:${r.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  deduped.sort((a, b) => Number(b.relevance || 0) - Number(a.relevance || 0));
+  return deduped;
 }
 
 export default {

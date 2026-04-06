@@ -29,7 +29,7 @@ function SearchTab({ id, label, active, hidden, onSelect }) {
 
 function ResultItem({ item, index, onSelect }) {
   const { ref, isTV, focused } = useSpatialNavigation({
-    focusKey: `search-result-${index}-${item.type}-${item.id ?? 'x'}`,
+    focusKey: `search-result-${index}-${item.type}-${item.id ?? item.name ?? 'x'}`,
     onEnterPress: () => onSelect?.(item),
   });
 
@@ -41,15 +41,37 @@ function ResultItem({ item, index, onSelect }) {
       onClick={() => onSelect?.(item)}
       onMouseEnter={!isTV ? () => {} : undefined}
     >
-      {item.logo ? <img className="search-result__img" src={item.logo} alt="" /> : <div className="search-result__img search-result__img--placeholder" />}
-      <div className="search-result__meta">
-        <div className="search-result__title">
-          {item.type === 'service' && item.lcn != null ? <span className="search-result__lcn">{item.lcn}</span> : null}
-          <span className="search-result__name">{item.name}</span>
-        </div>
-        <div className="search-result__type">{item.type}</div>
+      {item.logo
+        ? <img className="search-result__img" src={item.logo} alt={item.name} />
+        : <div className="search-result__img--placeholder" />
+      }
+      <div className="search-result__name">
+        {item.type === 'service' && item.lcn != null
+          ? <span className="search-result__lcn">{item.lcn}</span>
+          : null
+        }
+        {item.name}
       </div>
     </button>
+  );
+}
+
+function SearchSection({ title, items, baseIndex, onSelect }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div className="search-section">
+      <div className="search-section__title">{title}</div>
+      <div className="search-list">
+        {items.map((r, i) => (
+          <ResultItem
+            key={`${r.type}-${r.id ?? r.name ?? i}`}
+            item={r}
+            index={baseIndex + i}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -64,6 +86,10 @@ export function SearchPage() {
   const [activeTab, setActiveTab] = useState('all'); // all | service | vod | catchup
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const inputRef = useRef(null);
+  // Ref para que el efecto de carga siempre use la función t más reciente
+  // sin añadirla como dependencia (evita re-disparos por cambio de referencia)
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; });
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQuery(query), getSearchDebounceMs());
@@ -88,12 +114,14 @@ export function SearchPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Cargar VOD/Catchup si el usuario los necesita en búsqueda
+  // Cargar VOD/Catchup al entrar al buscador.
+  // tRef.current se pasa como snapshot al momento de la carga para evitar
+  // que el cambio de referencia de `t` re-dispare este efecto innecesariamente.
   useEffect(() => {
     if (!currentBrand) return;
-    if (vod.status === 'idle') loadVOD(currentBrand, { t });
+    if (vod.status === 'idle') loadVOD(currentBrand, { t: tRef.current });
     if (catchup.status === 'idle') loadCatchup(currentBrand);
-  }, [currentBrand, vod.status, catchup.status, loadVOD, loadCatchup, t]);
+  }, [currentBrand, vod.status, catchup.status, loadVOD, loadCatchup]);
 
   const resultsAll = useMemo(() => {
     return searchAll({
@@ -121,20 +149,20 @@ export function SearchPage() {
   const hideCatchupTab = !isEmptyQuery && grouped.catchups.length === 0;
   const hasServices = (epg.streams?.length ?? 0) > 0;
 
-  const visibleResults = useMemo(() => {
-    const tab = (() => {
-      if (activeTab === 'vod' && hideVodTab) return 'all';
-      if (activeTab === 'catchup' && hideCatchupTab) return 'all';
-      return activeTab;
-    })();
-    if (tab === 'service') return grouped.services;
-    if (tab === 'vod') return grouped.vods;
-    if (tab === 'catchup') return grouped.catchups;
-    return resultsAll;
-  }, [activeTab, grouped, resultsAll, hideVodTab, hideCatchupTab]);
+  // Tab efectivo: si el tab activo queda sin resultados, hacer fallback a 'all'
+  const effectiveTab = useMemo(() => {
+    if (activeTab === 'vod' && hideVodTab) return 'all';
+    if (activeTab === 'catchup' && hideCatchupTab) return 'all';
+    return activeTab;
+  }, [activeTab, hideVodTab, hideCatchupTab]);
 
-  // Nota: no forzamos setActiveTab en effects para evitar renders en cascada;
-  // visibleResults usa un tab efectivo con fallback a 'all'.
+  const visibleCount = useMemo(() => {
+    if (effectiveTab === 'all') return grouped.services.length + grouped.vods.length + grouped.catchups.length;
+    if (effectiveTab === 'service') return grouped.services.length;
+    if (effectiveTab === 'vod') return grouped.vods.length;
+    if (effectiveTab === 'catchup') return grouped.catchups.length;
+    return 0;
+  }, [effectiveTab, grouped]);
 
   const handleSelect = (item) => {
     if (!item) return;
@@ -224,18 +252,50 @@ export function SearchPage() {
         <div className="search-results">
           {isEmptyQuery ? (
             <div className="search-empty">{t('search.typeToSearch', { defaultValue: 'Escribe para buscar' })}</div>
-          ) : visibleResults.length === 0 ? (
+          ) : visibleCount === 0 ? (
             <div className="search-empty">{t('search.noResults', { defaultValue: 'No se encontraron resultados.' })}</div>
           ) : (
             <>
               <div className="search-count">
-                {visibleResults.length} {visibleResults.length === 1 ? t('search.result', { defaultValue: 'resultado' }) : t('search.results', { defaultValue: 'resultados' })}
+                {visibleCount} {visibleCount === 1 ? t('search.result', { defaultValue: 'resultado' }) : t('search.results', { defaultValue: 'resultados' })}
               </div>
-              <div className="search-list">
-                {visibleResults.map((r, i) => (
-                  <ResultItem key={`${r.type}-${r.id ?? i}`} item={r} index={i} onSelect={handleSelect} />
-                ))}
-              </div>
+
+              {effectiveTab === 'all' ? (
+                <>
+                  <SearchSection
+                    title={t('search.sectionServices', { defaultValue: 'Servicios' })}
+                    items={grouped.services}
+                    baseIndex={0}
+                    onSelect={handleSelect}
+                  />
+                  <SearchSection
+                    title={t('search.sectionVod', { defaultValue: 'VOD' })}
+                    items={grouped.vods}
+                    baseIndex={grouped.services.length}
+                    onSelect={handleSelect}
+                  />
+                  <SearchSection
+                    title={t('search.sectionCatchup', { defaultValue: 'Catchup' })}
+                    items={grouped.catchups}
+                    baseIndex={grouped.services.length + grouped.vods.length}
+                    onSelect={handleSelect}
+                  />
+                </>
+              ) : (
+                <div className="search-list">
+                  {(effectiveTab === 'service' ? grouped.services
+                    : effectiveTab === 'vod' ? grouped.vods
+                    : grouped.catchups
+                  ).map((r, i) => (
+                    <ResultItem
+                      key={`${r.type}-${r.id ?? r.name ?? i}`}
+                      item={r}
+                      index={i}
+                      onSelect={handleSelect}
+                    />
+                  ))}
+                </div>
+              )}
             </>
           )}
         </div>

@@ -35,7 +35,10 @@
     "typeToSearch": "Type to search",
     "noResults": "No results found.",
     "result": "result",
-    "results": "results"
+    "results": "results",
+    "sectionServices": "Services",
+    "sectionVod": "VOD",
+    "sectionCatchup": "Catchup"
   },
   "settings": {
     "confirm": "Confirm",
