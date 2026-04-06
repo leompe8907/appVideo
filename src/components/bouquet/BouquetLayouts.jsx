@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
@@ -125,7 +125,7 @@ function getChannelLayoutVariant(layoutType) {
  * - bouquet.name / description
  * - bouquet.items: array de canales { id, name, img, lcn, backgroundColor, ... }
  */
-export function BouquetRowCarousel({ bouquet, onChannelSelect, layoutType }) {
+export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, layoutType }) {
   const { t } = useTranslation();
   const title =
     bouquet?.name ??
@@ -151,6 +151,7 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, layoutType }) {
             index={index}
             layoutType={layoutType}
             onSelect={() => onChannelSelect?.(channel, bouquet)}
+            onFocus={() => onChannelFocus?.(channel, bouquet)}
           />
         ))}
       </div>
@@ -165,7 +166,7 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, layoutType }) {
  * - event_and_logo: logo arriba + imagen de evento abajo + barra de tiempo (timeship)
  * - event_line: igual que event pero con tamaño mayor
  */
-function ChannelCard({ channel, index, layoutType, onSelect }) {
+function ChannelCard({ channel, index, layoutType, onSelect, onFocus }) {
   const { isTV } = useDevice();
   
   const { ref, focused } = useSpatialNavigation({
@@ -174,13 +175,19 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
     isFocusable: true,
   });
 
+  useEffect(() => {
+    if (focused) {
+      onFocus?.();
+    }
+  }, [focused, onFocus]);
+
   const bgColor = normalizeColor(channel.backgroundColor ?? channel.bgColor);
   const variant = getChannelLayoutVariant(layoutType);
   const style =
     variant === 'event_and_logo' ? {} : bgColor ? { backgroundColor: bgColor } : {};
 
   // EPG: evento actual al aire (para event_and_logo)
-  const epgItems = channel.epgItems ?? [];
+  const epgItems = useMemo(() => channel.epgItems ?? [], [channel.epgItems]);
   const currentEpgEvent = getCurrentEpgEvent(epgItems);
   const eventTitle = getEpgEventTitle(currentEpgEvent);
   const eventStartTime = formatEpgTime(currentEpgEvent?.start);
@@ -195,7 +202,9 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
     getEpgEventProgressPercent(currentEpgEvent)
   );
   const epgItemsRef = useRef(epgItems);
-  epgItemsRef.current = epgItems;
+  useEffect(() => {
+    epgItemsRef.current = epgItems;
+  }, [epgItems]);
   useEffect(() => {
     if (variant !== 'event_and_logo' && variant !== 'event_and_logo_overlay') return;
     const tick = () => {
@@ -217,11 +226,9 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
   const fallbackLogoImage = channel.img || null;
   const initialLogoUrl = buildLogoUrlFromLogo2Id(channel) || fallbackLogoImage;
   const [logoImage, setLogoImage] = useState(initialLogoUrl);
-  const [eventImageFailed, setEventImageFailed] = useState(false);
-
-  useEffect(() => {
-    setEventImageFailed(false);
-  }, [currentEpgEvent?.event_id]);
+  const currentEventKey = currentEpgEvent?.event_id ?? `${channel.id ?? ''}-${channel.lcn ?? ''}`;
+  const [failedEventKey, setFailedEventKey] = useState(null);
+  const eventImageFailed = failedEventKey != null && failedEventKey === currentEventKey;
 
   const handleLogoError = () => {
     if (fallbackLogoImage && logoImage !== fallbackLogoImage) {
@@ -232,7 +239,7 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
   };
 
   const handleEventImageError = () => {
-    setEventImageFailed(true);
+    setFailedEventKey(currentEventKey);
   };
 
   // Cadena: imagen de evento → logo del canal → placeholder (si evento o logo faltan/fallan)
@@ -245,12 +252,14 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
     if (import.meta.env?.DEV) {
       console.log('[ChannelCard] click', channel?.id ?? channel?.lcn);
     }
+    onFocus?.();
     onSelect?.();
   };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
+      onFocus?.();
       onSelect?.();
     }
   };
@@ -387,7 +396,7 @@ function ChannelCard({ channel, index, layoutType, onSelect }) {
  * Layout de tipo grid horizontal: 3 filas de canales que se desplazan en horizontal
  * de izquierda a derecha para un mismo bouquet.
  */
-export function BouquetGridHorizontal({ bouquet, onChannelSelect, layoutType }) {
+export function BouquetGridHorizontal({ bouquet, onChannelSelect, onChannelFocus, layoutType }) {
   const { t } = useTranslation();
   const title =
     bouquet?.name ??
@@ -424,6 +433,7 @@ export function BouquetGridHorizontal({ bouquet, onChannelSelect, layoutType }) 
                 index={index}
                 layoutType={layoutType}
                 onSelect={() => onChannelSelect?.(channel, bouquet)}
+                onFocus={() => onChannelFocus?.(channel, bouquet)}
               />
             ))}
           </div>
@@ -437,7 +447,7 @@ export function BouquetGridHorizontal({ bouquet, onChannelSelect, layoutType }) 
  * Layout de tipo grid vertical: N columnas de canales que se desplazan
  * de arriba hacia abajo.
  */
-export function BouquetGridVertical({ bouquet, onChannelSelect, layoutType }) {
+export function BouquetGridVertical({ bouquet, onChannelSelect, onChannelFocus, layoutType }) {
   const { t } = useTranslation();
   const title =
     bouquet?.name ??
@@ -463,6 +473,7 @@ export function BouquetGridVertical({ bouquet, onChannelSelect, layoutType }) {
             index={index}
             layoutType={layoutType}
             onSelect={() => onChannelSelect?.(channel, bouquet)}
+            onFocus={() => onChannelFocus?.(channel, bouquet)}
           />
         ))}
       </div>

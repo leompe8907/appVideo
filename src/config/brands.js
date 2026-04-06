@@ -65,6 +65,13 @@
  *       @param {boolean} header.areas.<area>.enabled - Habilita el área.
  *       @param {boolean} header.areas.<area>.showLogo - Muestra logo de la marca.
  *       @param {boolean} header.areas.<area>.showTime - Muestra hora del dispositivo.
+ *       @param {'left'|'center'|'right'} header.areas.<area>.contentAlign - Alineación interna del contenido dentro del área.
+ *   @param {Object} header.subheader - Sub-área debajo del header (3 columnas iguales).
+ *     @param {Object} header.subheader.areas
+ *       @param {Object} header.subheader.areas.<area>
+ *         @param {boolean} header.subheader.areas.<area>.enabled
+ *         @param {boolean} header.subheader.areas.<area>.showServiceInfo - Muestra info del canal enfocado (evento actual + siguiente).
+ *         @param {'left'|'center'|'right'} header.subheader.areas.<area>.contentAlign - Alineación interna del contenido dentro del área.
  *
  * @param {Object} homeShell - Flags de UI por sección dentro de /home:
  *   @param {Object} homeShell.header - Habilita/deshabilita el header por módulo.
@@ -201,9 +208,16 @@ export const BRANDS = [
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
     header: {
       areas: {
-        left: { enabled: true, showLogo: true, showTime: false },
-        center: { enabled: true, showLogo: false, showTime: false },
-        right: { enabled: true, showLogo: false, showTime: true },
+        left: { enabled: true, showLogo: true, showTime: false, contentAlign: 'left' },
+        center: { enabled: true, showLogo: false, showTime: false, contentAlign: 'center' },
+        right: { enabled: true, showLogo: false, showTime: true, contentAlign: 'right' },
+      },
+      subheader: {
+        areas: {
+          left: { enabled: true, showServiceInfo: false, contentAlign: 'left' },
+          center: { enabled: true, showServiceInfo: true, contentAlign: 'center' },
+          right: { enabled: true, showServiceInfo: false, contentAlign: 'right' },
+        },
       },
     },
 
@@ -367,9 +381,43 @@ export const BRANDS = [
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
     header: {
       areas: {
-        left: { enabled: true, showLogo: false, showTime: false },
-        center: { enabled: true, showLogo: false, showTime: false },
-        right: { enabled: true, showLogo: false, showTime: true },
+        left: { 
+          enabled: true, 
+          showLogo: false, 
+          showTime: false,
+          contentAlign: 'left'
+        },
+        center: { 
+          enabled: true, 
+          showLogo: false, 
+          showTime: false,
+          contentAlign: 'center'
+        },
+        right: { 
+          enabled: true, 
+          showLogo: false, 
+          showTime: true,
+          contentAlign: 'right'
+        },
+      },
+      subheader: {
+        areas: {
+          left: { 
+            enabled: true, 
+            showServiceInfo: false,
+            contentAlign: 'left'
+          },
+          center: { 
+            enabled: true, 
+            showServiceInfo: true,
+            contentAlign: 'right'
+          },
+          right: { 
+            enabled: true, 
+            showServiceInfo: false,
+            contentAlign: 'right'
+          },
+        },
       },
     },
 
@@ -533,9 +581,16 @@ export const BRANDS = [
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
     header: {
       areas: {
-        left: { enabled: true, showLogo: true, showTime: false },
-        center: { enabled: true, showLogo: false, showTime: false },
-        right: { enabled: true, showLogo: false, showTime: true },
+        left: { enabled: true, showLogo: true, showTime: false, contentAlign: 'left' },
+        center: { enabled: true, showLogo: false, showTime: false, contentAlign: 'center' },
+        right: { enabled: true, showLogo: false, showTime: true, contentAlign: 'right' },
+      },
+      subheader: {
+        areas: {
+          left: { enabled: true, showServiceInfo: false, contentAlign: 'left' },
+          center: { enabled: true, showServiceInfo: true, contentAlign: 'center' },
+          right: { enabled: true, showServiceInfo: false, contentAlign: 'right' },
+        },
       },
     },
 
@@ -694,9 +749,16 @@ export const BRANDS = [
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
     header: {
       areas: {
-        left: { enabled: true, showLogo: true, showTime: false },
-        center: { enabled: true, showLogo: false, showTime: false },
-        right: { enabled: true, showLogo: false, showTime: true },
+        left: { enabled: true, showLogo: true, showTime: false, contentAlign: 'left' },
+        center: { enabled: true, showLogo: false, showTime: false, contentAlign: 'center' },
+        right: { enabled: true, showLogo: false, showTime: true, contentAlign: 'right' },
+      },
+      subheader: {
+        areas: {
+          left: { enabled: true, showServiceInfo: false, contentAlign: 'left' },
+          center: { enabled: true, showServiceInfo: true, contentAlign: 'center' },
+          right: { enabled: true, showServiceInfo: false, contentAlign: 'right' },
+        },
       },
     },
 

@@ -20,7 +20,7 @@ import {
  *
  * @param {'inicio' | 'servicios'} variant - inicio: isMain !== false explícito; servicios: solo isMain=false.
  */
-export function BouquetWall({ onChannelSelect, variant = 'inicio' }) {
+export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio' }) {
   const { t } = useTranslation();
   const { epg } = usePreload();
 
@@ -123,6 +123,7 @@ export function BouquetWall({ onChannelSelect, variant = 'inicio' }) {
               bouquet={bouquet}
               layoutType={layoutType}
               onChannelSelect={onChannelSelect}
+              onChannelFocus={onChannelFocus}
             />
           );
         }
@@ -134,6 +135,7 @@ export function BouquetWall({ onChannelSelect, variant = 'inicio' }) {
               bouquet={bouquet}
               layoutType={layoutType}
               onChannelSelect={onChannelSelect}
+              onChannelFocus={onChannelFocus}
             />
           );
         }
@@ -144,6 +146,7 @@ export function BouquetWall({ onChannelSelect, variant = 'inicio' }) {
             bouquet={bouquet}
             layoutType={layoutType}
             onChannelSelect={onChannelSelect}
+            onChannelFocus={onChannelFocus}
           />
         );
       })}

@@ -8,11 +8,13 @@ import { usePlayer } from '../contexts/PlayerContext';
 import BouquetWall from '../components/bouquet/BouquetWall';
 import VodRecommendedHomeRail from '../components/vod/VodRecommendedHomeRail';
 import panaccessService from '../services/panaccessService';
+import { useHomeHeader } from '../contexts/homeHeaderContext';
 import '../styles/pages/_bouquet.scss';
 
 export function BouquetPage() {
   // El background común lo maneja Home (.home-content)
   const { play } = usePlayer();
+  const { setFocusedChannel } = useHomeHeader();
 
   const handleChannelSelect = (channel) => {
     if (import.meta.env?.DEV) {
@@ -60,7 +62,11 @@ export function BouquetPage() {
       <div className="bouquet-container">
         <div className="bouquet-content">
           <div className="bouquet-inicio-scroll">
-            <BouquetWall variant="inicio" onChannelSelect={handleChannelSelect} />
+            <BouquetWall
+              variant="inicio"
+              onChannelSelect={handleChannelSelect}
+              onChannelFocus={(channel) => setFocusedChannel(channel)}
+            />
             <VodRecommendedHomeRail />
           </div>
         </div>

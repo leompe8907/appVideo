@@ -8,11 +8,13 @@ import BouquetWall from '../components/bouquet/BouquetWall';
 import { usePreload } from '../store/usePreload';
 import { hasTvRadioServiceBouquets } from '../services/tvDataService';
 import panaccessService from '../services/panaccessService';
+import { useHomeHeader } from '../contexts/homeHeaderContext';
 import '../styles/pages/_bouquet.scss';
 
 export function TvRadioServicesPage() {
   const { play } = usePlayer();
   const { epg } = usePreload();
+  const { setFocusedChannel } = useHomeHeader();
 
   const handleChannelSelect = (channel) => {
     if (import.meta.env?.DEV) {
@@ -67,7 +69,11 @@ export function TvRadioServicesPage() {
       <div className="bouquet-container">
         <div className="bouquet-content">
           <div className="bouquet-inicio-scroll">
-            <BouquetWall variant="servicios" onChannelSelect={handleChannelSelect} />
+            <BouquetWall
+              variant="servicios"
+              onChannelSelect={handleChannelSelect}
+              onChannelFocus={(channel) => setFocusedChannel(channel)}
+            />
           </div>
         </div>
       </div>

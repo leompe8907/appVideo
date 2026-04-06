@@ -10,6 +10,7 @@ import { AdZone } from './AdZone';
 import { usePreload } from '../../store/usePreload';
 import InicioHeader from '../home/InicioHeader';
 import { useBrand } from '../../contexts/BrandContext';
+import { HomeHeaderProvider } from '../../contexts/HomeHeaderProvider';
 
 function findStreamById(streams, id) {
   if (id == null || !Array.isArray(streams)) return null;
@@ -139,28 +140,30 @@ export function HomeShellContent() {
   const hasBottom = Array.isArray(bottom) && bottom.length > 0;
 
   return (
-    <div className="home-content-stack">
-      {headerEnabled && <InicioHeader />}
-      {adsEnabled && hasTop && (
-        <AdZone
-          key={`top-${top.map((a) => a.id).join('-')}`}
-          zoneKey="top"
-          ads={top}
-          onActivate={handleActivate}
-        />
-      )}
-      <div className="home-content-outlet">
-        <Outlet />
+    <HomeHeaderProvider>
+      <div className="home-content-stack">
+        {headerEnabled && <InicioHeader />}
+        {adsEnabled && hasTop && (
+          <AdZone
+            key={`top-${top.map((a) => a.id).join('-')}`}
+            zoneKey="top"
+            ads={top}
+            onActivate={handleActivate}
+          />
+        )}
+        <div className="home-content-outlet">
+          <Outlet />
+        </div>
+        {adsEnabled && hasBottom && (
+          <AdZone
+            key={`bottom-${bottom.map((a) => a.id).join('-')}`}
+            zoneKey="bottom"
+            ads={bottom}
+            onActivate={handleActivate}
+          />
+        )}
       </div>
-      {adsEnabled && hasBottom && (
-        <AdZone
-          key={`bottom-${bottom.map((a) => a.id).join('-')}`}
-          zoneKey="bottom"
-          ads={bottom}
-          onActivate={handleActivate}
-        />
-      )}
-    </div>
+    </HomeHeaderProvider>
   );
 }
 
