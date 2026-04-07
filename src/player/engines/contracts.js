@@ -6,6 +6,7 @@ export const PLAYER_ENGINE_EVENTS = Object.freeze({
   ERROR: 'error',
   SEEK_START: 'seek-start',
   SEEK_END: 'seek-end',
+  TRACKS_CHANGE: 'trackschange',
 });
 
 export const PLAYER_ENGINE_STATES = Object.freeze({

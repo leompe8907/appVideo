@@ -173,7 +173,23 @@ export function PlayerHud({ className = '' }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isTV } = useDevice();
-  const { state, pause, play, stop, close, forward, backward, skipLiveBy, goLive, containerRef } = usePlayer();
+  const {
+    state,
+    tracks,
+    refreshTracks,
+    selectAudioTrack,
+    selectTextTrack,
+    setSubtitlesEnabled,
+    pause,
+    play,
+    stop,
+    close,
+    forward,
+    backward,
+    skipLiveBy,
+    goLive,
+    containerRef,
+  } = usePlayer();
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
   const { setFocus } = useSpatialNavigation();
@@ -181,6 +197,7 @@ export function PlayerHud({ className = '' }) {
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
   const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement));
+  const [tracksPopoverPos, setTracksPopoverPos] = useState(null); // { top, left, width } | null
   const hideTimeoutRef = useRef(null);
 
   const debugEnabled = useMemo(() => {
@@ -290,6 +307,58 @@ export function PlayerHud({ className = '' }) {
       hideTimeoutRef.current = null;
     }, 4000);
   };
+
+  useEffect(() => {
+    if (overlay !== 'tracks') return;
+    refreshTracks?.();
+  }, [overlay, refreshTracks]);
+
+  useEffect(() => {
+    if (overlay !== 'tracks') {
+      setTracksPopoverPos(null);
+      return undefined;
+    }
+
+    const compute = () => {
+      const btn = document.getElementById('hud-top-tracks-btn');
+      if (!btn) return;
+      const r = btn.getBoundingClientRect();
+      const margin = 10;
+      const top = Math.max(margin, Math.floor(r.bottom + 10));
+      const left = Math.max(margin, Math.floor(r.left));
+      const width = Math.max(420, Math.floor(Math.min(window.innerWidth - margin * 2, 860)));
+      const clampedLeft = Math.min(left, Math.max(margin, window.innerWidth - width - margin));
+      setTracksPopoverPos({ top, left: clampedLeft, width });
+    };
+
+    compute();
+    window.addEventListener('resize', compute);
+    window.addEventListener('scroll', compute, { passive: true });
+    return () => {
+      window.removeEventListener('resize', compute);
+      window.removeEventListener('scroll', compute);
+    };
+  }, [overlay]);
+
+  useEffect(() => {
+    if (overlay !== 'tracks') return undefined;
+    const onKeyDown = (e) => {
+      const key = String(e.key || '');
+      const code = String(e.code || '');
+      const keyCode = Number(e.keyCode || e.which || 0);
+      const isEscape = key === 'Escape' || code === 'Escape' || keyCode === 27;
+      const isBackspace = key === 'Backspace' || code === 'Backspace' || keyCode === 8;
+      const isReturnLike = key === 'Return' || key === 'GoBack' || key === 'BrowserBack';
+      const isTvBackCodes = keyCode === 10009 || keyCode === 461;
+      if (isEscape || isBackspace || isReturnLike || isTvBackCodes) {
+        e.preventDefault();
+        e.stopPropagation();
+        setOverlay('');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [overlay]);
 
   const wakeHud = () => {
     setVisible(true);
@@ -505,6 +574,7 @@ export function PlayerHud({ className = '' }) {
             focusKey="hud-top-tracks"
             isFocusable={visible}
             aria-label={t('player.tracks', { defaultValue: 'Audio/Subtítulos' })}
+            id="hud-top-tracks-btn"
           >
             CC
           </FocusableButton>
@@ -649,7 +719,7 @@ export function PlayerHud({ className = '' }) {
       </div>
 
       {overlay ? (
-        overlay === 'info' && shouldUseEpgInfoModal ? null : (
+        overlay === 'tracks' ? null : overlay === 'info' && shouldUseEpgInfoModal ? null : (
         <div className="player-hud__overlay">
           <div className="player-hud__overlay-title">
             {overlay === 'channels'
@@ -660,8 +730,76 @@ export function PlayerHud({ className = '' }) {
           </div>
           <div className="player-hud__overlay-body">
             {overlay === 'tracks' ? (
-              <div className="player-hud__placeholder">
-                {t('common.comingSoon', { defaultValue: 'En preparación...' })}
+              <div className="player-hud__tracks">
+                <div className="player-hud__tracks-section">
+                  <div className="player-hud__tracks-title">{t('player.audio', { defaultValue: 'Audio' })}</div>
+                  <div className="player-hud__tracks-list" role="list">
+                    {(tracks?.audio || []).length === 0 ? (
+                      <div className="player-hud__tracks-empty">{t('player.noAudioTracks', { defaultValue: 'Sin pistas de audio' })}</div>
+                    ) : (
+                      (tracks?.audio || []).slice(0, 20).map((trk) => {
+                        const isActive = String(tracks?.selectedAudioId ?? '') === String(trk?.id ?? '');
+                        return (
+                          <FocusableButton
+                            key={`aud-${trk?.id}`}
+                            type="button"
+                            className={`player-hud__trackbtn${isActive ? ' player-hud__trackbtn--active' : ''}`}
+                            onClick={() => selectAudioTrack?.(trk?.id)}
+                            focusKey={`hud-tracks-audio-${trk?.id}`}
+                            isFocusable={visible}
+                            role="listitem"
+                          >
+                            <span className="player-hud__trackbtn-label">{trk?.label || trk?.lang || 'Audio'}</span>
+                            {trk?.lang ? <span className="player-hud__trackbtn-meta">{trk.lang}</span> : null}
+                          </FocusableButton>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <div className="player-hud__tracks-section">
+                  <div className="player-hud__tracks-title">{t('player.subtitles', { defaultValue: 'Subtítulos' })}</div>
+                  <div className="player-hud__tracks-list" role="list">
+                    <FocusableButton
+                      type="button"
+                      className={`player-hud__trackbtn${tracks?.textEnabled ? '' : ' player-hud__trackbtn--active'}`}
+                      onClick={() => setSubtitlesEnabled?.(false)}
+                      focusKey="hud-tracks-subs-off"
+                      isFocusable={visible}
+                      role="listitem"
+                    >
+                      <span className="player-hud__trackbtn-label">{t('player.subtitlesOff', { defaultValue: 'Desactivados' })}</span>
+                    </FocusableButton>
+
+                    {(tracks?.text || []).length === 0 ? (
+                      <div className="player-hud__tracks-empty">{t('player.noSubtitleTracks', { defaultValue: 'Sin subtítulos' })}</div>
+                    ) : (
+                      (tracks?.text || []).slice(0, 30).map((trk) => {
+                        const isActive =
+                          tracks?.textEnabled === true &&
+                          String(tracks?.selectedTextId ?? '') === String(trk?.id ?? '');
+                        return (
+                          <FocusableButton
+                            key={`sub-${trk?.id}`}
+                            type="button"
+                            className={`player-hud__trackbtn${isActive ? ' player-hud__trackbtn--active' : ''}`}
+                            onClick={() => {
+                              setSubtitlesEnabled?.(true);
+                              selectTextTrack?.(trk?.id);
+                            }}
+                            focusKey={`hud-tracks-subs-${trk?.id}`}
+                            isFocusable={visible}
+                            role="listitem"
+                          >
+                            <span className="player-hud__trackbtn-label">{trk?.label || trk?.lang || 'Sub'}</span>
+                            {trk?.lang ? <span className="player-hud__trackbtn-meta">{trk.lang}</span> : null}
+                          </FocusableButton>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="player-hud__placeholder">
@@ -681,6 +819,106 @@ export function PlayerHud({ className = '' }) {
         </div>
         )
       ) : null}
+
+      {overlay === 'tracks' && tracksPopoverPos ?
+        createPortal(
+          <div className="player-hud__tracks-popover-overlay" onClick={() => setOverlay('')}>
+            <div
+              className="player-hud__tracks-popover"
+              style={{ top: `${tracksPopoverPos.top}px`, left: `${tracksPopoverPos.left}px`, width: `${tracksPopoverPos.width}px` }}
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="player-hud__tracks-popover-title">{t('player.tracks', { defaultValue: 'Audio/Subtítulos' })}</div>
+              <div className="player-hud__tracks">
+                <div className="player-hud__tracks-section">
+                  <div className="player-hud__tracks-title">{t('player.audio', { defaultValue: 'Audio' })}</div>
+                  <div className="player-hud__tracks-list" role="list">
+                    {(tracks?.audio || []).length === 0 ? (
+                      <div className="player-hud__tracks-empty">{t('player.noAudioTracks', { defaultValue: 'Sin pistas de audio' })}</div>
+                    ) : (
+                      (tracks?.audio || []).slice(0, 20).map((trk) => {
+                        const isActive = String(tracks?.selectedAudioId ?? '') === String(trk?.id ?? '');
+                        return (
+                          <FocusableButton
+                            key={`aud-${trk?.id}`}
+                            type="button"
+                            className={`player-hud__trackbtn${isActive ? ' player-hud__trackbtn--active' : ''}`}
+                            onClick={() => selectAudioTrack?.(trk?.id)}
+                            focusKey={`hud-tracks-audio-${trk?.id}`}
+                            isFocusable={visible}
+                            role="listitem"
+                          >
+                            <span className="player-hud__trackbtn-label">{trk?.label || trk?.lang || 'Audio'}</span>
+                            {trk?.lang ? <span className="player-hud__trackbtn-meta">{trk.lang}</span> : null}
+                          </FocusableButton>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <div className="player-hud__tracks-section">
+                  <div className="player-hud__tracks-title">{t('player.subtitles', { defaultValue: 'Subtítulos' })}</div>
+                  <div className="player-hud__tracks-list" role="list">
+                    <FocusableButton
+                      type="button"
+                      className={`player-hud__trackbtn${tracks?.textEnabled ? '' : ' player-hud__trackbtn--active'}`}
+                      onClick={() => setSubtitlesEnabled?.(false)}
+                      focusKey="hud-tracks-subs-off"
+                      isFocusable={visible}
+                      role="listitem"
+                    >
+                      <span className="player-hud__trackbtn-label">{t('player.subtitlesOff', { defaultValue: 'Desactivados' })}</span>
+                    </FocusableButton>
+
+                    {(tracks?.text || []).length === 0 ? (
+                      <div className="player-hud__tracks-empty">{t('player.noSubtitleTracks', { defaultValue: 'Sin subtítulos' })}</div>
+                    ) : (
+                      (tracks?.text || []).slice(0, 30).map((trk) => {
+                        const isActive =
+                          tracks?.textEnabled === true &&
+                          String(tracks?.selectedTextId ?? '') === String(trk?.id ?? '');
+                        return (
+                          <FocusableButton
+                            key={`sub-${trk?.id}`}
+                            type="button"
+                            className={`player-hud__trackbtn${isActive ? ' player-hud__trackbtn--active' : ''}`}
+                            onClick={() => {
+                              setSubtitlesEnabled?.(true);
+                              selectTextTrack?.(trk?.id);
+                            }}
+                            focusKey={`hud-tracks-subs-${trk?.id}`}
+                            isFocusable={visible}
+                            role="listitem"
+                          >
+                            <span className="player-hud__trackbtn-label">{trk?.label || trk?.lang || 'Sub'}</span>
+                            {trk?.lang ? <span className="player-hud__trackbtn-meta">{trk.lang}</span> : null}
+                          </FocusableButton>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="player-hud__tracks-popover-actions">
+                <FocusableButton
+                  type="button"
+                  className="player-hud__pillbtn player-hud__overlay-close"
+                  onClick={() => setOverlay('')}
+                  focusKey="hud-overlay-close"
+                  isFocusable={visible}
+                >
+                  {t('common.close', { defaultValue: 'Cerrar' })}
+                </FocusableButton>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null}
 
       <ChannelSidebar
         open={overlay === 'channels'}

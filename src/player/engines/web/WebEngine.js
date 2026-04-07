@@ -18,6 +18,7 @@ export class WebEngine extends BaseEngine {
     this.timeUpdateThrottleMs = DEFAULT_TIMEUPDATE_THROTTLE_MS;
     this._handlers = null;
     this._debug = false;
+    this._lastTracksSnapshotKey = '';
   }
 
   _isDebugEnabled() {
@@ -239,7 +240,13 @@ export class WebEngine extends BaseEngine {
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         this._log('hls:MANIFEST_PARSED');
         emitLoadedAndMaybePlay();
+        this._emitTracksChange();
       });
+
+      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => this._emitTracksChange());
+      hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, () => this._emitTracksChange());
+      hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => this._emitTracksChange());
+      hls.on(Hls.Events.SUBTITLE_TRACK_SWITCH, () => this._emitTracksChange());
 
       hls.on(Hls.Events.FRAG_LOADING, (_event, data) => {
         this._log('hls:FRAG_LOADING', { sn: data?.frag?.sn, url: data?.frag?.url });
@@ -375,6 +382,155 @@ export class WebEngine extends BaseEngine {
 
     this.video = null;
     this.container = null;
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Tracks (Audio/Subtítulos) - Web/HLS
+  // ───────────────────────────────────────────────────────────────────────────
+
+  getTracks() {
+    const audio = [];
+    const text = [];
+    let selectedAudioId = null;
+    let selectedTextId = null;
+    let textEnabled = false;
+
+    const hls = this.hls;
+    if (hls) {
+      const audioTracks = Array.isArray(hls.audioTracks) ? hls.audioTracks : [];
+      const currentAudio = Number.isFinite(hls.audioTrack) ? hls.audioTrack : -1;
+      audioTracks.forEach((t, idx) => {
+        const id = String(t?.id ?? idx);
+        audio.push({
+          id,
+          label: t?.name || t?.lang || `Audio ${idx + 1}`,
+          lang: t?.lang || '',
+          index: idx,
+        });
+      });
+      if (currentAudio >= 0 && audioTracks[currentAudio]) {
+        selectedAudioId = String(audioTracks[currentAudio]?.id ?? currentAudio);
+      }
+
+      const subTracks = Array.isArray(hls.subtitleTracks) ? hls.subtitleTracks : [];
+      const currentSub = Number.isFinite(hls.subtitleTrack) ? hls.subtitleTrack : -1;
+      subTracks.forEach((t, idx) => {
+        const id = String(t?.id ?? idx);
+        text.push({
+          id,
+          label: t?.name || t?.lang || `Sub ${idx + 1}`,
+          lang: t?.lang || '',
+          index: idx,
+        });
+      });
+      if (currentSub >= 0 && subTracks[currentSub]) {
+        selectedTextId = String(subTracks[currentSub]?.id ?? currentSub);
+        textEnabled = true;
+      } else {
+        textEnabled = false;
+      }
+
+      return { audio, text, selectedAudioId, selectedTextId, textEnabled };
+    }
+
+    // Fallback: HTML5 textTracks (sin HLS.js)
+    const v = this.video;
+    const tt = v?.textTracks ? Array.from(v.textTracks) : [];
+    tt.forEach((track, idx) => {
+      const id = String(idx);
+      text.push({
+        id,
+        label: track?.label || track?.language || `Sub ${idx + 1}`,
+        lang: track?.language || '',
+        index: idx,
+      });
+      if (track?.mode === 'showing') {
+        selectedTextId = id;
+        textEnabled = true;
+      }
+    });
+    return { audio, text, selectedAudioId, selectedTextId, textEnabled };
+  }
+
+  selectAudioTrack(id) {
+    const hls = this.hls;
+    if (!hls) return false;
+    const idx = (Array.isArray(hls.audioTracks) ? hls.audioTracks : []).findIndex((t, i) => String(t?.id ?? i) === String(id));
+    if (idx < 0) return false;
+    hls.audioTrack = idx;
+    this._emitTracksChange();
+    return true;
+  }
+
+  setSubtitlesEnabled(enabled) {
+    const want = enabled === true;
+    const hls = this.hls;
+    if (hls) {
+      if (!want) {
+        hls.subtitleTrack = -1;
+        this._emitTracksChange();
+        return true;
+      }
+      // Si no hay seleccionado, tomar el primero disponible
+      if (!Number.isFinite(hls.subtitleTrack) || hls.subtitleTrack < 0) {
+        if ((hls.subtitleTracks || []).length > 0) {
+          hls.subtitleTrack = 0;
+          this._emitTracksChange();
+          return true;
+        }
+      }
+      this._emitTracksChange();
+      return true;
+    }
+
+    const v = this.video;
+    if (!v?.textTracks) return false;
+    const list = Array.from(v.textTracks);
+    list.forEach((tr) => {
+      // showing/disabled es lo más compatible
+      tr.mode = want ? 'showing' : 'disabled';
+    });
+    this._emitTracksChange();
+    return true;
+  }
+
+  selectTextTrack(id) {
+    const hls = this.hls;
+    if (hls) {
+      const idx = (Array.isArray(hls.subtitleTracks) ? hls.subtitleTracks : []).findIndex((t, i) => String(t?.id ?? i) === String(id));
+      if (idx < 0) return false;
+      hls.subtitleTrack = idx;
+      this._emitTracksChange();
+      return true;
+    }
+    const v = this.video;
+    if (!v?.textTracks) return false;
+    const list = Array.from(v.textTracks);
+    const idx = Number(id);
+    if (!Number.isFinite(idx) || idx < 0 || idx >= list.length) return false;
+    list.forEach((tr, i) => {
+      tr.mode = i === idx ? 'showing' : 'disabled';
+    });
+    this._emitTracksChange();
+    return true;
+  }
+
+  _emitTracksChange() {
+    try {
+      const snap = this.getTracks();
+      const key = JSON.stringify({
+        a: snap.audio.map((t) => t.id),
+        t: snap.text.map((t) => t.id),
+        sa: snap.selectedAudioId,
+        st: snap.selectedTextId,
+        te: snap.textEnabled,
+      });
+      if (key === this._lastTracksSnapshotKey) return;
+      this._lastTracksSnapshotKey = key;
+      this.emit(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, snap);
+    } catch {
+      // noop
+    }
   }
 }
 

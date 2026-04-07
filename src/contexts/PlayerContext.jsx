@@ -70,6 +70,13 @@ export function PlayerProvider({ children }) {
   });
 
   const [licenseInUsePrompt, setLicenseInUsePrompt] = useState(null);
+  const [tracks, setTracks] = useState({
+    audio: [],
+    text: [],
+    selectedAudioId: null,
+    selectedTextId: null,
+    textEnabled: false,
+  });
 
   const clearSeekTimeout = useCallback(() => {
     if (seekTimeoutRef.current) {
@@ -262,6 +269,17 @@ export function PlayerProvider({ children }) {
       setState((s) => ({ ...s, isSeeking: false }));
     };
 
+    const handleTracksChange = (payload) => {
+      if (!payload) return;
+      setTracks({
+        audio: Array.isArray(payload.audio) ? payload.audio : [],
+        text: Array.isArray(payload.text) ? payload.text : [],
+        selectedAudioId: payload.selectedAudioId ?? null,
+        selectedTextId: payload.selectedTextId ?? null,
+        textEnabled: payload.textEnabled === true,
+      });
+    };
+
     engine.on(PLAYER_ENGINE_EVENTS.TIME_UPDATE, handleTime);
     engine.on(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, handleDuration);
     engine.on(PLAYER_ENGINE_EVENTS.ENDED, handleEnded);
@@ -269,6 +287,7 @@ export function PlayerProvider({ children }) {
     engine.on(PLAYER_ENGINE_EVENTS.STATE_CHANGE, handleStateChange);
     engine.on(PLAYER_ENGINE_EVENTS.SEEK_START, handleSeekStart);
     engine.on(PLAYER_ENGINE_EVENTS.SEEK_END, handleSeekEnd);
+    engine.on(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, handleTracksChange);
 
     return () => {
       engine.off(PLAYER_ENGINE_EVENTS.TIME_UPDATE, handleTime);
@@ -278,6 +297,7 @@ export function PlayerProvider({ children }) {
       engine.off(PLAYER_ENGINE_EVENTS.STATE_CHANGE, handleStateChange);
       engine.off(PLAYER_ENGINE_EVENTS.SEEK_START, handleSeekStart);
       engine.off(PLAYER_ENGINE_EVENTS.SEEK_END, handleSeekEnd);
+      engine.off(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, handleTracksChange);
       clearSeekTimeout();
       log('engine:destroy');
       engine.destroy();
@@ -325,6 +345,8 @@ export function PlayerProvider({ children }) {
       liveSecondsLate: 0,
     }));
 
+    // Reset tracks para no mostrar info anterior mientras llega el manifiesto nuevo.
+    setTracks({ audio: [], text: [], selectedAudioId: null, selectedTextId: null, textEnabled: false });
     engine.load(url, { type, autoPlay, mediaOption, drmConfig });
   };
 
@@ -370,6 +392,7 @@ export function PlayerProvider({ children }) {
       liveSecondsLate: 0,
       error: null,
     });
+    setTracks({ audio: [], text: [], selectedAudioId: null, selectedTextId: null, textEnabled: false });
   };
 
   const seek = (seconds) => {
@@ -435,6 +458,7 @@ export function PlayerProvider({ children }) {
 
   const value = {
     state,
+    tracks,
     play,
     pause,
     stop,
@@ -447,6 +471,25 @@ export function PlayerProvider({ children }) {
     goLive,
     mute,
     unmute,
+    refreshTracks: () => {
+      try {
+        const next = engineRef.current?.getTracks?.();
+        if (next) {
+          setTracks({
+            audio: Array.isArray(next.audio) ? next.audio : [],
+            text: Array.isArray(next.text) ? next.text : [],
+            selectedAudioId: next.selectedAudioId ?? null,
+            selectedTextId: next.selectedTextId ?? null,
+            textEnabled: next.textEnabled === true,
+          });
+        }
+      } catch {
+        // noop
+      }
+    },
+    selectAudioTrack: (id) => engineRef.current?.selectAudioTrack?.(id),
+    selectTextTrack: (id) => engineRef.current?.selectTextTrack?.(id),
+    setSubtitlesEnabled: (enabled) => engineRef.current?.setSubtitlesEnabled?.(enabled),
     containerRef,
     licenseInUsePrompt,
     confirmLicenseInUse: async (accept) => {
