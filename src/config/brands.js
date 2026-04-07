@@ -175,6 +175,8 @@ export const BRANDS = [
       // - false: solo mostrar en VOD/Catchup (default recomendado).
       // - true: también mostrarla en 'service' (canales en vivo).
       showSeekbarOnLive: false,
+      // Sidebar de canales (player): cerrar automáticamente al seleccionar (zapping).
+      closeChannelSidebarOnSelect: true,
     },
 
     // Configuración de UI/Tema
@@ -351,6 +353,7 @@ export const BRANDS = [
       enginePolicy: 'auto',
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
+      closeChannelSidebarOnSelect: false,
     },
 
     // Configuración de UI/Tema
@@ -553,6 +556,7 @@ export const BRANDS = [
       enginePolicy: 'auto',
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
+      closeChannelSidebarOnSelect: true,
     },
 
     // Configuración de UI/Tema
@@ -723,6 +727,7 @@ export const BRANDS = [
       enginePolicy: 'auto',
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
+      closeChannelSidebarOnSelect: true,
     },
 
     // Configuración de UI/Tema

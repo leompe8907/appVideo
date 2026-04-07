@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { usePlayer } from '../../contexts/PlayerContext';
@@ -89,6 +90,83 @@ function resolveNowNextFromEpgItems(epgItems, nowMs = Date.now()) {
     return s != null && s > nowMs;
   });
   return { now: firstFuture ?? list[list.length - 1] ?? null, next: null };
+}
+
+function ChannelSidebar({
+  open,
+  title,
+  channels,
+  activeId,
+  autoCloseOnSelect = true,
+  onClose,
+  onSelectChannel,
+}) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (e) => {
+      const key = String(e.key || '');
+      const code = String(e.code || '');
+      const keyCode = Number(e.keyCode || e.which || 0);
+      const isEscape = key === 'Escape' || code === 'Escape' || keyCode === 27;
+      const isBackspace = key === 'Backspace' || code === 'Backspace' || keyCode === 8;
+      const isReturnLike = key === 'Return' || key === 'GoBack' || key === 'BrowserBack';
+      const isTvBackCodes = keyCode === 10009 || keyCode === 461;
+      if (isEscape || isBackspace || isReturnLike || isTvBackCodes) {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div className="player-channel-sidebar-overlay" role="dialog" aria-modal="true" onClick={() => onClose?.()}>
+      <div className="player-channel-sidebar" onClick={(e) => e.stopPropagation()}>
+        <div className="player-channel-sidebar__header">
+          <div className="player-channel-sidebar__title">{title}</div>
+        </div>
+
+        <div className="player-channel-sidebar__list" role="list">
+          {(channels || []).slice(0, 400).map((ch) => {
+            const chLogo = ch?.img || ch?.imageUrl || ch?.logoUrl || ch?.logo || ch?.icon || null;
+            const id = ch?.id ?? ch?.lcn ?? ch?.name;
+            const isActive = String(activeId ?? '') === String(ch?.id ?? '') || String(activeId ?? '') === String(ch?.lcn ?? '');
+            const { now } = resolveNowNextFromEpgItems(ch?.epgItems, Date.now());
+            const nowTitle = now?.languages?.[0]?.title || now?.title || now?.name || '';
+            return (
+              <FocusableButton
+                key={id}
+                type="button"
+                className={`player-channel-sidebar__row${isActive ? ' player-channel-sidebar__row--active' : ''}`}
+                onClick={() => {
+                  onSelectChannel?.(ch);
+                  if (autoCloseOnSelect) onClose?.();
+                }}
+                focusKey={`player-sidebar-channel-${id}`}
+                role="listitem"
+              >
+                {chLogo ? (
+                  <img className="player-channel-sidebar__logo" src={chLogo} alt="" />
+                ) : (
+                  <div className="player-channel-sidebar__logo player-channel-sidebar__logo--placeholder" />
+                )}
+                <span className="player-channel-sidebar__lcn">{ch?.lcn ?? ''}</span>
+                <span className="player-channel-sidebar__meta">
+                  <span className="player-channel-sidebar__name">{ch?.name ?? ''}</span>
+                  {nowTitle ? <span className="player-channel-sidebar__now">{nowTitle}</span> : null}
+                </span>
+              </FocusableButton>
+            );
+          })}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 export function PlayerHud({ className = '' }) {
@@ -325,7 +403,6 @@ export function PlayerHud({ className = '' }) {
       item: channel,
       autoPlay: true,
     });
-    setOverlay('');
   };
 
   const shouldUseEpgInfoModal = state?.type === 'service' && !!state?.item && !!nowNext?.now;
@@ -582,30 +659,9 @@ export function PlayerHud({ className = '' }) {
               : t('player.info', { defaultValue: 'Información' })}
           </div>
           <div className="player-hud__overlay-body">
-            {overlay === 'channels' ? (
-              <div className="player-hud__channel-list" role="list">
-                {(channelList || []).slice(0, 200).map((ch) => {
-                  const chLogo = ch?.img || ch?.imageUrl || ch?.logoUrl || ch?.logo || ch?.icon || null;
-                  const isCurrent =
-                    state?.type === 'service' &&
-                    (String(state?.id ?? '') === String(ch?.id ?? '') ||
-                      String(state?.id ?? '') === String(ch?.lcn ?? ''));
-                  return (
-                    <FocusableButton
-                      key={ch.id ?? ch.lcn ?? ch.name}
-                      type="button"
-                      className={`player-hud__channel-row${isCurrent ? ' player-hud__channel-row--active' : ''}`}
-                      onClick={() => handleZapToChannel(ch)}
-                      focusKey={`hud-channel-${ch.id ?? ch.lcn ?? ch.name}`}
-                      isFocusable={visible}
-                      role="listitem"
-                    >
-                      {chLogo ? <img className="player-hud__channel-row-logo" src={chLogo} alt="" /> : <div className="player-hud__channel-row-logo player-hud__channel-row-logo--placeholder" />}
-                      <span className="player-hud__channel-row-lcn">{ch.lcn ?? ''}</span>
-                      <span className="player-hud__channel-row-name">{ch.name ?? ''}</span>
-                    </FocusableButton>
-                  );
-                })}
+            {overlay === 'tracks' ? (
+              <div className="player-hud__placeholder">
+                {t('common.comingSoon', { defaultValue: 'En preparación...' })}
               </div>
             ) : (
               <div className="player-hud__placeholder">
@@ -625,6 +681,16 @@ export function PlayerHud({ className = '' }) {
         </div>
         )
       ) : null}
+
+      <ChannelSidebar
+        open={overlay === 'channels'}
+        title={t('player.channelList', { defaultValue: 'Listado de canales' })}
+        channels={channelList}
+        activeId={state?.id}
+        autoCloseOnSelect={currentBrand?.player?.closeChannelSidebarOnSelect !== false}
+        onClose={() => setOverlay('')}
+        onSelectChannel={(ch) => handleZapToChannel(ch)}
+      />
 
       {overlay === 'info' && shouldUseEpgInfoModal ? (
         <EpgEventModal

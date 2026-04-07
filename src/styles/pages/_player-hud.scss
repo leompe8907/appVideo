@@ -368,3 +368,128 @@
 .player-hud__overlay-close {
   align-self: flex-end;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sidebar de canales (modal izquierdo)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.player-channel-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+
+.player-channel-sidebar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: min(520px, 44vw);
+  background:linear-gradient(180deg, rgba(10, 10, 12, 0.72) 0%, rgba(10, 10, 12, 0.9) 100%);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35);
+}
+
+.player-channel-sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.player-channel-sidebar__title {
+  font-size: 2.35rem;
+  font-weight: 800;
+}
+
+.player-channel-sidebar__list {
+  flex: 1;
+  overflow: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  // Ocultar scrollbar sin perder scroll
+  scrollbar-width: none; // Firefox
+  -ms-overflow-style: none; // IE/Edge legacy
+}
+
+.player-channel-sidebar__list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.player-channel-sidebar__row {
+  display: grid;
+  grid-template-columns: 11rem 2rem 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+  text-align: left;
+}
+
+.player-channel-sidebar__row--active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(0, 0, 0, 0.14);
+}
+
+.player-channel-sidebar__row.focused {
+  outline: none;
+  border-color: rgba(0, 123, 255, 0.85);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  transform: scale(1.01);
+}
+
+.player-channel-sidebar__logo {
+  width: 10em;
+  // height: 46px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.player-channel-sidebar__logo--placeholder {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.player-channel-sidebar__lcn {
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+.player-channel-sidebar__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.player-channel-sidebar__meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 1.5rem;
+}
+
+.player-channel-sidebar__now {
+  margin-top: 2px;
+  font-size: 1.2rem;
+  opacity: 0.78;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
