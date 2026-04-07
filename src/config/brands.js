@@ -167,6 +167,14 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      // Controles de reproducción (⏪ ⏯ ⏩) en Live/Services:
+      // - false: solo mostrar en VOD/Catchup (default recomendado).
+      // - true: también mostrarlos en 'service' (canales en vivo).
+      showPlaybackButtonsOnLive: false,
+      // Seekbar (timeline) en Live/Services:
+      // - false: solo mostrar en VOD/Catchup (default recomendado).
+      // - true: también mostrarla en 'service' (canales en vivo).
+      showSeekbarOnLive: false,
     },
 
     // Configuración de UI/Tema
@@ -341,6 +349,8 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      showPlaybackButtonsOnLive: false,
+      showSeekbarOnLive: false,
     },
 
     // Configuración de UI/Tema
@@ -541,6 +551,8 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      showPlaybackButtonsOnLive: false,
+      showSeekbarOnLive: false,
     },
 
     // Configuración de UI/Tema
@@ -709,6 +721,8 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      showPlaybackButtonsOnLive: false,
+      showSeekbarOnLive: false,
     },
 
     // Configuración de UI/Tema

@@ -5,6 +5,9 @@ import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { resolveLiveWindowFromEpgItems } from '../../utils/epgCurrentEvent';
+import { usePreload } from '../../store/usePreload';
+import panaccessService from '../../services/panaccessService';
+import { useBrand } from '../../contexts/BrandContext';
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
@@ -17,6 +20,13 @@ function formatClock(seconds) {
   const ss = total % 60;
   if (hh > 0) return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
   return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+}
+
+function formatHHmm(dateLike) {
+  if (!dateLike) return '';
+  const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function toMs(value) {
@@ -61,17 +71,71 @@ function resolveLiveWindow(item) {
   return null;
 }
 
+function resolveNowNextFromEpgItems(epgItems, nowMs = Date.now()) {
+  const list = Array.isArray(epgItems) ? [...epgItems] : [];
+  if (list.length === 0) return { now: null, next: null };
+  list.sort((a, b) => (toMs(a?.startDate) ?? 0) - (toMs(b?.startDate) ?? 0));
+  const idx = list.findIndex((ev) => {
+    const s = toMs(ev?.startDate ?? ev?.start);
+    const e = toMs(ev?.endDate ?? ev?.end);
+    if (s == null || e == null) return false;
+    return nowMs >= s && nowMs <= e;
+  });
+  if (idx >= 0) return { now: list[idx] ?? null, next: list[idx + 1] ?? null };
+  const firstFuture = list.find((ev) => {
+    const s = toMs(ev?.startDate ?? ev?.start);
+    return s != null && s > nowMs;
+  });
+  return { now: firstFuture ?? list[list.length - 1] ?? null, next: null };
+}
+
 export function PlayerHud({ className = '' }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
   const { state, pause, play, stop, close, forward, backward, skipLiveBy, goLive } = usePlayer();
+  const { epg } = usePreload();
+  const { currentBrand } = useBrand();
   const { setFocus } = useSpatialNavigation();
   const [visible, setVisible] = useState(true);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
+  const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
   const hideTimeoutRef = useRef(null);
+
+  const forceHudVisible = useMemo(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const v = String(params.get('hud') || '').toLowerCase();
+      if (v === '1' || v === 'true') return true;
+    } catch {
+      // noop
+    }
+    // Por defecto, en DEV mantenemos el HUD visible para ajuste de UI.
+    return import.meta.env.DEV;
+  }, []);
 
   const hasContent = Boolean(state?.url);
   const liveWindow = useMemo(() => resolveLiveWindow(state?.item), [state?.item]);
+  const channelMeta = useMemo(() => {
+    const item = state?.item || null;
+    if (!item) return null;
+    const logo = item?.img || item?.imageUrl || item?.logoUrl || item?.logo || item?.icon || null;
+    const lcn = item?.lcn ?? item?.channelNumber ?? null;
+    const name = item?.name || item?.channelName || '';
+    const { now, next } = resolveNowNextFromEpgItems(item?.epgItems, liveNowTickMs);
+    const nowTitle = now?.languages?.[0]?.title || now?.title || now?.name || '';
+    const nextTitle = next?.languages?.[0]?.title || next?.title || next?.name || '';
+    const nowStart = toMs(now?.startDate ?? now?.start);
+    const nowEnd = toMs(now?.endDate ?? now?.end);
+    const nowRange = nowStart != null && nowEnd != null ? `${formatHHmm(nowStart)} - ${formatHHmm(nowEnd)}` : '';
+    return { logo, lcn, name, nowTitle, nextTitle, nowRange };
+  }, [state?.item, liveNowTickMs]);
+
+  const channelList = useMemo(() => {
+    const streams = epg?.streams || [];
+    const list = Array.isArray(streams) ? [...streams] : [];
+    list.sort((a, b) => Number(a?.lcn ?? 0) - Number(b?.lcn ?? 0));
+    return list;
+  }, [epg?.streams]);
 
   const progressModel = useMemo(() => {
     // Paridad legacy: para LIVE, usar la ventana temporal del evento.
@@ -109,7 +173,9 @@ export function PlayerHud({ className = '' }) {
 
   const armAutoHide = () => {
     clearHideTimeout();
+    if (forceHudVisible) return;
     if (!shouldAutoHide) return;
+    if (overlay) return;
     hideTimeoutRef.current = setTimeout(() => {
       setVisible(false);
       hideTimeoutRef.current = null;
@@ -121,7 +187,7 @@ export function PlayerHud({ className = '' }) {
     armAutoHide();
     if (isTV && !visible) {
       setTimeout(() => {
-        if (typeof setFocus === 'function') setFocus('hud-play-pause');
+        if (typeof setFocus === 'function') setFocus('hud-top-play-pause');
       }, 100);
     }
   };
@@ -134,6 +200,11 @@ export function PlayerHud({ className = '' }) {
 
   useEffect(() => {
     if (!hasContent) return undefined;
+    if (forceHudVisible) {
+      setVisible(true);
+      clearHideTimeout();
+      return undefined;
+    }
     const onMouseMove = () => wakeHud();
     const onKeyDown = () => wakeHud();
     const onPointerDown = () => wakeHud();
@@ -147,7 +218,7 @@ export function PlayerHud({ className = '' }) {
       clearHideTimeout();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasContent, shouldAutoHide]);
+  }, [hasContent, shouldAutoHide, forceHudVisible]);
 
   useEffect(() => {
     if (!(state?.type === 'service' && liveWindow && hasContent)) return undefined;
@@ -172,89 +243,306 @@ export function PlayerHud({ className = '' }) {
   };
 
   const isLiveWithWindow = state?.type === 'service' && !!liveWindow;
+  const clockText = formatHHmm(Date.now());
+  const showPlaybackButtons =
+    state?.type === 'vod' ||
+    state?.type === 'catchup' ||
+    (state?.type === 'service' && currentBrand?.player?.showPlaybackButtonsOnLive === true);
+  const showSeekbar =
+    state?.type === 'vod' ||
+    state?.type === 'catchup' ||
+    (state?.type === 'service' && currentBrand?.player?.showSeekbarOnLive === true);
+
+  const resolveChannelLiveUrl = (channel) => {
+    if (!channel) return null;
+    let url =
+      channel.url ||
+      channel.streamUrl ||
+      channel.hlsUrl ||
+      channel.hls ||
+      null;
+
+    if (!url) {
+      const streamId = channel.id ?? channel.epgStreamId;
+      if (streamId != null && streamId !== '') {
+        try {
+          url = panaccessService.getStreamM3u8Url({ streamId });
+        } catch {
+          // noop
+        }
+      }
+    }
+
+    if (!url) return null;
+    try {
+      url = panaccessService.normalizePlaybackUrl(url);
+    } catch {
+      // noop
+    }
+    return url || null;
+  };
+
+  const handleZapToChannel = (channel) => {
+    const url = resolveChannelLiveUrl(channel);
+    if (!url) return;
+    play({
+      type: 'service',
+      id: channel.id ?? channel.lcn ?? undefined,
+      url,
+      item: channel,
+      autoPlay: true,
+    });
+    setOverlay('');
+  };
 
   return (
     <div className={`player-hud ${visible ? 'player-hud--visible' : 'player-hud--hidden'} ${className}`.trim()}>
-      <div className="player-hud__chrome">
-        <div className="player-hud__status">
-          <span className="player-hud__badge">{state?.type || 'stream'}</span>
-          <div className="player-hud__status-right">
-            {isLiveWithWindow && Number.isFinite(state?.liveSecondsLate) && state.liveSecondsLate > 0 && (
-              <span className="player-hud__live-delay">
-                -{formatClock(state.liveSecondsLate)}
-              </span>
-            )}
-            <span className="player-hud__time">
-              {formatClock(progressModel.currentSec)} / {formatClock(progressModel.durationSec)}
-            </span>
+      <div className="player-hud__topbar">
+        <div className="player-hud__topbar-left">
+          <FocusableButton
+            type="button"
+            className="player-hud__iconbtn"
+            onClick={() => close()}
+            focusKey="hud-top-back"
+            isFocusable={visible}
+            aria-label={t('common.back', { defaultValue: 'Volver' })}
+          >
+            ⟵
+          </FocusableButton>
+          <FocusableButton
+            type="button"
+            className="player-hud__iconbtn"
+            onClick={() => setOverlay((v) => (v === 'channels' ? '' : 'channels'))}
+            focusKey="hud-top-channels"
+            isFocusable={visible}
+            aria-label={t('player.channels', { defaultValue: 'Canales' })}
+          >
+            ☰
+          </FocusableButton>
+          <FocusableButton
+            type="button"
+            className="player-hud__iconbtn"
+            onClick={() => setOverlay((v) => (v === 'info' ? '' : 'info'))}
+            focusKey="hud-top-info"
+            isFocusable={visible}
+            aria-label={t('player.info', { defaultValue: 'Información' })}
+          >
+            ⓘ
+          </FocusableButton>
+          <FocusableButton
+            type="button"
+            className="player-hud__iconbtn"
+            onClick={() => setOverlay((v) => (v === 'tracks' ? '' : 'tracks'))}
+            focusKey="hud-top-tracks"
+            isFocusable={visible}
+            aria-label={t('player.tracks', { defaultValue: 'Audio/Subtítulos' })}
+          >
+            CC
+          </FocusableButton>
+        </div>
+
+        {showPlaybackButtons ? (
+          <div className="player-hud__topbar-center">
+            <FocusableButton
+              type="button"
+              className="player-hud__iconbtn"
+              onClick={() => (isLiveWithWindow ? skipLiveBy(-10) : backward(10))}
+              focusKey="hud-top-rewind"
+              isFocusable={visible}
+              aria-label={t('player.rewind10', { defaultValue: 'Retroceder 10s' })}
+            >
+              ⏪
+            </FocusableButton>
+            <FocusableButton
+              type="button"
+              className="player-hud__iconbtn player-hud__iconbtn--primary"
+              onClick={handlePlayPause}
+              focusKey="hud-top-play-pause"
+              isFocusable={visible}
+              aria-label={state?.isPlaying ? t('player.pause', { defaultValue: 'Pausar' }) : t('player.play', { defaultValue: 'Reproducir' })}
+            >
+              {state?.isPlaying ? '⏸' : '▶'}
+            </FocusableButton>
+            <FocusableButton
+              type="button"
+              className="player-hud__iconbtn"
+              onClick={() => (isLiveWithWindow ? skipLiveBy(10) : forward(10))}
+              focusKey="hud-top-forward"
+              isFocusable={visible}
+              aria-label={t('player.forward10', { defaultValue: 'Adelantar 10s' })}
+            >
+              ⏩
+            </FocusableButton>
+          </div>
+        ) : (
+          <div className="player-hud__topbar-center" />
+        )}
+
+        <div className="player-hud__topbar-right">
+          <div className="player-hud__clock" aria-label={t('common.time', { defaultValue: 'Hora' })}>
+            {clockText}
+          </div>
+        </div>
+      </div>
+
+      {showSeekbar ? (
+        <div className="player-hud__seek">
+          <div className="player-hud__seek-times">
+            <span className="player-hud__seek-time">{formatClock(progressModel.currentSec)}</span>
+            <span className="player-hud__seek-time">{formatClock(progressModel.durationSec)}</span>
+          </div>
+          <div className="player-hud__progress">
+            <div className="player-hud__progress-fill" style={{ width: `${progressModel.percent}%` }} />
+          </div>
+          {isLiveWithWindow && Number.isFinite(state?.liveSecondsLate) && state.liveSecondsLate > 0 && (
+            <div className="player-hud__live-chip">
+              -{formatClock(state.liveSecondsLate)}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      <div className="player-hud__bottombar">
+        <div className="player-hud__channel">
+          {channelMeta?.logo ? (
+            <img className="player-hud__channel-logo" src={channelMeta.logo} alt="" />
+          ) : (
+            <div className="player-hud__channel-logo player-hud__channel-logo--placeholder" />
+          )}
+          <div className="player-hud__channel-text">
+            <div className="player-hud__channel-name">
+              {channelMeta?.lcn != null ? <span className="player-hud__channel-lcn">{channelMeta.lcn}</span> : null}
+              {channelMeta?.name || state?.type || '—'}
+            </div>
+            {channelMeta?.nowTitle ? (
+              <div className="player-hud__program">
+                <div className="player-hud__program-row">
+                  <span className="player-hud__program-label">{t('player.now', { defaultValue: 'En este momento:' })}</span>
+                  <span className="player-hud__program-title">{channelMeta.nowTitle}</span>
+                </div>
+                {channelMeta?.nextTitle ? (
+                  <div className="player-hud__program-row">
+                    <span className="player-hud__program-label">{t('player.next', { defaultValue: 'Siguiente:' })}</span>
+                    <span className="player-hud__program-title">{channelMeta.nextTitle}</span>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
 
-        <div className="player-hud__controls">
-          <FocusableButton
-            type="button"
-            className="player-hud__btn"
-            onClick={() => (isLiveWithWindow ? skipLiveBy(-10) : backward(10))}
-            focusKey="hud-rewind"
-            isFocusable={visible}
-          >
-            {t('player.rewind10', { defaultValue: '-10s' })}
-          </FocusableButton>
-          <FocusableButton
-            type="button"
-            className="player-hud__btn player-hud__btn--primary"
-            onClick={handlePlayPause}
-            focusKey="hud-play-pause"
-            isFocusable={visible}
-          >
-            {state?.isPlaying
-              ? t('player.pause', { defaultValue: 'Pausar' })
-              : t('player.play', { defaultValue: 'Reproducir' })}
-          </FocusableButton>
-          <FocusableButton
-            type="button"
-            className="player-hud__btn"
-            onClick={() => (isLiveWithWindow ? skipLiveBy(10) : forward(10))}
-            focusKey="hud-forward"
-            isFocusable={visible}
-          >
-            {t('player.forward10', { defaultValue: '+10s' })}
-          </FocusableButton>
-          {isLiveWithWindow && (
+        <div className="player-hud__rightmeta">
+          {channelMeta?.nowRange ? <div className="player-hud__event-range">{channelMeta.nowRange}</div> : null}
+          <div className="player-hud__actions">
+            {isLiveWithWindow ? (
+              <FocusableButton
+                type="button"
+                className="player-hud__pillbtn"
+                onClick={goLive}
+                focusKey="hud-bottom-live"
+                isFocusable={visible}
+              >
+                {t('player.goLive', { defaultValue: 'En vivo' })}
+              </FocusableButton>
+            ) : null}
             <FocusableButton
               type="button"
-              className="player-hud__btn player-hud__btn--live"
-              onClick={goLive}
-              focusKey="hud-live"
+              className="player-hud__pillbtn player-hud__pillbtn--danger"
+              onClick={stop}
+              focusKey="hud-bottom-stop"
               isFocusable={visible}
             >
-              {t('player.goLive', { defaultValue: 'En vivo' })}
+              {t('player.stop', { defaultValue: 'Detener' })}
             </FocusableButton>
-          )}
-          <FocusableButton
-            type="button"
-            className="player-hud__btn player-hud__btn--danger"
-            onClick={stop}
-            focusKey="hud-stop"
-            isFocusable={visible}
-          >
-            {t('player.stop', { defaultValue: 'Detener' })}
-          </FocusableButton>
-          <FocusableButton
-            type="button"
-            className="player-hud__btn player-hud__btn--exit"
-            onClick={close}
-            focusKey="hud-exit"
-            isFocusable={visible}
-          >
-            {t('player.exit', { defaultValue: 'Salir' })}
-          </FocusableButton>
-        </div>
-
-        <div className="player-hud__progress">
-          <div className="player-hud__progress-fill" style={{ width: `${progressModel.percent}%` }} />
+          </div>
         </div>
       </div>
+
+      {overlay ? (
+        <div className="player-hud__overlay">
+          <div className="player-hud__overlay-title">
+            {overlay === 'channels'
+              ? t('player.channelList', { defaultValue: 'Listado de canales' })
+              : overlay === 'tracks'
+              ? t('player.tracks', { defaultValue: 'Audio/Subtítulos' })
+              : t('player.info', { defaultValue: 'Información' })}
+          </div>
+          <div className="player-hud__overlay-body">
+            {overlay === 'channels' ? (
+              <div className="player-hud__channel-list" role="list">
+                {(channelList || []).slice(0, 200).map((ch) => {
+                  const chLogo = ch?.img || ch?.imageUrl || ch?.logoUrl || ch?.logo || ch?.icon || null;
+                  const isCurrent =
+                    state?.type === 'service' &&
+                    (String(state?.id ?? '') === String(ch?.id ?? '') ||
+                      String(state?.id ?? '') === String(ch?.lcn ?? ''));
+                  return (
+                    <FocusableButton
+                      key={ch.id ?? ch.lcn ?? ch.name}
+                      type="button"
+                      className={`player-hud__channel-row${isCurrent ? ' player-hud__channel-row--active' : ''}`}
+                      onClick={() => handleZapToChannel(ch)}
+                      focusKey={`hud-channel-${ch.id ?? ch.lcn ?? ch.name}`}
+                      isFocusable={visible}
+                      role="listitem"
+                    >
+                      {chLogo ? <img className="player-hud__channel-row-logo" src={chLogo} alt="" /> : <div className="player-hud__channel-row-logo player-hud__channel-row-logo--placeholder" />}
+                      <span className="player-hud__channel-row-lcn">{ch.lcn ?? ''}</span>
+                      <span className="player-hud__channel-row-name">{ch.name ?? ''}</span>
+                    </FocusableButton>
+                  );
+                })}
+              </div>
+            ) : overlay === 'info' ? (
+              <div className="player-hud__info">
+                <div className="player-hud__info-row">
+                  <span className="player-hud__info-k">{t('player.type', { defaultValue: 'Tipo' })}</span>
+                  <span className="player-hud__info-v">{state?.type || '—'}</span>
+                </div>
+                {channelMeta?.name ? (
+                  <div className="player-hud__info-row">
+                    <span className="player-hud__info-k">{t('player.channel', { defaultValue: 'Canal' })}</span>
+                    <span className="player-hud__info-v">
+                      {(channelMeta?.lcn != null ? `${channelMeta.lcn} | ` : '') + channelMeta.name}
+                    </span>
+                  </div>
+                ) : null}
+                {channelMeta?.nowTitle ? (
+                  <div className="player-hud__info-row">
+                    <span className="player-hud__info-k">{t('player.now', { defaultValue: 'En este momento' })}</span>
+                    <span className="player-hud__info-v">{channelMeta.nowTitle}</span>
+                  </div>
+                ) : null}
+                {channelMeta?.nextTitle ? (
+                  <div className="player-hud__info-row">
+                    <span className="player-hud__info-k">{t('player.next', { defaultValue: 'Siguiente' })}</span>
+                    <span className="player-hud__info-v">{channelMeta.nextTitle}</span>
+                  </div>
+                ) : null}
+                {channelMeta?.nowRange ? (
+                  <div className="player-hud__info-row">
+                    <span className="player-hud__info-k">{t('player.schedule', { defaultValue: 'Horario' })}</span>
+                    <span className="player-hud__info-v">{channelMeta.nowRange}</span>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="player-hud__placeholder">
+                {t('common.comingSoon', { defaultValue: 'En preparación...' })}
+              </div>
+            )}
+          </div>
+          <FocusableButton
+            type="button"
+            className="player-hud__pillbtn player-hud__overlay-close"
+            onClick={() => setOverlay('')}
+            focusKey="hud-overlay-close"
+            isFocusable={visible}
+          >
+            {t('common.close', { defaultValue: 'Cerrar' })}
+          </FocusableButton>
+        </div>
+      ) : null}
     </div>
   );
 }
