@@ -23,6 +23,16 @@ export function HomePage() {
   const { containerRef, state: playerState, licenseInUsePrompt, confirmLicenseInUse, close } = usePlayer();
   const isPlayerActive = Boolean(playerState?.url);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const debugEnabled = (() => {
+    if (import.meta.env.DEV) return true;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const v = String(params.get('playerDebug') || '').toLowerCase();
+      return v === '1' || v === 'true';
+    } catch {
+      return false;
+    }
+  })();
 
   // Evita el aviso "Blocked aria-hidden… descendant retained focus": no marcamos el shell
   // con aria-hidden mientras el foco sigue en una tarjeta; movemos el foco al player.
@@ -38,6 +48,21 @@ export function HomePage() {
       }
     }
   }, [isPlayerActive, containerRef]);
+
+  useLayoutEffect(() => {
+    if (!debugEnabled) return;
+    // eslint-disable-next-line no-console
+    console.log('[HomePage]', 'isPlayerActive', isPlayerActive, {
+      type: playerState?.type,
+      id: playerState?.id,
+      url: playerState?.url,
+      isPlaying: playerState?.isPlaying,
+      isLoading: playerState?.isLoading,
+      isSeeking: playerState?.isSeeking,
+      error: playerState?.error,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlayerActive, playerState?.url, playerState?.isPlaying, playerState?.isLoading, playerState?.isSeeking]);
 
   if (pathname === '/home') {
     return <Navigate to="/home/inicio" replace />;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
@@ -25,6 +26,7 @@ export function EpgEventModal({
   event,
   isLive,
   canPlayLive = true,
+  showActions = true,
   onClose,
   onPlayLive,
   onWatchCatchup,
@@ -34,16 +36,42 @@ export function EpgEventModal({
   const { setFocus } = useSpatialNavigation();
 
   useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (e) => {
+      const key = String(e.key || '');
+      const code = String(e.code || '');
+      const keyCode = Number(e.keyCode || e.which || 0);
+      const isEscape = key === 'Escape' || code === 'Escape' || keyCode === 27;
+      const isBackspace = key === 'Backspace' || code === 'Backspace' || keyCode === 8;
+      const isReturnLike = key === 'Return' || key === 'GoBack' || key === 'BrowserBack';
+      const isTvBackCodes = keyCode === 10009 || keyCode === 461; // Tizen Back / LG Back (comunes)
+      if (isEscape || isBackspace || isReturnLike || isTvBackCodes) {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose?.();
+      }
+    };
+    // capture=true para ganarle a norigin y handlers globales
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [open, onClose]);
+
+  useEffect(() => {
     if (isTV && open) {
       const t = setTimeout(() => {
         if (typeof setFocus === 'function') {
+          // Si estamos en modo info-only, el foco debe ir al botón cerrar.
+          if (!showActions) {
+            setFocus('epg-event-close');
+            return;
+          }
           // Si canPlayLive es false, se podría hacer fallback a watchCatchup o close
           setFocus(canPlayLive ? 'epg-event-play-live' : 'epg-event-watch-catchup');
         }
       }, 400);
       return () => clearTimeout(t);
     }
-  }, [isTV, open, canPlayLive, setFocus]);
+  }, [isTV, open, canPlayLive, showActions, setFocus]);
 
   const eventTitle = event?.languages?.[0]?.title || event?.title || '';
   const eventDescription =
@@ -94,7 +122,7 @@ export function EpgEventModal({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className="epg-event-modal-overlay"
       role="dialog"
@@ -157,16 +185,15 @@ export function EpgEventModal({
               />
             ) : null}
 
-            {!isTV && (
-              <button
-                className="epg-event-modal-close"
-                onClick={() => onClose?.()}
-                type="button"
-                tabIndex={0}
-              >
-                {t('common.close', { defaultValue: 'Cerrar' })}
-              </button>
-            )}
+            <FocusableButton
+              className="epg-event-modal-close"
+              onClick={() => onClose?.()}
+              type="button"
+              focusKey="epg-event-close"
+              onArrowPress={() => {}}
+            >
+              {t('common.close', { defaultValue: 'Cerrar' })}
+            </FocusableButton>
           </div>
         </div>
 
@@ -190,34 +217,36 @@ export function EpgEventModal({
           )}
         </div>
 
-        <div className="epg-event-modal-footer">
-          <FocusableButton
-            className="epg-event-modal-primary"
-            onClick={() => onPlayLive?.()}
-            type="button"
-            disabled={!canPlayLive}
-            focusKey="epg-event-play-live"
-            onArrowPress={() => {}} // Catch para evitar salir si queremos trap, o dejar libre
-          >
-            {t('epg.playLiveChannel', { defaultValue: 'Reproducir canal (en vivo)' })}
-          </FocusableButton>
+        {showActions ? (
+          <div className="epg-event-modal-footer">
+            <FocusableButton
+              className="epg-event-modal-primary"
+              onClick={() => onPlayLive?.()}
+              type="button"
+              disabled={!canPlayLive}
+              focusKey="epg-event-play-live"
+              onArrowPress={() => {}} // Catch para evitar salir si queremos trap, o dejar libre
+            >
+              {t('epg.playLiveChannel', { defaultValue: 'Reproducir canal (en vivo)' })}
+            </FocusableButton>
 
-          <FocusableButton
-            className={`epg-event-modal-secondary ${!canWatch ? 'epg-event-modal-secondary--disabled' : ''}`}
-            type="button"
-            disabled={!canWatch}
-            onClick={() => {
-              if (!canWatch) return;
-              onWatchCatchup?.(catchupId, event);
-            }}
-            focusKey="epg-event-watch-catchup"
-          >
-            {t('epg.watchCatchup', { defaultValue: 'Watch / Catchup (no disponible)' })}
-          </FocusableButton>
-        </div>
+            <FocusableButton
+              className={`epg-event-modal-secondary ${!canWatch ? 'epg-event-modal-secondary--disabled' : ''}`}
+              type="button"
+              disabled={!canWatch}
+              onClick={() => {
+                if (!canWatch) return;
+                onWatchCatchup?.(catchupId, event);
+              }}
+              focusKey="epg-event-watch-catchup"
+            >
+              {t('epg.watchCatchup', { defaultValue: 'Watch / Catchup (no disponible)' })}
+            </FocusableButton>
+          </div>
+        ) : null}
       </div>
     </div>
-  );
+  , document.body);
 }
 
 export default EpgEventModal;

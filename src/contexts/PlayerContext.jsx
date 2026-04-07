@@ -26,6 +26,30 @@ export function PlayerProvider({ children }) {
   const engineRef = useRef(null);
   const seekTimeoutRef = useRef(null);
   const recoveryRef = useRef({ inProgress: false, lastKey: '' });
+  const debugRef = useRef(false);
+
+  const isDebugEnabled = () => {
+    if (import.meta.env.DEV) return true;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const v = String(params.get('playerDebug') || '').toLowerCase();
+      if (v === '1' || v === 'true') return true;
+    } catch {
+      // noop
+    }
+    try {
+      const v = String(localStorage.getItem('player.debug') || '').toLowerCase();
+      return v === '1' || v === 'true';
+    } catch {
+      return false;
+    }
+  };
+
+  const log = (...args) => {
+    if (!debugRef.current) return;
+    // eslint-disable-next-line no-console
+    console.log('[PlayerContext]', ...args);
+  };
 
   const [state, setState] = useState({
     type: null, // 'service' | 'vod' | 'catchup'
@@ -63,13 +87,27 @@ export function PlayerProvider({ children }) {
     }, 20000);
   }, [clearSeekTimeout]);
 
-  // Inicializar engine una vez según el dispositivo
+  // Firma estable para evitar recrear engine en cada resize/fullscreen.
+  // `useDeviceDetection` actualiza innerWidth/innerHeight en resize, lo cual cambia el objeto deviceInfo
+  // y dispararía destroy/recreate del engine si dependemos del objeto completo.
+  const engineSignature = [
+    deviceInfo?.isTV ? 'tv' : 'pc',
+    String(deviceInfo?.userAgent || ''),
+    String(currentBrand?.brand || ''),
+    String(currentBrand?.player?.nativeAdaptersEnabled === true),
+    String(currentBrand?.player?.enginePolicy || 'auto'),
+  ].join('::');
+
+  // Inicializar engine solo si cambia plataforma/política real (no por resize).
   useEffect(() => {
+    debugRef.current = isDebugEnabled();
     const engine = createEngine(deviceInfo);
     engineRef.current = engine;
+    log('engine:create', { deviceType: deviceInfo?.deviceType, isTV: !!deviceInfo?.isTV, userAgent: deviceInfo?.userAgent });
 
     if (containerRef.current) {
       engine.init(containerRef.current);
+      log('engine:init', { hasContainer: true });
     }
 
     const handleTime = ({ currentTime, duration }) => {
@@ -109,6 +147,7 @@ export function PlayerProvider({ children }) {
 
     const handleEnded = () => {
       clearSeekTimeout();
+      log('engine:event ended');
       setState((s) => ({
         ...s,
         isPlaying: false,
@@ -169,6 +208,7 @@ export function PlayerProvider({ children }) {
 
     const handleError = (err) => {
       clearSeekTimeout();
+      log('engine:event error', err);
       setState((s) => {
         const snapshot = {
           type: s.type,
@@ -195,6 +235,7 @@ export function PlayerProvider({ children }) {
     };
 
     const handleStateChange = ({ state }) => {
+      log('engine:event statechange', state);
       if (state === 'loading' || state === 'loaded') {
         setState((s) => ({ ...s, isLoading: true }));
       } else if (state === 'seeking') {
@@ -238,10 +279,11 @@ export function PlayerProvider({ children }) {
       engine.off(PLAYER_ENGINE_EVENTS.SEEK_START, handleSeekStart);
       engine.off(PLAYER_ENGINE_EVENTS.SEEK_END, handleSeekEnd);
       clearSeekTimeout();
+      log('engine:destroy');
       engine.destroy();
       engineRef.current = null;
     };
-  }, [deviceInfo, currentBrand]);
+  }, [engineSignature]);
 
   const play = ({ type, id, url, item, autoPlay = true, mediaOption = {}, drmConfig = {} }) => {
     const engine = engineRef.current;
@@ -249,6 +291,7 @@ export function PlayerProvider({ children }) {
       console.warn('[PlayerProvider] No hay engine o URL para reproducir');
       return;
     }
+    log('action:play', { type, id, url });
 
     // Si el engine nunca se inicializó, o el nodo contenedor cambió (ej. remount), inicializar ahora
     if (containerRef.current && (!engine.video || engine.container !== containerRef.current)) {
@@ -258,6 +301,7 @@ export function PlayerProvider({ children }) {
     // Si ya estamos en el mismo contenido, solo darle play
     if (state.type === type && state.id === id && state.url === url) {
       setState((s) => ({ ...s, isLoading: true, error: null }));
+      log('action:play (same content) -> engine.play()');
       engine.play();
       return;
     }
@@ -290,6 +334,7 @@ export function PlayerProvider({ children }) {
 
   const stop = () => {
     clearSeekTimeout();
+    log('action:stop');
     engineRef.current?.stop?.();
     setState((s) => ({
       ...s,
@@ -302,6 +347,7 @@ export function PlayerProvider({ children }) {
 
   const close = () => {
     clearSeekTimeout();
+    log('action:close');
     try {
       engineRef.current?.stop?.();
     } catch {

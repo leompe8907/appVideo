@@ -17,6 +17,30 @@ export class WebEngine extends BaseEngine {
     this.lastTimeUpdateEmitMs = 0;
     this.timeUpdateThrottleMs = DEFAULT_TIMEUPDATE_THROTTLE_MS;
     this._handlers = null;
+    this._debug = false;
+  }
+
+  _isDebugEnabled() {
+    if (import.meta.env.DEV) return true;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const v = String(params.get('playerDebug') || '').toLowerCase();
+      if (v === '1' || v === 'true') return true;
+    } catch {
+      // noop
+    }
+    try {
+      const v = String(localStorage.getItem('player.debug') || '').toLowerCase();
+      return v === '1' || v === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  _log(...args) {
+    if (!this._debug) return;
+    // eslint-disable-next-line no-console
+    console.log('[WebEngine]', ...args);
   }
 
   _tearDownHls() {
@@ -31,6 +55,9 @@ export class WebEngine extends BaseEngine {
 
   init(container) {
     if (!container) return;
+
+    this._debug = this._isDebugEnabled();
+    this._log('init', { hasContainer: !!container });
     
     // If we are moving to a new container or re-initializing, detach old events safely
     if (this._handlers) {
@@ -74,6 +101,25 @@ export class WebEngine extends BaseEngine {
         duration: v.duration,
       });
       },
+      onLoadedMetadata: () => {
+        this._log('video:loadedmetadata', {
+          duration: v.duration,
+          videoWidth: v.videoWidth,
+          videoHeight: v.videoHeight,
+        });
+      },
+      onWaiting: () => {
+        this._log('video:waiting');
+      },
+      onStalled: () => {
+        this._log('video:stalled');
+      },
+      onPlaying: () => {
+        this._log('video:playing');
+      },
+      onCanPlay: () => {
+        this._log('video:canplay');
+      },
       onDurationChange: () => {
         this.emit(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, { duration: v.duration });
       },
@@ -82,24 +128,34 @@ export class WebEngine extends BaseEngine {
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.ENDED });
       },
       onPlay: () => {
+        this._log('video:play');
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
       },
       onPause: () => {
+        this._log('video:pause');
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
       },
       onSeeking: () => {
+        this._log('video:seeking', { currentTime: v.currentTime });
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.SEEKING });
       },
       onSeeked: () => {
+        this._log('video:seeked', { currentTime: v.currentTime });
         this.emit(PLAYER_ENGINE_EVENTS.SEEK_END, { currentTime: v.currentTime });
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.SEEKED });
       },
       onError: () => {
+        this._log('video:error', v.error);
         this.emit(PLAYER_ENGINE_EVENTS.ERROR, v.error || new Error('Unknown video error'));
       },
     };
 
     v.addEventListener('timeupdate', this._handlers.onTimeUpdate);
+    v.addEventListener('loadedmetadata', this._handlers.onLoadedMetadata);
+    v.addEventListener('waiting', this._handlers.onWaiting);
+    v.addEventListener('stalled', this._handlers.onStalled);
+    v.addEventListener('playing', this._handlers.onPlaying);
+    v.addEventListener('canplay', this._handlers.onCanPlay);
     v.addEventListener('durationchange', this._handlers.onDurationChange);
     v.addEventListener('ended', this._handlers.onEnded);
     v.addEventListener('play', this._handlers.onPlay);
@@ -113,6 +169,11 @@ export class WebEngine extends BaseEngine {
     if (!this.video || !this._handlers) return;
     const v = this.video;
     v.removeEventListener('timeupdate', this._handlers.onTimeUpdate);
+    v.removeEventListener('loadedmetadata', this._handlers.onLoadedMetadata);
+    v.removeEventListener('waiting', this._handlers.onWaiting);
+    v.removeEventListener('stalled', this._handlers.onStalled);
+    v.removeEventListener('playing', this._handlers.onPlaying);
+    v.removeEventListener('canplay', this._handlers.onCanPlay);
     v.removeEventListener('durationchange', this._handlers.onDurationChange);
     v.removeEventListener('ended', this._handlers.onEnded);
     v.removeEventListener('play', this._handlers.onPlay);
@@ -126,6 +187,8 @@ export class WebEngine extends BaseEngine {
   load(url, { type, autoPlay = false } = {}) {
     if (!this.video || !url) return;
     const v = this.video;
+    this._debug = this._isDebugEnabled();
+    this._log('load', { url, type, autoPlay, isHls: isHlsUrl(url) });
     this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADING, type });
 
     this._tearDownHls();
@@ -174,10 +237,26 @@ export class WebEngine extends BaseEngine {
       this.hls = hls;
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        this._log('hls:MANIFEST_PARSED');
         emitLoadedAndMaybePlay();
       });
 
+      hls.on(Hls.Events.FRAG_LOADING, (_event, data) => {
+        this._log('hls:FRAG_LOADING', { sn: data?.frag?.sn, url: data?.frag?.url });
+      });
+
+      hls.on(Hls.Events.FRAG_LOADED, (_event, data) => {
+        this._log('hls:FRAG_LOADED', { sn: data?.frag?.sn, url: data?.frag?.url, size: data?.payload?.byteLength });
+      });
+
       hls.on(Hls.Events.ERROR, (_event, data) => {
+        this._log('hls:ERROR', {
+          fatal: !!data?.fatal,
+          type: data?.type,
+          details: data?.details,
+          reason: data?.reason,
+          response: data?.response,
+        });
         if (!data?.fatal) return;
         const msg = data.details || data.type || 'Error HLS';
         this.emit(PLAYER_ENGINE_EVENTS.ERROR, new Error(String(msg)));
@@ -196,15 +275,18 @@ export class WebEngine extends BaseEngine {
 
   play() {
     if (!this.video) return;
+    this._log('play()');
     this.video
       .play()
       .catch((err) => {
+        this._log('play() error', err);
         this.emit(PLAYER_ENGINE_EVENTS.ERROR, err);
       });
   }
 
   pause() {
     if (!this.video) return;
+    this._log('pause()');
     this.video.pause();
   }
 
@@ -274,6 +356,8 @@ export class WebEngine extends BaseEngine {
 
   destroy() {
     if (!this.video) return;
+    this._debug = this._isDebugEnabled();
+    this._log('destroy()');
     this._tearDownHls();
     this.detachEvents();
     try {

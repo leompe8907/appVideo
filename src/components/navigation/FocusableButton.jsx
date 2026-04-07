@@ -23,6 +23,7 @@ export function FocusableButton({
   onClick,
   onEnterPress,
   onArrowPress,
+  isFocusable = true,
   className = '',
   focusKey,
   type = 'button',
@@ -55,7 +56,7 @@ export function FocusableButton({
     onEnterPress: handleEnterPress,
     onArrowPress,
     focusKey: focusKey || undefined,
-    isFocusable: !disabled,
+    isFocusable: isFocusable && !disabled,
   });
 
   // Handler para click

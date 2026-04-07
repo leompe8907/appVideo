@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
@@ -8,6 +9,7 @@ import { resolveLiveWindowFromEpgItems } from '../../utils/epgCurrentEvent';
 import { usePreload } from '../../store/usePreload';
 import panaccessService from '../../services/panaccessService';
 import { useBrand } from '../../contexts/BrandContext';
+import EpgEventModal from '../epg/EpgEventModal';
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
@@ -91,15 +93,40 @@ function resolveNowNextFromEpgItems(epgItems, nowMs = Date.now()) {
 
 export function PlayerHud({ className = '' }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { isTV } = useDevice();
-  const { state, pause, play, stop, close, forward, backward, skipLiveBy, goLive } = usePlayer();
+  const { state, pause, play, stop, close, forward, backward, skipLiveBy, goLive, containerRef } = usePlayer();
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
   const { setFocus } = useSpatialNavigation();
   const [visible, setVisible] = useState(true);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
+  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement));
   const hideTimeoutRef = useRef(null);
+
+  const debugEnabled = useMemo(() => {
+    if (import.meta.env.DEV) return true;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const v = String(params.get('playerDebug') || '').toLowerCase();
+      if (v === '1' || v === 'true') return true;
+    } catch {
+      // noop
+    }
+    try {
+      const v = String(localStorage.getItem('player.debug') || '').toLowerCase();
+      return v === '1' || v === 'true';
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const log = (...args) => {
+    if (!debugEnabled) return;
+    // eslint-disable-next-line no-console
+    console.log('[PlayerHud]', ...args);
+  };
 
   const forceHudVisible = useMemo(() => {
     try {
@@ -115,20 +142,24 @@ export function PlayerHud({ className = '' }) {
 
   const hasContent = Boolean(state?.url);
   const liveWindow = useMemo(() => resolveLiveWindow(state?.item), [state?.item]);
+  const nowNext = useMemo(() => {
+    if (!state?.item?.epgItems) return { now: null, next: null };
+    return resolveNowNextFromEpgItems(state.item.epgItems, liveNowTickMs);
+  }, [state?.item, liveNowTickMs]);
   const channelMeta = useMemo(() => {
     const item = state?.item || null;
     if (!item) return null;
     const logo = item?.img || item?.imageUrl || item?.logoUrl || item?.logo || item?.icon || null;
     const lcn = item?.lcn ?? item?.channelNumber ?? null;
     const name = item?.name || item?.channelName || '';
-    const { now, next } = resolveNowNextFromEpgItems(item?.epgItems, liveNowTickMs);
+    const { now, next } = nowNext;
     const nowTitle = now?.languages?.[0]?.title || now?.title || now?.name || '';
     const nextTitle = next?.languages?.[0]?.title || next?.title || next?.name || '';
     const nowStart = toMs(now?.startDate ?? now?.start);
     const nowEnd = toMs(now?.endDate ?? now?.end);
     const nowRange = nowStart != null && nowEnd != null ? `${formatHHmm(nowStart)} - ${formatHHmm(nowEnd)}` : '';
     return { logo, lcn, name, nowTitle, nextTitle, nowRange };
-  }, [state?.item, liveNowTickMs]);
+  }, [state?.item, liveNowTickMs, nowNext]);
 
   const channelList = useMemo(() => {
     const streams = epg?.streams || [];
@@ -187,7 +218,9 @@ export function PlayerHud({ className = '' }) {
     armAutoHide();
     if (isTV && !visible) {
       setTimeout(() => {
-        if (typeof setFocus === 'function') setFocus('hud-top-play-pause');
+        // En algunos layouts el play/pause puede no existir (por banderas).
+        // Enfocar un elemento siempre presente evita warnings de "node: null".
+        if (typeof setFocus === 'function') setFocus('hud-top-back');
       }, 100);
     }
   };
@@ -295,6 +328,50 @@ export function PlayerHud({ className = '' }) {
     setOverlay('');
   };
 
+  const shouldUseEpgInfoModal = state?.type === 'service' && !!state?.item && !!nowNext?.now;
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onFsChange);
+    if (debugEnabled) {
+      const onVisibility = () => log('document:visibilitychange', { state: document.visibilityState });
+      const onBlur = () => log('window:blur');
+      const onFocus = () => log('window:focus');
+      document.addEventListener('visibilitychange', onVisibility);
+      window.addEventListener('blur', onBlur);
+      window.addEventListener('focus', onFocus);
+      return () => {
+        document.removeEventListener('fullscreenchange', onFsChange);
+        document.removeEventListener('visibilitychange', onVisibility);
+        window.removeEventListener('blur', onBlur);
+        window.removeEventListener('focus', onFocus);
+      };
+    }
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debugEnabled]);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        log('fullscreen:exit requested');
+        await document.exitFullscreen?.();
+        return;
+      }
+
+      // Modo "F11-like": fullscreen de toda la app (documento).
+      // Es el enfoque más estable y evita que el engine pierda el <video>
+      // o que el browser entre/salga inmediatamente del fullscreen.
+      const el = document.documentElement;
+      if (!el || typeof el.requestFullscreen !== 'function') return;
+      log('fullscreen:enter requested', { target: 'documentElement' });
+      await el.requestFullscreen();
+    } catch (e) {
+      log('fullscreen:error', e);
+      // noop (browsers/TVs pueden bloquear si no hay gesto del usuario)
+    }
+  };
+
   return (
     <div className={`player-hud ${visible ? 'player-hud--visible' : 'player-hud--hidden'} ${className}`.trim()}>
       <div className="player-hud__topbar">
@@ -308,6 +385,21 @@ export function PlayerHud({ className = '' }) {
             aria-label={t('common.back', { defaultValue: 'Volver' })}
           >
             ⟵
+          </FocusableButton>
+          <FocusableButton
+            type="button"
+            className="player-hud__iconbtn"
+            onClick={() => {
+              setOverlay('');
+              close();
+              navigate('/home/epg');
+            }}
+            focusKey="hud-top-epg"
+            isFocusable={visible}
+            aria-label={t('epg.title', { defaultValue: 'EPG' })}
+            title={t('epg.title', { defaultValue: 'EPG' })}
+          >
+            EPG
           </FocusableButton>
           <FocusableButton
             type="button"
@@ -379,6 +471,27 @@ export function PlayerHud({ className = '' }) {
         )}
 
         <div className="player-hud__topbar-right">
+          {!isTV ? (
+            <FocusableButton
+              type="button"
+              className="player-hud__iconbtn"
+              onClick={toggleFullscreen}
+              focusKey="hud-top-fullscreen"
+              isFocusable={visible}
+              aria-label={
+                isFullscreen
+                  ? t('player.exitFullscreen', { defaultValue: 'Salir de pantalla completa' })
+                  : t('player.fullscreen', { defaultValue: 'Pantalla completa' })
+              }
+              title={
+                isFullscreen
+                  ? t('player.exitFullscreen', { defaultValue: 'Salir de pantalla completa' })
+                  : t('player.fullscreen', { defaultValue: 'Pantalla completa' })
+              }
+            >
+              {isFullscreen ? '⤢' : '⛶'}
+            </FocusableButton>
+          ) : null}
           <div className="player-hud__clock" aria-label={t('common.time', { defaultValue: 'Hora' })}>
             {clockText}
           </div>
@@ -459,6 +572,7 @@ export function PlayerHud({ className = '' }) {
       </div>
 
       {overlay ? (
+        overlay === 'info' && shouldUseEpgInfoModal ? null : (
         <div className="player-hud__overlay">
           <div className="player-hud__overlay-title">
             {overlay === 'channels'
@@ -493,39 +607,6 @@ export function PlayerHud({ className = '' }) {
                   );
                 })}
               </div>
-            ) : overlay === 'info' ? (
-              <div className="player-hud__info">
-                <div className="player-hud__info-row">
-                  <span className="player-hud__info-k">{t('player.type', { defaultValue: 'Tipo' })}</span>
-                  <span className="player-hud__info-v">{state?.type || '—'}</span>
-                </div>
-                {channelMeta?.name ? (
-                  <div className="player-hud__info-row">
-                    <span className="player-hud__info-k">{t('player.channel', { defaultValue: 'Canal' })}</span>
-                    <span className="player-hud__info-v">
-                      {(channelMeta?.lcn != null ? `${channelMeta.lcn} | ` : '') + channelMeta.name}
-                    </span>
-                  </div>
-                ) : null}
-                {channelMeta?.nowTitle ? (
-                  <div className="player-hud__info-row">
-                    <span className="player-hud__info-k">{t('player.now', { defaultValue: 'En este momento' })}</span>
-                    <span className="player-hud__info-v">{channelMeta.nowTitle}</span>
-                  </div>
-                ) : null}
-                {channelMeta?.nextTitle ? (
-                  <div className="player-hud__info-row">
-                    <span className="player-hud__info-k">{t('player.next', { defaultValue: 'Siguiente' })}</span>
-                    <span className="player-hud__info-v">{channelMeta.nextTitle}</span>
-                  </div>
-                ) : null}
-                {channelMeta?.nowRange ? (
-                  <div className="player-hud__info-row">
-                    <span className="player-hud__info-k">{t('player.schedule', { defaultValue: 'Horario' })}</span>
-                    <span className="player-hud__info-v">{channelMeta.nowRange}</span>
-                  </div>
-                ) : null}
-              </div>
             ) : (
               <div className="player-hud__placeholder">
                 {t('common.comingSoon', { defaultValue: 'En preparación...' })}
@@ -542,6 +623,28 @@ export function PlayerHud({ className = '' }) {
             {t('common.close', { defaultValue: 'Cerrar' })}
           </FocusableButton>
         </div>
+        )
+      ) : null}
+
+      {overlay === 'info' && shouldUseEpgInfoModal ? (
+        <EpgEventModal
+          open
+          channel={state?.item}
+          event={nowNext?.now}
+          isLive={true}
+          canPlayLive={true}
+          showActions={false}
+          onClose={() => setOverlay('')}
+          onPlayLive={() => {
+            // Reproducir canal en vivo: reusar el mismo flujo de zapping.
+            handleZapToChannel(state?.item);
+          }}
+          onWatchCatchup={(catchupId) => {
+            if (!catchupId) return;
+            setOverlay('');
+            navigate('/home/catchup', { state: { catchupId, from: 'player-info' }, replace: false });
+          }}
+        />
       ) : null}
     </div>
   );
