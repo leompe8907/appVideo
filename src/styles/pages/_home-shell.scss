@@ -252,7 +252,8 @@ $home-sidebar-duration: 380ms;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  // En ventana: evitar recortes. En fullscreen: llenar pantalla.
+  object-fit: var(--player-video-object-fit, contain);
   pointer-events: none;
 }
 

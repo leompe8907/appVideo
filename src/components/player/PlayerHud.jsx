@@ -477,8 +477,18 @@ export function PlayerHud({ className = '' }) {
   const shouldUseEpgInfoModal = state?.type === 'service' && !!state?.item && !!nowNext?.now;
 
   useEffect(() => {
-    const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    const onFsChange = () => {
+      const fs = Boolean(document.fullscreenElement);
+      setIsFullscreen(fs);
+      try {
+        document.documentElement.style.setProperty('--player-video-object-fit', fs ? 'cover' : 'contain');
+      } catch {
+        // noop
+      }
+    };
     document.addEventListener('fullscreenchange', onFsChange);
+    // Inicializar en montaje (por si el HUD aparece ya en fullscreen)
+    onFsChange();
     if (debugEnabled) {
       const onVisibility = () => log('document:visibilitychange', { state: document.visibilityState });
       const onBlur = () => log('window:blur');
