@@ -176,7 +176,7 @@ export const BRANDS = [
       // - true: también mostrarla en 'service' (canales en vivo).
       showSeekbarOnLive: false,
       // Sidebar de canales (player): cerrar automáticamente al seleccionar (zapping).
-      closeChannelSidebarOnSelect: true,
+      closeChannelSidebarOnSelect: false,
     },
 
     // Configuración de UI/Tema
@@ -556,7 +556,7 @@ export const BRANDS = [
       enginePolicy: 'auto',
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
-      closeChannelSidebarOnSelect: true,
+      closeChannelSidebarOnSelect: false,
     },
 
     // Configuración de UI/Tema
@@ -727,7 +727,7 @@ export const BRANDS = [
       enginePolicy: 'auto',
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
-      closeChannelSidebarOnSelect: true,
+      closeChannelSidebarOnSelect: false,
     },
 
     // Configuración de UI/Tema

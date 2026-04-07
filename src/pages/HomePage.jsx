@@ -100,7 +100,7 @@ export function HomePage() {
             <div className="home-global-player-loading-spinner" />
           </div>
         )}
-        {isPlayerActive && !(playerState?.isLoading || playerState?.isSeeking) && <PlayerHud />}
+        {isPlayerActive && <PlayerHud />}
       </div>
 
       <div

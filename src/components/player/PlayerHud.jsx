@@ -687,7 +687,7 @@ export function PlayerHud({ className = '' }) {
         title={t('player.channelList', { defaultValue: 'Listado de canales' })}
         channels={channelList}
         activeId={state?.id}
-        autoCloseOnSelect={currentBrand?.player?.closeChannelSidebarOnSelect !== false}
+        autoCloseOnSelect={currentBrand?.player?.closeChannelSidebarOnSelect === true}
         onClose={() => setOverlay('')}
         onSelectChannel={(ch) => handleZapToChannel(ch)}
       />
