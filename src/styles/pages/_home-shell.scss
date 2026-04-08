@@ -65,7 +65,7 @@ $home-sidebar-duration: 380ms;
   flex-direction: row;
   align-items: stretch;
   gap: 0.5rem;
-  min-height: 3.25rem;
+  min-height: 7.25rem;
   padding: 0.5rem 0.75rem;
   box-sizing: border-box;
 }
@@ -77,9 +77,9 @@ $home-sidebar-duration: 380ms;
   gap: 0.5rem;
   // Altura fija para evitar "saltos" cuando cambia el contenido (p. ej. canales sin EPG).
   // Debe ser suficientemente alta para el bloque de "Ahora/Siguiente" en TVs.
-  height: 8.25rem;
+  height: 10.25rem;
   min-height: 8.25rem;
-  max-height: 8.25rem;
+  max-height: 10.25rem;
   padding: 0.4rem 0.75rem 0.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-sizing: border-box;
@@ -89,7 +89,7 @@ $home-sidebar-duration: 380ms;
 .inicio-header__col {
   flex: 1 1 0;
   min-width: 0;
-  min-height: 2rem;
+  min-height: 7rem;
   display: flex;
   align-items: center;
 }
@@ -146,7 +146,7 @@ $home-sidebar-duration: 380ms;
   display: flex;
   gap: 0.6rem;
   align-items: baseline;
-  font-size: 0.95rem;
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.1;
   min-width: 0;
@@ -181,7 +181,7 @@ $home-sidebar-duration: 380ms;
   display: flex;
   gap: 0.5rem;
   align-items: baseline;
-  font-size: 0.85rem;
+  font-size: 1.2rem;
   opacity: 0.9;
 }
 
@@ -191,7 +191,7 @@ $home-sidebar-duration: 380ms;
 }
 
 .inicio-service-info__title {
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: 700;
   line-height: 1.1;
   white-space: nowrap;
@@ -209,14 +209,14 @@ $home-sidebar-duration: 380ms;
 
 .inicio-header__logo {
   max-height: 100%;
-  height: 2rem;
+  height: 4rem;
   width: auto;
   object-fit: contain;
   margin-right: 0.75rem;
 }
 
 .inicio-header__time {
-  font-size: 1.05rem;
+  font-size: 2.05rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   opacity: 0.92;
