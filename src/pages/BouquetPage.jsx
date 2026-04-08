@@ -5,6 +5,7 @@
  */
 
 import { usePlayer } from '../contexts/PlayerContext';
+import { useParentalGate } from '../hooks/useParentalGate';
 import BouquetWall from '../components/bouquet/BouquetWall';
 import VodRecommendedHomeRail from '../components/vod/VodRecommendedHomeRail';
 import panaccessService from '../services/panaccessService';
@@ -14,6 +15,7 @@ import '../styles/pages/_bouquet.scss';
 export function BouquetPage() {
   // El background común lo maneja Home (.home-content)
   const { play } = usePlayer();
+  const { requestPlayChannel } = useParentalGate();
   const { setFocusedChannel } = useHomeHeader();
 
   const handleChannelSelect = (channel) => {
@@ -47,12 +49,16 @@ export function BouquetPage() {
       return;
     }
 
-    play({
-      type: 'service',
-      id: channel.id ?? channel.lcn ?? undefined,
-      url,
-      item: channel,
-      autoPlay: true,
+    requestPlayChannel({
+      channel,
+      playFn: () =>
+        play({
+          type: 'service',
+          id: channel.id ?? channel.lcn ?? undefined,
+          url,
+          item: channel,
+          autoPlay: true,
+        }),
     });
   };
 

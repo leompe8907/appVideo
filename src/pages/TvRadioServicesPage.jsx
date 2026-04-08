@@ -4,6 +4,7 @@
 
 import { Navigate } from 'react-router-dom';
 import { usePlayer } from '../contexts/PlayerContext';
+import { useParentalGate } from '../hooks/useParentalGate';
 import BouquetWall from '../components/bouquet/BouquetWall';
 import { usePreload } from '../store/usePreload';
 import { hasTvRadioServiceBouquets } from '../services/tvDataService';
@@ -13,6 +14,7 @@ import '../styles/pages/_bouquet.scss';
 
 export function TvRadioServicesPage() {
   const { play } = usePlayer();
+  const { requestPlayChannel } = useParentalGate();
   const { epg } = usePreload();
   const { setFocusedChannel } = useHomeHeader();
 
@@ -47,12 +49,16 @@ export function TvRadioServicesPage() {
       return;
     }
 
-    play({
-      type: 'service',
-      id: channel.id ?? channel.lcn ?? undefined,
-      url,
-      item: channel,
-      autoPlay: true,
+    requestPlayChannel({
+      channel,
+      playFn: () =>
+        play({
+          type: 'service',
+          id: channel.id ?? channel.lcn ?? undefined,
+          url,
+          item: channel,
+          autoPlay: true,
+        }),
     });
   };
 

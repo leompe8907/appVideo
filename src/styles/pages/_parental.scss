@@ -1,0 +1,218 @@
+.parental-page {
+  padding: 18px 18px 28px;
+  color: var(--text-color, #fff);
+}
+
+.parental-header {
+  margin-bottom: 12px;
+}
+
+.parental-title {
+  margin: 0 0 6px;
+  font-size: 26px;
+}
+
+.parental-subtitle {
+  opacity: 0.85;
+}
+
+.parental-card {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.parental-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.parental-row__label {
+  font-weight: 600;
+}
+
+.parental-toggle {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+}
+.parental-toggle.active {
+  background: rgba(102, 126, 234, 0.25);
+  border-color: rgba(102, 126, 234, 0.6);
+}
+
+.parental-divider {
+  height: 1px;
+  margin: 12px 0;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.parental-pin-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.parental-pin-input {
+  width: 160px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+}
+
+.parental-btn {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+}
+.parental-btn--secondary {
+  opacity: 0.9;
+}
+
+.parental-msg {
+  margin-top: 10px;
+  opacity: 0.9;
+}
+
+.parental-empty {
+  margin-top: 10px;
+  opacity: 0.85;
+}
+
+.parental-channel-list {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  max-height: 52vh;
+  overflow: auto;
+}
+
+.parental-channel {
+  display: grid;
+  grid-template-columns: 70px 1fr 120px;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  text-align: left;
+}
+.parental-channel.blocked {
+  border-color: rgba(220, 53, 69, 0.5);
+  background: rgba(220, 53, 69, 0.12);
+}
+
+.parental-channel.temp-unlocked {
+  border-color: rgba(255, 193, 7, 0.55);
+  background: rgba(255, 193, 7, 0.12);
+}
+
+.parental-channel__lcn {
+  opacity: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+.parental-channel__state {
+  justify-self: end;
+  opacity: 0.9;
+}
+
+/* Gate */
+.parental-pin-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+}
+
+.parental-pin-card {
+  width: min(720px, 92vw);
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(20, 20, 24, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.parental-pin-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.parental-pin-message {
+  opacity: 0.9;
+  margin-bottom: 10px;
+}
+
+.parental-pin-input {
+  width: 100%;
+  font-size: 22px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+}
+
+.parental-pin-error {
+  margin-top: 8px;
+  color: #ff6b7a;
+}
+
+.parental-pin-pad {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.parental-pin-digit {
+  padding: 14px 0;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 18px;
+}
+
+.parental-pin-digit--ok {
+  grid-column: span 2;
+  background: rgba(102, 126, 234, 0.22);
+  border-color: rgba(102, 126, 234, 0.55);
+}
+
+.parental-pin-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.parental-pin-cancel,
+.parental-pin-ok {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.parental-pin-ok {
+  background: rgba(102, 126, 234, 0.22);
+  border-color: rgba(102, 126, 234, 0.55);
+}
+

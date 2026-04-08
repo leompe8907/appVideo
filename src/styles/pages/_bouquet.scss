@@ -326,6 +326,7 @@
     transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out,
       transform 0.1s ease-out;
     cursor: pointer;
+    position: relative;
 
     .channel-card-img {
       display: block;
@@ -568,6 +569,34 @@
     &:hover {
       border-color: rgba(255, 255, 255, 0.6);
     }
+  }
+
+  /* Control parental: canales bloqueados se ven “opacados” pero siguen enfocados/seleccionables */
+  .channel-card.channel-card--blocked {
+    opacity: 0.5;
+    filter: saturate(0.75);
+  }
+
+  .channel-card.channel-card--blocked.focused {
+    opacity: 0.85; /* Mantener legibilidad cuando está enfocado */
+    filter: saturate(0.95);
+  }
+
+  .channel-card-lock {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    font-size: 16px;
+    line-height: 1;
+    pointer-events: none;
   }
 
   @media screen and (min-width: 1792px) {

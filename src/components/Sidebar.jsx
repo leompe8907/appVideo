@@ -333,6 +333,16 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
                 type="button"
                 className="home-sidebar-sublink"
                 onClick={() => {
+                  navigate('/home/control-parental');
+                  collapseSidebar();
+                }}
+              >
+                {t('parental.title', { defaultValue: 'Control parental' })}
+              </button>
+              <button
+                type="button"
+                className="home-sidebar-sublink"
+                onClick={() => {
                   setAboutModal(true);
                   collapseSidebar();
                 }}

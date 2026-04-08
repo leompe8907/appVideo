@@ -11,6 +11,9 @@ import { usePreload } from '../../store/usePreload';
 import panaccessService from '../../services/panaccessService';
 import { useBrand } from '../../contexts/BrandContext';
 import EpgEventModal from '../epg/EpgEventModal';
+import { useParentalGate } from '../../hooks/useParentalGate';
+import { useParental } from '../../store/useParental';
+import { getChannelStableId } from '../../utils/channelId';
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
@@ -173,6 +176,8 @@ export function PlayerHud({ className = '' }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isTV } = useDevice();
+  const { requestPlayChannel } = useParentalGate();
+  const parental = useParental();
   const {
     state,
     tracks,
@@ -236,6 +241,7 @@ export function PlayerHud({ className = '' }) {
   }, []);
 
   const hasContent = Boolean(state?.url);
+  const isLiveService = state?.type === 'service' && !!state?.item;
   const liveWindow = useMemo(() => resolveLiveWindow(state?.item), [state?.item]);
   const nowNext = useMemo(() => {
     if (!state?.item?.epgItems) return { now: null, next: null };
@@ -408,6 +414,33 @@ export function PlayerHud({ className = '' }) {
 
   if (!hasContent) return null;
 
+  const currentChannelId = isLiveService ? getChannelStableId(state.item) : '';
+  const currentChannelBlocked =
+    parental.enabled && currentChannelId ? parental.isChannelBlocked(currentChannelId) : false;
+
+  const toggleCurrentChannelBlock = () => {
+    if (!isLiveService) return;
+    if (!parental.enabled) return;
+    if (!currentChannelId) return;
+
+    const doToggle = () => parental.toggleBlock(currentChannelId);
+
+    // Si está bloqueado -> desbloquear requiere PIN (acción administrativa).
+    if (currentChannelBlocked && parental.hasPinConfigured()) {
+      requestPlayChannel({
+        channel: state.item,
+        purpose: 'action',
+        title: t('parental.title', { defaultValue: 'Control parental' }),
+        message: t('parental.confirmChangeMessage', { defaultValue: 'Ingresa el PIN para cambiar el bloqueo del canal.' }),
+        playFn: doToggle,
+      });
+      return;
+    }
+
+    // Si está permitido -> bloquear no requiere PIN.
+    doToggle();
+  };
+
   const handlePlayPause = () => {
     if (state?.isPlaying) {
       pause();
@@ -465,12 +498,16 @@ export function PlayerHud({ className = '' }) {
   const handleZapToChannel = (channel) => {
     const url = resolveChannelLiveUrl(channel);
     if (!url) return;
-    play({
-      type: 'service',
-      id: channel.id ?? channel.lcn ?? undefined,
-      url,
-      item: channel,
-      autoPlay: true,
+    requestPlayChannel({
+      channel,
+      playFn: () =>
+        play({
+          type: 'service',
+          id: channel.id ?? channel.lcn ?? undefined,
+          url,
+          item: channel,
+          autoPlay: true,
+        }),
     });
   };
 
@@ -557,6 +594,27 @@ export function PlayerHud({ className = '' }) {
           >
             EPG
           </FocusableButton>
+          {isLiveService && parental.enabled && (
+            <FocusableButton
+              type="button"
+              className="player-hud__iconbtn"
+              onClick={toggleCurrentChannelBlock}
+              focusKey="hud-top-parental-toggle"
+              isFocusable={visible}
+              aria-label={
+                currentChannelBlocked
+                  ? t('parental.unblock', { defaultValue: 'Desbloquear canal' })
+                  : t('parental.block', { defaultValue: 'Bloquear canal' })
+              }
+              title={
+                currentChannelBlocked
+                  ? t('parental.unblock', { defaultValue: 'Desbloquear canal' })
+                  : t('parental.block', { defaultValue: 'Bloquear canal' })
+              }
+            >
+              {currentChannelBlocked ? '🔓' : '🔒'}
+            </FocusableButton>
+          )}
           <FocusableButton
             type="button"
             className="player-hud__iconbtn"

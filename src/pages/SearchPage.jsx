@@ -7,6 +7,7 @@ import { usePreload } from '../store/usePreload';
 import panaccessService from '../services/panaccessService';
 import { getSearchDebounceMs, searchAll } from '../services/searchService';
 import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
+import { useParentalGate } from '../hooks/useParentalGate';
 import '../styles/pages/_search.scss';
 
 function SearchTab({ id, label, active, hidden, onSelect }) {
@@ -133,6 +134,7 @@ export function SearchPage() {
   const navigate = useNavigate();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
+  const { requestPlayChannel } = useParentalGate();
   const { epg, vod, catchup, loadVOD, loadCatchup } = usePreload();
 
   const [query, setQuery] = useState('');
@@ -274,7 +276,11 @@ export function SearchPage() {
         // noop
       }
       if (!url) return;
-      play({ type: 'service', id: channel.id ?? channel.lcn ?? undefined, url, item: channel, autoPlay: true });
+      requestPlayChannel({
+        channel,
+        playFn: () =>
+          play({ type: 'service', id: channel.id ?? channel.lcn ?? undefined, url, item: channel, autoPlay: true }),
+      });
     }
 
     if (item.type === 'epg') {
@@ -305,7 +311,11 @@ export function SearchPage() {
         // noop
       }
       if (!url) return;
-      play({ type: 'service', id: channel.id ?? channel.lcn ?? undefined, url, item: channel, autoPlay: true });
+      requestPlayChannel({
+        channel,
+        playFn: () =>
+          play({ type: 'service', id: channel.id ?? channel.lcn ?? undefined, url, item: channel, autoPlay: true }),
+      });
     }
   };
 

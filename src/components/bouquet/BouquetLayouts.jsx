@@ -5,6 +5,8 @@ import { useDevice } from '../../contexts/DeviceContext';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
 import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
+import { useParental } from '../../store/useParental';
+import { getChannelStableId } from '../../utils/channelId';
 
 // --- Helpers EPG para layout event_and_logo ---
 /** Parsea "YYYY-MM-DD HH:mm:ss" a "HH:mm" para mostrar en UI */
@@ -166,6 +168,7 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, l
  */
 function ChannelCard({ channel, index, layoutType, onSelect, onFocus, focusKey }) {
   const { isTV } = useDevice();
+  const parental = useParental();
   
   const { ref, focused } = useSpatialNavigation({
     focusKey: focusKey || `channel-${channel.id ?? index}`,
@@ -183,6 +186,9 @@ function ChannelCard({ channel, index, layoutType, onSelect, onFocus, focusKey }
   const variant = getChannelLayoutVariant(layoutType);
   const style =
     variant === 'event_and_logo' ? {} : bgColor ? { backgroundColor: bgColor } : {};
+
+  const channelId = getChannelStableId(channel);
+  const isBlocked = parental.enabled && channelId ? parental.isChannelBlocked(channelId) : false;
 
   // EPG: evento actual al aire (para event_and_logo)
   const epgItems = useMemo(() => channel.epgItems ?? [], [channel.epgItems]);
@@ -265,7 +271,12 @@ function ChannelCard({ channel, index, layoutType, onSelect, onFocus, focusKey }
   return (
     <div
       ref={ref}
-      className={`channel-card channel-card--${variant} ${focused ? 'focused' : ''}`}
+      className={[
+        'channel-card',
+        `channel-card--${variant}`,
+        focused ? 'focused' : '',
+        isBlocked ? 'channel-card--blocked' : '',
+      ].filter(Boolean).join(' ')}
       style={style}
       onMouseEnter={() => onFocus?.()}
       onFocus={() => onFocus?.()}
@@ -276,6 +287,7 @@ function ChannelCard({ channel, index, layoutType, onSelect, onFocus, focusKey }
       data-lcn={channel.lcn}
       data-id={channel.id}
     >
+      {isBlocked ? <div className="channel-card-lock" aria-hidden="true">🔒</div> : null}
       {variant === 'event_and_logo' ? (
         <>
           <div className="channel-card-frame">

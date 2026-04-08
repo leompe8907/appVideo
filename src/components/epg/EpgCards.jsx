@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import panaccessService from '../../services/panaccessService';
 import EpgEventModal from './EpgEventModal';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+import { useParentalGate } from '../../hooks/useParentalGate';
 import '../epg/epg-common.scss';
 
 function asMs(dateLike) {
@@ -161,6 +162,7 @@ export function EpgCards({ onSelect }) {
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
+  const { requestPlayChannel } = useParentalGate();
   const { isTV } = useDevice();
   const navigate = useNavigate();
 
@@ -221,7 +223,11 @@ export function EpgCards({ onSelect }) {
   const handlePlayLive = (channel) => {
     const url = resolveChannelLiveUrl(channel);
     if (!url) return false;
-    play({ type: 'service', id: channel.id ?? channel.lcn ?? undefined, url, item: channel, autoPlay: true });
+    requestPlayChannel({
+      channel,
+      playFn: () =>
+        play({ type: 'service', id: channel.id ?? channel.lcn ?? undefined, url, item: channel, autoPlay: true }),
+    });
     return true;
   };
 

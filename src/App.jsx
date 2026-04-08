@@ -23,6 +23,7 @@ const PreloadDataPage = lazy(() => import('./pages/PreloadDataPage'));
 const HomePage = lazy(() => import('./pages/HomePage'));
 const EpgCardsPage = lazy(() => import('./pages/EpgCardsPage'));
 const CatchupPage = lazy(() => import('./pages/CatchupPage'));
+const ParentalSettingsPage = lazy(() => import('./pages/ParentalSettingsPage'));
 const HomePlaceholderPage = lazy(() =>
   import('./pages/HomePage').then((m) => ({ default: m.HomePlaceholderPage }))
 );
@@ -135,6 +136,7 @@ function App() {
                   <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>}/>
                   <Route path="epg" element={<PreloadGate required="epg"> <Suspense fallback={<Loading />}> <EpgCardsPage /></Suspense></PreloadGate>}/>
                   <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>}/>
+                  <Route path="control-parental" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><ParentalSettingsPage /></Suspense></PreloadGate>}/>
                   <Route path="osms" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="OSMS" description="Modulo en preparacion para mensajes del sistema." /></Suspense>}/>
                   <Route path="*" element={<Navigate to="/home/inicio" replace />} />
                 </Route>

@@ -11,6 +11,7 @@ import { usePreload } from '../../store/usePreload';
 import InicioHeader from '../home/InicioHeader';
 import { useBrand } from '../../contexts/BrandContext';
 import { HomeHeaderProvider } from '../../contexts/HomeHeaderProvider';
+import { useParentalGate } from '../../hooks/useParentalGate';
 
 function findStreamById(streams, id) {
   if (id == null || !Array.isArray(streams)) return null;
@@ -22,6 +23,7 @@ export function HomeShellContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const { play } = usePlayer();
+  const { requestPlayChannel } = useParentalGate();
   const { currentBrand } = useBrand();
   const { epg, ads, loadAds } = usePreload();
 
@@ -101,12 +103,16 @@ export function HomeShellContent() {
           if (import.meta.env?.DEV) console.warn('[HomeShellContent] normalizePlaybackUrl', e);
         }
         if (url) {
-          play({
-            type: 'service',
-            id: stream.id,
-            url,
-            item: stream,
-            autoPlay: true,
+          requestPlayChannel({
+            channel: stream,
+            playFn: () =>
+              play({
+                type: 'service',
+                id: stream.id,
+                url,
+                item: stream,
+                autoPlay: true,
+              }),
           });
         }
         return;
