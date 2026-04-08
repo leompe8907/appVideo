@@ -188,6 +188,67 @@ function ensureStreamPlaybackUrl(stream) {
  * Filtra bouquets marcados como principales (isMain) y ordena por prioridad.
  * Útil con datos ya cargados (p. ej. preload) sin volver a llamar al API.
  */
+function getBouquetPriorityValue(bouquet) {
+  // Backends distintos pueden variar el nombre del campo o mandarlo en customData.
+  const direct =
+    bouquet?.priority ??
+    bouquet?.Priority ??
+    bouquet?.prioridad ??
+    bouquet?.prio ??
+    bouquet?.order ??
+    bouquet?.position ??
+    null;
+
+  if (direct != null && direct !== '') {
+    const n = Number(direct);
+    if (Number.isFinite(n)) return n;
+  }
+
+  const cd = bouquet?.customData;
+  if (cd && typeof cd === 'object') {
+    const raw = cd.priority ?? cd.Priority ?? cd.prioridad ?? cd.prio ?? cd.order ?? cd.position ?? null;
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
+  }
+  if (typeof cd === 'string') {
+    const trimmed = cd.trim();
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        const raw = parsed?.priority ?? parsed?.Priority ?? parsed?.prioridad ?? parsed?.prio ?? parsed?.order ?? parsed?.position ?? null;
+        const n = Number(raw);
+        if (Number.isFinite(n)) return n;
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  return null;
+}
+
+function sortBouquetsByPriority(bouquets) {
+  const arr = Array.isArray(bouquets) ? [...bouquets] : [];
+  arr.sort((a, b) => {
+    const pa = getBouquetPriorityValue(a);
+    const pb = getBouquetPriorityValue(b);
+    // Prioridades válidas primero (asc).
+    if (pa == null && pb == null) {
+      // Determinístico: desempate por id/name para evitar "saltos" visuales.
+      const ia = String(a?.bouquetId ?? a?.id ?? a?.name ?? '');
+      const ib = String(b?.bouquetId ?? b?.id ?? b?.name ?? '');
+      return ia.localeCompare(ib);
+    }
+    if (pa == null) return 1;
+    if (pb == null) return -1;
+    if (pa !== pb) return pa - pb;
+    const ia = String(a?.bouquetId ?? a?.id ?? a?.name ?? '');
+    const ib = String(b?.bouquetId ?? b?.id ?? b?.name ?? '');
+    return ia.localeCompare(ib);
+  });
+  return arr;
+}
+
 export function filterMainBouquets(bouquets) {
   if (!Array.isArray(bouquets)) return [];
 
@@ -201,13 +262,7 @@ export function filterMainBouquets(bouquets) {
     return false;
   });
 
-  mainBouquets.sort((a, b) => {
-    const pa = Number(a.priority ?? a.Priority ?? 0);
-    const pb = Number(b.priority ?? b.Priority ?? 0);
-    return pa - pb;
-  });
-
-  return mainBouquets;
+  return sortBouquetsByPriority(mainBouquets);
 }
 
 function resolveBouquetMainRaw(bouquet) {
@@ -240,7 +295,8 @@ export function hasTvRadioServiceBouquets(bouquets) {
  */
 export function filterBouquetsForInicio(bouquets) {
   if (!Array.isArray(bouquets)) return [];
-  return bouquets.filter((b) => !isBouquetExplicitlyNonMain(b));
+  const filtered = bouquets.filter((b) => !isBouquetExplicitlyNonMain(b));
+  return sortBouquetsByPriority(filtered);
 }
 
 /**
@@ -249,12 +305,7 @@ export function filterBouquetsForInicio(bouquets) {
 export function filterBouquetsForTvRadioServices(bouquets) {
   if (!Array.isArray(bouquets)) return [];
   const filtered = bouquets.filter(isBouquetExplicitlyNonMain);
-  filtered.sort((a, b) => {
-    const pa = Number(a.priority ?? a.Priority ?? 0);
-    const pb = Number(b.priority ?? b.Priority ?? 0);
-    return pa - pb;
-  });
-  return filtered;
+  return sortBouquetsByPriority(filtered);
 }
 
 /**

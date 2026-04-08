@@ -75,10 +75,15 @@ $home-sidebar-duration: 380ms;
   flex-direction: row;
   align-items: stretch;
   gap: 0.5rem;
-  min-height: 2.75rem;
+  // Altura fija para evitar "saltos" cuando cambia el contenido (p. ej. canales sin EPG).
+  // Debe ser suficientemente alta para el bloque de "Ahora/Siguiente" en TVs.
+  height: 8.25rem;
+  min-height: 8.25rem;
+  max-height: 8.25rem;
   padding: 0.4rem 0.75rem 0.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .inicio-header__col {
@@ -125,6 +130,7 @@ $home-sidebar-duration: 380ms;
   max-width: 100%;
   width: fit-content;
   min-width: 0;
+  height: 100%;
 }
 
 .inicio-service-info {
@@ -133,6 +139,7 @@ $home-sidebar-duration: 380ms;
   flex-direction: column;
   gap: 0.6rem;
   min-width: 0;
+  max-height: 100%;
 }
 
 .inicio-service-info__channel {
