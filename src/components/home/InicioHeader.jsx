@@ -3,6 +3,7 @@ import { useBrand } from '../../contexts/BrandContext';
 import { useDeviceTime } from '../../hooks/useDeviceTime';
 import { useHomeHeader } from '../../contexts/homeHeaderContext';
 import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
+import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
 
 /**
  * Cabecera de Inicio: tres zonas horizontales (izquierda, centro, derecha).
@@ -13,10 +14,8 @@ function pad2(n) {
 }
 
 function fmtHHmm(dateLike) {
-  if (!dateLike) return '';
-  const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
-  if (Number.isNaN(d.getTime())) return '';
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const ms = parseEpgDateToMs(dateLike);
+  return ms == null ? '' : formatHHmmFromMs(ms);
 }
 
 function getEventTitle(event) {
@@ -121,11 +120,15 @@ export function InicioHeader({ sectionKey = null }) {
 
     const currentTitle = getEventTitle(current);
     const currentDesc = getEventDescription(current);
-    const currentTime = current ? `${fmtHHmm(current.start)} – ${fmtHHmm(current.end)}`.trim() : '';
+    const currentStart = current?.startDate?.valueOf?.() ?? current?.start;
+    const currentEnd = current?.endDate?.valueOf?.() ?? current?.end;
+    const currentTime = current ? `${fmtHHmm(currentStart)} – ${fmtHHmm(currentEnd)}`.trim() : '';
 
     const nextTitle = getEventTitle(next);
     const nextDesc = getEventDescription(next);
-    const nextTime = next ? `${fmtHHmm(next.start)} – ${fmtHHmm(next.end)}`.trim() : '';
+    const nextStart = next?.startDate?.valueOf?.() ?? next?.start;
+    const nextEnd = next?.endDate?.valueOf?.() ?? next?.end;
+    const nextTime = next ? `${fmtHHmm(nextStart)} – ${fmtHHmm(nextEnd)}`.trim() : '';
 
     // Fuerza re-render cuando cambia el tiempo (minuto) aunque el foco no cambie.
     const _ = serviceNow?.valueOf?.();

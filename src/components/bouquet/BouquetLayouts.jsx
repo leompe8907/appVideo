@@ -4,16 +4,13 @@ import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
+import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
 
 // --- Helpers EPG para layout event_and_logo ---
 /** Parsea "YYYY-MM-DD HH:mm:ss" a "HH:mm" para mostrar en UI */
 function formatEpgTime(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return '';
-  const h = d.getHours();
-  const m = d.getMinutes();
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  const ms = parseEpgDateToMs(dateStr);
+  return ms == null ? '' : formatHHmmFromMs(ms);
 }
 
 /** Progreso 0–100 del evento actual (para la barra). start/end como string o con startDate/endDate */

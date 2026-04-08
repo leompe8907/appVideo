@@ -6,6 +6,7 @@
 import CryptoJS from 'crypto-js';
 import { getEpgCdnUrl, getOperatorName } from '../utils/userSession';
 import { normalizeEpgInWorker } from '../workers/epgWorkerClient';
+import { parseEpgDateToMs } from '../utils/epgTime';
 
 const DEFAULT_EPG_HOURS_LIMIT = 12;
 const DEFAULT_EPG_DAYS_OFFSET = 2;
@@ -109,8 +110,8 @@ function getTodayDate() {
  */
 function toMomentLike(start) {
   if (start == null) return null;
-  const t = typeof start === 'number' ? start : new Date(start).getTime();
-  if (Number.isNaN(t)) return null;
+  const t = parseEpgDateToMs(start);
+  if (t == null || Number.isNaN(t)) return null;
   return { valueOf: () => t };
 }
 
