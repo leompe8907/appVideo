@@ -40,7 +40,9 @@
     "sectionServices": "Servicios",
     "sectionVod": "VOD",
     "sectionCatchup": "Catchup",
-    "sectionEpg": "EPG"
+    "sectionEpg": "EPG",
+    "tabVod": "VOD",
+    "tabCatchup": "Catchup"
   },
   "settings": {
     "confirm": "Confirmar",
@@ -179,10 +181,21 @@
     "watchCatchup": "Watch / Catchup (no disponible)"
   },
   "player": {
+    "player": "Reproductor",
     "selectChannelFirst": "Selecciona un canal primero",
     "play": "Reproducir",
     "pause": "Pausar",
     "playbackError": "Error en reproducción"
+  },
+  "catchup": {
+    "title": "Catchup",
+    "loading": "Cargando...",
+    "errorLoad": "Error al cargar catchup",
+    "empty": "Sin catchup disponible",
+    "recorded": "Grabados",
+    "recommended": "Recomendados",
+    "noRecordings": "No hay grabaciones",
+    "noRecommendations": "Sin recomendaciones"
   },
   "vod": {
     "title": "VOD",
@@ -238,6 +251,51 @@
       "Terror": "Horror",
       "Variedades": "Variedades"
     }
+  },
+  "parental": {
+    "title": "Control parental",
+    "subtitle": "Bloquea el acceso a canales con PIN (sin ocultarlos).",
+    "enabled": "Activar control parental",
+    "pin": "PIN",
+    "setPin": "Configurar PIN",
+    "changePin": "Cambiar PIN",
+    "forgotPin": "Olvidé mi PIN",
+    "forgotPinTitle": "Olvidé mi PIN",
+    "forgotPinMessage": "Por seguridad, el PIN no se puede restablecer desde aquí sin verificación. Debes iniciar sesión nuevamente o contactar soporte según la política de tu servicio.",
+    "enterCurrentPin": "Ingresa el PIN actual para continuar.",
+    "setPinTitle": "Configurar PIN",
+    "enterNewPin": "Ingresa el nuevo PIN (4 a 6 dígitos).",
+    "pinMin": "El PIN debe tener al menos 4 dígitos.",
+    "pinSaved": "PIN guardado.",
+    "pinError": "No se pudo guardar el PIN.",
+    "lockNow": "Bloquear ahora",
+    "unlockActive": "Desbloqueo temporal activo. Los canales bloqueados permitirán reproducir hasta que presiones “Bloquear ahora” o expire el tiempo.",
+    "channels": "Canales",
+    "noChannels": "No hay canales cargados. Asegúrate de haber hecho preload.",
+    "blocked": "Bloqueado",
+    "allowed": "Permitido",
+    "block": "Bloquear canal",
+    "unblock": "Desbloquear canal",
+    "confirmChangeTitle": "Control parental",
+    "confirmChangeMessage": "Ingresa el PIN para cambiar el bloqueo del canal.",
+    "ratingTitle": "Clasificación (BR)",
+    "ratingHint": "Configura el límite de edad para pedir PIN al reproducir.",
+    "ratingAllowUpTo": "Permitir hasta",
+    "ratingNoRestrictions": "Sin restricciones",
+    "ratingLivreShort": "L",
+    "ratingApplyToLive": "Aplicar a TV en vivo (EPG)",
+    "restrictedTitle": "Contenido restringido",
+    "restrictedMessage": "Ingresa el PIN para reproducir contenido restringido por clasificación.",
+    "parentalControlMessage": "Ingresa el PIN para reproducir contenido restringido.",
+    "channelBlockedTitle": "Canal bloqueado"
+  },
+  "pinGate": {
+    "enterPin": "Ingresa el PIN",
+    "wrongPin": "PIN incorrecto",
+    "keypad": "Teclado numérico",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "ok": "OK"
   },
   "preload": {
     "message": "Preparando guía de programación...",

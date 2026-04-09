@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import { usePreload } from '../store/usePreload';
+import { useParentalGate } from '../hooks/useParentalGate';
 import VodCard from '../components/vod/VodCard';
 import VodSeeMoreCard from '../components/vod/VodSeeMoreCard';
 import VodDetailModal from '../components/vod/VodDetailModal';
@@ -25,6 +26,7 @@ export function VodPage() {
   const navigate = useNavigate();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
+  const { requestPlayMedia } = useParentalGate();
   const { vod, loadVOD } = usePreload();
   const [detailItem, setDetailItem] = useState(null);
   const [categoryModal, setCategoryModal] = useState(null);
@@ -73,7 +75,15 @@ export function VodPage() {
   };
 
   const handlePlayFromModal = (params) => {
-    if (params?.url) play(params);
+    if (!params?.url) return;
+    // Gate por rating (VOD): antes de reproducir.
+    requestPlayMedia({
+      item: params.item,
+      ratingRaw: params?.item?.parentalRating,
+      title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+      message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
+      playFn: () => play(params),
+    });
   };
 
   return (

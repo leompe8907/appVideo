@@ -134,7 +134,7 @@ export function SearchPage() {
   const navigate = useNavigate();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
-  const { requestPlayChannel } = useParentalGate();
+  const { requestPlayChannel, requestPlayMedia } = useParentalGate();
   const { epg, vod, catchup, loadVOD, loadCatchup } = usePreload();
 
   const [query, setQuery] = useState('');
@@ -240,7 +240,14 @@ export function SearchPage() {
         const url = panaccessService.getCatchupM3u8Url({ catchupId });
         const normalized = panaccessService.normalizePlaybackUrl(url);
         if (normalized) {
-          play({ type: 'catchup', id: catchupId, url: normalized, item: item.raw || { catchupId }, autoPlay: true });
+          requestPlayMedia({
+            item: item.raw || { catchupId },
+            ratingRaw: item?.raw?.parentalRating ?? item?.parentalRating ?? null,
+            title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+            message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
+            playFn: () =>
+              play({ type: 'catchup', id: catchupId, url: normalized, item: item.raw || { catchupId }, autoPlay: true }),
+          });
         }
       } catch {
         // noop
@@ -346,8 +353,8 @@ export function SearchPage() {
           <SearchTab id="all" label={t('search.tabAll', { defaultValue: 'Todos' })} active={activeTab === 'all'} onSelect={setActiveTab} />
           <SearchTab id="service" label={t('search.tabServices', { defaultValue: 'Servicios' })} active={activeTab === 'service'} hidden={!hasServices} onSelect={setActiveTab} />
           <SearchTab id="epg" label={t('search.tabEpg', { defaultValue: 'EPG' })} active={activeTab === 'epg'} hidden={hideEpgTab} onSelect={setActiveTab} />
-          <SearchTab id="vod" label="VOD" active={activeTab === 'vod'} hidden={hideVodTab} onSelect={setActiveTab} />
-          <SearchTab id="catchup" label="Catchup" active={activeTab === 'catchup'} hidden={hideCatchupTab} onSelect={setActiveTab} />
+          <SearchTab id="vod" label={t('search.tabVod', { defaultValue: 'VOD' })} active={activeTab === 'vod'} hidden={hideVodTab} onSelect={setActiveTab} />
+          <SearchTab id="catchup" label={t('search.tabCatchup', { defaultValue: 'Catchup' })} active={activeTab === 'catchup'} hidden={hideCatchupTab} onSelect={setActiveTab} />
         </div>
 
         <div className="search-results">

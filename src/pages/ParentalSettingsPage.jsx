@@ -5,6 +5,8 @@ import { useParental } from '../store/useParental';
 import { getChannelStableId } from '../utils/channelId';
 import { useParentalGate } from '../hooks/useParentalGate';
 import ParentalChannelCard from '../components/parental/ParentalChannelCard';
+import ParentalPinGate from '../components/parental/ParentalPinGate';
+import ConfirmModal from '../components/ConfirmModal';
 import '../styles/pages/_parental.scss';
 
 export function ParentalSettingsPage() {
@@ -12,8 +14,10 @@ export function ParentalSettingsPage() {
   const { epg } = usePreload();
   const parental = useParental();
   const { requestPlayChannel } = useParentalGate();
-  const [pinDraft, setPinDraft] = useState('');
   const [pinMsg, setPinMsg] = useState('');
+  const [pinStep, setPinStep] = useState(''); // '' | 'verify-old' | 'set-new'
+  const [pendingOldPin, setPendingOldPin] = useState('');
+  const [showForgotPin, setShowForgotPin] = useState(false);
 
   const channels = useMemo(() => {
     const streams = epg?.streams || [];
@@ -24,20 +28,15 @@ export function ParentalSettingsPage() {
     setPinMsg('');
   }, [parental.enabled]);
 
-  const savePin = async () => {
+  const openChangePinFlow = () => {
     setPinMsg('');
-    const value = String(pinDraft || '').replace(/\D/g, '').slice(0, 6);
-    if (value.length < 4) {
-      setPinMsg(t('parental.pinMin', { defaultValue: 'El PIN debe tener al menos 4 dígitos.' }));
+    setPendingOldPin('');
+    if (parental.hasPinConfigured()) {
+      setPinStep('verify-old');
       return;
     }
-    try {
-      await parental.setPin(value);
-      setPinDraft('');
-      setPinMsg(t('parental.pinSaved', { defaultValue: 'PIN guardado.' }));
-    } catch {
-      setPinMsg(t('parental.pinError', { defaultValue: 'No se pudo guardar el PIN.' }));
-    }
+    // Si no hay PIN aún, crear uno directamente.
+    setPinStep('set-new');
   };
 
   const unlockActive =
@@ -48,6 +47,67 @@ export function ParentalSettingsPage() {
 
   return (
     <section className="parental-page" aria-label={t('parental.title', { defaultValue: 'Control parental' })}>
+      <ConfirmModal
+        open={showForgotPin}
+        title={t('parental.forgotPinTitle', { defaultValue: 'Olvidé mi PIN' })}
+        message={t('parental.forgotPinMessage', {
+          defaultValue:
+            'Por seguridad, el PIN no se puede restablecer desde aquí sin verificación. Debes iniciar sesión nuevamente o contactar soporte según la política de tu servicio.',
+        })}
+        confirmText={t('common.close', { defaultValue: 'Cerrar' })}
+        onConfirm={() => setShowForgotPin(false)}
+      />
+
+      <ParentalPinGate
+        open={pinStep === 'verify-old'}
+        title={t('parental.changePin', { defaultValue: 'Cambiar PIN' })}
+        message={t('parental.enterCurrentPin', { defaultValue: 'Ingresa el PIN actual para continuar.' })}
+        onCancel={() => {
+          setPinStep('');
+          setPendingOldPin('');
+        }}
+        onSubmit={async (pin) => {
+          try {
+            const ok = await parental.verifyPin(pin);
+            if (!ok) return false;
+            setPendingOldPin(pin);
+            setPinStep('set-new');
+            return true;
+          } catch {
+            return false;
+          }
+        }}
+      />
+
+      <ParentalPinGate
+        open={pinStep === 'set-new'}
+        title={t('parental.setPinTitle', { defaultValue: 'Configurar PIN' })}
+        message={t('parental.enterNewPin', { defaultValue: 'Ingresa el nuevo PIN (4 a 6 dígitos).' })}
+        onCancel={() => {
+          setPinStep('');
+          setPendingOldPin('');
+        }}
+        onSubmit={async (pin) => {
+          const digits = String(pin || '').replace(/\D/g, '').slice(0, 6);
+          if (digits.length < 4) {
+            setPinMsg(t('parental.pinMin', { defaultValue: 'El PIN debe tener al menos 4 dígitos.' }));
+            return false;
+          }
+          try {
+            // Si había PIN anterior, ya fue verificado en el paso previo.
+            void pendingOldPin;
+            await parental.setPin(digits);
+            setPinMsg(t('parental.pinSaved', { defaultValue: 'PIN guardado.' }));
+            setPendingOldPin('');
+            setPinStep('');
+            return true;
+          } catch {
+            setPinMsg(t('parental.pinError', { defaultValue: 'No se pudo guardar el PIN.' }));
+            return false;
+          }
+        }}
+      />
+
       <div className="parental-header">
         <h2 className="parental-title">{t('parental.title', { defaultValue: 'Control parental' })}</h2>
         <div className="parental-subtitle">
@@ -72,17 +132,20 @@ export function ParentalSettingsPage() {
         <div className="parental-row">
           <div className="parental-row__label">{t('parental.pin', { defaultValue: 'PIN' })}</div>
           <div className="parental-pin-controls">
-            <input
-              className="parental-pin-input"
-              value={pinDraft}
-              placeholder="••••"
-              inputMode="numeric"
-              type="password"
-              onChange={(e) => setPinDraft(String(e.target.value || '').replace(/\D/g, '').slice(0, 6))}
-            />
-            <button type="button" className="parental-btn" onClick={savePin}>
-              {t('parental.savePin', { defaultValue: 'Guardar PIN' })}
+            <button type="button" className="parental-btn" onClick={openChangePinFlow}>
+              {parental.hasPinConfigured()
+                ? t('parental.changePin', { defaultValue: 'Cambiar PIN' })
+                : t('parental.setPin', { defaultValue: 'Configurar PIN' })}
             </button>
+            {parental.hasPinConfigured() ? (
+              <button
+                type="button"
+                className="parental-btn parental-btn--secondary"
+                onClick={() => setShowForgotPin(true)}
+              >
+                {t('parental.forgotPin', { defaultValue: 'Olvidé mi PIN' })}
+              </button>
+            ) : null}
             <button type="button" className="parental-btn parental-btn--secondary" onClick={() => parental.lockNow()}>
               {t('parental.lockNow', { defaultValue: 'Bloquear ahora' })}
             </button>
@@ -96,6 +159,68 @@ export function ParentalSettingsPage() {
             })}
           </div>
         ) : null}
+
+        <div className="parental-divider" />
+
+        <div className="parental-row">
+          <div className="parental-row__label">
+            {t('parental.ratingTitle', { defaultValue: 'Clasificación (BR)' })}
+          </div>
+          <div className="parental-rating-hint">
+            {t('parental.ratingHint', { defaultValue: 'Configura el límite de edad para pedir PIN al reproducir.' })}
+          </div>
+        </div>
+
+        <div className="parental-rating-controls">
+          <div className="parental-rating-label">
+            {t('parental.ratingAllowUpTo', { defaultValue: 'Permitir hasta' })}
+          </div>
+          <div className="parental-rating-segment" role="group" aria-label={t('parental.ratingAllowUpTo', { defaultValue: 'Permitir hasta' })}>
+            {[
+              { key: 'none', label: t('parental.ratingNoRestrictions', { defaultValue: 'Sin restricciones' }) },
+              { key: 'L', label: t('parental.ratingLivreShort', { defaultValue: 'L' }), value: 0 },
+              { key: '10', label: '10', value: 10 },
+              { key: '12', label: '12', value: 12 },
+              { key: '14', label: '14', value: 14 },
+              { key: '16', label: '16', value: 16 },
+              { key: '18', label: '18', value: 18 },
+            ].map((opt) => {
+              const isActive =
+                opt.key === 'none'
+                  ? parental.ratingEnabled !== true
+                  : parental.ratingEnabled === true && Number(parental.ratingAllowedMax ?? 18) === Number(opt.value);
+
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  className={`parental-rating-segbtn${isActive ? ' active' : ''}`}
+                  onClick={() => {
+                    if (opt.key === 'none') {
+                      parental.setRatingEnabled(false);
+                      return;
+                    }
+                    parental.setRatingEnabled(true);
+                    parental.setRatingAllowedMax(opt.value);
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {parental.ratingEnabled ? (
+            <label className="parental-rating-checkbox">
+              <input
+                type="checkbox"
+                checked={parental.ratingApplyToLive !== false}
+                onChange={(e) => parental.setRatingApplyToLive(e.target.checked)}
+              />
+              {t('parental.ratingApplyToLive', { defaultValue: 'Aplicar a TV en vivo (EPG)' })}
+            </label>
+          ) : null}
+        </div>
       </div>
 
       <div className="parental-card">

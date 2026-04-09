@@ -3,6 +3,8 @@ import { derivePinHash, timingSafeEqual } from '../utils/pinHash';
 import { getActiveBrandConfig } from '../config/brandConfig';
 
 const DEFAULT_UNLOCK_TTL_MS = 15 * 60 * 1000;
+const DEFAULT_RATING_UNLOCK_TTL_MS = 15 * 60 * 1000;
+const DEFAULT_PARENTALCONTROL_MULTI_TTL_MS = 40 * 60 * 1000;
 const STORAGE_VERSION = 1;
 
 function getStorageKey() {
@@ -39,6 +41,15 @@ const initial = {
   unlockUntilMs: null,
   lastUnlockScope: null, // 'global' | 'channel' | null
   lastUnlockedChannelId: null,
+  ratingEnabled: false,
+  ratingAllowedMax: 18, // "Permitir hasta" (BR)
+  ratingApplyToLive: true,
+  ratingUnlockUntilMs: null, // unlock temporal global para rating
+
+  // Unlock por metadata `parentalControl:true` (adultos).
+  // Nota: por seguridad, este unlock es solo de sesión (no se persiste en localStorage).
+  pcUnlockUntilMs: null, // TTL global (multi-adult)
+  pcUnlockSessionActive: false, // "sin límite" en sesión (single-adult)
 };
 
 export const useParentalStore = create((set, get) => {
@@ -58,6 +69,10 @@ export const useParentalStore = create((set, get) => {
       unlockUntilMs: Number.isFinite(Number(data.unlockUntilMs)) ? Number(data.unlockUntilMs) : null,
       lastUnlockScope: data.lastUnlockScope === 'global' || data.lastUnlockScope === 'channel' ? data.lastUnlockScope : null,
       lastUnlockedChannelId: data.lastUnlockedChannelId != null ? String(data.lastUnlockedChannelId) : null,
+      ratingEnabled: data.ratingEnabled === true,
+      ratingAllowedMax: Number.isFinite(Number(data.ratingAllowedMax)) ? Number(data.ratingAllowedMax) : 18,
+      ratingApplyToLive: data.ratingApplyToLive !== false,
+      ratingUnlockUntilMs: Number.isFinite(Number(data.ratingUnlockUntilMs)) ? Number(data.ratingUnlockUntilMs) : null,
     }));
   };
 
@@ -74,6 +89,10 @@ export const useParentalStore = create((set, get) => {
       unlockUntilMs: s.unlockUntilMs,
       lastUnlockScope: s.lastUnlockScope,
       lastUnlockedChannelId: s.lastUnlockedChannelId,
+      ratingEnabled: s.ratingEnabled === true,
+      ratingAllowedMax: s.ratingAllowedMax,
+      ratingApplyToLive: s.ratingApplyToLive !== false,
+      ratingUnlockUntilMs: s.ratingUnlockUntilMs,
     });
   };
 
@@ -87,7 +106,39 @@ export const useParentalStore = create((set, get) => {
     persist,
 
     setEnabled: (enabled) => {
-      set((s) => ({ ...s, enabled: Boolean(enabled) }));
+      const nextEnabled = Boolean(enabled);
+      set((s) => ({
+        ...s,
+        enabled: nextEnabled,
+        // Si se desactiva, invalidar unlocks de sesión por seguridad/coherencia.
+        ...(nextEnabled
+          ? null
+          : {
+              unlockUntilMs: null,
+              lastUnlockScope: null,
+              lastUnlockedChannelId: null,
+              ratingUnlockUntilMs: null,
+              pcUnlockUntilMs: null,
+              pcUnlockSessionActive: false,
+            }),
+      }));
+      queueMicrotask(() => persist());
+    },
+
+    setRatingEnabled: (enabled) => {
+      set((s) => ({ ...s, ratingEnabled: Boolean(enabled) }));
+      queueMicrotask(() => persist());
+    },
+
+    setRatingAllowedMax: (value) => {
+      const n = Number(value);
+      const allowed = n === 0 || n === 10 || n === 12 || n === 14 || n === 16 || n === 18 ? n : 18;
+      set((s) => ({ ...s, ratingAllowedMax: allowed }));
+      queueMicrotask(() => persist());
+    },
+
+    setRatingApplyToLive: (enabled) => {
+      set((s) => ({ ...s, ratingApplyToLive: Boolean(enabled) }));
       queueMicrotask(() => persist());
     },
 
@@ -108,6 +159,9 @@ export const useParentalStore = create((set, get) => {
         unlockUntilMs: null,
         lastUnlockScope: null,
         lastUnlockedChannelId: null,
+        ratingUnlockUntilMs: null,
+        pcUnlockUntilMs: null,
+        pcUnlockSessionActive: false,
       }));
       queueMicrotask(() => persist());
       return true;
@@ -178,7 +232,15 @@ export const useParentalStore = create((set, get) => {
     },
 
     lockNow: () => {
-      set((s) => ({ ...s, unlockUntilMs: null, lastUnlockScope: null, lastUnlockedChannelId: null }));
+      set((s) => ({
+        ...s,
+        unlockUntilMs: null,
+        lastUnlockScope: null,
+        lastUnlockedChannelId: null,
+        ratingUnlockUntilMs: null,
+        pcUnlockUntilMs: null,
+        pcUnlockSessionActive: false,
+      }));
       queueMicrotask(() => persist());
     },
 
@@ -205,6 +267,55 @@ export const useParentalStore = create((set, get) => {
         lastUnlockedChannelId: scope === 'channel' ? String(channelId ?? '') : null,
       }));
       queueMicrotask(() => persist());
+      return true;
+    },
+
+    isRatingUnlocked: () => {
+      const s = get();
+      const now = Date.now();
+      return !!(s.ratingUnlockUntilMs && now < s.ratingUnlockUntilMs);
+    },
+
+    unlockRatingWithPin: async (pin, { ttlMs = DEFAULT_RATING_UNLOCK_TTL_MS } = {}) => {
+      const ok = await get().verifyPin(pin);
+      if (!ok) return false;
+      const until = Date.now() + (Number.isFinite(Number(ttlMs)) ? Number(ttlMs) : DEFAULT_RATING_UNLOCK_TTL_MS);
+      set((s) => ({ ...s, ratingUnlockUntilMs: until }));
+      queueMicrotask(() => persist());
+      return true;
+    },
+
+    // --- Unlock por metadata parentalControl:true ---
+    isParentalControlUnlocked: () => {
+      const s = get();
+      if (s.pcUnlockSessionActive === true) return true;
+      const now = Date.now();
+      return !!(s.pcUnlockUntilMs && now < s.pcUnlockUntilMs);
+    },
+
+    invalidateParentalControlUnlock: () => {
+      set((s) => {
+        if (!s.pcUnlockUntilMs && !s.pcUnlockSessionActive) return s;
+        return { ...s, pcUnlockUntilMs: null, pcUnlockSessionActive: false };
+      });
+    },
+
+    unlockParentalControlWithPin: async (
+      pin,
+      { mode = 'ttl', ttlMs = DEFAULT_PARENTALCONTROL_MULTI_TTL_MS } = {}
+    ) => {
+      const ok = await get().verifyPin(pin);
+      if (!ok) return false;
+
+      if (mode === 'session') {
+        set((s) => ({ ...s, pcUnlockSessionActive: true, pcUnlockUntilMs: null }));
+        return true;
+      }
+
+      const until =
+        Date.now() +
+        (Number.isFinite(Number(ttlMs)) ? Number(ttlMs) : DEFAULT_PARENTALCONTROL_MULTI_TTL_MS);
+      set((s) => ({ ...s, pcUnlockUntilMs: until, pcUnlockSessionActive: false }));
       return true;
     },
   };

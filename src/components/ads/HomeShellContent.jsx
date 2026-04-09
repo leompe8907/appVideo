@@ -3,6 +3,7 @@
  */
 
 import { useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { usePlayer } from '../../contexts/PlayerContext';
 import panaccessService from '../../services/panaccessService';
@@ -20,10 +21,11 @@ function findStreamById(streams, id) {
 }
 
 export function HomeShellContent() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { play } = usePlayer();
-  const { requestPlayChannel } = useParentalGate();
+  const { requestPlayChannel, requestPlayMedia } = useParentalGate();
   const { currentBrand } = useBrand();
   const { epg, ads, loadAds } = usePreload();
 
@@ -124,7 +126,13 @@ export function HomeShellContent() {
         try {
           const url = panaccessService.normalizePlaybackUrl(panaccessService.getCatchupM3u8Url({ catchupId: id }));
           if (url) {
-            play({ type: 'catchup', id, url, item: { catchupId: id }, autoPlay: true });
+            requestPlayMedia({
+              item: { catchupId: id },
+              ratingRaw: null,
+              title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+              message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
+              playFn: () => play({ type: 'catchup', id, url, item: { catchupId: id }, autoPlay: true }),
+            });
           }
         } catch (e) {
           if (import.meta.env?.DEV) console.warn('[HomeShellContent] catchup', e);
@@ -138,7 +146,7 @@ export function HomeShellContent() {
         navigate('/home/vod', { state: { adOpenVodId: id } });
       }
     },
-    [epg.streams, navigate, play]
+    [epg.streams, navigate, play, requestPlayChannel, requestPlayMedia, t]
   );
 
   const { top, bottom } = ads;

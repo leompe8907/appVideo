@@ -98,9 +98,17 @@ export function enrichConfigWithAssets(config) {
   const splashAnimado = config.ui?.splashAnimado === true || config.splashAnimado === true;
   const splashPath = getSplashPath(config.brand, splashAnimado);
 
+  const parental = {
+    // TTL por defecto para unlock global cuando hay múltiples canales con parentalControl:true
+    // dentro del mismo bouquet. Se puede sobreescribir por marca en brands.js
+    parentalControlMultiTtlMs: config.parental?.parentalControlMultiTtlMs ?? 40 * 60 * 1000,
+    ...(config.parental || {}),
+  };
+
   return {
     ...config,
     ...EPG_SHARED,
+    parental,
     assets: {
       logo: getBrandAsset(config.brand, "logo.png"),
       logoWhite: getBrandAsset(config.brand, "logo-white.png"),

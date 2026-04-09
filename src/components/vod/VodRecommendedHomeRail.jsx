@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../../contexts/BrandContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { usePreload } from '../../store/usePreload';
+import { useParentalGate } from '../../hooks/useParentalGate';
 import VodCard from './VodCard';
 import VodSeeMoreCard from './VodSeeMoreCard';
 import VodDetailModal from './VodDetailModal';
@@ -21,6 +22,7 @@ export function VodRecommendedHomeRail() {
   const navigate = useNavigate();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
+  const { requestPlayMedia } = useParentalGate();
   const { vod, loadVOD } = usePreload();
   const [detailItem, setDetailItem] = useState(null);
   const vodRetryRef = useRef(false);
@@ -49,7 +51,14 @@ export function VodRecommendedHomeRail() {
   };
 
   const handlePlayFromModal = (params) => {
-    if (params?.url) play(params);
+    if (!params?.url) return;
+    requestPlayMedia({
+      item: params.item,
+      ratingRaw: params?.item?.parentalRating,
+      title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+      message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
+      playFn: () => play(params),
+    });
   };
 
   const showRail = status === 'ready' && vodRecommended.length > 0;

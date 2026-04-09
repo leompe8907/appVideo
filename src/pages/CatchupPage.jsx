@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { usePreload } from '../store/usePreload';
 import { usePlayer } from '../contexts/PlayerContext';
+import { useParentalGate } from '../hooks/useParentalGate';
 import panaccessService from '../services/panaccessService';
 import '../styles/pages/_catchup.scss';
 
@@ -78,7 +79,7 @@ function CatchupEventButton({
   );
 }
 
-function LegacyCatchupLayout({ groups, onPlayCatchup }) {
+function LegacyCatchupLayout({ groups, onPlayCatchup, t }) {
   const flat = groups?.flatMap((g) => (g?.events || []).map((ev) => ({ group: g, event: ev }))) || [];
   return (
     <div className="catchup-layout catchup-layout--legacy">
@@ -105,12 +106,12 @@ function LegacyCatchupLayout({ groups, onPlayCatchup }) {
           </div>
         </section>
       ))}
-      {flat.length === 0 ? <div className="catchup-empty">Sin catchup disponible</div> : null}
+      {flat.length === 0 ? <div className="catchup-empty">{t('catchup.empty', { defaultValue: 'Sin catchup disponible' })}</div> : null}
     </div>
   );
 }
 
-function TimelineCatchupLayout({ events, onPlayCatchup }) {
+function TimelineCatchupLayout({ events, onPlayCatchup, t }) {
   const groupedByDate = useMemo(() => {
     const map = new Map();
     (events || []).forEach((ev) => {
@@ -148,17 +149,17 @@ function TimelineCatchupLayout({ events, onPlayCatchup }) {
           </div>
         </section>
       ))}
-      {(events || []).length === 0 ? <div className="catchup-empty">Sin catchup disponible</div> : null}
+      {(events || []).length === 0 ? <div className="catchup-empty">{t('catchup.empty', { defaultValue: 'Sin catchup disponible' })}</div> : null}
     </div>
   );
 }
 
-function NetflixCatchupLayout({ recorded, recommended, onPlayCatchup }) {
+function NetflixCatchupLayout({ recorded, recommended, onPlayCatchup, t }) {
   const recommendedItems = recommended || [];
   return (
     <div className="catchup-layout catchup-layout--netflix">
       <section className="catchup-rail">
-        <h2 className="catchup-rail-title">{'Grabados'}</h2>
+        <h2 className="catchup-rail-title">{t('catchup.recorded', { defaultValue: 'Grabados' })}</h2>
         <div className="catchup-rail-grid">
           {(recorded || []).slice(0, 30).map((task) => {
             const catchupId = task?.catchupId ?? task?.catchup_id ?? null;
@@ -175,12 +176,12 @@ function NetflixCatchupLayout({ recorded, recommended, onPlayCatchup }) {
               />
             );
           })}
-          {(recorded || []).length === 0 ? <div className="catchup-empty">No hay grabaciones</div> : null}
+          {(recorded || []).length === 0 ? <div className="catchup-empty">{t('catchup.noRecordings', { defaultValue: 'No hay grabaciones' })}</div> : null}
         </div>
       </section>
 
       <section className="catchup-rail">
-        <h2 className="catchup-rail-title">{'Recomendados'}</h2>
+        <h2 className="catchup-rail-title">{t('catchup.recommended', { defaultValue: 'Recomendados' })}</h2>
         <div className="catchup-rail-grid">
           {recommendedItems.slice(0, 30).map((event) => {
             const catchupId = event?.catchupId ?? event?.id ?? event?.eventId ?? null;
@@ -197,7 +198,7 @@ function NetflixCatchupLayout({ recorded, recommended, onPlayCatchup }) {
               />
             );
           })}
-          {recommendedItems.length === 0 ? <div className="catchup-empty">Sin recomendaciones</div> : null}
+          {recommendedItems.length === 0 ? <div className="catchup-empty">{t('catchup.noRecommendations', { defaultValue: 'Sin recomendaciones' })}</div> : null}
         </div>
       </section>
     </div>
@@ -210,6 +211,7 @@ export function CatchupPage() {
   const { currentBrand } = useBrand();
   const { catchup, loadCatchup } = usePreload();
   const { play } = usePlayer();
+  const { requestPlayMedia } = useParentalGate();
 
   const catchupCfg = currentBrand?.catchup || {};
   const uiCfg = catchupCfg.ui || {};
@@ -258,7 +260,13 @@ export function CatchupPage() {
   const onPlayCatchup = (catchupId, event) => {
     const url = resolveCatchupUrl(catchupId);
     if (!url) return;
-    play({ type: 'catchup', id: catchupId, url, item: event || { catchupId }, autoPlay: true });
+    requestPlayMedia({
+      item: event || { catchupId },
+      ratingRaw: event?.parentalRating,
+      title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+      message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
+      playFn: () => play({ type: 'catchup', id: catchupId, url, item: event || { catchupId }, autoPlay: true }),
+    });
   };
 
   useEffect(() => {
@@ -272,7 +280,13 @@ export function CatchupPage() {
     if (!url) return;
 
     autoPlayDoneRef.current = true;
-    play({ type: 'catchup', id: catchupId, url, item: { catchupId }, autoPlay: true });
+    requestPlayMedia({
+      item: { catchupId },
+      ratingRaw: null,
+      title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+      message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
+      playFn: () => play({ type: 'catchup', id: catchupId, url, item: { catchupId }, autoPlay: true }),
+    });
   }, [location.state, enabled, play]);
 
   const layoutsToShow = useMemo(() => {
@@ -305,12 +319,12 @@ export function CatchupPage() {
               if (catchupCfg.layouts?.[layoutKey]?.enabled === false) return null;
 
               if (layoutKey === 'legacy') {
-                return <LegacyCatchupLayout key="legacy" groups={groups} onPlayCatchup={onPlayCatchup} />;
+                return <LegacyCatchupLayout key="legacy" groups={groups} onPlayCatchup={onPlayCatchup} t={t} />;
               }
               if (layoutKey === 'timeline') {
-                return <TimelineCatchupLayout key="timeline" events={allEvents} onPlayCatchup={onPlayCatchup} />;
+                return <TimelineCatchupLayout key="timeline" events={allEvents} onPlayCatchup={onPlayCatchup} t={t} />;
               }
-              return <NetflixCatchupLayout key="netflix" recorded={recorded} recommended={recommended} onPlayCatchup={onPlayCatchup} />;
+              return <NetflixCatchupLayout key="netflix" recorded={recorded} recommended={recommended} onPlayCatchup={onPlayCatchup} t={t} />;
             })}
           </div>
         )}

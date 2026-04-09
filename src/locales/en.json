@@ -40,7 +40,9 @@
     "sectionServices": "Services",
     "sectionVod": "VOD",
     "sectionCatchup": "Catchup",
-    "sectionEpg": "EPG"
+    "sectionEpg": "EPG",
+    "tabVod": "VOD",
+    "tabCatchup": "Catchup"
   },
   "settings": {
     "confirm": "Confirm",
@@ -179,10 +181,21 @@
     "watchCatchup": "Watch / Catchup (not available)"
   },
   "player": {
+    "player": "Player",
     "selectChannelFirst": "Select a channel first",
     "play": "Play",
     "pause": "Pause",
     "playbackError": "Playback error"
+  },
+  "catchup": {
+    "title": "Catchup",
+    "loading": "Loading...",
+    "errorLoad": "Error loading catchup",
+    "empty": "No catchup available",
+    "recorded": "Recorded",
+    "recommended": "Recommended",
+    "noRecordings": "No recordings",
+    "noRecommendations": "No recommendations"
   },
   "vod": {
     "title": "VOD",
@@ -238,6 +251,51 @@
       "Terror": "Horror",
       "Variedades": "Variety"
     }
+  },
+  "parental": {
+    "title": "Parental control",
+    "subtitle": "Block access to channels with a PIN (without hiding them).",
+    "enabled": "Enable parental control",
+    "pin": "PIN",
+    "setPin": "Set PIN",
+    "changePin": "Change PIN",
+    "forgotPin": "Forgot my PIN",
+    "forgotPinTitle": "Forgot my PIN",
+    "forgotPinMessage": "For security reasons, the PIN cannot be reset here without verification. Please sign in again or contact support according to your service policy.",
+    "enterCurrentPin": "Enter the current PIN to continue.",
+    "setPinTitle": "Set PIN",
+    "enterNewPin": "Enter the new PIN (4 to 6 digits).",
+    "pinMin": "The PIN must be at least 4 digits.",
+    "pinSaved": "PIN saved.",
+    "pinError": "Could not save the PIN.",
+    "lockNow": "Lock now",
+    "unlockActive": "Temporary unlock active. Blocked channels will play until you press “Lock now” or the time expires.",
+    "channels": "Channels",
+    "noChannels": "No channels loaded. Make sure preload has completed.",
+    "blocked": "Blocked",
+    "allowed": "Allowed",
+    "block": "Block channel",
+    "unblock": "Unblock channel",
+    "confirmChangeTitle": "Parental control",
+    "confirmChangeMessage": "Enter the PIN to change the channel lock.",
+    "ratingTitle": "Rating (BR)",
+    "ratingHint": "Set an age limit to require a PIN on playback.",
+    "ratingAllowUpTo": "Allow up to",
+    "ratingNoRestrictions": "No restrictions",
+    "ratingLivreShort": "L",
+    "ratingApplyToLive": "Apply to Live TV (EPG)",
+    "restrictedTitle": "Restricted content",
+    "restrictedMessage": "Enter the PIN to play content restricted by rating.",
+    "parentalControlMessage": "Enter the PIN to play restricted content.",
+    "channelBlockedTitle": "Channel locked"
+  },
+  "pinGate": {
+    "enterPin": "Enter PIN",
+    "wrongPin": "Wrong PIN",
+    "keypad": "Numeric keypad",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "ok": "OK"
   },
   "preload": {
     "message": "Preparing program guide...",

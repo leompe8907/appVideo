@@ -95,7 +95,7 @@ export function HomePage() {
           ref={containerRef}
           tabIndex={isPlayerActive ? -1 : undefined}
           role={isPlayerActive ? 'application' : undefined}
-          aria-label={isPlayerActive ? 'Reproductor' : undefined}
+          aria-label={isPlayerActive ? t('player.player', { defaultValue: 'Reproductor' }) : undefined}
         />
         {isPlayerActive && (playerState?.isLoading || playerState?.isSeeking) && (
           <div className="home-global-player-loading">

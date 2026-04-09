@@ -1,6 +1,8 @@
 .parental-page {
   padding: 18px 18px 28px;
   color: var(--text-color, #fff);
+  max-width: 100%;
+  overflow-x: hidden; /* nunca scroll horizontal */
 }
 
 .parental-header {
@@ -85,6 +87,56 @@
   opacity: 0.9;
 }
 
+.parental-rating-controls {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  max-width: 100%;
+  overflow-x: hidden; /* nunca scroll horizontal */
+}
+
+.parental-rating-label {
+  opacity: 0.95;
+}
+
+.parental-rating-hint {
+  opacity: 0.8;
+  font-size: 0.95rem;
+  text-align: right;
+  max-width: 60ch;
+}
+
+.parental-rating-segment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+  overflow-x: hidden; /* nunca scroll horizontal */
+}
+
+.parental-rating-segbtn {
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  white-space: nowrap;
+}
+
+.parental-rating-segbtn.active {
+  background: rgba(102, 126, 234, 0.25);
+  border-color: rgba(102, 126, 234, 0.6);
+}
+
+.parental-rating-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.95;
+}
+
 .parental-empty {
   margin-top: 10px;
   opacity: 0.85;
@@ -96,8 +148,14 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
   max-height: 56vh;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden; /* nunca scroll horizontal */
   padding-right: 6px;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge legacy */
+}
+.parental-channel-grid::-webkit-scrollbar {
+  display: none; /* WebKit/Blink */
 }
 
 /* Ajustes responsivos suaves (también aplica a PC preview) */

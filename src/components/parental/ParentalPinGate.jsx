@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
 export function ParentalPinGate({
   open,
-  title = 'Canal bloqueado',
-  message = 'Ingresa el PIN para continuar',
+  title,
+  message,
   onSubmit,
   onCancel,
 }) {
+  const { t } = useTranslation();
   const { isTV } = useDevice();
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -42,12 +44,12 @@ export function ParentalPinGate({
     if (!open) return;
     const value = String(pin || '');
     if (!value) {
-      setError('Ingresa el PIN');
+      setError(t('pinGate.enterPin', { defaultValue: 'Ingresa el PIN' }));
       return;
     }
     const ok = await onSubmit?.(value);
     if (!ok) {
-      setError('PIN incorrecto');
+      setError(t('pinGate.wrongPin', { defaultValue: 'PIN incorrecto' }));
       setPin('');
       try { pinInputRef.current?.focus?.({ preventScroll: true }); } catch { /* noop */ }
     }
@@ -88,11 +90,14 @@ export function ParentalPinGate({
 
   if (!open) return null;
 
+  const effectiveTitle = title || t('parental.channelBlockedTitle', { defaultValue: 'Canal bloqueado' });
+  const effectiveMessage = message || t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para continuar' });
+
   return (
-    <div className="parental-pin-overlay" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="parental-pin-overlay" role="dialog" aria-modal="true" aria-label={effectiveTitle}>
       <div className="parental-pin-card">
-        <div className="parental-pin-title">{title}</div>
-        <div className="parental-pin-message">{message}</div>
+        <div className="parental-pin-title">{effectiveTitle}</div>
+        <div className="parental-pin-message">{effectiveMessage}</div>
 
         <input
           ref={pinInputRef}
@@ -118,7 +123,7 @@ export function ParentalPinGate({
 
         {error ? <div className="parental-pin-error">{error}</div> : null}
 
-        <div className="parental-pin-pad" aria-label="Teclado numérico">
+        <div className="parental-pin-pad" aria-label={t('pinGate.keypad', { defaultValue: 'Teclado numérico' })}>
           {digits.map((d, idx) => (
             <button
               key={d}
@@ -146,16 +151,16 @@ export function ParentalPinGate({
             className="parental-pin-digit parental-pin-digit--ok"
             onClick={() => handleSubmit()}
           >
-            OK
+            {t('pinGate.ok', { defaultValue: 'OK' })}
           </button>
         </div>
 
         <div className="parental-pin-actions">
           <button ref={cancelRef} type="button" className="parental-pin-cancel" onClick={() => onCancel?.()}>
-            Cancelar
+            {t('pinGate.cancel', { defaultValue: 'Cancelar' })}
           </button>
           <button ref={okRef} type="button" className="parental-pin-ok" onClick={() => handleSubmit()}>
-            Confirmar
+            {t('pinGate.confirm', { defaultValue: 'Confirmar' })}
           </button>
         </div>
       </div>

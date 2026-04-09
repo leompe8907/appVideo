@@ -11,12 +11,14 @@ export function useParentalGate() {
   const title = useParentalGateStore((s) => s.title);
   const message = useParentalGateStore((s) => s.message);
   const requestPlayChannel = useParentalGateStore((s) => s.requestPlayChannel);
+  const requestPlayMedia = useParentalGateStore((s) => s.requestPlayMedia);
   const closeGate = useParentalGateStore((s) => s.closeGate);
   const submitPin = useParentalGateStore((s) => s.submitPin);
 
   return {
     gate: { open, channel, title, message },
     requestPlayChannel,
+    requestPlayMedia,
     closeGate,
     submitPin,
   };
