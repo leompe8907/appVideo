@@ -113,6 +113,9 @@
  * @param {Object} parental - Configuración de Control Parental por marca:
  *   @param {number} parental.parentalControlMultiTtlMs - TTL (ms) para unlock temporal global cuando en el bouquet hay 2+ canales
  *     con `parentalControl:true`. Default: 40 minutos.
+ *
+ * @param {Object} epg - Configuración de EPG por marca:
+ *   @param {number} epg.reminderLeadSeconds - Segundos antes de start para mostrar popup de recordatorio. Default: 60.
  */
 export const BRANDS = [
   {

@@ -178,7 +178,12 @@
     "notLive": "No en vivo",
     "noDescription": "Sin descripción",
     "playLiveChannel": "Reproducir canal (en vivo)",
-    "watchCatchup": "Watch / Catchup (no disponible)"
+    "watchCatchup": "Ver (Catchup)",
+    "remindMe": "Recordarme",
+    "reminderTitle": "Recordatorio",
+    "reminderStartingSoon": "Este programa está por comenzar",
+    "reminderStartsIn": "Comienza en",
+    "goToChannel": "Ir al canal"
   },
   "player": {
     "player": "Reproductor",

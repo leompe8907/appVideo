@@ -105,10 +105,18 @@ export function enrichConfigWithAssets(config) {
     ...(config.parental || {}),
   };
 
+  const epg = {
+    // Recordatorios EPG: segundos antes de start para mostrar popup.
+    // Se puede sobreescribir por marca en brands.js (config.epg.reminderLeadSeconds).
+    reminderLeadSeconds: config.epg?.reminderLeadSeconds ?? 60,
+    ...(config.epg || {}),
+  };
+
   return {
     ...config,
     ...EPG_SHARED,
     parental,
+    epg,
     assets: {
       logo: getBrandAsset(config.brand, "logo.png"),
       logoWhite: getBrandAsset(config.brand, "logo-white.png"),

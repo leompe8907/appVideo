@@ -178,7 +178,12 @@
     "notLive": "Not live",
     "noDescription": "No description",
     "playLiveChannel": "Play channel (live)",
-    "watchCatchup": "Watch / Catchup (not available)"
+    "watchCatchup": "Watch (Catchup)",
+    "remindMe": "Remind me",
+    "reminderTitle": "Reminder",
+    "reminderStartingSoon": "This program is about to start",
+    "reminderStartsIn": "Starts in",
+    "goToChannel": "Go to channel"
   },
   "player": {
     "player": "Player",

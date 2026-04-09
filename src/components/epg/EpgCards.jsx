@@ -9,6 +9,8 @@ import panaccessService from '../../services/panaccessService';
 import EpgEventModal from './EpgEventModal';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { useParentalGate } from '../../hooks/useParentalGate';
+import { useEpgReminderStore } from '../../store/epgReminderStore';
+import { getChannelStableId } from '../../utils/channelId';
 import '../epg/epg-common.scss';
 
 function asMs(dateLike) {
@@ -165,6 +167,9 @@ export function EpgCards({ onSelect }) {
   const { requestPlayChannel } = useParentalGate();
   const { isTV } = useDevice();
   const navigate = useNavigate();
+  const addReminder = useEpgReminderStore((s) => s.addReminder);
+  const removeReminder = useEpgReminderStore((s) => s.removeReminder);
+  const hasReminder = useEpgReminderStore((s) => s.hasReminder);
 
   const epgCardsCfg = currentBrand?.epgCards || {};
   const epgPastEnabled = !!epgCardsCfg.epgPast;
@@ -406,6 +411,7 @@ export function EpgCards({ onSelect }) {
           channel={detail.channel}
           event={detail.event}
           isLive={detail.isLive}
+          nowMs={nowMs}
           canPlayLive={canPlayLive}
           onClose={() => setDetail(null)}
           onPlayLive={() => {
@@ -415,8 +421,26 @@ export function EpgCards({ onSelect }) {
             }
           }}
           onWatchCatchup={(catchupId) => {
-            if (!catchupId) return;
+            if (catchupId == null || Number(catchupId) < 0) return;
             navigate('/home/catchup', { state: { catchupId, from: 'epg' }, replace: false });
+          }}
+          onRemind={({ channel, event, startMs }) => {
+            const eventId = event?.event_id ?? event?.eventId ?? event?.id ?? null;
+            const id = String(eventId ?? '');
+            if (!id) return;
+            if (hasReminder(id)) {
+              removeReminder(id);
+              return;
+            }
+            addReminder({
+              id,
+              eventId,
+              title: event?.languages?.[0]?.title || event?.title || event?.name || '',
+              startMs: Number(startMs ?? event?.startDate?.valueOf?.() ?? new Date(event?.start).getTime()),
+              channelStableId: getChannelStableId(channel),
+            });
+            // feedback visual: cerrar modal (opcional, mantiene UX simple)
+            setDetail(null);
           }}
         />
       )}

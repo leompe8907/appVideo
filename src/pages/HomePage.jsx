@@ -6,6 +6,7 @@ import { usePlayer } from '../contexts/PlayerContext';
 import PlayerHud from '../components/player/PlayerHud';
 import ConfirmModal from '../components/ConfirmModal';
 import ParentalGateHost from '../components/parental/ParentalGateHost';
+import EpgReminderHost from '../components/epg/EpgReminderHost';
 import { useTranslation } from 'react-i18next';
 import '../styles/pages/_home-shell.scss';
 
@@ -84,6 +85,7 @@ export function HomePage() {
         }}
       />
       <ParentalGateHost />
+      <EpgReminderHost />
       <div className={`home-global-player${isPlayerActive ? ' home-global-player--active' : ''}`}>
         {/*
           El motor solo debe montar el <video> en un nodo que React no reordene.

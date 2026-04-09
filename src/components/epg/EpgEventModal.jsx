@@ -25,11 +25,13 @@ export function EpgEventModal({
   channel,
   event,
   isLive,
+  nowMs,
   canPlayLive = true,
   showActions = true,
   onClose,
   onPlayLive,
   onWatchCatchup,
+  onRemind,
 }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
@@ -55,23 +57,6 @@ export function EpgEventModal({
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [open, onClose]);
-
-  useEffect(() => {
-    if (isTV && open) {
-      const t = setTimeout(() => {
-        if (typeof setFocus === 'function') {
-          // Si estamos en modo info-only, el foco debe ir al botón cerrar.
-          if (!showActions) {
-            setFocus('epg-event-close');
-            return;
-          }
-          // Si canPlayLive es false, se podría hacer fallback a watchCatchup o close
-          setFocus(canPlayLive ? 'epg-event-play-live' : 'epg-event-watch-catchup');
-        }
-      }, 400);
-      return () => clearTimeout(t);
-    }
-  }, [isTV, open, canPlayLive, showActions, setFocus]);
 
   const eventTitle = event?.languages?.[0]?.title || event?.title || '';
   const eventDescription =
@@ -108,17 +93,60 @@ export function EpgEventModal({
   const startTime = fmtHHmm(startMs);
   const endTime = fmtHHmm(endMs);
 
+  // El evento EPG puede incluir identificador de catchup (backend/config).
+  // Si existe, habilitamos "Watch / Catchup".
+  const catchupId = event?.catchupId ?? event?.catchup_id ?? event?.catchupEventId ?? null;
+  const canWatch = catchupId != null && Number(catchupId) > -1;
+
+  const isPast = useMemo(() => {
+    if (nowMs == null || endMs == null) return false;
+    return Number(nowMs) > Number(endMs);
+  }, [nowMs, endMs]);
+
+  const isFuture = useMemo(() => {
+    if (nowMs == null || startMs == null) return false;
+    return Number(nowMs) < Number(startMs);
+  }, [nowMs, startMs]);
+
+  useEffect(() => {
+    if (isTV && open) {
+      const t = setTimeout(() => {
+        if (typeof setFocus === 'function') {
+          // Si estamos en modo info-only, el foco debe ir al botón cerrar.
+          if (!showActions) {
+            setFocus('epg-event-close');
+            return;
+          }
+          // Orden de foco:
+          // - Play live si está disponible
+          // - si es futuro, "Recordarme"
+          // - si es pasado con catchup disponible, "Watch/Catchup"
+          // - fallback cerrar
+          if (canPlayLive) {
+            setFocus('epg-event-play-live');
+            return;
+          }
+          if (isFuture) {
+            setFocus('epg-event-remind');
+            return;
+          }
+          if (isPast && canWatch) {
+            setFocus('epg-event-watch-catchup');
+            return;
+          }
+          setFocus('epg-event-close');
+        }
+      }, 400);
+      return () => clearTimeout(t);
+    }
+  }, [isTV, open, canPlayLive, showActions, setFocus, isFuture, isPast, canWatch]);
+
   const durationMinutes = useMemo(() => {
     if (startMs == null || endMs == null) return null;
     const diffMs = endMs - startMs;
     if (!Number.isFinite(diffMs) || diffMs <= 0) return null;
     return Math.max(0, Math.round(diffMs / 60000));
   }, [startMs, endMs]);
-
-  // El evento EPG puede incluir identificador de catchup (backend/config).
-  // Si existe, habilitamos "Watch / Catchup".
-  const catchupId = event?.catchupId ?? event?.catchup_id ?? event?.catchupEventId ?? null;
-  const canWatch = !!catchupId;
 
   if (!open) return null;
 
@@ -230,18 +258,27 @@ export function EpgEventModal({
               {t('epg.playLiveChannel', { defaultValue: 'Reproducir canal (en vivo)' })}
             </FocusableButton>
 
-            <FocusableButton
-              className={`epg-event-modal-secondary ${!canWatch ? 'epg-event-modal-secondary--disabled' : ''}`}
-              type="button"
-              disabled={!canWatch}
-              onClick={() => {
-                if (!canWatch) return;
-                onWatchCatchup?.(catchupId, event);
-              }}
-              focusKey="epg-event-watch-catchup"
-            >
-              {t('epg.watchCatchup', { defaultValue: 'Watch / Catchup (no disponible)' })}
-            </FocusableButton>
+            {isPast && canWatch ? (
+              <FocusableButton
+                className="epg-event-modal-secondary"
+                type="button"
+                onClick={() => onWatchCatchup?.(catchupId, event)}
+                focusKey="epg-event-watch-catchup"
+              >
+                {t('epg.watchCatchup', { defaultValue: 'Watch (Catchup)' })}
+              </FocusableButton>
+            ) : null}
+
+            {isFuture ? (
+              <FocusableButton
+                className="epg-event-modal-secondary"
+                type="button"
+                onClick={() => onRemind?.({ channel, event, startMs, endMs })}
+                focusKey="epg-event-remind"
+              >
+                {t('epg.remindMe', { defaultValue: 'Recordarme' })}
+              </FocusableButton>
+            ) : null}
           </div>
         ) : null}
       </div>
