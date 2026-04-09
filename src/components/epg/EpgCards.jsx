@@ -412,13 +412,18 @@ export function EpgCards({ onSelect }) {
           event={detail.event}
           isLive={detail.isLive}
           nowMs={nowMs}
+          remindActive={(() => {
+            const ev = detail?.event;
+            const id = String(ev?.event_id ?? ev?.eventId ?? ev?.id ?? '');
+            return id ? hasReminder(id) : false;
+          })()}
           canPlayLive={canPlayLive}
           onClose={() => setDetail(null)}
           onPlayLive={() => {
-            const started = handlePlayLive(detail.channel);
-            if (started && closeModalOnPlayLive) {
-              setDetail(null);
-            }
+            // Requerimiento UX: al iniciar reproducción desde detalle, cerrar SIEMPRE el modal
+            // para que no quede overlay sobre el player (y para evitar dobles overlays con PIN gate).
+            setDetail(null);
+            handlePlayLive(detail.channel);
           }}
           onWatchCatchup={(catchupId) => {
             if (catchupId == null || Number(catchupId) < 0) return;
@@ -439,8 +444,6 @@ export function EpgCards({ onSelect }) {
               startMs: Number(startMs ?? event?.startDate?.valueOf?.() ?? new Date(event?.start).getTime()),
               channelStableId: getChannelStableId(channel),
             });
-            // feedback visual: cerrar modal (opcional, mantiene UX simple)
-            setDetail(null);
           }}
         />
       )}

@@ -32,6 +32,7 @@ export function EpgEventModal({
   onPlayLive,
   onWatchCatchup,
   onRemind,
+  remindActive = false,
 }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
@@ -276,7 +277,9 @@ export function EpgEventModal({
                 onClick={() => onRemind?.({ channel, event, startMs, endMs })}
                 focusKey="epg-event-remind"
               >
-                {t('epg.remindMe', { defaultValue: 'Recordarme' })}
+                {remindActive
+                  ? t('epg.reminded', { defaultValue: 'Recordado' })
+                  : t('epg.remindMe', { defaultValue: 'Recordarme' })}
               </FocusableButton>
             ) : null}
           </div>

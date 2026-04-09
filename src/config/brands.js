@@ -116,6 +116,8 @@
  *
  * @param {Object} epg - Configuración de EPG por marca:
  *   @param {number} epg.reminderLeadSeconds - Segundos antes de start para mostrar popup de recordatorio. Default: 60.
+ *   @param {boolean} epg.reminderShowWhilePlaying - Si true, el popup puede mostrarse aun con playback activo.
+ *     Si false (default), se considera "no molestar" y no se muestra mientras hay video reproduciendo.
  */
 export const BRANDS = [
   {

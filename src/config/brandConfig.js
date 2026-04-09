@@ -109,6 +109,8 @@ export function enrichConfigWithAssets(config) {
     // Recordatorios EPG: segundos antes de start para mostrar popup.
     // Se puede sobreescribir por marca en brands.js (config.epg.reminderLeadSeconds).
     reminderLeadSeconds: config.epg?.reminderLeadSeconds ?? 60,
+    // Recordatorios EPG: si false, no mostrar popup mientras el player está reproduciendo.
+    reminderShowWhilePlaying: config.epg?.reminderShowWhilePlaying === true,
     ...(config.epg || {}),
   };
 

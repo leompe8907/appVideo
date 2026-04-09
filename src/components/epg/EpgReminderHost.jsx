@@ -44,7 +44,7 @@ export function EpgReminderHost() {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
   const { epg } = usePreload();
-  const { play } = usePlayer();
+  const { play, state: playerState } = usePlayer();
   const { isTV } = useDevice();
   const { requestPlayChannel } = useParentalGate();
 
@@ -56,6 +56,8 @@ export function EpgReminderHost() {
   const leadSeconds =
     Number(currentBrand?.epg?.reminderLeadSeconds ?? currentBrand?.epgCards?.reminderLeadSeconds ?? 60) || 60;
   const leadMs = Math.max(5, leadSeconds) * 1000;
+  const showWhilePlaying = currentBrand?.epg?.reminderShowWhilePlaying === true;
+  const isPlayerActive = Boolean(playerState?.url);
 
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
@@ -64,6 +66,7 @@ export function EpgReminderHost() {
   }, []);
 
   const due = useMemo(() => {
+    if (isPlayerActive && !showWhilePlaying) return null;
     const list = Array.isArray(reminders) ? reminders : [];
     if (list.length === 0) return null;
     const eligible = list
@@ -80,7 +83,7 @@ export function EpgReminderHost() {
     if (eligible.length === 0) return null;
     eligible.sort((a, b) => a.startMs - b.startMs);
     return eligible[0];
-  }, [reminders, nowMs, leadMs, isDismissed]);
+  }, [reminders, nowMs, leadMs, isDismissed, isPlayerActive, showWhilePlaying]);
 
   const [openId, setOpenId] = useState(null);
   useEffect(() => {
