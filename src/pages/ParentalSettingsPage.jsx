@@ -4,6 +4,7 @@ import { usePreload } from '../store/usePreload';
 import { useParental } from '../store/useParental';
 import { getChannelStableId } from '../utils/channelId';
 import { useParentalGate } from '../hooks/useParentalGate';
+import ParentalChannelCard from '../components/parental/ParentalChannelCard';
 import '../styles/pages/_parental.scss';
 
 export function ParentalSettingsPage() {
@@ -104,23 +105,18 @@ export function ParentalSettingsPage() {
             {t('parental.noChannels', { defaultValue: 'No hay canales cargados. Asegúrate de haber hecho preload.' })}
           </div>
         ) : (
-          <div className="parental-channel-list">
+          <div className="parental-channel-grid">
             {channels.map((ch) => {
               const id = getChannelStableId(ch);
               const blocked = parental.isChannelBlocked(id);
-              const tempUnlocked = blocked && parental.isUnlockedFor(id);
               return (
-                <button
+                <ParentalChannelCard
                   key={id || ch.lcn || ch.name}
-                  type="button"
-                  className={[
-                    'parental-channel',
-                    blocked ? 'blocked' : '',
-                    tempUnlocked ? 'temp-unlocked' : '',
-                  ].filter(Boolean).join(' ')}
-                  onClick={() => {
+                  channel={ch}
+                  blocked={blocked}
+                  onSelect={() => {
                     // Reglas UX:
-                    // - Para DESBLOQUEAR (cambiar de bloqueado -> permitido), pedir PIN si control parental está activo.
+                    // - Para DESBLOQUEAR (bloqueado -> permitido), pedir PIN si control parental está activo.
                     // - Para BLOQUEAR, no pedir PIN (acción del adulto) pero sí invalidar unlock global (lo hace el store).
                     if (parental.enabled && parental.hasPinConfigured() && blocked) {
                       requestPlayChannel({
@@ -134,17 +130,7 @@ export function ParentalSettingsPage() {
                     }
                     parental.toggleBlock(id);
                   }}
-                >
-                  <span className="parental-channel__lcn">{ch.lcn ?? ''}</span>
-                  <span className="parental-channel__name">{ch.name ?? ''}</span>
-                  <span className="parental-channel__state">
-                    {blocked
-                      ? (tempUnlocked
-                        ? t('parental.tempUnlocked', { defaultValue: 'Bloqueado (desbloqueado temporal)' })
-                        : t('parental.blocked', { defaultValue: 'Bloqueado' }))
-                      : t('parental.allowed', { defaultValue: 'Permitido' })}
-                  </span>
-                </button>
+                />
               );
             })}
           </div>
