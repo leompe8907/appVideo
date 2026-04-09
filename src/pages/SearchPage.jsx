@@ -29,6 +29,7 @@ function SearchTab({ id, label, active, hidden, onSelect }) {
 }
 
 function ResultItem({ item, index, onSelect }) {
+  const { t } = useTranslation();
   const { ref, isTV, focused } = useSpatialNavigation({
     focusKey: `search-result-${index}-${item.type}-${item.id ?? item.name ?? 'x'}`,
     onEnterPress: () => onSelect?.(item),
@@ -98,13 +99,24 @@ function ResultItem({ item, index, onSelect }) {
           {timeText ? <div className="search-result__time">{timeText}</div> : null}
         </>
       ) : (
-        <div className="search-result__name">
-          {item.type === 'service' && item.lcn != null
-            ? <span className="search-result__lcn">{item.lcn}</span>
-            : null
-          }
-          {item.name}
-        </div>
+        <>
+          <div className="search-result__name">
+            {item.type === 'service' && item.lcn != null
+              ? <span className="search-result__lcn">{item.lcn}</span>
+              : null
+            }
+            {item.name}
+          </div>
+          {item.type === 'vod' && item.vodSearchMeta ? (
+            <div className="search-result__vod-meta">
+              {item.vodSearchMeta.kind === 'actor'
+                ? t('search.vodMetaActor', { name: item.vodSearchMeta.value, defaultValue: `Actor: ${item.vodSearchMeta.value}` })
+                : item.vodSearchMeta.kind === 'director'
+                  ? t('search.vodMetaDirector', { name: item.vodSearchMeta.value, defaultValue: `Dirección: ${item.vodSearchMeta.value}` })
+                  : t('search.vodMetaYear', { year: item.vodSearchMeta.value, defaultValue: `Año: ${item.vodSearchMeta.value}` })}
+            </div>
+          ) : null}
+        </>
       )}
     </button>
   );

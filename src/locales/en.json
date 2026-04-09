@@ -42,7 +42,10 @@
     "sectionCatchup": "Catchup",
     "sectionEpg": "EPG",
     "tabVod": "VOD",
-    "tabCatchup": "Catchup"
+    "tabCatchup": "Catchup",
+    "vodMetaActor": "Actor: {{name}}",
+    "vodMetaDirector": "Director: {{name}}",
+    "vodMetaYear": "Year: {{year}}"
   },
   "settings": {
     "confirm": "Confirm",

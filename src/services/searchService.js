@@ -161,6 +161,64 @@ function resolveVodPosterUrl(item, drmBaseUrl) {
  * Series: primero background (o image3 → original); si falta o falla la carga, posterInfo (o image1 → posterInfo).
  * Devuelve `vodPosterFallback` solo cuando hay una URL secundaria distinta de la principal (para onError en UI).
  */
+/** Año de estreno (misma heurística que detalle VOD). */
+function extractVodReleaseYear(vod) {
+  const raw = vod?.libraryReleaseDate ?? vod?.releaseDate ?? '';
+  const m = String(raw).trim().match(/^(\d{4})/);
+  return m ? m[1] : null;
+}
+
+function firstPersonNameMatching(names, lowerQuery) {
+  if (!Array.isArray(names)) return null;
+  for (const n of names) {
+    if (n != null && normalizeStr(n).indexOf(lowerQuery) !== -1) return String(n);
+  }
+  return null;
+}
+
+/**
+ * Relevancia VOD: título > actor/director > año (4 dígitos).
+ * Devuelve { relevance, vodSearchMeta } donde meta solo aplica si el título no matchea la query.
+ */
+function scoreVodSearch(vod, trimmed, lowerQuery) {
+  const name = vod?.name ?? '';
+  if (!name) return { relevance: 0, vodSearchMeta: null };
+
+  const nameHit = normalizeStr(name).indexOf(lowerQuery) !== -1;
+  let relevance = 0;
+  if (nameHit) relevance = Math.max(relevance, calculateRelevance(name, trimmed));
+
+  const actorHit = firstPersonNameMatching(vod?.actorNames, lowerQuery);
+  const directorHit = firstPersonNameMatching(vod?.directorNames, lowerQuery);
+  if (actorHit) {
+    relevance = Math.max(relevance, Math.floor(calculateRelevance(actorHit, trimmed) * 0.82));
+  }
+  if (directorHit) {
+    relevance = Math.max(relevance, Math.floor(calculateRelevance(directorHit, trimmed) * 0.82));
+  }
+
+  const releaseYear = extractVodReleaseYear(vod);
+  const isYearQuery = /^\d{4}$/.test(trimmed);
+  if (isYearQuery && releaseYear === trimmed) {
+    relevance = Math.max(relevance, 430);
+  }
+
+  if (relevance <= 0) return { relevance: 0, vodSearchMeta: null };
+
+  let vodSearchMeta = null;
+  if (!nameHit) {
+    if (isYearQuery && releaseYear === trimmed) {
+      vodSearchMeta = { kind: 'year', value: releaseYear };
+    } else if (actorHit) {
+      vodSearchMeta = { kind: 'actor', value: actorHit };
+    } else if (directorHit) {
+      vodSearchMeta = { kind: 'director', value: directorHit };
+    }
+  }
+
+  return { relevance, vodSearchMeta };
+}
+
 function resolveVodSeriesPosters(item, drmBaseUrl) {
   const base = String(drmBaseUrl || '').replace(/\/?$/, '');
 
@@ -269,14 +327,14 @@ export function searchAll({
     allResults.push(normalized);
   });
 
-  // VOD: nombre
+  // VOD: título, actores, directores, año (libraryReleaseDate)
   (Array.isArray(vods) ? vods : []).forEach((vod) => {
-    const name = vod?.name;
-    if (!name) return;
-    if (normalizeStr(name).indexOf(lowerQuery) === -1) return;
+    const { relevance, vodSearchMeta } = scoreVodSearch(vod, trimmed, lowerQuery);
+    if (relevance <= 0) return;
     const normalized = normalizeResult(vod, 'vod', { vodDrmBaseUrl });
     if (!normalized) return;
-    normalized.relevance = calculateRelevance(name, trimmed);
+    normalized.relevance = relevance;
+    if (vodSearchMeta) normalized.vodSearchMeta = vodSearchMeta;
     allResults.push(normalized);
   });
 
