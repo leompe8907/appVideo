@@ -12,7 +12,7 @@ import panaccessService from '../../services/panaccessService';
 import { getVodImageUrl } from '../../services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+import { useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 
 export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }) {
   const { t } = useTranslation();
@@ -24,7 +24,7 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
   const [error, setError] = useState(null);
   const [extraMeta, setExtraMeta] = useState(null);
 
-  const { setFocus } = useSpatialNavigation();
+  const setFocus = useSpatialSetFocus();
 
   useEffect(() => {
     if (isTV && !loading) {

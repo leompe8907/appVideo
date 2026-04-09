@@ -11,7 +11,7 @@ import panaccessService from '../../services/panaccessService';
 import { getVodImageUrl } from '../../services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+import { useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 
 const DESCRIPTION_MAX_LENGTH = 180;
 
@@ -26,7 +26,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [extraMeta, setExtraMeta] = useState(null);
 
-  const { setFocus } = useSpatialNavigation();
+  const setFocus = useSpatialSetFocus();
 
   useEffect(() => {
     if (isTV && !loading) {

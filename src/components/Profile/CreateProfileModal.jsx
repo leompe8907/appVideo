@@ -10,7 +10,7 @@ import { useDevice } from '../../contexts/DeviceContext';
 
 import { FocusableInput } from '../navigation/FocusableInput';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+import { useSpatialNavigation, useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 
 import panaccessService from '../../services/panaccessService';
 import Img from '../../constants/images';
@@ -32,7 +32,7 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
     (card) => !profiles.some((profile) => profile.sn === getCardKey(card))
   );
 
-  const { setFocus } = useSpatialNavigation();
+  const setFocus = useSpatialSetFocus();
 
   // Focus inicial en TV
   useEffect(() => {

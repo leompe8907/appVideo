@@ -11,7 +11,7 @@ import { loginAndActivateLicense } from '../services/loginFlow';
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
 import { getActiveLicense } from '../utils/userSession';
 import { useUdidLoginFlow } from '../hooks/useUdidLoginFlow';
-import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
+import { useSpatialSetFocus } from '../hooks/navigation/useSpatialNavigation';
 import '../styles/components/_login.scss';
 
 export function LoginPage() {
@@ -31,7 +31,7 @@ export function LoginPage() {
   const [isUdidModalOpen, setIsUdidModalOpen] = useState(false);
   const [udidQrImageSrc, setUdidQrImageSrc] = useState('');
 
-  const { setFocus } = useSpatialNavigation();
+  const setFocus = useSpatialSetFocus();
 
   console.log(`🖥️ [DEVICE] Modo: ${isTV ? 'TV' : 'PC'}`);
 

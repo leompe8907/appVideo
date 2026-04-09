@@ -7,12 +7,12 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../contexts/DeviceContext';
 import { FocusableButton } from './navigation/FocusableButton';
-import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
+import { useSpatialSetFocus } from '../hooks/navigation/useSpatialNavigation';
 
 export function MessageModal({ type = 'success', message, onClose }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
-  const { setFocus } = useSpatialNavigation();
+  const setFocus = useSpatialSetFocus();
 
   useEffect(() => {
     if (isTV) {

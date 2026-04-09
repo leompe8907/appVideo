@@ -11,7 +11,7 @@ import { useDevice } from '../contexts/DeviceContext';
 import { DeleteProfileModal } from '../components/profile/DeleteProfileModal';
 import { MessageModal } from '../components/MessageModal';
 import { FocusableButton } from '../components/navigation/FocusableButton';
-import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
+import { useSpatialNavigation, useSpatialSetFocus } from '../hooks/navigation/useSpatialNavigation';
 import panaccessService from '../services/panaccessService';
 import { setLoggedOut } from '../utils/userSession';
 import Img from '../constants/images';
@@ -43,7 +43,7 @@ export function ProfilePage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState(null);
 
-  const { setFocus } = useSpatialNavigation();
+  const setFocus = useSpatialSetFocus();
 
   // Si esta marca no tiene perfiles, redirigir a smartcard (evita acceso directo por URL)
   const profilesFeatureEnabled = currentBrand ? isFeatureEnabled('profiles') : true;

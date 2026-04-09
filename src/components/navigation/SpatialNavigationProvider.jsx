@@ -65,6 +65,10 @@ export function SpatialNavigationProvider({ children }) {
         initNav({
           debug: debugEnabled,
           visualDebug: visualDebug,
+          // Sincronizar foco DOM con el foco espacial: necesario para que webOS/Tizen
+          // asocien el campo activo y abran el teclado virtual al pulsar OK.
+          shouldFocusDOMNode: true,
+          domNodeFocusOptions: { preventScroll: true },
         });
 
         if (setKeys && typeof setKeys === 'function') {

@@ -2,9 +2,25 @@
  * Hook wrapper de @noriginmedia/norigin-spatial-navigation
  * Adapta el comportamiento de foco virtual para TV y nativo DOM para PC.
  */
-import { useRef } from 'react';
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+import { useRef, useCallback } from 'react';
+import { useFocusable, setFocus as noriginSetFocus } from '@noriginmedia/norigin-spatial-navigation';
 import { useDevice } from '../../contexts/DeviceContext';
+
+/**
+ * Programar foco por focusKey en TV sin registrar un focusable huérfano
+ * (evita el warning "Component added without a node reference").
+ */
+export function useSpatialSetFocus() {
+  const { isTV } = useDevice();
+  return useCallback(
+    (focusKey, focusDetails) => {
+      if (isTV && focusKey) {
+        noriginSetFocus(focusKey, focusDetails);
+      }
+    },
+    [isTV]
+  );
+}
 
 export function useSpatialNavigation(config = {}) {
   const { isTV } = useDevice();
@@ -27,9 +43,9 @@ export function useSpatialNavigation(config = {}) {
     focused,
     focusSelf,
     hasFocusedChild,
-    setFocus
   } = useFocusable({
-    isFocusable: isTV && isFocusable !== false,
+    // La API de norigin usa `focusable`, no `isFocusable` (antes se ignoraba).
+    focusable: isTV && isFocusable !== false,
     onEnterPress: isTV ? onEnterPress : undefined,
     onArrowPress: isTV ? onArrowPress : undefined,
     onFocus: isTV ? onFocus : undefined,
@@ -59,8 +75,8 @@ export function useSpatialNavigation(config = {}) {
       }
     },
     setFocus: (...args) => {
-      if (isTV && typeof setFocus === 'function') {
-        setFocus(...args);
+      if (isTV) {
+        noriginSetFocus(...args);
       }
     },
     hasFocusedChild: isTV ? hasFocusedChild : false,

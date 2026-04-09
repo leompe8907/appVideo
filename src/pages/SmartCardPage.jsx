@@ -12,7 +12,7 @@ import {
   setActiveLicense,
 } from '../utils/userSession';
 import { useDevice } from '../contexts/DeviceContext';
-import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
+import { useSpatialNavigation, useSpatialSetFocus } from '../hooks/navigation/useSpatialNavigation';
 import '../styles/pages/_smartcard.scss';
 
 // Normaliza la estructura de una licencia (alineado con 10foot)
@@ -58,7 +58,7 @@ export function SmartCardPage() {
   // para que el usuario no quede atascado en esta pantalla.
   const autoActivateAttemptedRef = useRef(false);
   const { isTV } = useDevice();
-  const { setFocus } = useSpatialNavigation();
+  const setFocus = useSpatialSetFocus();
 
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
 

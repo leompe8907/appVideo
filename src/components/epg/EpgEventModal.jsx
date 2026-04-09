@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+import { useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 import '../epg/epg-common.scss';
 
 function fmtHHmm(ms) {
@@ -36,7 +36,7 @@ export function EpgEventModal({
 }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
-  const { setFocus } = useSpatialNavigation();
+  const setFocus = useSpatialSetFocus();
 
   useEffect(() => {
     if (!open) return undefined;

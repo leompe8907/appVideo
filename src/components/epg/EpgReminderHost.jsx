@@ -6,7 +6,7 @@ import { usePreload } from '../../store/usePreload';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import panaccessService from '../../services/panaccessService';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+import { useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 import { FocusableButton } from '../navigation/FocusableButton';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useEpgReminderStore } from '../../store/epgReminderStore';
@@ -94,7 +94,7 @@ export function EpgReminderHost() {
   const active = due && openId === due.id ? due : null;
   const countdown = active ? formatCountdown(active.startMs - nowMs) : '00:00';
 
-  const { setFocus } = useSpatialNavigation();
+  const setFocus = useSpatialSetFocus();
   useEffect(() => {
     if (!active || !isTV) return;
     const tm = setTimeout(() => setFocus?.('epg-reminder-go'), 50);

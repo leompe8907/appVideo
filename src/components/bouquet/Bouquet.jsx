@@ -9,7 +9,7 @@ import { useDevice } from '../../contexts/DeviceContext';
 import { usePreload } from '../../store/usePreload';
 import { mergeEpgIntoChannels } from '../../utils/epgMerge';
 import { getMainBouquets, getChannelsForBouquet, filterMainBouquets } from '../../services/tvDataService';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+import { useSpatialNavigation, useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 
 /**
  * Normaliza un color devuelto por el backend (ej. "ffffff  ") a formato CSS (#ffffff).
@@ -76,7 +76,7 @@ export function Bouquet() {
   const isLoading = bouquetsFromPreload !== null ? false : fallbackLoading;
   const error = bouquetsFromPreload !== null ? null : fallbackError;
 
-  const { setFocus } = useSpatialNavigation();
+  const setFocus = useSpatialSetFocus();
 
   useEffect(() => {
     if (isTV && bouquets.length > 0) {

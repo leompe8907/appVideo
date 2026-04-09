@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
+import { useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 import { resolveLiveWindowFromEpgItems } from '../../utils/epgCurrentEvent';
 import { usePreload } from '../../store/usePreload';
 import panaccessService from '../../services/panaccessService';
@@ -197,7 +197,7 @@ export function PlayerHud({ className = '' }) {
   } = usePlayer();
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
-  const { setFocus } = useSpatialNavigation();
+  const setFocus = useSpatialSetFocus();
   const [visible, setVisible] = useState(true);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
