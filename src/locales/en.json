@@ -218,6 +218,8 @@
     "episodes": "Episodes",
     "minutes": "min",
     "releaseYear": "Release",
+    "cast": "Cast",
+    "directors": "Directors",
     "errorLoadSeries": "Error loading series info.",
     "errorPlay": "Error playing.",
     "seriesCategory": "Series",

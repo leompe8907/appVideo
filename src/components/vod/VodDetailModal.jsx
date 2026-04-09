@@ -3,7 +3,7 @@
  * Película: reproducir. Serie: lista de episodios y reproducir.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDevice } from '../../contexts/DeviceContext';
@@ -24,6 +24,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
   const [loading, setLoading] = useState(!!item?.isSeries);
   const [error, setError] = useState(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [extraMeta, setExtraMeta] = useState(null);
 
   const { setFocus } = useSpatialNavigation();
 
@@ -84,6 +85,61 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
       .filter(Boolean);
     return [...new Set(names)];
   })();
+
+  const { castList, directorsList } = useMemo(() => {
+    const src = extraMeta || item || {};
+    const readList = (v) => {
+      if (!v) return [];
+      if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean);
+      if (typeof v === 'string') {
+        return v
+          .split(/[,\|;]/g)
+          .map((x) => String(x).trim())
+          .filter(Boolean);
+      }
+      return [];
+    };
+
+    const cast = [
+      ...readList(src.cast),
+      ...readList(src.actors),
+      ...readList(src.actor),
+      ...readList(src.elenco),
+      ...readList(src.actorNames),
+    ];
+    const directors = [
+      ...readList(src.directors),
+      ...readList(src.director),
+      ...readList(src.diretor),
+      ...readList(src.direction),
+      ...readList(src.directorNames),
+    ];
+
+    return {
+      castList: [...new Set(cast)].filter(Boolean),
+      directorsList: [...new Set(directors)].filter(Boolean),
+    };
+  }, [extraMeta, item]);
+
+  useEffect(() => {
+    const url = item?.customDataUrl ?? item?.custom_data_url ?? null;
+    if (!url || typeof url !== 'string') {
+      setExtraMeta(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled) setExtraMeta(data && typeof data === 'object' ? data : null);
+      })
+      .catch(() => {
+        if (!cancelled) setExtraMeta(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [item?.customDataUrl, item?.custom_data_url]);
 
   useEffect(() => {
     if (!isSeries || !item?.id) {
@@ -191,6 +247,23 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
                   </span>
                 )}
               </div>
+
+              {directorsList.length > 0 ? (
+                <div className="vod-detail-meta" style={{ marginTop: 10 }}>
+                  <span className="vod-detail-meta-item vod-detail-category-tag">
+                    {t('vod.directors', { defaultValue: 'Dirección' })}: {directorsList.join(', ')}
+                  </span>
+                </div>
+              ) : null}
+
+              {castList.length > 0 ? (
+                <div className="vod-detail-meta" style={{ marginTop: 6 }}>
+                  <span className="vod-detail-meta-item vod-detail-category-tag">
+                    {t('vod.cast', { defaultValue: 'Reparto' })}: {castList.join(', ')}
+                  </span>
+                </div>
+              ) : null}
+
               {description && (
                 <div className="vod-detail-description-wrap">
                   <p className="vod-detail-description">{descriptionToShow}</p>

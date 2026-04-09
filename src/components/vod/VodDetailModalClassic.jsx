@@ -4,7 +4,7 @@
  * Series: columna izquierda poster+info, derecha lista de episodios.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDevice } from '../../contexts/DeviceContext';
@@ -22,6 +22,7 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
   const [seriesInfo, setSeriesInfo] = useState(null);
   const [loading, setLoading] = useState(!!item?.isSeries);
   const [error, setError] = useState(null);
+  const [extraMeta, setExtraMeta] = useState(null);
 
   const { setFocus } = useSpatialNavigation();
 
@@ -58,6 +59,59 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
       .filter(Boolean);
     return names.length > 0 ? names.join(', ') : '';
   })();
+
+  const { castList, directorsList } = useMemo(() => {
+    const src = extraMeta || item || {};
+    const readList = (v) => {
+      if (!v) return [];
+      if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean);
+      if (typeof v === 'string') {
+        return v
+          .split(/[,\|;]/g)
+          .map((x) => String(x).trim())
+          .filter(Boolean);
+      }
+      return [];
+    };
+    const cast = [
+      ...readList(src.cast),
+      ...readList(src.actors),
+      ...readList(src.actor),
+      ...readList(src.elenco),
+      ...readList(src.actorNames),
+    ];
+    const directors = [
+      ...readList(src.directors),
+      ...readList(src.director),
+      ...readList(src.diretor),
+      ...readList(src.direction),
+      ...readList(src.directorNames),
+    ];
+    return {
+      castList: [...new Set(cast)].filter(Boolean),
+      directorsList: [...new Set(directors)].filter(Boolean),
+    };
+  }, [extraMeta, item]);
+
+  useEffect(() => {
+    const url = item?.customDataUrl ?? item?.custom_data_url ?? null;
+    if (!url || typeof url !== 'string') {
+      setExtraMeta(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled) setExtraMeta(data && typeof data === 'object' ? data : null);
+      })
+      .catch(() => {
+        if (!cancelled) setExtraMeta(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [item?.customDataUrl, item?.custom_data_url]);
 
   useEffect(() => {
     if (!isSeries || !item?.id) {
@@ -146,6 +200,16 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
                     ))}
                   </div>
                 </div>
+                {directorsList.length > 0 ? (
+                  <div className="vod-classic-description" style={{ marginTop: 8 }}>
+                    <strong>{t('vod.directors', { defaultValue: 'Dirección' })}:</strong> {directorsList.join(', ')}
+                  </div>
+                ) : null}
+                {castList.length > 0 ? (
+                  <div className="vod-classic-description" style={{ marginTop: 6 }}>
+                    <strong>{t('vod.cast', { defaultValue: 'Reparto' })}:</strong> {castList.join(', ')}
+                  </div>
+                ) : null}
                 {description && <div className="vod-classic-description">{description}</div>}
                 {error && <p className="vod-detail-error">{error}</p>}
               </div>
@@ -172,6 +236,16 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
                       ))}
                     </div>
                   </div>
+                  {directorsList.length > 0 ? (
+                    <div className="vod-classic-description" style={{ marginTop: 8 }}>
+                      <strong>{t('vod.directors', { defaultValue: 'Dirección' })}:</strong> {directorsList.join(', ')}
+                    </div>
+                  ) : null}
+                  {castList.length > 0 ? (
+                    <div className="vod-classic-description" style={{ marginTop: 6 }}>
+                      <strong>{t('vod.cast', { defaultValue: 'Reparto' })}:</strong> {castList.join(', ')}
+                    </div>
+                  ) : null}
                   {description && <div className="vod-classic-description">{description}</div>}
                 </div>
               </div>

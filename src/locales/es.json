@@ -218,6 +218,8 @@
     "episodes": "Episodios",
     "minutes": "min",
     "releaseYear": "Estreno",
+    "cast": "Reparto",
+    "directors": "Dirección",
     "errorLoadSeries": "Error al cargar la serie.",
     "errorPlay": "Error al reproducir.",
     "seriesCategory": "Séries",

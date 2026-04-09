@@ -135,7 +135,29 @@ export async function loadVODData(brandConfig, options = {}) {
   const library = Array.isArray(libraryResponse) && libraryResponse.length > 0
     ? libraryResponse[0]
     : (libraryResponse && typeof libraryResponse === 'object' && libraryResponse.categoryGroups != null ? libraryResponse : {});
-  const categoryGroups = (library.categoryGroups || []).filter((g) => g.type === 5 || g.type === 6);
+  const allGroups = library.categoryGroups || [];
+  const categoryGroups = allGroups.filter((g) => g.type === 5 || g.type === 6);
+
+  // Metadata VOD (por categorías) como en legacy: Actor / Direção.
+  // En algunos backends viene como type 3 (Actor) y type 7 (Direção), o por name.
+  const actorGroup = allGroups.find((g) => g?.type === 3 || String(g?.name || '').toLowerCase() === 'actor');
+  const directorGroup =
+    allGroups.find((g) => g?.type === 7 || String(g?.name || '').toLowerCase() === 'direção' || String(g?.name || '').toLowerCase() === 'direcao');
+
+  const actorByCategoryId = new Map();
+  const directorByCategoryId = new Map();
+  (actorGroup?.categories || []).forEach((c) => {
+    const id = c?.id;
+    const name = c?.name;
+    if (id == null || !name) return;
+    actorByCategoryId.set(String(id), String(name));
+  });
+  (directorGroup?.categories || []).forEach((c) => {
+    const id = c?.id;
+    const name = c?.name;
+    if (id == null || !name) return;
+    directorByCategoryId.set(String(id), String(name));
+  });
 
   const categories = categoryGroups.flatMap((g) => g.categories || []);
   categories.forEach((cat, i) => {
@@ -161,6 +183,25 @@ export async function loadVODData(brandConfig, options = {}) {
     onProgress(allVods.length);
     if (list.length < VOD_CONTENT_PAGE_SIZE) break;
     offset += VOD_CONTENT_PAGE_SIZE;
+  }
+
+  // Enriquecer items VOD con actorNames/directorNames a partir de categories[] + mapas de library.
+  if (actorByCategoryId.size > 0 || directorByCategoryId.size > 0) {
+    allVods.forEach((vod) => {
+      const ids = Array.isArray(vod?.categories) ? vod.categories : [];
+      if (ids.length === 0) return;
+      const actorNames = [];
+      const directorNames = [];
+      ids.forEach((id) => {
+        const key = String(id);
+        const a = actorByCategoryId.get(key);
+        const d = directorByCategoryId.get(key);
+        if (a) actorNames.push(a);
+        if (d) directorNames.push(d);
+      });
+      if (actorNames.length > 0) vod.actorNames = [...new Set(actorNames)];
+      if (directorNames.length > 0) vod.directorNames = [...new Set(directorNames)];
+    });
   }
 
   return prepareDataForVOD(allVods, categories, vodRecommendedId, baseUrl, imageTemplates, t);

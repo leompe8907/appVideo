@@ -422,7 +422,8 @@
 }
 
 .vod-detail-meta-item {
-  font-size: 0.9rem;
+  padding: 0.15em 0.4em;
+  font-size: 1.2rem;
   color: rgba(255, 255, 255, 0.9);
 }
 
@@ -432,7 +433,7 @@
   padding: 0.15em 0.4em;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 1.2rem;
   font-weight: 600;
 }
 
@@ -446,7 +447,7 @@
 .vod-detail-category-tag {
   display: inline-block;
   padding: 0.2em 0.5em;
-  font-size: 0.8rem;
+  font-size: 1.2rem;
   color: rgba(255, 255, 255, 0.9);
   background: rgba(255, 255, 255, 0.12);
   border-radius: 4px;

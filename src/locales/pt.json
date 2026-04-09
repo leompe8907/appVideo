@@ -218,6 +218,8 @@
     "episodes": "Episódios",
     "minutes": "min",
     "releaseYear": "Lançamento",
+    "cast": "Elenco",
+    "directors": "Direção",
     "errorLoadSeries": "Erro ao carregar a série.",
     "errorPlay": "Erro ao reproduzir.",
     "seriesCategory": "Séries",
