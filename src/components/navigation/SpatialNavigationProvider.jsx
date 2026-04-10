@@ -42,7 +42,10 @@ export function SpatialNavigationProvider({ children }) {
       const rootEl = document.getElementById('root');
       if (rootEl) {
         if (!rootEl.hasAttribute('tabindex')) rootEl.setAttribute('tabindex', '-1');
-        rootEl.focus?.({ preventScroll: true });
+        // WebViews Tizen/webOS antiguos pueden fallar con focus({ preventScroll: true })
+        try {
+          if (typeof rootEl.focus === 'function') rootEl.focus();
+        } catch (_) {}
       }
 
       // 2. Registrar teclas específicas en Tizen (Back, Return, etc.)

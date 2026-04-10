@@ -13,7 +13,14 @@
     "build:intv": "cross-env VITE_BRAND=intv VITE_DEFAULT_BRAND=intv vite build",
     "build:gigmax": "cross-env VITE_BRAND=gigmax VITE_DEFAULT_BRAND=gigmax vite build",
     "preview": "vite preview",
-    "preview:brand": "vite preview --outDir dist",
+    "preview:telecable": "cross-env VITE_BRAND=telecable VITE_DEFAULT_BRAND=telecable vite preview --outDir dist/telecable",
+    "preview:telecable:full": "pnpm run build:telecable && pnpm run preview:telecable",
+    "preview:bromteck": "cross-env VITE_BRAND=bromteck VITE_DEFAULT_BRAND=bromteck vite preview --outDir dist/bromteck",
+    "preview:bromteck:full": "pnpm run build:bromteck && pnpm run preview:bromteck",
+    "preview:intv": "cross-env VITE_BRAND=intv VITE_DEFAULT_BRAND=intv vite preview --outDir dist/intv",
+    "preview:intv:full": "pnpm run build:intv && pnpm run preview:intv",
+    "preview:gigmax": "cross-env VITE_BRAND=gigmax VITE_DEFAULT_BRAND=gigmax vite preview --outDir dist/gigmax",
+    "preview:gigmax:full": "pnpm run build:gigmax && pnpm run preview:gigmax",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -25,17 +32,26 @@
     "i18next": "^24.2.3",
     "node-forge": "^1.0.0",
     "qrcode": "^1.5.4",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-i18next": "^15.7.4",
     "react-router-dom": "^7.11.0",
     "sass": "^1.97.0",
     "zustand": "^5.0.12"
   },
+  "pnpm": {
+    "allowBuilds": {
+      "@parcel/watcher": true,
+      "@swc/core": true,
+      "core-js": true,
+      "esbuild": true
+    }
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-legacy": "^8.0.1",
     "@vitejs/plugin-react-swc": "^4.2.2",
     "cross-env": "^7.0.3",
     "eslint": "^9.39.1",

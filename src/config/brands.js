@@ -270,7 +270,7 @@ export const BRANDS = [
       url: "https://shop.fotelka.tv/?c=customer&p=register",
     },
     udidLogin: {
-      enabled: true,
+      enabled: false,
       baseUrl: "",
       requestPath: "",
       wsUrl: "",

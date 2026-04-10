@@ -120,7 +120,7 @@ function App() {
           <div className="App">
             <Routes>
                 {/* Rutas públicas */}
-                <Route path="/" element={<Suspense fallback={<Loading />}><SplashPage /></Suspense>}/>
+                <Route path="/" element={<SplashPage />}/>
                 <Route path="/login" element={<Suspense fallback={<Loading />}><LoginPage /></Suspense>}/>
                 {/* Rutas protegidas */}
                 <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<Loading />}><ProfilePage /></Suspense></ProtectedRoute>}/>
