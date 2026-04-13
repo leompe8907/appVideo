@@ -1,6 +1,8 @@
 /**
  * Punto de entrada - Providers + Render
- * Compatibilidad: Tizen 4/5 (LG 2019), webOS 4/5 (Samsung 2019)
+ * Compatibilidad: Samsung Tizen 4/5 (~2019), LG webOS 4/5 (~2019)
+ *
+ * ReactDOM.render (API clásica): algunos WebViews de TV se comportan mejor que createRoot.
  */
 
 import './locales/i18n';
@@ -10,81 +12,35 @@ import { BrowserRouter } from 'react-router-dom';
 import { BrandProvider } from './contexts/BrandContext';
 import { DeviceProvider } from './contexts/DeviceContext';
 import { AppQueryProvider } from './query/QueryProvider';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import App from './App';
 
 import './styles/main.scss';
 
-/** ErrorBoundary inline — muestra el error real en pantalla en la TV */
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, info) {
-    console.error('[ErrorBoundary]', error, info);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return React.createElement('div', {
-        style: {
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: '#8B0000',
-          color: '#FFFFFF',
-          padding: '40px',
-          fontFamily: 'monospace',
-          fontSize: '28px',
-          overflow: 'auto',
-          zIndex: 99999,
-        }
-      },
-        React.createElement('div', { style: { marginBottom: 20, fontSize: 36, fontWeight: 'bold' } }, '⚠ Error de aplicación'),
-        React.createElement('div', { style: { marginBottom: 16, color: '#FFD700' } }, String(this.state.error)),
-        React.createElement('pre', { style: { fontSize: 20, whiteSpace: 'pre-wrap', wordBreak: 'break-all' } },
-          this.state.error && this.state.error.stack
-        )
-      );
-    }
-    return this.props.children;
-  }
-}
-
-/** Base URL alineada con Vite `base` (builds por marca bajo /{brand}/) */
-var routerBasename = (function() {
-  var base = (import.meta.env && import.meta.env.BASE_URL) || '/';
+const routerBasename = (() => {
+  const base = import.meta.env.BASE_URL || '/';
   if (base === '/') return undefined;
-  var trimmed = base.replace(/\/$/, '');
+  const trimmed = base.replace(/\/$/, '');
   return trimmed || undefined;
 })();
 
-/** Guard: si el div#root no existe, no explota silenciosamente */
-var rootEl = document.getElementById('root');
+const rootEl = document.getElementById('root');
 if (!rootEl) {
+  // eslint-disable-next-line no-console
   console.error('[main] No se encontró #root en el DOM');
 } else {
   ReactDOM.render(
-    React.createElement(
-      ErrorBoundary, null,
-      React.createElement(
-        BrowserRouter, { basename: routerBasename },
-        React.createElement(
-          DeviceProvider, null,
-          React.createElement(
-            BrandProvider, null,
-            React.createElement(
-              AppQueryProvider, null,
-              React.createElement(App, null)
-            )
-          )
-        )
-      )
-    ),
+    <ErrorBoundary>
+      <BrowserRouter basename={routerBasename}>
+        <DeviceProvider>
+          <BrandProvider>
+            <AppQueryProvider>
+              <App />
+            </AppQueryProvider>
+          </BrandProvider>
+        </DeviceProvider>
+      </BrowserRouter>
+    </ErrorBoundary>,
     rootEl
   );
 }
