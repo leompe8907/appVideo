@@ -376,8 +376,8 @@ export const BRANDS = [
       // EPG
       epgLineColorTime: "#3333FF",
       // Colores
-      primaryColor: "#3333FF",
-      secondaryColor: "#1a1aaa",
+      primaryColor: "#ff3336",
+      secondaryColor: "#ff3336",
       theme: "light",
       // Fuente
       fontFamily: "Roboto, sans-serif",
