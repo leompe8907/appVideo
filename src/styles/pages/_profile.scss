@@ -56,7 +56,7 @@
     }
 
     .profile-title {
-      font-size: clamp(2rem, 5vw, 4rem);
+      font-size: 3rem;
       font-weight: 600;
       color: #ffffff;
       margin: 0;
@@ -444,18 +444,18 @@
 @media (min-width: $breakpoint-fullhd) {
   .profile-page {
     .profiles-grid {
-      grid-template-columns: repeat(auto-fit, minmax(min(180px, 12vw), 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(12em, 1fr));
       gap: $spacing-lg;
     }
 
     .profile-card {
       .profile-avatar-wrapper {
-        width: clamp(100px, 10vw, 140px);
-        height: clamp(100px, 10vw, 140px);
+        width: 7em;
+        height: 7em;
       }
 
       .profile-avatar {
-        font-size: clamp(2.5rem, 4vw, 4rem);
+        font-size: 3.5rem;
       }
     }
   }

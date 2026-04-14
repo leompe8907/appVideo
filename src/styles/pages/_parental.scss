@@ -147,6 +147,8 @@
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
+  max-height: 28em;
+  // En pantallas muy bajas, evitar overflow vertical excesivo
   max-height: 56vh;
   overflow-y: auto;
   overflow-x: hidden; /* nunca scroll horizontal */
@@ -252,7 +254,8 @@
 }
 
 .parental-pin-card {
-  width: min(720px, 92vw);
+  width: 45em;
+  max-width: 92vw;
   border-radius: 18px;
   padding: 18px;
   background: rgba(20, 20, 24, 0.95);

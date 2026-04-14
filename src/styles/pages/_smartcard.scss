@@ -41,7 +41,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: clamp(1rem, 2vw, 2rem);
+    padding: 1.5rem;
     box-sizing: border-box;
   }
 
@@ -50,7 +50,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(0.75rem, 1.5vw, 1.25rem);
+    gap: 1rem;
     overflow: hidden;
     max-height: 100vh;
   }
@@ -63,7 +63,7 @@
 
   .smartcard-instructions {
     margin: 0 0 0.75rem;
-    font-size: clamp(0.9rem, 1.2vw, 1rem);
+    font-size: 1rem;
     font-weight: 400;
     color: rgba(255, 255, 255, 0.95);
     text-align: left;
@@ -75,7 +75,7 @@
     padding: 1rem;
     height: 20em;
     width: 100%;
-    max-height: 50vh;
+    max-height: none;
     overflow: auto;
     display: flex;
     flex-direction: column;
@@ -95,7 +95,7 @@
     border: 2px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     color: #fff;
-    font-size: clamp(0.8rem, 1vw, 0.95rem);
+    font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s ease;
     outline: none;
@@ -158,14 +158,14 @@
     background: rgba(42, 42, 42, 0.95);
     border-radius: 12px;
     border: 2px solid rgba(255, 255, 255, 0.2);
-    padding: clamp(1.25rem, 2vw, 1.5rem);
+    padding: 1.5rem;
     max-width: 400px;
     width: 100%;
   }
 
   .confirm-in-use-title {
     margin: 0 0 1rem;
-    font-size: clamp(0.95rem, 1.2vw, 1.05rem);
+    font-size: 1rem;
     font-weight: 500;
     color: #fff;
     text-align: center;
@@ -202,7 +202,7 @@
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: clamp(0.75rem, 1.5vw, 1.25rem);
+    gap: 1rem;
     width: 100%;
     overflow: hidden;
     max-height: calc(100vh - 120px);
@@ -217,18 +217,18 @@
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    width: clamp(180px, 18vw, 240px);
+    width: 12em;
     min-width: 0;
     max-width: 100%;
     flex: 0 0 auto;
     background: rgba(42, 42, 42, 0.6);
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 6px;
-    padding: clamp(0.875rem, 1.2vw, 1.25rem);
+    padding: 1rem;
     backdrop-filter: blur(10px);
     outline: none;
     box-sizing: border-box;
-    min-height: clamp(160px, 20vh, 220px);
+    min-height: 10.5em;
     max-height: 100%;
     align-self: center;
 
@@ -271,18 +271,18 @@
     }
 
     &.license-card-full {
-      width: clamp(280px, 35vw, 450px);
+      width: 24em;
     }
 
     .license-card-header {
       width: 100%;
       text-align: center;
-      margin-bottom: clamp(0.75rem, 1vw, 1rem);
+      margin-bottom: 0.85rem;
       flex-shrink: 0;
 
       h3 {
         margin: 0;
-        font-size: clamp(0.875rem, 1.2vw, 1rem);
+        font-size: 0.95rem;
         font-weight: 400;
         letter-spacing: 0.05em;
         color: #fff;
@@ -305,7 +305,7 @@
   .license-fields {
     display: flex;
     flex-direction: column;
-    gap: clamp(0.5rem, 0.8vw, 0.75rem);
+    gap: 0.6rem;
     width: 100%;
     overflow: hidden;
   }
@@ -314,7 +314,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    padding: clamp(0.5rem, 0.8vw, 0.75rem) 0;
+    padding: 0.6rem 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
 
@@ -325,14 +325,14 @@
     .license-label {
       font-weight: 400;
       color: rgba(255, 255, 255, 0.7);
-      font-size: clamp(0.65rem, 0.9vw, 0.75rem);
+      font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
     .license-value {
       color: #fff;
-      font-size: clamp(0.75rem, 1vw, 0.875rem);
+      font-size: 0.85rem;
       word-break: break-word;
       line-height: 1.4;
       font-weight: 300;
@@ -343,10 +343,10 @@
   .license-json {
     background: rgba(0, 0, 0, 0.4);
     color: #fff;
-    padding: clamp(0.75rem, 1vw, 1rem);
+    padding: 0.9rem;
     border-radius: 4px;
     font-family: 'Courier New', monospace;
-    font-size: clamp(0.65rem, 0.9vw, 0.75rem);
+    font-size: 0.75rem;
     line-height: 1.4;
     overflow: auto;
     @include scrollbar-hidden;
@@ -362,7 +362,7 @@
     @include flex-center;
     flex-direction: column;
     text-align: center;
-    padding: clamp(2rem, 4vw, 3rem);
+    padding: 2.5rem;
     background: rgba(42, 42, 42, 0.8);
     backdrop-filter: blur(10px);
     border-radius: 8px;
@@ -378,7 +378,7 @@
     border-top-color: #fff;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin-bottom: clamp(1rem, 2vw, 1.5rem);
+    margin-bottom: 1.25rem;
   }
 
   @keyframes spin {
@@ -388,7 +388,7 @@
   }
 
   .loading-text {
-    font-size: clamp(0.875rem, 1.2vw, 1rem);
+    font-size: 1rem;
     color: #fff;
     margin: 0;
     font-weight: 300;
@@ -396,13 +396,13 @@
 
   .error-icon {
     font-size: 2.5rem;
-    margin-bottom: clamp(1rem, 2vw, 1.5rem);
+    margin-bottom: 1.25rem;
   }
 
   .error-text {
-    font-size: clamp(0.875rem, 1.2vw, 1rem);
+    font-size: 1rem;
     color: #fff;
-    margin-bottom: clamp(1rem, 2vw, 1.5rem);
+    margin-bottom: 1.25rem;
     font-weight: 300;
   }
 
@@ -411,7 +411,7 @@
     @include flex-center;
     flex-direction: column;
     gap: 0.5rem;
-    padding: clamp(1rem, 2vw, 1.5rem) clamp(1.5rem, 3vw, 2rem);
+    padding: 1.25rem 1.75rem;
     background: rgba(34, 139, 34, 0.85);
     backdrop-filter: blur(10px);
     border-radius: 8px;
@@ -426,7 +426,7 @@
     }
 
     .success-text {
-      font-size: clamp(0.875rem, 1.2vw, 1rem);
+      font-size: 1rem;
       color: #fff;
       margin: 0;
       font-weight: 400;
@@ -434,7 +434,7 @@
   }
 
   .no-licenses {
-    font-size: clamp(0.875rem, 1.2vw, 1rem);
+    font-size: 1rem;
     color: rgba(255, 255, 255, 0.7);
     margin: 0;
     font-weight: 300;
@@ -465,7 +465,7 @@
     }
 
     .loading-text {
-      font-size: clamp(0.875rem, 1.2vw, 1rem);
+      font-size: 1rem;
       color: #fff;
       margin: 0;
       font-weight: 300;
@@ -485,8 +485,8 @@
     background: rgba(42, 42, 42, 0.8);
     backdrop-filter: blur(10px);
     color: #fff;
-    padding: clamp(0.75rem, 1vw, 1rem) clamp(1.5rem, 2vw, 2rem);
-    font-size: clamp(0.875rem, 1.2vw, 1rem);
+    padding: 0.9rem 1.75rem;
+    font-size: 1rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     border: 2px solid rgba(255, 255, 255, 0.3);
     font-weight: 300;

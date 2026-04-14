@@ -1,95 +1,64 @@
 /**
  * Estilos responsive globales
- * Sistema de escalado automático para múltiples resoluciones
+ * Sistema de escalado por “escalones” (estilo 10foot)
+ *
+ * En 10foot, la consistencia PC/TV se logra principalmente con:
+ * - tamaños en em/rem
+ * - cambio de escala por breakpoints grandes (HD vs FullHD)
+ *
+ * En `app` reemplazamos el escalado fluido (clamp/vw) por un control
+ * centralizado de `html { font-size }` por breakpoint.
  */
 
 @use 'variables' as *;
 @use 'mixins' as *;
 
-// Variables para escalado
-$base-font-size: 16px;
-$base-spacing: 1rem;
-
-// Función para escalar tamaños basado en viewport
-@function scale($size, $base: 1920) {
-  @return calc(#{$size} * (100vw / #{$base}));
+/**
+ * Escala base: HD (1280) -> 16px.
+ * Escala TV/FullHD (1920) -> 24px (1.5x), para imitar el salto 8em -> 12em de 10foot.
+ *
+ * Nota: al usar rem/em, este ajuste escala componentes de forma consistente
+ * sin depender de `vw`.
+ */
+html {
+  font-size: 16px;
 }
 
-// Función para clamp (tamaño mínimo, preferido, máximo)
-@function responsive-size($min, $preferred, $max) {
-  @return clamp(#{$min}, #{$preferred}, #{$max});
-}
-
-// Clase base para escalado automático
-.responsive-container {
-  // Escalar desde Full HD (1920px) como base
-  font-size: clamp(12px, 1vw, 24px);
-  
-  // Para pantallas muy grandes (4K+), limitar el crecimiento
-  @include tv-4k {
-    font-size: clamp(16px, 0.8vw, 32px);
-  }
-  
-  @include tv-8k {
-    font-size: clamp(20px, 0.6vw, 40px);
-  }
-}
-
-// Utilidades para padding y margin responsive
-.responsive-padding {
-  padding: clamp(1rem, 2vw, 3rem);
-}
-
-.responsive-margin {
-  margin: clamp(0.5rem, 1vw, 2rem);
-}
-
-// Ajustes específicos por resolución
+// Móvil/tablet: bajar levemente para legibilidad/espacio
 @include mobile {
-  html {
-    font-size: 14px;
-  }
+  html { font-size: 14px; }
 }
-
 @include tablet {
-  html {
-    font-size: 15px;
-  }
+  html { font-size: 15px; }
 }
 
+// Escritorio “normal” (hasta HD): mantener base
 @include desktop {
-  html {
-    font-size: 16px;
-  }
+  html { font-size: 16px; }
 }
 
+// HD explícito (1280+): mantener base
 @include hd {
-  html {
-    font-size: 16px;
-  }
+  html { font-size: 16px; }
 }
 
+// FullHD/TV (1920+): salto de escala
 @include fullhd {
-  html {
-    font-size: 16px; // Base
-  }
+  html { font-size: 24px; }
 }
 
+// UltraHD/4K/8K: mantener escalones adicionales, sin escalado fluido
 @include ultrahd {
-  html {
-    font-size: 18px; // Ligeramente más grande
-  }
+  html { font-size: 26px; }
 }
-
 @include tv-4k {
-  html {
-    font-size: 20px; // Más grande para 4K
-  }
+  html { font-size: 28px; }
+}
+@include tv-8k {
+  html { font-size: 32px; }
 }
 
-@include tv-8k {
-  html {
-    font-size: 24px; // Aún más grande para 8K
-  }
-}
+// Utilidades simples (no fluidas) por si se usan en layout
+.responsive-padding { padding: 2rem; }
+.responsive-margin { margin: 1rem; }
 

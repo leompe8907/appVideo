@@ -90,14 +90,8 @@
   }
 }
 
-// Helper para escalado automático basado en viewport
-@mixin responsive-scale($base-size) {
-  font-size: clamp(
-    #{$base-size * 0.5},
-    #{$base-size * 100vw / $base-width},
-    #{$base-size * 2}
-  );
-}
+// (Eliminado) escalado fluido basado en viewport.
+// En este proyecto el escalado se controla por `html { font-size }` en `_responsive.scss`.
 
 // Aspecto ratio (para TVs)
 @mixin aspect-ratio($width, $height) {
