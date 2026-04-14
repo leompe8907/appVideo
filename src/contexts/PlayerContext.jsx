@@ -95,19 +95,30 @@ export function PlayerProvider({ children }) {
   }, [clearSeekTimeout]);
 
   // Firma estable para evitar recrear engine en cada resize/fullscreen.
-  // `useDeviceDetection` actualiza innerWidth/innerHeight en resize, lo cual cambia el objeto deviceInfo
-  // y dispararía destroy/recreate del engine si dependemos del objeto completo.
+  // NOTA: userAgent fue removido porque puede cambiar en algunos WebViews sin que
+  // la plataforma real cambie, lo que causaba recreación del engine durante playback.
   const engineSignature = [
     deviceInfo?.isTV ? 'tv' : 'pc',
-    String(deviceInfo?.userAgent || ''),
     String(currentBrand?.brand || ''),
     String(currentBrand?.player?.nativeAdaptersEnabled === true),
     String(currentBrand?.player?.enginePolicy || 'auto'),
   ].join('::');
 
-  // Inicializar engine solo si cambia plataforma/política real (no por resize).
+  // Crear engine UNA SOLA VEZ al montar el provider.
+  // El engine se mantiene vivo durante toda la sesión para evitar:
+  // - Pantalla negra durante navegación entre páginas
+  // - Pérdida del elemento <video> montado
+  // - Re-registro de event listeners (overhead de CPU)
+  // - Reset de estado de playback mid-playback
   useEffect(() => {
     debugRef.current = isDebugEnabled();
+    
+    // Si ya existe un engine, no recrear (protección contra cambios de signature)
+    if (engineRef.current) {
+      log('engine:skip (already exists)');
+      return;
+    }
+    
     const engine = createEngine(deviceInfo);
     engineRef.current = engine;
     log('engine:create', { deviceType: deviceInfo?.deviceType, isTV: !!deviceInfo?.isTV, userAgent: deviceInfo?.userAgent });
@@ -299,11 +310,47 @@ export function PlayerProvider({ children }) {
       engine.off(PLAYER_ENGINE_EVENTS.SEEK_END, handleSeekEnd);
       engine.off(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, handleTracksChange);
       clearSeekTimeout();
-      log('engine:destroy');
+      log('engine:destroy (cleanup on unmount)');
       engine.destroy();
       engineRef.current = null;
     };
-  }, [engineSignature]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Array vacío: engine se crea UNA SOLA VEZ al montar
+
+  // Efecto separado: recrear engine SOLO si la plataforma cambia realmente (TV ↔ PC).
+  // Esto normalmente NO ocurre durante una sesión normal, solo si el usuario cambia
+  // de dispositivo (ej. de TV a PC o viceversa) sin recargar la página.
+  const currentPlatform = deviceInfo?.isTV ? 'tv' : 'pc';
+  useEffect(() => {
+    // Solo actuar si el engine ya fue creado inicialmente
+    if (!engineRef.current) return;
+    
+    // Verificar si la plataforma cambió respecto a la que creó el engine actual
+    const enginePlatform = engineRef.current.platform || 'unknown';
+    if (enginePlatform !== 'unknown' && enginePlatform !== currentPlatform) {
+      log('engine:platformChanged', { from: enginePlatform, to: currentPlatform });
+      
+      // Destruir engine actual
+      engineRef.current.off(PLAYER_ENGINE_EVENTS.TIME_UPDATE, () => {});
+      engineRef.current.destroy();
+      engineRef.current = null;
+      
+      // Crear nuevo engine para la nueva plataforma
+      const newEngine = createEngine(deviceInfo);
+      newEngine.platform = currentPlatform; // Marcar con plataforma actual
+      engineRef.current = newEngine;
+      
+      if (containerRef.current) {
+        newEngine.init(containerRef.current);
+        log('engine:recreated (platform change)', { platform: currentPlatform });
+      }
+    } else if (engineRef.current) {
+      // Marcar engine con plataforma actual si no tiene marca
+      if (!engineRef.current.platform) {
+        engineRef.current.platform = currentPlatform;
+      }
+    }
+  }, [currentPlatform, deviceInfo, containerRef, log]);
 
   const play = ({ type, id, url, item, autoPlay = true, mediaOption = {}, drmConfig = {} }) => {
     const engine = engineRef.current;

@@ -3,12 +3,13 @@
  * Botón navegable que funciona con controles remotos de TV y mouse/teclado de PC
  */
 
+import React from 'react';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
 /**
  * Botón navegable compatible con TV y PC
- * 
+ *
  * @param {Object} props
  * @param {React.ReactNode} props.children - Contenido del botón
  * @param {Function} props.onClick - Callback cuando se hace click (opcional)
@@ -18,7 +19,7 @@ import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigatio
  * @param {string} props.type - Tipo de botón: 'button', 'submit', 'reset' (default: 'button')
  * @param {boolean} props.disabled - Si el botón está deshabilitado
  */
-export function FocusableButton({ 
+function FocusableButton({
   children,
   onClick,
   onEnterPress,
@@ -28,7 +29,7 @@ export function FocusableButton({
   focusKey,
   type = 'button',
   disabled = false,
-  ...restProps 
+  ...restProps
 }) {
   const { isTV } = useDevice();
 
@@ -103,5 +104,10 @@ export function FocusableButton({
   );
 }
 
+// Memoizado para evitar re-renders cuando las props no cambian
+// (importante en listas de botones navegables)
+const MemoizedFocusableButton = React.memo(FocusableButton);
+
+export { FocusableButton, MemoizedFocusableButton };
 export default FocusableButton;
 

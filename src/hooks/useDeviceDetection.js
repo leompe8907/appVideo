@@ -177,16 +177,17 @@ export function useDeviceDetection() {
       });
     };
 
-    // Detectar al montar
+    // Detectar al montar (UNA SOLA VEZ)
     detectDevice();
 
-    // Re-detectar si cambia el tamaño (por si acaso)
-    window.addEventListener('resize', detectDevice);
-    window.addEventListener('orientationchange', detectDevice);
+    // NOTA: Se eliminaron los listeners de resize y orientationchange porque:
+    // 1. El tipo de dispositivo (TV vs PC) NO cambia durante una sesión
+    // 2. En TVs, los eventos resize pueden dispararse durante animaciones, causando
+    //    ejecuciones innecesarias del algoritmo de detección (7 señales + scoring + localStorage)
+    // 3. localStorage.setItem se ejecutaba en cada resize, bloqueando el main thread
 
     return () => {
-      window.removeEventListener('resize', detectDevice);
-      window.removeEventListener('orientationchange', detectDevice);
+      // No cleanup necesario — no hay listeners que remover
     };
   }, []);
 

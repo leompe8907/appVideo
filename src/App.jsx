@@ -70,10 +70,11 @@ function ProtectedRoute({ children }) {
 function App() {
   const viewport = useViewport();
   const lastViewportClassRef = useRef('');
-  const lastScaleRef = useRef(null);
   const rafRef = useRef(0);
 
-  // Aplicar clases de viewport al root
+  // Aplicar clases de viewport al root (TV/PC, resolución)
+  // NOTA: Se eliminó el código que setea --viewport-scale porque no se usaba en ningún SCSS.
+  // Las clases CSS (.mobile, .desktop, .tv-4k, etc.) son suficientes para estilos responsivos.
   useEffect(() => {
     const root = document.documentElement;
 
@@ -81,13 +82,6 @@ function App() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = 0;
-
-      const scaleValue = viewport.scale > 1.5 ? viewport.scale : 1;
-      const prevScale = lastScaleRef.current;
-      if (prevScale == null || Math.abs(Number(prevScale) - Number(scaleValue)) > 0.01) {
-        root.style.setProperty('--viewport-scale', String(scaleValue));
-        lastScaleRef.current = scaleValue;
-      }
 
       const classes = [];
       if (viewport.isMobile) classes.push('mobile');

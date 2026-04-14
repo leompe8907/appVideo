@@ -39,9 +39,9 @@ export function useViewport() {
       let scale = 1;
       if (width >= 1920) {
         scale = width / 1920;
-      } else if (width < 1920) {
-        scale = width / 1920;
       }
+      // NOTA: Se eliminó el else if (width < 1920) porque era dead code
+      // (ambas ramas tenían la misma lógica: scale = width / 1920)
 
       setViewport({
         width,

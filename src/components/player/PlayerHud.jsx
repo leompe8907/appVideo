@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -94,6 +94,9 @@ function resolveNowNextFromEpgItems(epgItems, nowMs = Date.now()) {
   });
   return { now: firstFuture ?? list[list.length - 1] ?? null, next: null };
 }
+
+// ChannelSidebar memoizado: se re-renderiza solo cuando cambian las props relevantes
+const MemoizedChannelSidebar = React.memo(ChannelSidebar);
 
 function ChannelSidebar({
   open,
@@ -988,7 +991,7 @@ export function PlayerHud({ className = '' }) {
         )
       : null}
 
-      <ChannelSidebar
+      <MemoizedChannelSidebar
         open={overlay === 'channels'}
         title={t('player.channelList', { defaultValue: 'Listado de canales' })}
         channels={channelList}
@@ -1022,5 +1025,10 @@ export function PlayerHud({ className = '' }) {
   );
 }
 
-export default PlayerHud;
+// PlayerHud memoizado: evita re-renders innecesarios cuando el estado del player cambia
+// pero las props del componente no cambian. El HUD recibe actualizaciones de currentTime
+// cada ~250ms, pero la mayoría no requieren re-renderizar el componente completo.
+const MemoizedPlayerHud = React.memo(PlayerHud);
+
+export default MemoizedPlayerHud;
 

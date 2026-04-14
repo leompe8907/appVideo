@@ -3,13 +3,14 @@
  * Card navegable que funciona con controles remotos de TV y mouse/teclado de PC
  */
 
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
 /**
  * Card navegable compatible con TV y PC
- * 
+ *
  * @param {Object} props
  * @param {string} props.icon - Icono a mostrar (emoji o texto)
  * @param {string} props.label - Texto del label
@@ -18,14 +19,15 @@ import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigatio
  * @param {string} props.className - Clases CSS adicionales (opcional)
  * @param {string} props.focusKey - Clave única para identificar el elemento (opcional)
  */
-export function FocusableCard({ 
-  icon, 
-  path, 
+function FocusableCard({
+  icon,
+  label,
+  path,
   onEnterPress,
   onArrowPress,
   className = '',
   focusKey,
-  ...restProps 
+  ...restProps
 }) {
   const navigate = useNavigate();
   const { isTV } = useDevice();
@@ -90,5 +92,10 @@ export function FocusableCard({
   );
 }
 
+// Memoizado para evitar re-renders cuando las props no cambian
+// (importante en listas/grids de tarjetas navegables)
+const MemoizedFocusableCard = React.memo(FocusableCard);
+
+export { FocusableCard, MemoizedFocusableCard };
 export default FocusableCard;
 
