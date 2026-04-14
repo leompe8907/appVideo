@@ -205,7 +205,7 @@
     gap: 1rem;
     width: 100%;
     overflow: hidden;
-    max-height: calc(100vh - 120px);
+    max-height: min(34em, calc(100vh - 7.5rem));
   }
 
   // Tarjeta de licencia - estilo Netflix minimalista

@@ -454,7 +454,8 @@
 
 .player-hud__tracks-popover {
   position: fixed;
-  max-height: min(560px, calc(100vh - 120px));
+  // Base en em (escala con html font-size) + tope por viewport para pantallas bajas
+  max-height: min(35em, calc(100vh - 7.5rem));
   overflow: hidden;
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.72);

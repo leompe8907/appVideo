@@ -147,9 +147,8 @@
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
-  max-height: 28em;
-  // En pantallas muy bajas, evitar overflow vertical excesivo
-  max-height: 56vh;
+  // Base en em (escala con html font-size) con tope por altura de viewport
+  max-height: min(28em, 56vh);
   overflow-y: auto;
   overflow-x: hidden; /* nunca scroll horizontal */
   padding-right: 6px;
