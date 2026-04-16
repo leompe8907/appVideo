@@ -5,19 +5,10 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { useDevice } from '../../contexts/DeviceContext';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
 export function VodSeeMoreCard({ focusKeyPrefix, onSelect, label, textInPoster }) {
   const { t } = useTranslation();
   const displayLabel = label ?? t('vod.seeMore');
-
-  const { isTV } = useDevice();
-  const { ref, focused } = useSpatialNavigation({
-    focusKey: `${focusKeyPrefix || 'vod-see-more'}-${label ? 'label' : 'default'}`,
-    onEnterPress: () => onSelect?.(),
-    isFocusable: true,
-  });
 
   const handleClick = () => onSelect?.();
   const handleKeyDown = (e) => {
@@ -29,19 +20,17 @@ export function VodSeeMoreCard({ focusKeyPrefix, onSelect, label, textInPoster }
 
   return (
     <button
-      ref={ref}
       type="button"
       className={[
         'vod-card',
         'vod-see-more-card',
         textInPoster ? 'vod-see-more-card--poster-text' : '',
-        focused ? 'focused' : ''
       ]
         .filter(Boolean)
         .join(' ')}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      tabIndex={isTV ? -1 : 0}
+      tabIndex={0}
       aria-label={displayLabel}
     >
       <div className="vod-card-poster vod-see-more-poster">

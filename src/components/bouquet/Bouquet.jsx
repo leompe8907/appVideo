@@ -9,7 +9,6 @@ import { useDevice } from '../../contexts/DeviceContext';
 import { usePreload } from '../../store/usePreload';
 import { mergeEpgIntoChannels } from '../../utils/epgMerge';
 import { getMainBouquets, getChannelsForBouquet, filterMainBouquets } from '../../services/tvDataService';
-import { useSpatialNavigation, useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 
 /**
  * Normaliza un color devuelto por el backend (ej. "ffffff  ") a formato CSS (#ffffff).
@@ -76,21 +75,15 @@ export function Bouquet() {
   const isLoading = bouquetsFromPreload !== null ? false : fallbackLoading;
   const error = bouquetsFromPreload !== null ? null : fallbackError;
 
-  const setFocus = useSpatialSetFocus();
-
   useEffect(() => {
     if (isTV && bouquets.length > 0) {
       const timer = setTimeout(() => {
-        if (typeof setFocus === 'function') {
-          setFocus('bouquet-0');
-        } else {
-          const el = document.querySelector('[data-focus-key="bouquet-0"]');
-          if (el) el.focus();
-        }
+        const el = document.getElementById('bouquet-0');
+        if (el) el.focus();
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [isTV, bouquets.length, setFocus]);
+  }, [isTV, bouquets.length]);
 
   const handleSelectBouquet = async (bouquet) => {
     setSelectedBouquet(bouquet);
@@ -198,12 +191,6 @@ function BouquetRow({ bouquet, index, onSelect }) {
     ...(textColor ? { color: textColor } : {}),
   };
 
-  const { ref, focused } = useSpatialNavigation({
-    focusKey: `bouquet-${index}`,
-    onEnterPress: () => onSelect?.(bouquet),
-    isFocusable: true,
-  });
-
   const handleClick = () => {
     onSelect?.(bouquet);
   };
@@ -217,14 +204,13 @@ function BouquetRow({ bouquet, index, onSelect }) {
 
   return (
     <div
-      ref={ref}
-      className={`bouquet-row ${focused ? 'focused' : ''}`}
+      id={`bouquet-${index}`}
+      className="bouquet-row"
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={isTV ? -1 : 0}
       aria-label={t('bouquet.bouquetAria', { name })}
-      data-focus-key={`bouquet-${index}`}
       style={style}
     >
       <div className="bouquet-row-content">

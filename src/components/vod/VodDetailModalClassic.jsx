@@ -12,7 +12,6 @@ import panaccessService from '../../services/panaccessService';
 import { getVodImageUrl } from '../../services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 
 export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }) {
   const { t } = useTranslation();
@@ -24,16 +23,15 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
   const [error, setError] = useState(null);
   const [extraMeta, setExtraMeta] = useState(null);
 
-  const setFocus = useSpatialSetFocus();
-
   useEffect(() => {
     if (isTV && !loading) {
       const t = setTimeout(() => {
-        if (typeof setFocus === 'function') setFocus('vod-classic-play');
+        const btn = document.getElementById('vod-classic-play');
+        if (btn) btn.focus();
       }, 400);
       return () => clearTimeout(t);
     }
-  }, [isTV, loading, setFocus]);
+  }, [isTV, loading]);
 
   const isSeries = item?.isSeries === true;
   const title = item?.name || item?.title || '';
@@ -179,7 +177,7 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
                   type="button"
                   className="vod-classic-play"
                   onClick={handlePlayCurrent}
-                  focusKey="vod-classic-play"
+                  id="vod-classic-play"
                   aria-label={t('vod.play')}
                 >
                   <i className="vod-classic-play-icon" aria-hidden>▶</i>
@@ -261,7 +259,7 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
                   </ul>
                 )}
                 {!loading && seriesInfo && (!seriesInfo.episodes || seriesInfo.episodes.length === 0) && (
-                  <FocusableButton type="button" className="vod-classic-play-btn-inline" onClick={handlePlayCurrent} focusKey="vod-classic-play">
+                  <FocusableButton type="button" className="vod-classic-play-btn-inline" onClick={handlePlayCurrent}>
                     {t('vod.play')}
                   </FocusableButton>
                 )}
@@ -278,7 +276,7 @@ function ClassicEpisodeItem({ episode, index, onPlay }) {
   const name = episode.name ?? episode.title ?? episode.episodeTitle ?? `Episode ${index + 1}`;
   return (
     <li className="vod-classic-episode-item">
-      <FocusableButton type="button" className="vod-classic-episode-btn" onClick={onPlay} focusKey={`vod-episode-${index}`}>
+      <FocusableButton type="button" className="vod-classic-episode-btn" onClick={onPlay}>
         <span className="vod-classic-episode-play" aria-hidden>▶</span>
         <span className="vod-classic-episode-name">{name}</span>
       </FocusableButton>

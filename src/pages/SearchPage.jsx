@@ -6,19 +6,13 @@ import { usePlayer } from '../contexts/PlayerContext';
 import { usePreload } from '../store/usePreload';
 import panaccessService from '../services/panaccessService';
 import { getSearchDebounceMs, searchAll } from '../services/searchService';
-import { useSpatialNavigation } from '../hooks/navigation/useSpatialNavigation';
 import { useParentalGate } from '../hooks/useParentalGate';
 import '../styles/pages/_search.scss';
 
 function SearchTab({ id, label, active, hidden, onSelect }) {
-  const { ref } = useSpatialNavigation({
-    focusKey: `search-tab-${id}`,
-    onEnterPress: () => onSelect?.(id),
-  });
   if (hidden) return null;
   return (
     <button
-      ref={ref}
       type="button"
       className={`search-tab${active ? ' active' : ''}`}
       onClick={() => onSelect?.(id)}
@@ -30,10 +24,6 @@ function SearchTab({ id, label, active, hidden, onSelect }) {
 
 function ResultItem({ item, index, onSelect }) {
   const { t } = useTranslation();
-  const { ref, isTV, focused } = useSpatialNavigation({
-    focusKey: `search-result-${index}-${item.type}-${item.id ?? item.name ?? 'x'}`,
-    onEnterPress: () => onSelect?.(item),
-  });
 
   const [imgSrc, setImgSrc] = useState(item.logo || '');
   useEffect(() => {
@@ -58,11 +48,9 @@ function ResultItem({ item, index, onSelect }) {
 
   return (
     <button
-      ref={ref}
       type="button"
-      className={`search-result${isEpg ? ' search-result--epg' : ''}${focused ? ' focused' : ''}`}
+      className={`search-result${isEpg ? ' search-result--epg' : ''}`}
       onClick={() => onSelect?.(item)}
-      onMouseEnter={!isTV ? () => {} : undefined}
     >
       {imgSrc ? (
         <img
@@ -353,6 +341,10 @@ export function SearchPage() {
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
                 setQuery('');
+              }
+              if (e.key === 'Enter') {
+                const all = resultsAll || [];
+                if (all.length > 0) handleSelect(all[0]);
               }
             }}
           />

@@ -6,7 +6,6 @@ import { useAuthValidator } from './hooks/useAuthValidator';
 
 import { isAuthenticated } from './utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
-import { SpatialNavigationProvider } from './components/navigation/SpatialNavigationProvider';
 import { PreloadGate } from './components/preload/PreloadGate';
 import { SkeletonText, SkeletonCard } from './components/ui/Skeleton';
 
@@ -110,35 +109,33 @@ function App() {
   return (
     <>
       <PlayerProvider>
-        <SpatialNavigationProvider>
-          <div className="App">
-            <Routes>
-                {/* Rutas públicas */}
-                <Route path="/" element={<Suspense fallback={<Loading />}><SplashPage /></Suspense>}/>
-                <Route path="/login" element={<Suspense fallback={<Loading />}><LoginPage /></Suspense>}/>
-                {/* Rutas protegidas */}
-                <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<Loading />}><ProfilePage /></Suspense></ProtectedRoute>}/>
-                <Route path="/smartcard" element={<ProtectedRoute><Suspense fallback={<Loading />}><SmartCardPage /></Suspense></ProtectedRoute>}/>
-                <Route path="/preload" element={<ProtectedRoute><Suspense fallback={<Loading />}><PreloadDataPage /></Suspense></ProtectedRoute>}/>
-                <Route path="/inicio" element={<Navigate to="/home/inicio" replace />}/>
-                <Route path="/vod" element={<Navigate to="/home/vod" replace />}/>
-                <Route path="/epg" element={<Navigate to="/home/epg" replace />}/>
-                <Route path="/home" element={<ProtectedRoute><Suspense fallback={<Loading />}><HomePage /></Suspense></ProtectedRoute>}>
-                  <Route path="inicio" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><BouquetPage /></Suspense></PreloadGate>}/>
-                  <Route path="buscador" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><SearchPage /></Suspense></PreloadGate>}/>
-                  <Route path="servicios-tv-radio"element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><TvRadioServicesPage /></Suspense></PreloadGate>}/>
-                  <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>}/>
-                  <Route path="epg" element={<PreloadGate required="epg"> <Suspense fallback={<Loading />}> <EpgCardsPage /></Suspense></PreloadGate>}/>
-                  <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>}/>
-                  <Route path="control-parental" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><ParentalSettingsPage /></Suspense></PreloadGate>}/>
-                  <Route path="osms" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="OSMS" description="Modulo en preparacion para mensajes del sistema." /></Suspense>}/>
-                  <Route path="*" element={<Navigate to="/home/inicio" replace />} />
-                </Route>
-                {/* Fallback */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </div>
-        </SpatialNavigationProvider>
+        <div className="App">
+          <Routes>
+              {/* Rutas públicas */}
+              <Route path="/" element={<Suspense fallback={<Loading />}><SplashPage /></Suspense>}/>
+              <Route path="/login" element={<Suspense fallback={<Loading />}><LoginPage /></Suspense>}/>
+              {/* Rutas protegidas */}
+              <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<Loading />}><ProfilePage /></Suspense></ProtectedRoute>}/>
+              <Route path="/smartcard" element={<ProtectedRoute><Suspense fallback={<Loading />}><SmartCardPage /></Suspense></ProtectedRoute>}/>
+              <Route path="/preload" element={<ProtectedRoute><Suspense fallback={<Loading />}><PreloadDataPage /></Suspense></ProtectedRoute>}/>
+              <Route path="/inicio" element={<Navigate to="/home/inicio" replace />}/>
+              <Route path="/vod" element={<Navigate to="/home/vod" replace />}/>
+              <Route path="/epg" element={<Navigate to="/home/epg" replace />}/>
+              <Route path="/home" element={<ProtectedRoute><Suspense fallback={<Loading />}><HomePage /></Suspense></ProtectedRoute>}>
+                <Route path="inicio" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><BouquetPage /></Suspense></PreloadGate>}/>
+                <Route path="buscador" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><SearchPage /></Suspense></PreloadGate>}/>
+                <Route path="servicios-tv-radio"element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><TvRadioServicesPage /></Suspense></PreloadGate>}/>
+                <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>}/>
+                <Route path="epg" element={<PreloadGate required="epg"> <Suspense fallback={<Loading />}> <EpgCardsPage /></Suspense></PreloadGate>}/>
+                <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>}/>
+                <Route path="control-parental" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><ParentalSettingsPage /></Suspense></PreloadGate>}/>
+                <Route path="osms" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="OSMS" description="Modulo en preparacion para mensajes del sistema." /></Suspense>}/>
+                <Route path="*" element={<Navigate to="/home/inicio" replace />} />
+              </Route>
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
       </PlayerProvider>
     </>
   );

@@ -6,7 +6,6 @@ import { usePreload } from '../../store/usePreload';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import panaccessService from '../../services/panaccessService';
-import { useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 import { FocusableButton } from '../navigation/FocusableButton';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useEpgReminderStore } from '../../store/epgReminderStore';
@@ -93,13 +92,14 @@ export function EpgReminderHost() {
 
   const active = due && openId === due.id ? due : null;
   const countdown = active ? formatCountdown(active.startMs - nowMs) : '00:00';
-
-  const setFocus = useSpatialSetFocus();
   useEffect(() => {
     if (!active || !isTV) return;
-    const tm = setTimeout(() => setFocus?.('epg-reminder-go'), 50);
+    const tm = setTimeout(() => {
+      const btn = document.getElementById('epg-reminder-go');
+      if (btn) btn.focus();
+    }, 50);
     return () => clearTimeout(tm);
-  }, [active, isTV, setFocus]);
+  }, [active, isTV]);
 
   if (!active) return null;
 
@@ -147,8 +147,7 @@ export function EpgReminderHost() {
               className="epg-event-modal-close"
               onClick={close}
               type="button"
-              focusKey="epg-reminder-close-x"
-              onArrowPress={() => {}}
+            id="epg-reminder-close-x"
             >
               {t('common.close', { defaultValue: 'Cerrar' })}
             </FocusableButton>
@@ -170,7 +169,7 @@ export function EpgReminderHost() {
             className="epg-event-modal-secondary"
             type="button"
             onClick={close}
-            focusKey="epg-reminder-close"
+            id="epg-reminder-close"
           >
             {t('common.close', { defaultValue: 'Cerrar' })}
           </FocusableButton>
@@ -178,7 +177,7 @@ export function EpgReminderHost() {
             className="epg-event-modal-primary"
             type="button"
             onClick={goToChannel}
-            focusKey="epg-reminder-go"
+            id="epg-reminder-go"
             disabled={!channel}
           >
             {t('epg.goToChannel', { defaultValue: 'Ir al canal' })}

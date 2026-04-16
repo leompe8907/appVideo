@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 import { resolveLiveWindowFromEpgItems } from '../../utils/epgCurrentEvent';
 import { usePreload } from '../../store/usePreload';
 import panaccessService from '../../services/panaccessService';
@@ -200,7 +199,6 @@ export function PlayerHud({ className = '' }) {
   } = usePlayer();
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
-  const setFocus = useSpatialSetFocus();
   const [visible, setVisible] = useState(true);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
@@ -372,13 +370,6 @@ export function PlayerHud({ className = '' }) {
   const wakeHud = () => {
     setVisible(true);
     armAutoHide();
-    if (isTV && !visible) {
-      setTimeout(() => {
-        // En algunos layouts el play/pause puede no existir (por banderas).
-        // Enfocar un elemento siempre presente evita warnings de "node: null".
-        if (typeof setFocus === 'function') setFocus('hud-top-back');
-      }, 100);
-    }
   };
 
   useEffect(() => {
@@ -576,8 +567,6 @@ export function PlayerHud({ className = '' }) {
             type="button"
             className="player-hud__iconbtn"
             onClick={() => close()}
-            focusKey="hud-top-back"
-            isFocusable={visible}
             aria-label={t('common.back', { defaultValue: 'Volver' })}
           >
             ⟵
@@ -590,8 +579,6 @@ export function PlayerHud({ className = '' }) {
               close();
               navigate('/home/epg');
             }}
-            focusKey="hud-top-epg"
-            isFocusable={visible}
             aria-label={t('epg.title', { defaultValue: 'EPG' })}
             title={t('epg.title', { defaultValue: 'EPG' })}
           >
@@ -602,8 +589,6 @@ export function PlayerHud({ className = '' }) {
               type="button"
               className="player-hud__iconbtn"
               onClick={toggleCurrentChannelBlock}
-              focusKey="hud-top-parental-toggle"
-              isFocusable={visible}
               aria-label={
                 currentChannelBlocked
                   ? t('parental.unblock', { defaultValue: 'Desbloquear canal' })
@@ -622,8 +607,6 @@ export function PlayerHud({ className = '' }) {
             type="button"
             className="player-hud__iconbtn"
             onClick={() => setOverlay((v) => (v === 'channels' ? '' : 'channels'))}
-            focusKey="hud-top-channels"
-            isFocusable={visible}
             aria-label={t('player.channels', { defaultValue: 'Canales' })}
           >
             ☰
@@ -632,8 +615,6 @@ export function PlayerHud({ className = '' }) {
             type="button"
             className="player-hud__iconbtn"
             onClick={() => setOverlay((v) => (v === 'info' ? '' : 'info'))}
-            focusKey="hud-top-info"
-            isFocusable={visible}
             aria-label={t('player.info', { defaultValue: 'Información' })}
           >
             ⓘ
@@ -642,8 +623,6 @@ export function PlayerHud({ className = '' }) {
             type="button"
             className="player-hud__iconbtn"
             onClick={() => setOverlay((v) => (v === 'tracks' ? '' : 'tracks'))}
-            focusKey="hud-top-tracks"
-            isFocusable={visible}
             aria-label={t('player.tracks', { defaultValue: 'Audio/Subtítulos' })}
             id="hud-top-tracks-btn"
           >
@@ -657,8 +636,6 @@ export function PlayerHud({ className = '' }) {
               type="button"
               className="player-hud__iconbtn"
               onClick={() => (isLiveWithWindow ? skipLiveBy(-10) : backward(10))}
-              focusKey="hud-top-rewind"
-              isFocusable={visible}
               aria-label={t('player.rewind10', { defaultValue: 'Retroceder 10s' })}
             >
               ⏪
@@ -667,8 +644,6 @@ export function PlayerHud({ className = '' }) {
               type="button"
               className="player-hud__iconbtn player-hud__iconbtn--primary"
               onClick={handlePlayPause}
-              focusKey="hud-top-play-pause"
-              isFocusable={visible}
               aria-label={state?.isPlaying ? t('player.pause', { defaultValue: 'Pausar' }) : t('player.play', { defaultValue: 'Reproducir' })}
             >
               {state?.isPlaying ? '⏸' : '▶'}
@@ -677,8 +652,6 @@ export function PlayerHud({ className = '' }) {
               type="button"
               className="player-hud__iconbtn"
               onClick={() => (isLiveWithWindow ? skipLiveBy(10) : forward(10))}
-              focusKey="hud-top-forward"
-              isFocusable={visible}
               aria-label={t('player.forward10', { defaultValue: 'Adelantar 10s' })}
             >
               ⏩
@@ -694,8 +667,6 @@ export function PlayerHud({ className = '' }) {
               type="button"
               className="player-hud__iconbtn"
               onClick={toggleFullscreen}
-              focusKey="hud-top-fullscreen"
-              isFocusable={visible}
               aria-label={
                 isFullscreen
                   ? t('player.exitFullscreen', { defaultValue: 'Salir de pantalla completa' })
@@ -770,8 +741,6 @@ export function PlayerHud({ className = '' }) {
                 type="button"
                 className="player-hud__pillbtn"
                 onClick={goLive}
-                focusKey="hud-bottom-live"
-                isFocusable={visible}
               >
                 {t('player.goLive', { defaultValue: 'En vivo' })}
               </FocusableButton>
@@ -780,8 +749,6 @@ export function PlayerHud({ className = '' }) {
               type="button"
               className="player-hud__pillbtn player-hud__pillbtn--danger"
               onClick={stop}
-              focusKey="hud-bottom-stop"
-              isFocusable={visible}
             >
               {t('player.stop', { defaultValue: 'Detener' })}
             </FocusableButton>
@@ -816,8 +783,6 @@ export function PlayerHud({ className = '' }) {
                             type="button"
                             className={`player-hud__trackbtn${isActive ? ' player-hud__trackbtn--active' : ''}`}
                             onClick={() => selectAudioTrack?.(trk?.id)}
-                            focusKey={`hud-tracks-audio-${trk?.id}`}
-                            isFocusable={visible}
                             role="listitem"
                           >
                             <span className="player-hud__trackbtn-label">{trk?.label || trk?.lang || 'Audio'}</span>
@@ -836,8 +801,6 @@ export function PlayerHud({ className = '' }) {
                       type="button"
                       className={`player-hud__trackbtn${tracks?.textEnabled ? '' : ' player-hud__trackbtn--active'}`}
                       onClick={() => setSubtitlesEnabled?.(false)}
-                      focusKey="hud-tracks-subs-off"
-                      isFocusable={visible}
                       role="listitem"
                     >
                       <span className="player-hud__trackbtn-label">{t('player.subtitlesOff', { defaultValue: 'Desactivados' })}</span>
@@ -859,8 +822,6 @@ export function PlayerHud({ className = '' }) {
                               setSubtitlesEnabled?.(true);
                               selectTextTrack?.(trk?.id);
                             }}
-                            focusKey={`hud-tracks-subs-${trk?.id}`}
-                            isFocusable={visible}
                             role="listitem"
                           >
                             <span className="player-hud__trackbtn-label">{trk?.label || trk?.lang || 'Sub'}</span>
@@ -882,8 +843,6 @@ export function PlayerHud({ className = '' }) {
             type="button"
             className="player-hud__pillbtn player-hud__overlay-close"
             onClick={() => setOverlay('')}
-            focusKey="hud-overlay-close"
-            isFocusable={visible}
           >
             {t('common.close', { defaultValue: 'Cerrar' })}
           </FocusableButton>
@@ -979,8 +938,6 @@ export function PlayerHud({ className = '' }) {
                   type="button"
                   className="player-hud__pillbtn player-hud__overlay-close"
                   onClick={() => setOverlay('')}
-                  focusKey="hud-overlay-close"
-                  isFocusable={visible}
                 >
                   {t('common.close', { defaultValue: 'Cerrar' })}
                 </FocusableButton>

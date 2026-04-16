@@ -2,7 +2,6 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
 import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
 import { useParental } from '../../store/useParental';
@@ -169,18 +168,7 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, l
 function ChannelCard({ channel, index, layoutType, onSelect, onFocus, focusKey }) {
   const { isTV } = useDevice();
   const parental = useParental();
-  
-  const { ref, focused } = useSpatialNavigation({
-    focusKey: focusKey || `channel-${channel.id ?? index}`,
-    onEnterPress: onSelect,
-    isFocusable: true,
-  });
-
-  useEffect(() => {
-    if (focused) {
-      onFocus?.();
-    }
-  }, [focused, onFocus]);
+  const [focused, setFocused] = useState(false);
 
   const bgColor = normalizeColor(channel.backgroundColor ?? channel.bgColor);
   const variant = getChannelLayoutVariant(layoutType);
@@ -270,7 +258,6 @@ function ChannelCard({ channel, index, layoutType, onSelect, onFocus, focusKey }
 
   return (
     <div
-      ref={ref}
       className={[
         'channel-card',
         `channel-card--${variant}`,
@@ -279,7 +266,11 @@ function ChannelCard({ channel, index, layoutType, onSelect, onFocus, focusKey }
       ].filter(Boolean).join(' ')}
       style={style}
       onMouseEnter={() => onFocus?.()}
-      onFocus={() => onFocus?.()}
+      onFocus={() => {
+        setFocused(true);
+        onFocus?.();
+      }}
+      onBlur={() => setFocused(false)}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       tabIndex={isTV ? -1 : 0}

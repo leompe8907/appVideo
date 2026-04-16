@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 import '../epg/epg-common.scss';
 
 function fmtHHmm(ms) {
@@ -36,7 +35,6 @@ export function EpgEventModal({
 }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
-  const setFocus = useSpatialSetFocus();
 
   useEffect(() => {
     if (!open) return undefined;
@@ -112,35 +110,23 @@ export function EpgEventModal({
   useEffect(() => {
     if (isTV && open) {
       const t = setTimeout(() => {
-        if (typeof setFocus === 'function') {
-          // Si estamos en modo info-only, el foco debe ir al botón cerrar.
-          if (!showActions) {
-            setFocus('epg-event-close');
-            return;
-          }
-          // Orden de foco:
-          // - Play live si está disponible
-          // - si es futuro, "Recordarme"
-          // - si es pasado con catchup disponible, "Watch/Catchup"
-          // - fallback cerrar
-          if (canPlayLive) {
-            setFocus('epg-event-play-live');
-            return;
-          }
-          if (isFuture) {
-            setFocus('epg-event-remind');
-            return;
-          }
-          if (isPast && canWatch) {
-            setFocus('epg-event-watch-catchup');
-            return;
-          }
-          setFocus('epg-event-close');
-        }
+        // Sin navegación espacial: enfocar un botón si existe.
+        const id =
+          !showActions
+            ? 'epg-event-close'
+            : canPlayLive
+              ? 'epg-event-play-live'
+              : isFuture
+                ? 'epg-event-remind'
+                : (isPast && canWatch)
+                  ? 'epg-event-watch-catchup'
+                  : 'epg-event-close';
+        const el = document.getElementById(id);
+        if (el) el.focus();
       }, 400);
       return () => clearTimeout(t);
     }
-  }, [isTV, open, canPlayLive, showActions, setFocus, isFuture, isPast, canWatch]);
+  }, [isTV, open, canPlayLive, showActions, isFuture, isPast, canWatch]);
 
   const durationMinutes = useMemo(() => {
     if (startMs == null || endMs == null) return null;
@@ -218,8 +204,7 @@ export function EpgEventModal({
               className="epg-event-modal-close"
               onClick={() => onClose?.()}
               type="button"
-              focusKey="epg-event-close"
-              onArrowPress={() => {}}
+              id="epg-event-close"
             >
               {t('common.close', { defaultValue: 'Cerrar' })}
             </FocusableButton>
@@ -253,8 +238,7 @@ export function EpgEventModal({
               onClick={() => onPlayLive?.()}
               type="button"
               disabled={!canPlayLive}
-              focusKey="epg-event-play-live"
-              onArrowPress={() => {}} // Catch para evitar salir si queremos trap, o dejar libre
+              id="epg-event-play-live"
             >
               {t('epg.playLiveChannel', { defaultValue: 'Reproducir canal (en vivo)' })}
             </FocusableButton>
@@ -264,7 +248,7 @@ export function EpgEventModal({
                 className="epg-event-modal-secondary"
                 type="button"
                 onClick={() => onWatchCatchup?.(catchupId, event)}
-                focusKey="epg-event-watch-catchup"
+                id="epg-event-watch-catchup"
               >
                 {t('epg.watchCatchup', { defaultValue: 'Watch (Catchup)' })}
               </FocusableButton>
@@ -275,7 +259,7 @@ export function EpgEventModal({
                 className="epg-event-modal-secondary"
                 type="button"
                 onClick={() => onRemind?.({ channel, event, startMs, endMs })}
-                focusKey="epg-event-remind"
+                id="epg-event-remind"
               >
                 {remindActive
                   ? t('epg.reminded', { defaultValue: 'Recordado' })

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
 export function ParentalPinGate({
   open,
@@ -15,30 +14,9 @@ export function ParentalPinGate({
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const pinInputRef = useRef(null);
+  const okBtnRef = useRef(null);
 
   const digits = useMemo(() => ['1','2','3','4','5','6','7','8','9','0'], []);
-
-  const { ref: okRef } = useSpatialNavigation({
-    focusKey: 'parental-pin-ok',
-    onEnterPress: () => handleSubmit(),
-    isFocusable: open,
-  });
-  const { ref: cancelRef } = useSpatialNavigation({
-    focusKey: 'parental-pin-cancel',
-    onEnterPress: () => onCancel?.(),
-    isFocusable: open,
-  });
-
-  const digitRefs = digits.map((d) =>
-    useSpatialNavigation({
-      focusKey: `parental-pin-digit-${d}`,
-      onEnterPress: () => {
-        setError('');
-        setPin((p) => (p.length >= 6 ? p : `${p}${d}`));
-      },
-      isFocusable: open,
-    })
-  );
 
   const handleSubmit = async () => {
     if (!open) return;
@@ -51,7 +29,7 @@ export function ParentalPinGate({
     if (!ok) {
       setError(t('pinGate.wrongPin', { defaultValue: 'PIN incorrecto' }));
       setPin('');
-      try { pinInputRef.current?.focus?.({ preventScroll: true }); } catch { /* noop */ }
+      try { pinInputRef.current?.focus?.(); } catch { /* noop */ }
     }
   };
 
@@ -61,7 +39,7 @@ export function ParentalPinGate({
     setError('');
     const t = setTimeout(() => {
       try {
-        pinInputRef.current?.focus?.({ preventScroll: true });
+        pinInputRef.current?.focus?.();
       } catch { /* noop */ }
     }, 0);
     return () => clearTimeout(t);
@@ -127,7 +105,6 @@ export function ParentalPinGate({
           {digits.map((d, idx) => (
             <button
               key={d}
-              ref={digitRefs[idx].ref}
               type="button"
               className="parental-pin-digit"
               onClick={() => {
@@ -146,7 +123,7 @@ export function ParentalPinGate({
             ⌫
           </button>
           <button
-            ref={okRef}
+            ref={okBtnRef}
             type="button"
             className="parental-pin-digit parental-pin-digit--ok"
             onClick={() => handleSubmit()}
@@ -156,10 +133,10 @@ export function ParentalPinGate({
         </div>
 
         <div className="parental-pin-actions">
-          <button ref={cancelRef} type="button" className="parental-pin-cancel" onClick={() => onCancel?.()}>
+          <button type="button" className="parental-pin-cancel" onClick={() => onCancel?.()}>
             {t('pinGate.cancel', { defaultValue: 'Cancelar' })}
           </button>
-          <button ref={okRef} type="button" className="parental-pin-ok" onClick={() => handleSubmit()}>
+          <button type="button" className="parental-pin-ok" onClick={() => handleSubmit()}>
             {t('pinGate.confirm', { defaultValue: 'Confirmar' })}
           </button>
         </div>

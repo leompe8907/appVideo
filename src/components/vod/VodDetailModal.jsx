@@ -11,7 +11,6 @@ import panaccessService from '../../services/panaccessService';
 import { getVodImageUrl } from '../../services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 
 const DESCRIPTION_MAX_LENGTH = 180;
 
@@ -26,16 +25,15 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [extraMeta, setExtraMeta] = useState(null);
 
-  const setFocus = useSpatialSetFocus();
-
   useEffect(() => {
     if (isTV && !loading) {
       const t = setTimeout(() => {
-        if (typeof setFocus === 'function') setFocus('vod-detail-play');
+        const btn = document.getElementById('vod-detail-play');
+        if (btn) btn.focus();
       }, 400);
       return () => clearTimeout(t);
     }
-  }, [isTV, loading, setFocus]);
+  }, [isTV, loading]);
 
   const vodDetailConfig = currentBrand?.vod?.vodDetail || {};
   const contentPosition = vodDetailConfig.contentPosition === 'top' || vodDetailConfig.contentPosition === 'middle'
@@ -272,7 +270,6 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
                       type="button"
                       className="vod-detail-read-more"
                       onClick={() => setDescriptionExpanded((v) => !v)}
-                      focusKey="vod-detail-read-more"
                     >
                       {descriptionExpanded ? t('vod.readLess') : t('vod.readMore')}
                     </FocusableButton>
@@ -286,7 +283,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
                   type="button"
                   className="vod-detail-play-btn"
                   onClick={handlePlayCurrent}
-                  focusKey="vod-detail-play"
+                  id="vod-detail-play"
                 >
                   <span className="vod-detail-play-icon" aria-hidden>▶</span>
                   {t('vod.play')}
@@ -318,7 +315,6 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
                 type="button"
                 className="vod-detail-play-btn"
                 onClick={handlePlayCurrent}
-                focusKey="vod-detail-play-fallback"
               >
                 <span className="vod-detail-play-icon" aria-hidden>▶</span>
                 {t('vod.play')}
@@ -345,7 +341,6 @@ function EpisodeItem({ episode, index, baseUrl, onPlay }) {
         type="button"
         className="vod-episode-btn"
         onClick={onPlay}
-        focusKey={`vod-episode-${index}`}
       >
         <div className="vod-episode-thumb">
           {thumbUrl ? (

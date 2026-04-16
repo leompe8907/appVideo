@@ -5,8 +5,6 @@
 
 
 import { getVodImageUrl } from '../../services/vodService';
-import { useDevice } from '../../contexts/DeviceContext';
-import { useSpatialNavigation } from '../../hooks/navigation/useSpatialNavigation';
 
 export function VodCard({ item, index, onSelect, focusKeyPrefix = 'vod-card', baseUrl }) {
   const posterUrl =
@@ -14,13 +12,6 @@ export function VodCard({ item, index, onSelect, focusKeyPrefix = 'vod-card', ba
     item.posterInfoURL ||
     (item.image1Id != null && baseUrl ? getVodImageUrl(baseUrl, item.image1Id, 'posterList') : null);
   const title = item.name || item.title || '';
-
-  const { isTV } = useDevice();
-  const { ref, focused } = useSpatialNavigation({
-    focusKey: `${focusKeyPrefix}-${item.id ?? index}`,
-    onEnterPress: () => onSelect?.(item),
-    isFocusable: true,
-  });
 
   const handleClick = () => onSelect?.(item);
   const handleKeyDown = (e) => {
@@ -32,12 +23,11 @@ export function VodCard({ item, index, onSelect, focusKeyPrefix = 'vod-card', ba
 
   return (
     <button
-      ref={ref}
       type="button"
-      className={`vod-card ${focused ? 'focused' : ''}`}
+      className="vod-card"
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      tabIndex={isTV ? -1 : 0}
+      tabIndex={0}
       aria-label={title}
     >
       <div className="vod-card-poster">

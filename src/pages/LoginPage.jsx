@@ -11,7 +11,6 @@ import { loginAndActivateLicense } from '../services/loginFlow';
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
 import { getActiveLicense } from '../utils/userSession';
 import { useUdidLoginFlow } from '../hooks/useUdidLoginFlow';
-import { useSpatialSetFocus } from '../hooks/navigation/useSpatialNavigation';
 import '../styles/components/_login.scss';
 
 export function LoginPage() {
@@ -30,8 +29,6 @@ export function LoginPage() {
   const [qrError, setQrError] = useState('');
   const [isUdidModalOpen, setIsUdidModalOpen] = useState(false);
   const [udidQrImageSrc, setUdidQrImageSrc] = useState('');
-
-  const setFocus = useSpatialSetFocus();
 
   console.log(`🖥️ [DEVICE] Modo: ${isTV ? 'TV' : 'PC'}`);
 
@@ -91,17 +88,13 @@ export function LoginPage() {
     if (isTV) {
       // Pequeño delay
       const timer = setTimeout(() => {
-        if (typeof setFocus === 'function') {
-          setFocus('login-username');
-        } else {
-          const usernameInput = document.getElementById('username');
-          if (usernameInput) usernameInput.focus();
-        }
+        const usernameInput = document.getElementById('username');
+        if (usernameInput) usernameInput.focus();
       }, 300);
 
       return () => clearTimeout(timer);
     }
-  }, [isTV, setFocus]);
+  }, [isTV]);
 
   useEffect(() => {
     if (!isQrModalOpen) return;
@@ -291,7 +284,6 @@ export function LoginPage() {
               disabled={isSubmitting}
               autoComplete="username"
               required
-              focusKey="login-username"
             />
           </div>
 
@@ -308,13 +300,11 @@ export function LoginPage() {
                 disabled={isSubmitting}
                 autoComplete="current-password"
                 required
-                focusKey="login-password"
               />
               <FocusableButton
                 type="button"
                 className="password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
-                focusKey="login-password-toggle"
               >
                 {showPassword ? '🙈' : '👁️'}
               </FocusableButton>
@@ -327,13 +317,6 @@ export function LoginPage() {
             type="submit" 
             disabled={isSubmitting}
             className="login-button"
-            focusKey="login-submit"
-            onEnterPress={() => {
-              // En TV, ejecutar el submit del formulario cuando se presiona Enter
-              if (isTV) {
-                handleSubmit();
-              }
-            }}
           >
             {isSubmitting ? t('login.submitting') : t('login.submit')}
           </FocusableButton>
@@ -344,13 +327,7 @@ export function LoginPage() {
               <FocusableButton
                 type="button"
                 className="register-button"
-                focusKey="login-register"
                 onClick={handleOpenQrModal}
-                onEnterPress={() => {
-                  if (isTV) {
-                    handleOpenQrModal();
-                  }
-                }}
               >
                 {t('login.register')}
               </FocusableButton>
@@ -363,13 +340,7 @@ export function LoginPage() {
               <FocusableButton
                 type="button"
                 className="register-button"
-                focusKey="login-udid"
                 onClick={handleOpenUdidModal}
-                onEnterPress={() => {
-                  if (isTV) {
-                    handleOpenUdidModal();
-                  }
-                }}
               >
                 {t('login.udidButton')}
               </FocusableButton>
@@ -393,12 +364,7 @@ export function LoginPage() {
             <FocusableButton
               type="button"
               className="register-close-button"
-              focusKey="login-register-close"
-              onArrowPress={() => false}
               onClick={handleCloseQrModal}
-              onEnterPress={() => {
-                if (isTV) handleCloseQrModal();
-              }}
             >
               {t('common.close')}
             </FocusableButton>
@@ -443,8 +409,6 @@ export function LoginPage() {
                 <FocusableButton
                   type="button"
                   className="register-button"
-                  focusKey="login-udid-retry"
-                  onArrowPress={(direction) => (direction === 'left' || direction === 'right')}
                   onClick={udidFlow.retry}
                 >
                   {t('login.udidRetry')}
@@ -454,12 +418,7 @@ export function LoginPage() {
               <FocusableButton
                 type="button"
                 className="register-close-button"
-                focusKey="login-udid-cancel"
-                onArrowPress={(direction) => (direction === 'left' || direction === 'right')}
                 onClick={handleCloseUdidModal}
-                onEnterPress={() => {
-                  if (isTV) handleCloseUdidModal();
-                }}
               >
                 {t('common.close')}
               </FocusableButton>

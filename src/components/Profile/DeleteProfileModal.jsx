@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { useSpatialSetFocus } from '../../hooks/navigation/useSpatialNavigation';
 
 import panaccessService from '../../services/panaccessService';
 
@@ -17,17 +16,16 @@ export function DeleteProfileModal({ profile, onClose, onSuccess }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
-  
-  const setFocus = useSpatialSetFocus();
 
   useEffect(() => {
     if (isTV) {
       const timer = setTimeout(() => {
-        if (typeof setFocus === 'function') setFocus('delete-profile-cancel');
+        const btn = document.getElementById('delete-profile-cancel');
+        if (btn) btn.focus();
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [isTV, setFocus]);
+  }, [isTV]);
 
   const handleConfirm = async (e) => {
     if (e) e.preventDefault();
@@ -70,10 +68,8 @@ export function DeleteProfileModal({ profile, onClose, onSuccess }) {
           <FocusableButton
             type="button"
             onClick={handleConfirm}
-            onEnterPress={handleConfirm}
             disabled={isDeleting}
-            onArrowPress={(direction) => (direction === 'left' || direction === 'right')}
-            focusKey="delete-profile-confirm"
+            id="delete-profile-confirm"
             className="create-profile-btn delete-profile-btn-confirm"
           >
             {isDeleting ? t('profile.deleteDeleting') : t('profile.deleteConfirm')}
@@ -81,10 +77,8 @@ export function DeleteProfileModal({ profile, onClose, onSuccess }) {
           <FocusableButton
             type="button"
             onClick={onClose}
-            onEnterPress={onClose}
             disabled={isDeleting}
-            onArrowPress={(direction) => (direction === 'left' || direction === 'right')}
-            focusKey="delete-profile-cancel"
+            id="delete-profile-cancel"
             className="create-profile-btn create-profile-btn-secondary"
           >
             {t('profile.deleteCancel')}
