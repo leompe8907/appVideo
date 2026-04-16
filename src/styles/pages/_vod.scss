@@ -1002,11 +1002,9 @@
 .vod-category-modal {
   position: relative;
   width: 100%;
-  max-width: 70em;
-  max-height: 42em;
-  // Fallback para pantallas chicas
-  max-width: 95vw;
-  max-height: 90vh;
+  // Base en em (escala con html font-size) con tope por viewport.
+  max-width: min(70em, 95vw);
+  max-height: min(42em, 90vh);
   display: flex;
   flex-direction: column;
   background: rgba(28, 28, 28, 0.98);
@@ -1065,8 +1063,7 @@
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-auto-rows: minmax(20rem, auto);
-  height: 34em;
-  max-height: 80vh;
+  height: min(34em, 80vh);
   gap: 1.25rem;
   padding: 1.5rem 3rem 2rem 3rem;
   overflow-y: auto;
