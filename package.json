@@ -12,7 +12,7 @@
     "build:bromteck": "cross-env VITE_BRAND=bromteck VITE_DEFAULT_BRAND=bromteck vite build",
     "build:intv": "cross-env VITE_BRAND=intv VITE_DEFAULT_BRAND=intv vite build",
     "build:gigmax": "cross-env VITE_BRAND=gigmax VITE_DEFAULT_BRAND=gigmax vite build",
-    "build:windplay": "cross-env VITE_BRAND=windplay VITE_DEFAULT_BRAND=windplay vite build",
+    "build:wind": "cross-env VITE_BRAND=wind VITE_DEFAULT_BRAND=wind vite build",
     "preview": "vite preview",
     "preview:telecable": "cross-env VITE_BRAND=telecable VITE_DEFAULT_BRAND=telecable vite preview --outDir dist/telecable",
     "preview:telecable:full": "pnpm run build:telecable && pnpm run preview:telecable",
@@ -22,8 +22,8 @@
     "preview:intv:full": "pnpm run build:intv && pnpm run preview:intv",
     "preview:gigmax": "cross-env VITE_BRAND=gigmax VITE_DEFAULT_BRAND=gigmax vite preview --outDir dist/gigmax",
     "preview:gigmax:full": "pnpm run build:gigmax && pnpm run preview:gigmax",
-    "preview:windplay": "cross-env VITE_BRAND=windplay VITE_DEFAULT_BRAND=windplay vite preview --outDir dist/windplay",
-    "preview:windplay:full": "pnpm run build:windplay && pnpm run preview:windplay",
+    "preview:wind": "cross-env VITE_BRAND=wind VITE_DEFAULT_BRAND=wind vite preview --outDir dist/wind",
+    "preview:wind:full": "pnpm run build:wind && pnpm run preview:wind",
     "lint": "eslint ."
   },
   "dependencies": {
