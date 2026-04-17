@@ -281,11 +281,9 @@ export const BRANDS = [
       },
       backgroundImage: {
         // Personaliza el fondo del login por marca:
-        // - url: URL absoluta o relativa (tiene prioridad)
         // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
         enabled: true,
-        url: "",
-        assetPath: "backgroundAlt",
+        assetPath: "backgroundalt.png",
       },
       qrRegister: {
         enabled: true,
@@ -507,8 +505,7 @@ export const BRANDS = [
       },
       backgroundImage: {
         enabled: true,
-        url: "",
-        assetPath: "backgroundAlt",
+        assetPath: "backgroundalt.png",
       },
       qrRegister: {
         enabled: true,
@@ -703,8 +700,7 @@ export const BRANDS = [
       },
       backgroundImage: {
         enabled: true,
-        url: "",
-        assetPath: "backgroundAlt",
+        assetPath: "backgroundalt.png",
       },
       qrRegister: {
         enabled: false,
@@ -893,9 +889,8 @@ export const BRANDS = [
         modalCloseText: "#ffffff",
       },
       backgroundImage: {
-        enabled: true,
-        url: "",
-        assetPath: "backgroundAlt",
+        enabled: false,
+        assetPath: "backgroundalt.png",
       },
       qrRegister: {
         enabled: true,
@@ -1114,6 +1109,10 @@ export const BRANDS = [
         toggleText: "rgba(255, 255, 255, 0.7)",
         modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
         modalCloseText: "#ffffff",
+      },
+      backgroundImage: {
+        enabled: true,
+        assetPath: "backgroundalt.png",
       },
       qrRegister: {
         enabled: true,

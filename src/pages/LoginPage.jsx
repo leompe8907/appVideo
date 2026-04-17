@@ -257,7 +257,20 @@ export function LoginPage() {
   }
 
   const logoPath = getImage('logo.png');
-  const backgroundPath = currentBrand.assets?.background || getImage('background.png');
+  const loginBackgroundConfig = currentBrand?.login?.backgroundImage;
+  const hasCustomLoginBg = loginBackgroundConfig?.enabled === true;
+  const loginBgAssetPathRaw =
+    typeof loginBackgroundConfig?.assetPath === 'string'
+      ? loginBackgroundConfig.assetPath.trim()
+      : '';
+  const loginBgAssetPath =
+    loginBgAssetPathRaw && !loginBgAssetPathRaw.includes('.')
+      ? `${loginBgAssetPathRaw}.png`
+      : loginBgAssetPathRaw;
+
+  const backgroundPath = hasCustomLoginBg && loginBgAssetPath
+    ? getImage(loginBgAssetPath)
+    : (currentBrand.assets?.background || getImage('background.png'));
 
   return (
     <div 
