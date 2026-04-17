@@ -1,64 +1,12 @@
 /**
  * Estilos responsive globales
- * Sistema de escalado por “escalones” (estilo 10foot)
- *
- * En 10foot, la consistencia PC/TV se logra principalmente con:
- * - tamaños en em/rem
- * - cambio de escala por breakpoints grandes (HD vs FullHD)
- *
- * En `app` reemplazamos el escalado fluido (clamp/vw) por un control
- * centralizado de `html { font-size }` por breakpoint.
+ * Sin reescalado por ancho (móvil/tablet/desktop ni resolución TV): `html` fijo.
  */
 
-@use 'variables' as *;
-@use 'mixins' as *;
-
-/**
- * Escala base: HD (1280) -> 16px.
- * Escala TV/FullHD (1920) -> 24px (1.5x), para imitar el salto 8em -> 12em de 10foot.
- *
- * Nota: al usar rem/em, este ajuste escala componentes de forma consistente
- * sin depender de `vw`.
- */
 html {
   font-size: 16px;
-}
-
-// Móvil/tablet: bajar levemente para legibilidad/espacio
-@include mobile {
-  html { font-size: 14px; }
-}
-@include tablet {
-  html { font-size: 15px; }
-}
-
-// Escritorio “normal” (hasta HD): mantener base
-@include desktop {
-  html { font-size: 16px; }
-}
-
-// HD explícito (1280+): mantener base
-@include hd {
-  html { font-size: 16px; }
-}
-
-// FullHD/TV (1920+): salto de escala
-@include fullhd {
-  html { font-size: 24px; }
-}
-
-// UltraHD/4K/8K: mantener escalones adicionales, sin escalado fluido
-@include ultrahd {
-  html { font-size: 26px; }
-}
-@include tv-4k {
-  html { font-size: 28px; }
-}
-@include tv-8k {
-  html { font-size: 32px; }
 }
 
 // Utilidades simples (no fluidas) por si se usan en layout
 .responsive-padding { padding: 2rem; }
 .responsive-margin { margin: 1rem; }
-

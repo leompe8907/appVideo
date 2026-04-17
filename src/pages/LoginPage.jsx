@@ -32,7 +32,7 @@ export function LoginPage() {
 
   console.log(`🖥️ [DEVICE] Modo: ${isTV ? 'TV' : 'PC'}`);
 
-  const qrRegisterConfig = currentBrand?.qrRegister;
+  const qrRegisterConfig = currentBrand?.login?.qrRegister || currentBrand?.qrRegister;
   const qrRegisterEnabled = !!qrRegisterConfig?.enabled;
   const qrRegisterUrl = typeof qrRegisterConfig?.url === 'string' ? qrRegisterConfig.url.trim() : '';
   const canShowQrRegister = qrRegisterEnabled && qrRegisterUrl.length > 0;
@@ -42,7 +42,7 @@ export function LoginPage() {
   const isSamsungTv = isTV && (hasSamsungRuntime || userAgent.includes('tizen') || userAgent.includes('samsung'));
   const isLgTv = isTV && (hasLgRuntime || userAgent.includes('webos') || userAgent.includes('netcast') || userAgent.includes('lg'));
   const shouldShowQrModal = isSamsungTv || isLgTv;
-  const udidLoginConfig = currentBrand?.udidLogin;
+  const udidLoginConfig = currentBrand?.login?.udid || currentBrand?.udidLogin;
   const effectiveUdidConfig = {
     ...udidLoginConfig,
     baseUrl: udidLoginConfig?.baseUrl || currentBrand?.api?.baseUrl || '',
@@ -339,7 +339,7 @@ export function LoginPage() {
               <p className="register-hint">{t('login.udidHint')}</p>
               <FocusableButton
                 type="button"
-                className="register-button"
+                className="udid-button"
                 onClick={handleOpenUdidModal}
               >
                 {t('login.udidButton')}
@@ -408,7 +408,7 @@ export function LoginPage() {
               {(udidFlow.status === 'error' || udidFlow.status === 'expired' || udidFlow.status === 'rate_limited') && (
                 <FocusableButton
                   type="button"
-                  className="register-button"
+                  className="udid-button"
                   onClick={udidFlow.retry}
                 >
                   {t('login.udidRetry')}

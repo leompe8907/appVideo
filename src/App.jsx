@@ -1,13 +1,11 @@
-import { useEffect, useRef, Suspense, lazy } from 'react';
+import { Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useViewport } from './hooks/useViewport';
 import { useAuthValidator } from './hooks/useAuthValidator';
 
 import { isAuthenticated } from './utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
 import { PreloadGate } from './components/preload/PreloadGate';
-import { SkeletonText, SkeletonCard } from './components/ui/Skeleton';
 
 // Lazy loading de páginas
 const SplashPage = lazy(() => import('./pages/SplashPage'));
@@ -27,20 +25,13 @@ const HomePlaceholderPage = lazy(() =>
   import('./pages/HomePage').then((m) => ({ default: m.HomePlaceholderPage }))
 );
 
+/** Fallback Suspense: mismo look que #app-boot-shell del index (transición continua). */
 function Loading() {
   const { t } = useTranslation();
   return (
-    <div className="loading">
-      <div style={{ width: 260, marginBottom: 12 }}>
-        <SkeletonText />
-      </div>
-      <div style={{ width: '70%', maxWidth: 520, marginBottom: 18 }}>
-        <SkeletonText />
-      </div>
-      <div style={{ width: '100%', height: 220, maxWidth: 980 }}>
-        <SkeletonCard style={{ height: '100%' }} />
-      </div>
-      <div style={{ marginTop: 10, opacity: 0.85 }}>{t('common.loading')}</div>
+    <div className="app-route-loading" role="status" aria-live="polite" aria-busy="true">
+      <div className="app-route-loading__spinner" aria-hidden="true" />
+      <p className="app-route-loading__label">{t('common.loading')}</p>
     </div>
   );
 }
@@ -67,44 +58,7 @@ function ProtectedRoute({ children }) {
 }
 
 function App() {
-  const viewport = useViewport();
-  const lastViewportClassRef = useRef('');
-  const rafRef = useRef(0);
-
-  // Aplicar clases de viewport al root (TV/PC, resolución)
-  // NOTA: Se eliminó el código que setea --viewport-scale porque no se usaba en ningún SCSS.
-  // Las clases CSS (.mobile, .desktop, .tv-4k, etc.) son suficientes para estilos responsivos.
-  useEffect(() => {
-    const root = document.documentElement;
-
-    // Evitar repintadas masivas en TV: agrupar en rAF y aplicar solo si cambió.
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = 0;
-
-      const classes = [];
-      if (viewport.isMobile) classes.push('mobile');
-      if (viewport.isTablet) classes.push('tablet');
-      if (viewport.isDesktop) classes.push('desktop');
-      if (viewport.isHD) classes.push('hd');
-      if (viewport.isFullHD) classes.push('fullhd');
-      if (viewport.isUltraHD) classes.push('ultrahd');
-      if (viewport.is4K) classes.push('tv-4k');
-      if (viewport.is8K) classes.push('tv-8k');
-
-      const classKey = classes.sort().join(' ');
-      if (classKey !== lastViewportClassRef.current) {
-        root.classList.remove('mobile', 'tablet', 'desktop', 'hd', 'fullhd', 'ultrahd', 'tv-4k', 'tv-8k');
-        classes.forEach((c) => root.classList.add(c));
-        lastViewportClassRef.current = classKey;
-      }
-    });
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = 0;
-    };
-  }, [viewport]);
+  const { t } = useTranslation();
 
   return (
     <>
@@ -129,7 +83,7 @@ function App() {
                 <Route path="epg" element={<PreloadGate required="epg"> <Suspense fallback={<Loading />}> <EpgCardsPage /></Suspense></PreloadGate>}/>
                 <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>}/>
                 <Route path="control-parental" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><ParentalSettingsPage /></Suspense></PreloadGate>}/>
-                <Route path="osms" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title="OSMS" description="Modulo en preparacion para mensajes del sistema." /></Suspense>}/>
+                <Route path="osms" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title={t('sidebar.osms')} description={t('sidebar.osmsPlaceholder')} /></Suspense>}/>
                 <Route path="*" element={<Navigate to="/home/inicio" replace />} />
               </Route>
               {/* Fallback */}

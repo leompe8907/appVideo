@@ -9,6 +9,7 @@
 @use 'responsive' as *;
 @use 'global' as *;
 @use 'components/skeleton' as *;
+@use 'components/app-boot-shell' as *;
 @use 'components/login' as *;
 @use 'components/confirm-modal' as *;
 @use 'components/layout' as *;

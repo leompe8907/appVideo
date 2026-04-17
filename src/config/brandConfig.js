@@ -114,9 +114,21 @@ export function enrichConfigWithAssets(config) {
     ...(config.epg || {}),
   };
 
+  const login = config.login || {};
+  const derivedQrRegister = login.qrRegister || config.qrRegister;
+  const derivedUdidLogin = login.udid || config.udidLogin;
+
   return {
     ...config,
     ...EPG_SHARED,
+    login: {
+      ...login,
+      qrRegister: derivedQrRegister,
+      udid: derivedUdidLogin,
+    },
+    // Compatibilidad: mientras migra el resto del código, mantenemos llaves top-level.
+    qrRegister: derivedQrRegister,
+    udidLogin: derivedUdidLogin,
     parental,
     epg,
     assets: {

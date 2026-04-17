@@ -41,15 +41,15 @@
  *   @param {string} api.baseUrl - URL base del backend propio (ej. validación de UDID, auth, etc.).
  *   @param {string} api.wsUrl - URL de WebSocket asociado (si aplica) para esta marca.
  *
- * @param {Object} qrRegister - Configuración de registro por QR en Login:
- *   @param {boolean} qrRegister.enabled - Habilita/deshabilita el botón/modal de registro QR.
- *   @param {string} qrRegister.url - URL destino codificada en el QR.
- *
- * @param {Object} udidLogin - Configuración de login por UDID:
- *   @param {boolean} udidLogin.enabled - Habilita/deshabilita el login externo por UDID.
- *   @param {string} udidLogin.baseUrl - Base del backend propio para request de UDID.
- *   @param {string} udidLogin.requestPath - Path para solicitar código UDID (default recomendado: /udid/request-udid-manual/).
- *   @param {string} udidLogin.wsUrl - WebSocket para esperar confirmación remota.
+ * @param {Object} login - Bloque unificado de configuración del Login por marca.
+ *   @param {Object} login.qrRegister - Registro por QR en Login:
+ *     @param {boolean} login.qrRegister.enabled - Habilita/deshabilita el botón/modal de registro QR.
+ *     @param {string} login.qrRegister.url - URL destino codificada en el QR.
+ *   @param {Object} login.udid - Login por UDID:
+ *     @param {boolean} login.udid.enabled - Habilita/deshabilita el login externo por UDID.
+ *     @param {string} login.udid.baseUrl - Base del backend propio para request de UDID.
+ *     @param {string} login.udid.requestPath - Path para solicitar código UDID (default recomendado: /udid/request-udid-manual/).
+ *     @param {string} login.udid.wsUrl - WebSocket para esperar confirmación remota.
  *
  * @param {boolean} hashPasswordBeforeLogin - true: hashear contraseña en cliente antes de enviar (ej. Panaccess);
  *   false: enviar contraseña en claro (ej. backends como intv).
@@ -265,21 +265,44 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
-    qrRegister: {
-      enabled: true,
-      url: "https://shop.fotelka.tv/?c=customer&p=register",
-    },
-    udidLogin: {
-      enabled: false,
-      baseUrl: "",
-      requestPath: "",
-      wsUrl: "",
-      appType: "10foot",
-      appVersion: "1.0",
-      maxReconnectAttempts: 3,
-      reconnectMs: [3000, 6000, 10000],
-      heartbeatMs: 30000,
-      privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+    login: {
+      theme: {
+        cardBackground: "rgba(255, 255, 255, 0.05)",// Fondo de la tarjeta del login
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Botón principal (Entrar)
+        submitText: "#ffffff",// Texto del botón principal
+        registerBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón de registro
+        registerText: "#ffffff",// Texto del botón de registro
+        udidBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón UDID
+        udidText: "#ffffff",// Texto del botón UDID
+        toggleBg: "rgba(255, 255, 255, 0.1)",// Fondo del botón de toggle
+        toggleText: "rgba(255, 255, 255, 0.7)",// Texto del botón de toggle
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Fondo del botón cerrar modal
+        modalCloseText: "#ffffff",// Texto del botón cerrar modal
+      },
+      backgroundImage: {
+        // Personaliza el fondo del login por marca:
+        // - url: URL absoluta o relativa (tiene prioridad)
+        // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
+        enabled: true,
+        url: "",
+        assetPath: "backgroundAlt",
+      },
+      qrRegister: {
+        enabled: true,
+        url: "https://shop.fotelka.tv/?c=customer&p=register",
+      },
+      udid: {
+        enabled: false,
+        baseUrl: "",
+        requestPath: "",
+        wsUrl: "",
+        appType: "10foot",
+        appVersion: "1.0",
+        maxReconnectAttempts: 3,
+        reconnectMs: [3000, 6000, 10000],
+        heartbeatMs: 30000,
+        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
     },
     vod: {
       layout: "hero",
@@ -468,21 +491,41 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
-    qrRegister: {
-      enabled: false,
-      url: "https://shop.fotelka.tv/?c=customer&p=register",
-    },
-    udidLogin: {
-      enabled: false,
-      baseUrl: "",
-      requestPath: "",
-      wsUrl: "",
-      appType: "10foot",
-      appVersion: "1.0",
-      maxReconnectAttempts: 3,
-      reconnectMs: [3000, 6000, 10000],
-      heartbeatMs: 30000,
-      privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+    login: {
+      theme: {
+        cardBackground: "rgba(255, 255, 255, 0.05)",
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
+        submitText: "#ffffff",
+        registerBg: "rgba(255, 255, 255, 0.12)",
+        registerText: "#ffffff",
+        udidBg: "rgba(255, 255, 255, 0.12)",
+        udidText: "#ffffff",
+        toggleBg: "rgba(255, 255, 255, 0.1)",
+        toggleText: "rgba(255, 255, 255, 0.7)",
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
+        modalCloseText: "#ffffff",
+      },
+      backgroundImage: {
+        enabled: true,
+        url: "",
+        assetPath: "backgroundAlt",
+      },
+      qrRegister: {
+        enabled: true,
+        url: "https://shop.fotelka.tv/?c=customer&p=register",
+      },
+      udid: {
+        enabled: false,
+        baseUrl: "",
+        requestPath: "",
+        wsUrl: "",
+        appType: "10foot",
+        appVersion: "1.0",
+        maxReconnectAttempts: 3,
+        reconnectMs: [3000, 6000, 10000],
+        heartbeatMs: 30000,
+        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
     },
     vod: {
       layout: "hero", // "hero" | "classic"
@@ -644,21 +687,41 @@ export const BRANDS = [
       showRating: false, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
-    qrRegister: {
-      enabled: false,
-      url: "",
-    },
-    udidLogin: {
-      enabled: false,
-      baseUrl: "",
-      requestPath: "/udid/request-udid-manual/",
-      wsUrl: "",
-      appType: "10foot",
-      appVersion: "1.0",
-      maxReconnectAttempts: 3,
-      reconnectMs: [3000, 6000, 10000],
-      heartbeatMs: 30000,
-      privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+    login: {
+      theme: {
+        cardBackground: "rgba(255, 255, 255, 0.05)",
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
+        submitText: "#ffffff",
+        registerBg: "rgba(255, 255, 255, 0.12)",
+        registerText: "#ffffff",
+        udidBg: "rgba(255, 255, 255, 0.12)",
+        udidText: "#ffffff",
+        toggleBg: "rgba(255, 255, 255, 0.1)",
+        toggleText: "rgba(255, 255, 255, 0.7)",
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
+        modalCloseText: "#ffffff",
+      },
+      backgroundImage: {
+        enabled: true,
+        url: "",
+        assetPath: "backgroundAlt",
+      },
+      qrRegister: {
+        enabled: false,
+        url: "",
+      },
+      udid: {
+        enabled: false,
+        baseUrl: "",
+        requestPath: "/udid/request-udid-manual/",
+        wsUrl: "",
+        appType: "10foot",
+        appVersion: "1.0",
+        maxReconnectAttempts: 3,
+        reconnectMs: [3000, 6000, 10000],
+        heartbeatMs: 30000,
+        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
     },
     vod: {
       layout: "hero",
@@ -815,21 +878,259 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
-    qrRegister: {
-      enabled: true,
-      url: "https://shop.fotelka.tv/?c=customer&p=register",
+    login: {
+      theme: {
+        cardBackground: "rgba(255, 255, 255, 0.05)",
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
+        submitText: "#ffffff",
+        registerBg: "rgba(255, 255, 255, 0.12)",
+        registerText: "#ffffff",
+        udidBg: "rgba(255, 255, 255, 0.12)",
+        udidText: "#ffffff",
+        toggleBg: "rgba(255, 255, 255, 0.1)",
+        toggleText: "rgba(255, 255, 255, 0.7)",
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
+        modalCloseText: "#ffffff",
+      },
+      backgroundImage: {
+        enabled: true,
+        url: "",
+        assetPath: "backgroundAlt",
+      },
+      qrRegister: {
+        enabled: true,
+        url: "https://shop.fotelka.tv/?c=customer&p=register",
+      },
+      udid: {
+        enabled: true,
+        requestPath: "/udid/request-udid-manual/",
+        baseUrl: "http://127.0.0.1:8000", //"https://bt-auth.cabledelancer.com",
+        wsUrl: "ws://127.0.0.1:8000/ws/auth/", //"wss://bt-auth.cabledelancer.com/ws/auth/",
+        appType: "10foot",
+        appVersion: "1.0",
+        maxReconnectAttempts: 3,
+        reconnectMs: [3000, 6000, 10000],
+        heartbeatMs: 30000,
+        privateKeyUrl: "/cableatlantico/keys/private_key.pem",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
     },
-    udidLogin: {
+    vod: {
+      layout: "hero", // "hero" | "classic"
+      add: true,
+      vodDetail: {
+        descriptionMaxLength: 180, // Caracteres máximos de la descripción antes de "Leer más" (0 = sin límite)
+        showReleaseYear: true, // Mostrar año de estreno en la metadata
+        showDuration: true, // Mostrar duración (min) en la metadata
+        showParentalRating: true, // Mostrar badge de clasificación por edades
+        showCategories: true, // Mostrar etiquetas de categorías
+        showStarRating: true, // Mostrar valoración en estrellas
+        showDescription: true, // Mostrar bloque de descripción
+        playButtonColor: null, // Color del botón Reproducir (hex/css)
+        starRatingColor: null, // Color de las estrellas rellenas (hex/css)
+        heroGradientOpacity: 0.95, // Opacidad del gradiente inferior del hero (0–1)    
+        posterWidthMin: 100, // Ancho mínimo del poster en px
+        posterWidthMax: 200, // Ancho máximo del poster en px
+        categoryTagBackground: "rgba(255, 255, 255, 0.12)", // Color/fondo de las etiquetas de categoría (css)
+        categoryTagBorderColor: "rgba(255, 255, 255, 0.2)", // Borde de las etiquetas de categoría (css)
+        parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)", // Borde del badge de clasificación por edades (css)
+        contentPosition: "middle", // "top" | "middle" | "bottom" - posición vertical del bloque poster + info
+      },
+    },
+    // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
+    hashPasswordBeforeLogin: false,
+    debug: {
+      spatialNav: false, // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
+    },
+  },
+  {
+    brand: "wind",
+    appName: "windplay",
+    drm: "https://pmdw-1.in.tv.br/",
+    token: "CEVQmnhOsXvpRQZbGADl",
+    os: 'HTML5',
+    appVersion: '1',    
+    branding: 'Panaccess',
+    developedBy: "windplay",
+    version: "1.0.0",
+
+    // EPG: parámetros generales para la API de guía de programación (mismo valor en todas las marcas)
+    epg: {
+      daysOffset: 2, // Días de offset para la API de guía de programación
+      rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
+      hoursLimit: 12, // Límite de horas para la API de guía de programación
+    },
+    
+    // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
+    epgCards: {
+      epgPast: true,
+      epgPagesPastEnabled: true,
+      epgCardsChannelActiveBg: "rgb(0 0 0)",
+      epgCardsProgramLiveBg: "#6C8EB6",
+      // Color de la barra de progreso (programa en vivo / "Ahora")
+      epgCardsProgramLiveProgressBg: "#6C8EB6",
+      epgCardsLaterGlobal: true,
+      // Control del cierre de modal al reproducir en vivo:
+      // true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
+      epgCloseModalOnPlayLive: 'auto',
+    },
+
+    // Catchup: pantalla independiente con 3 diseños (Legacy / Timeline / Netflix).
+    catchup: {
       enabled: true,
-      requestPath: "/udid/request-udid-manual/",
-      baseUrl: "http://127.0.0.1:8000", //"https://bt-auth.cabledelancer.com",
-      wsUrl: "ws://127.0.0.1:8000/ws/auth/", //"wss://bt-auth.cabledelancer.com/ws/auth/",
-      appType: "10foot",
-      appVersion: "1.0",
-      maxReconnectAttempts: 3,
-      reconnectMs: [3000, 6000, 10000],
-      heartbeatMs: 30000,
-      privateKeyUrl: "/cableatlantico/keys/private_key.pem",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      ui: {
+        activeLayout: 'legacy',
+        showAllLayouts: false,
+      },
+      layouts: {
+        legacy: { enabled: true },
+        timeline: { enabled: true },
+        netflix: { enabled: true },
+      },
+    },
+
+    // Player: control técnico de selección de engine por marca.
+    player: {
+      nativeAdaptersEnabled: false,
+      enginePolicy: 'auto',
+      showPlaybackButtonsOnLive: false,
+      showSeekbarOnLive: false,
+      closeChannelSidebarOnSelect: false,
+    },
+
+    // Configuración de UI/Tema
+    ui: {
+      // Splash
+      splashDuration: 3000, // Duración en milisegundos
+      splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      // Logo
+      logoPositionHome: "right", // "top" | "right" | "left" | "center"
+      showTime: false, // Si es true → muestra el tiempo, si es false → no muestra el tiempo
+      // EPG
+      epgLineColorTime: "#3333FF",
+      // Colores
+      primaryColor: "#ff3336",
+      secondaryColor: "#ff3336",
+      theme: "light",
+      // Fuente
+      fontFamily: "Roboto, sans-serif",
+      // Player loading overlay
+      playerLoading: {
+        premium: true,
+      },
+      // Sidebar Home (estructura uniforme entre marcas)
+      sidebar: {
+        backgroundColor: 'rgb(0, 0, 0)',
+        textColor: 'rgba(255, 255, 255, 0.82)',
+        submenuBackgroundColor: 'rgb(0, 0, 0)',
+        submenuTextColor: 'rgba(255, 255, 255, 0.85)',
+        fixed: true,
+      },
+    },
+
+    // Configuración específica de bouquets
+    bouquets: {
+      timeshipColor: "#3333FF",
+    },
+
+    // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    header: {
+      areas: {
+        left: { 
+          enabled: true, 
+          showLogo: true, 
+          showTime: false,
+          contentAlign: 'left'
+        },
+        center: { 
+          enabled: true, 
+          showLogo: false, 
+          showTime: false,
+          contentAlign: 'center'
+        },
+        right: { 
+          enabled: true, 
+          showLogo: false, 
+          showTime: true,
+          contentAlign: 'right'
+        },
+      },
+      subheader: {
+        areas: {
+          left: { 
+            enabled: true, 
+            showServiceInfo: true,
+            contentAlign: 'left'
+          },
+          center: { 
+            enabled: true, 
+            showServiceInfo: false,
+            contentAlign: 'right'
+          },
+          right: { 
+            enabled: true, 
+            showServiceInfo: false,
+            contentAlign: 'right'
+          },
+        },
+      },
+    },
+
+    // Flags de HomeShell (header + ads por sección)
+    homeShell: {
+      header: {
+        inicio: true,
+        serviciosTvRadio: true,
+        vod: true,
+        catchup: true,
+      },
+      ads: {
+        inicio: true,
+        serviciosTvRadio: false,
+        vod: false,
+        catchup: false,
+      },
+    },
+    
+    // Features habilitadas/deshabilitadas
+    features: {
+      miniPlayer: true,
+      profiles: true,
+      seekbar: false, // Equivalente a seekbarEnabled en 10foot
+      logout: false, // Equivalente a logoutEnabled en 10foot
+      showRating: true, // Equivalente a showRating en 10foot
+      osms: false, // Equivalente a osmsEnabled en 10foot
+    },
+    login: {
+      theme: {
+        cardBackground: "rgba(255, 255, 255, 0.05)",
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
+        submitText: "#ffffff",
+        registerBg: "rgba(255, 255, 255, 0.12)",
+        registerText: "#ffffff",
+        udidBg: "rgba(255, 255, 255, 0.12)",
+        udidText: "#ffffff",
+        toggleBg: "rgba(255, 255, 255, 0.1)",
+        toggleText: "rgba(255, 255, 255, 0.7)",
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
+        modalCloseText: "#ffffff",
+      },
+      qrRegister: {
+        enabled: true,
+        url: "https://shop.fotelka.tv/?c=customer&p=register",
+      },
+      udid: {
+        enabled: false,
+        baseUrl: "",
+        requestPath: "",
+        wsUrl: "",
+        appType: "10foot",
+        appVersion: "1.0",
+        maxReconnectAttempts: 3,
+        reconnectMs: [3000, 6000, 10000],
+        heartbeatMs: 30000,
+        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
     },
     vod: {
       layout: "hero", // "hero" | "classic"

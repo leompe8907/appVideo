@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   getActiveBrandConfig,
   enrichConfigWithAssets,
@@ -28,6 +29,7 @@ export const useBrand = () => {
  * Maneja la configuración del brand activo y proporciona helpers
  */
 export const BrandProvider = ({ children }) => {
+  const { t } = useTranslation();
   const [currentBrand, setCurrentBrand] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -220,16 +222,21 @@ export const BrandProvider = ({ children }) => {
 
   // Mostrar loading solo si realmente está cargando
   if (isLoading) {
-    return <div className="brand-loading">Cargando configuración...</div>;
+    return (
+      <div className="brand-loading" role="status" aria-live="polite" aria-busy="true">
+        <div className="brand-loading__spinner" aria-hidden="true" />
+        <p className="brand-loading__label">{t('brand.loadingConfig')}</p>
+      </div>
+    );
   }
 
   // Mostrar error solo si es crítico (no hay brand)
   if (error && !currentBrand) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
-        <h2>Error de Configuración</h2>
+        <h2>{t('brand.configErrorTitle')}</h2>
         <p>{error}</p>
-        <p>Por favor, verifica que exista un brand válido en brands.js</p>
+        <p>{t('brand.configErrorHint')}</p>
       </div>
     );
   }

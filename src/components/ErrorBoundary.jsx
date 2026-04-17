@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import i18n from '../locales/i18n';
 
 /**
  * Captura fallos de render en TV/navegadores sin consola accesible.
@@ -34,8 +35,8 @@ export class ErrorBoundary extends Component {
             boxSizing: 'border-box',
           }}
         >
-          <h1 style={{ fontSize: 22, marginTop: 0 }}>Error al cargar la aplicación</h1>
-          <p style={{ opacity: 0.9 }}>En PC abre las herramientas de desarrollador; en TV revisa la red y la URL base.</p>
+          <h1 style={{ fontSize: 22, marginTop: 0 }}>{i18n.t('errors.loadAppTitle')}</h1>
+          <p style={{ opacity: 0.9 }}>{i18n.t('errors.loadAppHint')}</p>
           <pre
             style={{
               whiteSpace: 'pre-wrap',

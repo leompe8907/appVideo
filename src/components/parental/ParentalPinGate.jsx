@@ -84,7 +84,7 @@ export function ParentalPinGate({
           type="password"
           inputMode="numeric"
           pattern="[0-9]*"
-          placeholder="••••"
+          placeholder={t('pinGate.maskInput')}
           onChange={(e) => {
             setError('');
             const digitsOnly = String(e.target.value || '').replace(/\D/g, '').slice(0, 6);

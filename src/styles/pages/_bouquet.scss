@@ -264,30 +264,6 @@
     }
   }
 
-  // Columnas por dispositivo usando clases del root (configuradas en App/useViewport)
-  :root.mobile & .bouquet-grid-vertical .bouquet-grid-vertical-content {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  :root.tablet & .bouquet-grid-vertical .bouquet-grid-vertical-content {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  :root.desktop & .bouquet-grid-vertical .bouquet-grid-vertical-content,
-  :root.hd & .bouquet-grid-vertical .bouquet-grid-vertical-content,
-  :root.fullhd & .bouquet-grid-vertical .bouquet-grid-vertical-content {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-
-  /* TVs de alta resolución: más columnas para evitar tarjetas enormes */
-  :root.tv-4k & .bouquet-grid-vertical .bouquet-grid-vertical-content {
-    grid-template-columns: repeat(8, minmax(0, 1fr)); /* 8 columnas en 4K */
-  }
-
-  :root.tv-8k & .bouquet-grid-vertical .bouquet-grid-vertical-content {
-    grid-template-columns: repeat(12, minmax(0, 1fr)); /* 12 columnas en 8K */
-  }
-
   .bouquet-row-carousel {
     flex: 0 0 auto;
     display: flex;

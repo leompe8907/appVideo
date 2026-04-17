@@ -119,6 +119,24 @@ export function applyTheme(brandConfig) {
     .filter(Boolean)
     .map((u) => `url("${u}")`);
   root.style.setProperty('--home-background-image', bgUrls.join(', ') || 'none');
+
+  // Login (colores por marca): `login.theme`
+  const loginTheme = brandConfig?.login?.theme || {};
+  const setLoginVar = (name, value) => {
+    if (value == null) return;
+    root.style.setProperty(name, String(value));
+  };
+  setLoginVar('--login-card-background', loginTheme.cardBackground);
+  setLoginVar('--login-submit-bg', loginTheme.submitBg);
+  setLoginVar('--login-submit-text', loginTheme.submitText);
+  setLoginVar('--login-register-bg', loginTheme.registerBg);
+  setLoginVar('--login-register-text', loginTheme.registerText);
+  setLoginVar('--login-udid-bg', loginTheme.udidBg);
+  setLoginVar('--login-udid-text', loginTheme.udidText);
+  setLoginVar('--login-toggle-bg', loginTheme.toggleBg);
+  setLoginVar('--login-toggle-text', loginTheme.toggleText);
+  setLoginVar('--login-modal-close-bg', loginTheme.modalCloseBg);
+  setLoginVar('--login-modal-close-text', loginTheme.modalCloseText);
   
   // Aplicar clase de tema
   root.setAttribute('data-theme', ui.theme);

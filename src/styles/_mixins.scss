@@ -71,24 +71,8 @@
   }
 }
 
-@mixin tv-4k {
-  @media (min-width: $breakpoint-4k) and (max-width: #{$breakpoint-8k - 1px}) {
-    @content;
-  }
-}
-
-@mixin tv-8k {
-  @media (min-width: $breakpoint-8k) {
-    @content;
-  }
-}
-
-// Helper para TVs (Full HD y superior)
-@mixin tv {
-  @media (min-width: $breakpoint-fullhd) {
-    @content;
-  }
-}
+// Nota: se eliminaron los mixins `tv-4k` / `tv-8k` (y helpers asociados)
+// para evitar introducir estilos condicionados por resolución de TV.
 
 // (Eliminado) escalado fluido basado en viewport.
 // En este proyecto el escalado se controla por `html { font-size }` en `_responsive.scss`.
