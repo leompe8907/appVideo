@@ -50,6 +50,12 @@
  *     @param {string} login.udid.baseUrl - Base del backend propio para request de UDID.
  *     @param {string} login.udid.requestPath - Path para solicitar código UDID (default recomendado: /udid/request-udid-manual/).
  *     @param {string} login.udid.wsUrl - WebSocket para esperar confirmación remota.
+ *   @param {Object} login.socialLogin - Login social (Google / Facebook) por marca:
+ *     @param {Object} login.socialLogin.google - Configuración del botón/flujo Google.
+ *       @param {boolean} login.socialLogin.google.enabled - Muestra u oculta el botón.
+ *       @param {string} login.socialLogin.google.redirectUrl - URL de redirección OAuth o destino del flujo (vacío si no aplica).
+ *       @param {string} login.socialLogin.google.accessToken - Token o identificador de integración con backend (vacío si no aplica).
+ *     @param {Object} login.socialLogin.facebook - Igual que google para Facebook.
  *
  * @param {boolean} hashPasswordBeforeLogin - true: hashear contraseña en cliente antes de enviar (ej. Panaccess);
  *   false: enviar contraseña en claro (ej. backends como intv).
@@ -317,10 +323,17 @@ export const BRANDS = [
         heartbeatMs: 30000,
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
-      // Login social (solo UI por ahora): banderas por proveedor
       socialLogin: {
-        googleEnabled: false,
-        facebookEnabled: false,
+        google: {
+          enabled: false,
+          redirectUrl: '',
+          accessToken: '',
+        },
+        facebook: {
+          enabled: false,
+          redirectUrl: '',
+          accessToken: '',
+        },
       },
     },
     vod: {
@@ -559,8 +572,16 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
-        googleEnabled: false,
-        facebookEnabled: false,
+        google: {
+          enabled: false,
+          redirectUrl: '',
+          accessToken: '',
+        },
+        facebook: {
+          enabled: false,
+          redirectUrl: '',
+          accessToken: '',
+        },
       },
     },
     vod: {
@@ -772,8 +793,16 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
-        googleEnabled: false,
-        facebookEnabled: false,
+        google: {
+          enabled: false,
+          redirectUrl: '',
+          accessToken: '',
+        },
+        facebook: {
+          enabled: false,
+          redirectUrl: '',
+          accessToken: '',
+        },
       },
     },
     vod: {
@@ -980,8 +1009,16 @@ export const BRANDS = [
         privateKeyUrl: "/cableatlantico/keys/private_key.pem",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
-        googleEnabled: false,
-        facebookEnabled: false,
+        google: {
+          enabled: false,
+          redirectUrl: '',
+          accessToken: '',
+        },
+        facebook: {
+          enabled: false,
+          redirectUrl: '',
+          accessToken: '',
+        },
       },
     },
     vod: {
@@ -1221,8 +1258,16 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
-        googleEnabled: true,
-        facebookEnabled: true,
+        google: {
+          enabled: true,
+          redirectUrl: '/wind/auth/google/',
+          accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
+        },
+        facebook: {
+          enabled: true,
+          redirectUrl: '',
+          accessToken: '',
+        },
       },
     },
     vod: {

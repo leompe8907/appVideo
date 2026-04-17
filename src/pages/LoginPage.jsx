@@ -273,17 +273,26 @@ export function LoginPage() {
     ? getImage(loginBgAssetPath)
     : (currentBrand.assets?.background || getImage('background.png'));
 
-  const socialConfig = currentBrand?.login?.socialLogin || {};
-  const showGoogle = socialConfig.googleEnabled === true;
-  const showFacebook = socialConfig.facebookEnabled === true;
+  const socialLogin = currentBrand?.login?.socialLogin || {};
+  const googleSocial = socialLogin.google || {};
+  const facebookSocial = socialLogin.facebook || {};
+  const showGoogle = googleSocial.enabled === true;
+  const showFacebook = facebookSocial.enabled === true;
   const showAnySocial = showGoogle || showFacebook;
 
   const handleSocialClick = (provider) => {
-    // UI/branding first: el wiring real (OAuth) se implementa por integración.
-    setError(t('login.socialNotAvailable'));
-    if (import.meta.env.DEV) {
-      console.log(`[Login] Social click: ${provider}`);
+    const cfg = provider === 'google' ? googleSocial : facebookSocial;
+    const redirectUrl =
+      typeof cfg?.redirectUrl === 'string' ? cfg.redirectUrl.trim() : '';
+    if (redirectUrl) {
+      window.location.assign(redirectUrl);
+      return;
     }
+    // `accessToken` queda para integración con backend (no exponer en logs en producción).
+    if (import.meta.env.DEV && cfg?.accessToken) {
+      console.warn(`[Login] Social (${provider}): hay accessToken pero no redirectUrl; flujo no implementado.`);
+    }
+    setError(t('login.socialNotAvailable'));
   };
 
   return (
