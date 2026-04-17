@@ -41,7 +41,8 @@ export function LoginPage() {
   const hasLgRuntime = typeof window !== 'undefined' && (!!window.webOS || !!window.PalmSystem);
   const isSamsungTv = isTV && (hasSamsungRuntime || userAgent.includes('tizen') || userAgent.includes('samsung'));
   const isLgTv = isTV && (hasLgRuntime || userAgent.includes('webos') || userAgent.includes('netcast') || userAgent.includes('lg'));
-  const shouldShowQrModal = isSamsungTv || isLgTv;
+  // En TV siempre usamos modal (redirigir es peor UX y muchos runtimes no se detectan como LG/Samsung).
+  const shouldShowQrModal = isTV;
   const udidLoginConfig = currentBrand?.login?.udid || currentBrand?.udidLogin;
   const effectiveUdidConfig = {
     ...udidLoginConfig,
@@ -272,16 +273,26 @@ export function LoginPage() {
     ? getImage(loginBgAssetPath)
     : (currentBrand.assets?.background || getImage('background.png'));
 
+  const socialConfig = currentBrand?.login?.socialLogin || {};
+  const showGoogle = socialConfig.googleEnabled === true;
+  const showFacebook = socialConfig.facebookEnabled === true;
+  const showAnySocial = showGoogle || showFacebook;
+
+  const handleSocialClick = (provider) => {
+    // UI/branding first: el wiring real (OAuth) se implementa por integración.
+    setError(t('login.socialNotAvailable'));
+    if (import.meta.env.DEV) {
+      console.log(`[Login] Social click: ${provider}`);
+    }
+  };
+
   return (
     <div 
       className="panaccess-login"
       style={backgroundPath ? { backgroundImage: `url(${backgroundPath})` } : {}}
     >
-      <div className="login-brand-section">
-        {logoPath && <img src={logoPath} alt={appName} className="brand-logo" />}
-      </div>
-
       <div className="login-card">
+        {logoPath && <img src={logoPath} alt={appName} className="brand-logo" />}
         <h2>{t('login.title')}</h2>
 
         <form onSubmit={handleSubmit}>
@@ -357,6 +368,30 @@ export function LoginPage() {
               >
                 {t('login.udidButton')}
               </FocusableButton>
+            </div>
+          )}
+
+          {showAnySocial && (
+            <div className="social-login">
+              {showGoogle && (
+                <FocusableButton
+                  type="button"
+                  className="social-button google"
+                  onClick={() => handleSocialClick('google')}
+                >
+                  {t('login.continueWithGoogle')}
+                </FocusableButton>
+              )}
+
+              {showFacebook && (
+                <FocusableButton
+                  type="button"
+                  className="social-button facebook"
+                  onClick={() => handleSocialClick('facebook')}
+                >
+                  {t('login.continueWithFacebook')}
+                </FocusableButton>
+              )}
             </div>
           )}
         </form>

@@ -67,12 +67,15 @@
     "exitConfirmMessage": "Deseja sair do aplicativo?"
   },
   "login": {
-    "title": "Entrar",
+    "title": "Boas-vindas!",
     "user": "Usuário",
     "userPlaceholder": "Seu usuário",
     "password": "Senha",
     "passwordPlaceholder": "Sua senha",
     "submit": "Entrar",
+    "continueWithGoogle": "Continuar com Google",
+    "continueWithFacebook": "Continuar com Facebook",
+    "socialNotAvailable": "O login social não está disponível nesta versão.",
     "register": "Registrar",
     "registerTitle": "Registro por QR",
     "registerHint": "Escaneie este QR code para concluir seu cadastro.",

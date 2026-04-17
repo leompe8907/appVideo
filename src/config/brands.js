@@ -276,6 +276,22 @@ export const BRANDS = [
         udidText: "#ffffff",// Texto del botón UDID
         toggleBg: "rgba(255, 255, 255, 0.1)",// Fondo del botón de toggle
         toggleText: "rgba(255, 255, 255, 0.7)",// Texto del botón de toggle
+        inputs: {
+          // Inputs (usuario/contraseña) - personalizable por marca
+          bg: "rgba(255, 255, 255, 0.1)",
+          border: "rgba(255, 255, 255, 0.2)",
+          text: "#ffffff",
+          placeholder: "rgba(255, 255, 255, 0.4)",
+          focusedBg: "rgba(255, 255, 255, 0.15)",
+          focusedBorder: null,
+          focusedShadow: null,
+        },
+        social: {
+          // Botones login social (Google/Facebook)
+          bg: "rgba(255, 255, 255, 0.08)",
+          border: "rgba(255, 255, 255, 0.22)",
+          text: "rgba(255, 255, 255, 0.92)",
+        },
         modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Fondo del botón cerrar modal
         modalCloseText: "#ffffff",// Texto del botón cerrar modal
       },
@@ -300,6 +316,11 @@ export const BRANDS = [
         reconnectMs: [3000, 6000, 10000],
         heartbeatMs: 30000,
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
+      // Login social (solo UI por ahora): banderas por proveedor
+      socialLogin: {
+        googleEnabled: false,
+        facebookEnabled: false,
       },
     },
     vod: {
@@ -408,7 +429,7 @@ export const BRANDS = [
       },
       // Sidebar Home (estructura uniforme entre marcas)
       sidebar: {
-        backgroundColor: 'rgb(0, 0, 0)',
+        backgroundColor: '#4AC7D7',
         textColor: 'rgba(255, 255, 255, 0.82)',
         submenuBackgroundColor: 'rgb(0, 0, 0)',
         submenuTextColor: 'rgba(255, 255, 255, 0.85)',
@@ -500,6 +521,20 @@ export const BRANDS = [
         udidText: "#ffffff",
         toggleBg: "rgba(255, 255, 255, 0.1)",
         toggleText: "rgba(255, 255, 255, 0.7)",
+        inputs: {
+          bg: "rgba(255, 255, 255, 0.1)",
+          border: "rgba(255, 255, 255, 0.2)",
+          text: "#ffffff",
+          placeholder: "rgba(255, 255, 255, 0.4)",
+          focusedBg: "rgba(255, 255, 255, 0.15)",
+          focusedBorder: null,
+          focusedShadow: null,
+        },
+        social: {
+          bg: "rgba(255, 255, 255, 0.08)",
+          border: "rgba(255, 255, 255, 0.22)",
+          text: "rgba(255, 255, 255, 0.92)",
+        },
         modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
         modalCloseText: "#ffffff",
       },
@@ -522,6 +557,10 @@ export const BRANDS = [
         reconnectMs: [3000, 6000, 10000],
         heartbeatMs: 30000,
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
+      socialLogin: {
+        googleEnabled: false,
+        facebookEnabled: false,
       },
     },
     vod: {
@@ -695,6 +734,20 @@ export const BRANDS = [
         udidText: "#ffffff",
         toggleBg: "rgba(255, 255, 255, 0.1)",
         toggleText: "rgba(255, 255, 255, 0.7)",
+        inputs: {
+          bg: "rgba(255, 255, 255, 0.1)",
+          border: "rgba(255, 255, 255, 0.2)",
+          text: "#ffffff",
+          placeholder: "rgba(255, 255, 255, 0.4)",
+          focusedBg: "rgba(255, 255, 255, 0.15)",
+          focusedBorder: null,
+          focusedShadow: null,
+        },
+        social: {
+          bg: "rgba(255, 255, 255, 0.08)",
+          border: "rgba(255, 255, 255, 0.22)",
+          text: "rgba(255, 255, 255, 0.92)",
+        },
         modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
         modalCloseText: "#ffffff",
       },
@@ -717,6 +770,10 @@ export const BRANDS = [
         reconnectMs: [3000, 6000, 10000],
         heartbeatMs: 30000,
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
+      socialLogin: {
+        googleEnabled: false,
+        facebookEnabled: false,
       },
     },
     vod: {
@@ -885,6 +942,20 @@ export const BRANDS = [
         udidText: "#ffffff",
         toggleBg: "rgba(255, 255, 255, 0.1)",
         toggleText: "rgba(255, 255, 255, 0.7)",
+        inputs: {
+          bg: "rgba(255, 255, 255, 0.1)",
+          border: "rgba(255, 255, 255, 0.2)",
+          text: "#ffffff",
+          placeholder: "rgba(255, 255, 255, 0.4)",
+          focusedBg: "rgba(255, 255, 255, 0.15)",
+          focusedBorder: null,
+          focusedShadow: null,
+        },
+        social: {
+          bg: "rgba(255, 255, 255, 0.08)",
+          border: "rgba(255, 255, 255, 0.22)",
+          text: "rgba(255, 255, 255, 0.92)",
+        },
         modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
         modalCloseText: "#ffffff",
       },
@@ -907,6 +978,10 @@ export const BRANDS = [
         reconnectMs: [3000, 6000, 10000],
         heartbeatMs: 30000,
         privateKeyUrl: "/cableatlantico/keys/private_key.pem",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
+      socialLogin: {
+        googleEnabled: false,
+        facebookEnabled: false,
       },
     },
     vod: {
@@ -1004,9 +1079,9 @@ export const BRANDS = [
       // EPG
       epgLineColorTime: "#3333FF",
       // Colores
-      primaryColor: "#ff3336",
-      secondaryColor: "#ff3336",
-      theme: "light",
+      primaryColor: "#3AA3AE",
+      secondaryColor: "#2C7F88",
+      theme: "dark",
       // Fuente
       fontFamily: "Roboto, sans-serif",
       // Player loading overlay
@@ -1015,7 +1090,7 @@ export const BRANDS = [
       },
       // Sidebar Home (estructura uniforme entre marcas)
       sidebar: {
-        backgroundColor: 'rgb(0, 0, 0)',
+        backgroundColor: '#012B4F',
         textColor: 'rgba(255, 255, 255, 0.82)',
         submenuBackgroundColor: 'rgb(0, 0, 0)',
         submenuTextColor: 'rgba(255, 255, 255, 0.85)',
@@ -1098,8 +1173,9 @@ export const BRANDS = [
     },
     login: {
       theme: {
-        cardBackground: "rgba(255, 255, 255, 0.05)",
-        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
+        // Ajustado para igualar el look & feel del mock (captura)
+        cardBackground: "rgba(0, 22, 38, 0.55)",
+        submitBg: "#3AA3AE",
         submitText: "#ffffff",
         registerBg: "rgba(255, 255, 255, 0.12)",
         registerText: "#ffffff",
@@ -1107,6 +1183,20 @@ export const BRANDS = [
         udidText: "#ffffff",
         toggleBg: "rgba(255, 255, 255, 0.1)",
         toggleText: "rgba(255, 255, 255, 0.7)",
+        inputs: {
+          bg: "rgba(0, 0, 0, 0.0)",
+          border: "rgba(255, 255, 255, 0.7)",
+          text: "#ffffff",
+          placeholder: "rgba(190, 210, 220, 0.7)",
+          focusedBg: "rgba(255, 255, 255, 0.06)",
+          focusedBorder: "rgba(255, 255, 255, 0.95)",
+          focusedShadow: "0 0 0 3px rgba(255, 255, 255, 0.18)",
+        },
+        social: {
+          bg: "rgba(0, 22, 38, 0.55)",
+          border: "rgba(255, 255, 255, 0.28)",
+          text: "#ffffff",
+        },
         modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
         modalCloseText: "#ffffff",
       },
@@ -1129,6 +1219,10 @@ export const BRANDS = [
         reconnectMs: [3000, 6000, 10000],
         heartbeatMs: 30000,
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
+      socialLogin: {
+        googleEnabled: true,
+        facebookEnabled: true,
       },
     },
     vod: {

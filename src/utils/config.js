@@ -137,6 +137,22 @@ export function applyTheme(brandConfig) {
   setLoginVar('--login-toggle-text', loginTheme.toggleText);
   setLoginVar('--login-modal-close-bg', loginTheme.modalCloseBg);
   setLoginVar('--login-modal-close-text', loginTheme.modalCloseText);
+
+  // Login Inputs (colores por marca): `login.theme.inputs`
+  const loginInputs = loginTheme.inputs || {};
+  setLoginVar('--login-input-bg', loginInputs.bg);
+  setLoginVar('--login-input-border', loginInputs.border);
+  setLoginVar('--login-input-text', loginInputs.text);
+  setLoginVar('--login-input-placeholder', loginInputs.placeholder);
+  setLoginVar('--login-input-focused-bg', loginInputs.focusedBg);
+  setLoginVar('--login-input-focused-border', loginInputs.focusedBorder);
+  setLoginVar('--login-input-focused-shadow', loginInputs.focusedShadow);
+
+  // Login Social buttons (colores por marca): `login.theme.social`
+  const loginSocial = loginTheme.social || {};
+  setLoginVar('--login-social-bg', loginSocial.bg);
+  setLoginVar('--login-social-text', loginSocial.text);
+  setLoginVar('--login-social-border', loginSocial.border);
   
   // Aplicar clase de tema
   root.setAttribute('data-theme', ui.theme);

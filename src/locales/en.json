@@ -67,12 +67,15 @@
     "exitConfirmMessage": "Do you want to exit the application?"
   },
   "login": {
-    "title": "Sign In",
+    "title": "Welcome!",
     "user": "Username",
     "userPlaceholder": "Your username",
     "password": "Password",
     "passwordPlaceholder": "Your password",
     "submit": "Enter",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithFacebook": "Continue with Facebook",
+    "socialNotAvailable": "Social sign-in is not available in this version.",
     "register": "Register",
     "registerTitle": "QR Registration",
     "registerHint": "Scan this QR code to complete your registration.",
