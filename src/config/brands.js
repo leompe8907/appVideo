@@ -13,8 +13,6 @@
  * @param {Object} ui - Configuración de interfaz y tema:
  *   @param {number} ui.splashDuration - Tiempo en milisegundos que se muestra la pantalla de splash al iniciar.
  *   @param {boolean} ui.splashAnimado - true: usa imagen animada (.gif); false: usa imagen estática (.png/.webp/.jpg).
- *   @param {string} ui.logoPositionHome - Posición del logo en la home: "top" | "right" | "left" | "center".
- *   @param {boolean} ui.showTime - true: muestra la hora en la UI; false: la oculta.
  *   @param {string} ui.epgLineColorTime - Color (hex) de la línea de tiempo actual en la guía de programación (EPG).
  *   @param {string} ui.primaryColor - Color principal de la marca (botones, acentos, etc.).
  *   @param {string} ui.secondaryColor - Color secundario (hover, fondos, etc.).
@@ -30,10 +28,7 @@
  *     @param {boolean} ui.playerLoading.premium - true: overlay premium (blur + gradientes + glow); false: overlay simple.
  *
  * @param {Object} features - Funcionalidades activas o no para esta marca:
- *   @param {boolean} features.miniPlayer - true: habilita el mini reproductor; false: lo deshabilita.
  *   @param {boolean} features.profiles - true: tras login redirige a /profile; false: redirige a /smartcard.
- *   @param {boolean} features.seekbar - true: habilita la barra de búsqueda del player; false: la oculta.
- *   @param {boolean} features.logout - true: muestra la opción de cerrar sesión en la UI; false: la oculta.
  *   @param {boolean} features.showRating - true: muestra la clasificación/rating de contenido; false: la oculta.
  *   @param {boolean} features.osms - true: habilita la integración OSMS y su menú; false: la deshabilita.
  *
@@ -129,6 +124,7 @@
  *   @param {boolean} epg.reminderShowWhilePlaying - Si true, el popup puede mostrarse con playback activo.
  */
 export const BRANDS = [
+  // Bromteck
   {
     brand: "bromteck",
     appName: "Bromteck",
@@ -204,9 +200,6 @@ export const BRANDS = [
       // Splash
       splashDuration: 3000, // Duración en milisegundos
       splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
-      // Logo
-      logoPositionHome: "top", // "top" | "right" | "left" | "center"
-      showTime: true, // Si es true → muestra el tiempo, si es false → no muestra el tiempo
       // EPG
       epgLineColorTime: "#2CE308",
       // Colores
@@ -269,10 +262,7 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      miniPlayer: true, // Si es true → muestra el mini player, si es false → no muestra el mini player
       profiles: false, // Si es true → redirige a /profile después del login, si es false → redirige a /smartcard después del login
-      seekbar: true, // Equivalente a seekbarEnabled en 10foot
-      logout: false, // Equivalente a logoutEnabled en 10foot
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
@@ -377,6 +367,7 @@ export const BRANDS = [
       spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
     },
   },
+  // inTV Play
   {
     brand: "intv",
     appName: "inTV Play",
@@ -440,9 +431,6 @@ export const BRANDS = [
       // Splash
       splashDuration: 3000, // Duración en milisegundos
       splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
-      // Logo
-      logoPositionHome: "right", // "top" | "right" | "left" | "center"
-      showTime: false, // Si es true → muestra el tiempo, si es false → no muestra el tiempo
       // EPG
       epgLineColorTime: "#3333FF",
       // Colores
@@ -531,10 +519,7 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      miniPlayer: true,
       profiles: true,
-      seekbar: false, // Equivalente a seekbarEnabled en 10foot
-      logout: false, // Equivalente a logoutEnabled en 10foot
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
@@ -635,6 +620,7 @@ export const BRANDS = [
       spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
     },
   },
+  // Gigmax
   {
     brand: "gigmax",
     appName: "Gigmax",
@@ -698,9 +684,6 @@ export const BRANDS = [
       // Splash
       splashDuration: 3000, // Duración en milisegundos
       splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
-      // Logo
-      logoPositionHome: "right", // "top" | "right" | "left" | "center"
-      showTime: true, // Si es true → muestra el tiempo, si es false → no muestra el tiempo
       // EPG
       epgLineColorTime: "#2CE308",
       // Colores
@@ -762,10 +745,7 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      miniPlayer: true,
       profiles: false,
-      seekbar: false, // Equivalente a seekbarEnabled en 10foot
-      logout: false, // Equivalente a logoutEnabled en 10foot
       showRating: false, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
@@ -865,6 +845,7 @@ export const BRANDS = [
       spatialNavVisual: false,
     },
   },
+  // Cableatlantico
   {
     brand: "cableatlantico",
     appName: "delancertv",
@@ -926,9 +907,6 @@ export const BRANDS = [
       // Splash
       splashDuration: 3000, // Duración en milisegundos
       splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
-      // Logo
-      logoPositionHome: "right", // "top" | "right" | "left" | "center"
-      showTime: false, // Si es true → muestra el tiempo, si es false → no muestra el tiempo
       // EPG
       epgLineColorTime: "#3333FF",
       // Colores
@@ -990,10 +968,7 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      miniPlayer: true,
       profiles: false,
-      seekbar: false, // Equivalente a seekbarEnabled en 10foot
-      logout: false, // Equivalente a logoutEnabled en 10foot
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
@@ -1094,11 +1069,12 @@ export const BRANDS = [
       spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
     },
   },
+  // Windplay
   {
     brand: "wind",
     appName: "windplay",
-    drm: 'https://cv01.panaccess.com/',
-    token: 'gQposTlrMIOYQVdYBNYC',
+    drm: "https://pmdw-1.in.tv.br/",
+    token: "CEVQmnhOsXvpRQZbGADl",
     os: 'HTML5',
     appVersion: '1',    
     branding: 'Panaccess',
@@ -1117,7 +1093,7 @@ export const BRANDS = [
     
     // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
     epgCards: {
-      epgPast: true,
+      epgPast: false,
       epgPagesPastEnabled: true,
       epgCardsChannelActiveBg: "rgb(0 0 0)",
       epgCardsProgramLiveBg: "#6C8EB6",
@@ -1156,9 +1132,6 @@ export const BRANDS = [
       // Splash
       splashDuration: 3000, // Duración en milisegundos
       splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
-      // Logo
-      logoPositionHome: "right", // "top" | "right" | "left" | "center"
-      showTime: false, // Si es true → muestra el tiempo, si es false → no muestra el tiempo
       // EPG
       epgLineColorTime: "#3333FF",
       // Colores
@@ -1247,10 +1220,7 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      miniPlayer: true,
       profiles: true,
-      seekbar: false, // Equivalente a seekbarEnabled en 10foot
-      logout: false, // Equivalente a logoutEnabled en 10foot
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
