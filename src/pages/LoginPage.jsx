@@ -14,6 +14,7 @@ import { getActiveLicense } from '../utils/userSession';
 import { useUdidLoginFlow } from '../hooks/useUdidLoginFlow';
 import { getGoogleSocialPostUrl } from '../utils/socialAuthUrls';
 import { exchangeGoogleCredentialWithBackend } from '../services/googleSocialLogin';
+import { preloadImage } from '../utils/assetLoader';
 import '../styles/components/_login.scss';
 
 export function LoginPage() {
@@ -32,6 +33,7 @@ export function LoginPage() {
   const [qrError, setQrError] = useState('');
   const [isUdidModalOpen, setIsUdidModalOpen] = useState(false);
   const [udidQrImageSrc, setUdidQrImageSrc] = useState('');
+  const [isLoginBgReady, setIsLoginBgReady] = useState(false);
 
   console.log(`🖥️ [DEVICE] Modo: ${isTV ? 'TV' : 'PC'}`);
 
@@ -337,6 +339,23 @@ export function LoginPage() {
     ? getImage(loginBgAssetPath)
     : (currentBrand.assets?.background || getImage('background.png'));
 
+  // Precargar el background para evitar que se "pinte por partes" mientras se descarga/decodifica.
+  // Si el preload falla, igual mostramos el fondo para no bloquear la pantalla.
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoginBgReady(false);
+    if (!backgroundPath) {
+      setIsLoginBgReady(true);
+      return () => { cancelled = true; };
+    }
+    preloadImage(backgroundPath)
+      .catch(() => null)
+      .finally(() => {
+        if (!cancelled) setIsLoginBgReady(true);
+      });
+    return () => { cancelled = true; };
+  }, [backgroundPath]);
+
   const socialLogin = currentBrand?.login?.socialLogin || {};
   const googleSocial = socialLogin.google || {};
   const facebookSocial = socialLogin.facebook || {};
@@ -364,7 +383,7 @@ export function LoginPage() {
   const loginShell = (
     <div 
       className="panaccess-login"
-      style={backgroundPath ? { backgroundImage: `url(${backgroundPath})` } : {}}
+      style={isLoginBgReady && backgroundPath ? { backgroundImage: `url(${backgroundPath})` } : {}}
     >
       <div className="login-card">
         {logoPath && <img src={logoPath} alt={appName} className="brand-logo" />}

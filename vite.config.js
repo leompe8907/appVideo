@@ -40,33 +40,12 @@ export default defineConfig(({ mode }) => {
       },
       rollupOptions: {
         output: {
-          // Code splitting habilitado: separa chunks por vendor y página
+          // Code splitting habilitado.
+          // Nota: evitar partir `node_modules` en múltiples vendor chunks porque puede generar
+          // dependencias circulares (p.ej. react <-> libs) y romper en runtime (React undefined).
           manualChunks(id) {
-            // Vendor chunks: bibliotecas externas pesadas
             if (id.includes('node_modules')) {
-              if (id.includes('react/') || id.includes('react-dom/') || id.includes('react-router')) {
-                return 'vendor-react';
-              }
-              if (id.includes('hls.js')) {
-                return 'vendor-hls';
-              }
-              if (id.includes('norigin-spatial-navigation')) {
-                return 'vendor-nav';
-              }
-              if (id.includes('@tanstack/react-query')) {
-                return 'vendor-query';
-              }
-              if (id.includes('zustand')) {
-                return 'vendor-state';
-              }
-              if (id.includes('i18next') || id.includes('react-i18next')) {
-                return 'vendor-i18n';
-              }
-              if (id.includes('bootstrap')) {
-                return 'vendor-bootstrap';
-              }
-              // Resto de node_modules en chunk genérico
-              return 'vendor-libs';
+              return 'vendor';
             }
 
             // Páginas: cada página en su propio chunk (gracias a React.lazy)
@@ -84,7 +63,10 @@ export default defineConfig(({ mode }) => {
       },
     },
 
-    base: brand ? `/${brand}/` : '/',
+    // Importante: cuando el build sale a `dist/<brand>`, ese folder se sirve como raíz.
+    // Si usáramos `base=/<brand>/`, Vite buscaría los bundles en `/<brand>/assets/...`
+    // (equivalente a `dist/<brand>/<brand>/assets/...`) y rompe `vite preview --outDir dist/<brand>`.
+    base: '/',
     define: { __BRAND__: JSON.stringify(brand) },
 
     server: {

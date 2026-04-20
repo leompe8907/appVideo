@@ -303,7 +303,7 @@ export const BRANDS = [
         // Personaliza el fondo del login por marca:
         // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
         enabled: false,
-        assetPath: "backgroundalt.png",
+        assetPath: "backgroundalt.webp",
       },
       qrRegister: {
         enabled: true,
@@ -552,7 +552,7 @@ export const BRANDS = [
       },
       backgroundImage: {
         enabled: true,
-        assetPath: "backgroundalt.png",
+        assetPath: "backgroundalt.webp",
       },
       qrRegister: {
         enabled: true,
@@ -774,7 +774,7 @@ export const BRANDS = [
       },
       backgroundImage: {
         enabled: true,
-        assetPath: "backgroundalt.png",
+        assetPath: "backgroundalt.webp",
       },
       qrRegister: {
         enabled: false,
@@ -993,7 +993,7 @@ export const BRANDS = [
       },
       backgroundImage: {
         enabled: false,
-        assetPath: "backgroundalt.png",
+        assetPath: "backgroundalt.webp",
       },
       qrRegister: {
         enabled: true,
@@ -1243,7 +1243,7 @@ export const BRANDS = [
       },
       backgroundImage: {
         enabled: true,
-        assetPath: "backgroundalt.png",
+        assetPath: "backgroundalt.webp",
       },
       qrRegister: {
         enabled: true,
