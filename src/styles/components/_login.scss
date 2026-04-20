@@ -371,6 +371,18 @@
       flex-direction: column;
       gap: 0.6rem;
 
+      .google-login-host {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+
+        & > div {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+        }
+      }
+
       .social-button {
         @include button-base;
         width: 100%;

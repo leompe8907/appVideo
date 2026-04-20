@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import QRCode from 'qrcode';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { FocusableInput } from '../components/navigation/FocusableInput';
@@ -11,10 +12,12 @@ import { loginAndActivateLicense } from '../services/loginFlow';
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
 import { getActiveLicense } from '../utils/userSession';
 import { useUdidLoginFlow } from '../hooks/useUdidLoginFlow';
+import { getGoogleSocialPostUrl } from '../utils/socialAuthUrls';
+import { exchangeGoogleCredentialWithBackend } from '../services/googleSocialLogin';
 import '../styles/components/_login.scss';
 
 export function LoginPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { currentBrand, appName, isLoading, getImage } = useBrand();
   const { isTV } = useDevice();
@@ -36,11 +39,6 @@ export function LoginPage() {
   const qrRegisterEnabled = !!qrRegisterConfig?.enabled;
   const qrRegisterUrl = typeof qrRegisterConfig?.url === 'string' ? qrRegisterConfig.url.trim() : '';
   const canShowQrRegister = qrRegisterEnabled && qrRegisterUrl.length > 0;
-  const userAgent = (typeof navigator !== 'undefined' ? navigator.userAgent : '').toLowerCase();
-  const hasSamsungRuntime = typeof window !== 'undefined' && (!!window.tizen || !!window.webapis);
-  const hasLgRuntime = typeof window !== 'undefined' && (!!window.webOS || !!window.PalmSystem);
-  const isSamsungTv = isTV && (hasSamsungRuntime || userAgent.includes('tizen') || userAgent.includes('samsung'));
-  const isLgTv = isTV && (hasLgRuntime || userAgent.includes('webos') || userAgent.includes('netcast') || userAgent.includes('lg'));
   // En TV siempre usamos modal (redirigir es peor UX y muchos runtimes no se detectan como LG/Samsung).
   const shouldShowQrModal = isTV;
   const udidLoginConfig = currentBrand?.login?.udid || currentBrand?.udidLogin;
@@ -190,6 +188,72 @@ export function LoginPage() {
     return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
   };
 
+  const handleGoogleCredentialSuccess = useCallback(
+    async (credentialResponse) => {
+      const credential = credentialResponse?.credential;
+      if (!credential || !currentBrand) return;
+
+      setError('');
+      setIsSubmitting(true);
+      const url = getGoogleSocialPostUrl(currentBrand);
+      if (!url) {
+        setError(t('login.socialBackendMissing'));
+        setIsSubmitting(false);
+        return;
+      }
+
+      try {
+        const data = await exchangeGoogleCredentialWithBackend(url, credential);
+        const pc = data.panaccess_credentials;
+        const login1 = pc?.login1 != null ? String(pc.login1).trim() : '';
+        const pwd = pc?.password != null ? String(pc.password) : '';
+        if (!login1 || !pwd) {
+          throw new Error(t('login.googlePanaccessMissing'));
+        }
+
+        await loginAndActivateLicense(
+          currentBrand,
+          { username: login1, password: pwd },
+          {
+            autoActivateLicense: true,
+            failIfInUse: true,
+            activationRecursive: true,
+            storeClientConfig: true,
+            storeLicenses: true,
+          },
+        );
+
+        const active = getActiveLicense?.();
+        const hasActiveLicense = !!active?.licenseKey;
+        const skipSmartcard = !currentBrand?.features?.profiles && hasActiveLicense;
+        navigate(skipSmartcard ? '/home/inicio' : getInitialRoute(currentBrand));
+      } catch (err) {
+        const errorInfo = err.errorInfo || classifyError(err);
+        let messageToShow = err.message || t('login.errorGeneric');
+        switch (errorInfo.type) {
+          case ERROR_TYPES.NETWORK:
+            messageToShow = t('login.errorNetwork');
+            break;
+          case ERROR_TYPES.TIMEOUT:
+            messageToShow = t('login.errorTimeout');
+            break;
+          case ERROR_TYPES.SERVER:
+            messageToShow = t('login.errorServer');
+            break;
+          case ERROR_TYPES.AUTH:
+            messageToShow = t('login.errorAuth');
+            break;
+          default:
+            messageToShow = errorInfo.userMessage || err.message || t('login.errorGeneric');
+        }
+        setError(messageToShow);
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [currentBrand, navigate, t],
+  );
+
   // ============================================
   // SUBMIT
   // ============================================
@@ -278,24 +342,26 @@ export function LoginPage() {
   const facebookSocial = socialLogin.facebook || {};
   const showGoogle = googleSocial.enabled === true;
   const showFacebook = facebookSocial.enabled === true;
-  const showAnySocial = showGoogle || showFacebook;
 
-  const handleSocialClick = (provider) => {
-    const cfg = provider === 'google' ? googleSocial : facebookSocial;
+  const googleClientId =
+    (typeof googleSocial.accessToken === 'string' ? googleSocial.accessToken.trim() : '') ||
+    (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+  const googlePostUrl = getGoogleSocialPostUrl(currentBrand);
+  const showGoogleOAuth = showGoogle && !isTV && !!googleClientId && !!googlePostUrl;
+  const showGoogleMisconfigured = showGoogle && !isTV && !!googleClientId && !googlePostUrl;
+  const showAnySocial = showGoogleOAuth || showGoogleMisconfigured || showFacebook;
+
+  const handleFacebookClick = () => {
     const redirectUrl =
-      typeof cfg?.redirectUrl === 'string' ? cfg.redirectUrl.trim() : '';
+      typeof facebookSocial?.redirectUrl === 'string' ? facebookSocial.redirectUrl.trim() : '';
     if (redirectUrl) {
       window.location.assign(redirectUrl);
       return;
     }
-    // `accessToken` queda para integración con backend (no exponer en logs en producción).
-    if (import.meta.env.DEV && cfg?.accessToken) {
-      console.warn(`[Login] Social (${provider}): hay accessToken pero no redirectUrl; flujo no implementado.`);
-    }
     setError(t('login.socialNotAvailable'));
   };
 
-  return (
+  const loginShell = (
     <div 
       className="panaccess-login"
       style={backgroundPath ? { backgroundImage: `url(${backgroundPath})` } : {}}
@@ -382,11 +448,32 @@ export function LoginPage() {
 
           {showAnySocial && (
             <div className="social-login">
-              {showGoogle && (
+              {showGoogleOAuth && (
+                <div
+                  className="google-login-host"
+                  style={{
+                    opacity: isSubmitting ? 0.65 : 1,
+                    pointerEvents: isSubmitting ? 'none' : 'auto',
+                  }}
+                >
+                  <GoogleLogin
+                    onSuccess={handleGoogleCredentialSuccess}
+                    onError={() => setError(t('login.googleSignInFailed'))}
+                    useOneTap={false}
+                    theme="outline"
+                    size="large"
+                    width="384"
+                    text="continue_with"
+                    locale={(i18n.language || 'es').replace('_', '-')}
+                  />
+                </div>
+              )}
+
+              {showGoogleMisconfigured && (
                 <FocusableButton
                   type="button"
                   className="social-button google"
-                  onClick={() => handleSocialClick('google')}
+                  onClick={() => setError(t('login.socialBackendMissing'))}
                 >
                   {t('login.continueWithGoogle')}
                 </FocusableButton>
@@ -396,7 +483,7 @@ export function LoginPage() {
                 <FocusableButton
                   type="button"
                   className="social-button facebook"
-                  onClick={() => handleSocialClick('facebook')}
+                  onClick={handleFacebookClick}
                 >
                   {t('login.continueWithFacebook')}
                 </FocusableButton>
@@ -485,6 +572,16 @@ export function LoginPage() {
       )}
     </div>
   );
+
+  if (showGoogleOAuth) {
+    return (
+      <GoogleOAuthProvider clientId={googleClientId}>
+        {loginShell}
+      </GoogleOAuthProvider>
+    );
+  }
+
+  return loginShell;
 }
 
 export default LoginPage;

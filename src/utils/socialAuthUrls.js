@@ -1,0 +1,51 @@
+/**
+ * Construye la URL del endpoint REST de login social (Google / win-backend).
+ * Prioridad: URL absoluta en redirectUrl o tokenUrl → base + path.
+ */
+
+function trimTrailingSlash(s) {
+  return String(s).replace(/\/+$/, '');
+}
+
+function joinBaseAndPath(base, path) {
+  const b = trimTrailingSlash(base);
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${b}${p}`;
+}
+
+/**
+ * URL para POST JSON `{ access_token: <JWT de Google Identity> }` (contrato win-backend).
+ * @param {Object} brandConfig - currentBrand
+ * @returns {string} URL absoluta o cadena vacía si falta configuración
+ */
+export function getGoogleSocialPostUrl(brandConfig) {
+  const social = brandConfig?.login?.socialLogin;
+  const google = social?.google;
+  if (!google?.enabled) return '';
+
+  const redirectUrl = typeof google.redirectUrl === 'string' ? google.redirectUrl.trim() : '';
+  if (/^https?:\/\//i.test(redirectUrl)) {
+    return redirectUrl;
+  }
+
+  const tokenUrl = typeof google.tokenUrl === 'string' ? google.tokenUrl.trim() : '';
+  if (/^https?:\/\//i.test(tokenUrl)) {
+    return tokenUrl;
+  }
+
+  const base =
+    (typeof google.backendBaseUrl === 'string' && google.backendBaseUrl.trim()) ||
+    (typeof social?.backendBaseUrl === 'string' && social.backendBaseUrl.trim()) ||
+    (import.meta.env.VITE_SOCIAL_AUTH_BASE_URL || '').trim() ||
+    (typeof brandConfig?.api?.baseUrl === 'string' && brandConfig.api.baseUrl.trim()) ||
+    '';
+
+  if (!base) return '';
+
+  const path =
+    (typeof google.authPath === 'string' && google.authPath.trim()) ||
+    (redirectUrl.startsWith('/') ? redirectUrl : '') ||
+    '/wind/auth/google/';
+
+  return joinBaseAndPath(base, path);
+}

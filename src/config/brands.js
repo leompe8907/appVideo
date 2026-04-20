@@ -37,10 +37,6 @@
  *   @param {boolean} features.showRating - true: muestra la clasificación/rating de contenido; false: la oculta.
  *   @param {boolean} features.osms - true: habilita la integración OSMS y su menú; false: la deshabilita.
  *
- * @param {Object} api - Configuración de endpoints propios por marca:
- *   @param {string} api.baseUrl - URL base del backend propio (ej. validación de UDID, auth, etc.).
- *   @param {string} api.wsUrl - URL de WebSocket asociado (si aplica) para esta marca.
- *
  * @param {Object} login - Bloque unificado de configuración del Login por marca.
  *   @param {Object} login.qrRegister - Registro por QR en Login:
  *     @param {boolean} login.qrRegister.enabled - Habilita/deshabilita el botón/modal de registro QR.
@@ -51,11 +47,15 @@
  *     @param {string} login.udid.requestPath - Path para solicitar código UDID (default recomendado: /udid/request-udid-manual/).
  *     @param {string} login.udid.wsUrl - WebSocket para esperar confirmación remota.
  *   @param {Object} login.socialLogin - Login social (Google / Facebook) por marca:
- *     @param {Object} login.socialLogin.google - Configuración del botón/flujo Google.
- *       @param {boolean} login.socialLogin.google.enabled - Muestra u oculta el botón.
- *       @param {string} login.socialLogin.google.redirectUrl - URL de redirección OAuth o destino del flujo (vacío si no aplica).
- *       @param {string} login.socialLogin.google.accessToken - Token o identificador de integración con backend (vacío si no aplica).
- *     @param {Object} login.socialLogin.facebook - Igual que google para Facebook.
+ *     @param {string} login.socialLogin.backendBaseUrl - Base del backend win (ej. http://127.0.0.1:8000); alternativa: VITE_SOCIAL_AUTH_BASE_URL.
+ *     @param {Object} login.socialLogin.google - Google Identity + POST a /wind/auth/google/.
+ *       @param {boolean} login.socialLogin.google.enabled - Muestra el botón (solo escritorio; en TV se oculta).
+ *       @param {string} login.socialLogin.google.redirectUrl - Si es absoluta (http...), URL del POST; si empieza con /, path relativo a la base.
+ *       @param {string} login.socialLogin.google.authPath - Path del POST si redirectUrl no es una ruta (default /wind/auth/google/).
+ *       @param {string} login.socialLogin.google.backendBaseUrl - Base solo para Google (opcional; si no, socialLogin.backendBaseUrl).
+ *       @param {string} login.socialLogin.google.tokenUrl - URL completa del POST (opcional).
+ *       @param {string} login.socialLogin.google.accessToken - OAuth client_id de Google (GIS); alternativa: VITE_GOOGLE_CLIENT_ID.
+ *     @param {Object} login.socialLogin.facebook - Misma forma que google (enabled, redirectUrl, accessToken, authPath, tokenUrl, backendBaseUrl).
  *
  * @param {boolean} hashPasswordBeforeLogin - true: hashear contraseña en cliente antes de enviar (ej. Panaccess);
  *   false: enviar contraseña en claro (ej. backends como intv).
@@ -120,10 +120,13 @@
  *   @param {number} parental.parentalControlMultiTtlMs - TTL (ms) para unlock temporal global cuando en el bouquet hay 2+ canales
  *     con `parentalControl:true`. Default: 40 minutos.
  *
- * @param {Object} epg - Configuración de EPG por marca:
- *   @param {number} epg.reminderLeadSeconds - Segundos antes de start para mostrar popup de recordatorio. Default: 60.
- *   @param {boolean} epg.reminderShowWhilePlaying - Si true, el popup puede mostrarse aun con playback activo.
- *     Si false (default), se considera "no molestar" y no se muestra mientras hay video reproduciendo.
+ * @param {Object} epg - Configuración de EPG por marca (misma forma en todas las marcas):
+ *   @param {number} epg.daysOffset
+ *   @param {number} epg.rowsOnInit
+ *   @param {number} epg.hoursLimit
+ *   @param {string} epg.epgLineColorTime - Color guía (alineado con ui.epgLineColorTime de la marca).
+ *   @param {number} epg.reminderLeadSeconds - Segundos antes de start para popup de recordatorio. Default: 60.
+ *   @param {boolean} epg.reminderShowWhilePlaying - Si true, el popup puede mostrarse con playback activo.
  */
 export const BRANDS = [
   {
@@ -144,6 +147,8 @@ export const BRANDS = [
       rowsOnInit: 200, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#2CE308",
+      reminderLeadSeconds: 60,
+      reminderShowWhilePlaying: false,
     },
 
     // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
@@ -304,7 +309,7 @@ export const BRANDS = [
       backgroundImage: {
         // Personaliza el fondo del login por marca:
         // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
-        enabled: true,
+        enabled: false,
         assetPath: "backgroundalt.png",
       },
       qrRegister: {
@@ -324,15 +329,22 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
+        backendBaseUrl: '',
         google: {
           enabled: false,
           redirectUrl: '',
           accessToken: '',
+          authPath: '',
+          tokenUrl: '',
+          backendBaseUrl: '',
         },
         facebook: {
           enabled: false,
           redirectUrl: '',
           accessToken: '',
+          authPath: '',
+          tokenUrl: '',
+          backendBaseUrl: '',
         },
       },
     },
@@ -381,6 +393,9 @@ export const BRANDS = [
       daysOffset: 2, // Días de offset para la API de guía de programación
       rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
+      epgLineColorTime: "#3333FF",
+      reminderLeadSeconds: 60,
+      reminderShowWhilePlaying: false,
     },
     
     // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
@@ -572,15 +587,22 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
+        backendBaseUrl: '',
         google: {
           enabled: false,
           redirectUrl: '',
           accessToken: '',
+          authPath: '',
+          tokenUrl: '',
+          backendBaseUrl: '',
         },
         facebook: {
           enabled: false,
           redirectUrl: '',
           accessToken: '',
+          authPath: '',
+          tokenUrl: '',
+          backendBaseUrl: '',
         },
       },
     },
@@ -629,6 +651,9 @@ export const BRANDS = [
       daysOffset: 2, // Días de offset para la API de guía de programación
       rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
+      epgLineColorTime: "#2CE308",
+      reminderLeadSeconds: 60,
+      reminderShowWhilePlaying: false,
     },
     
     // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
@@ -793,15 +818,22 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
+        backendBaseUrl: '',
         google: {
           enabled: false,
           redirectUrl: '',
           accessToken: '',
+          authPath: '',
+          tokenUrl: '',
+          backendBaseUrl: '',
         },
         facebook: {
           enabled: false,
           redirectUrl: '',
           accessToken: '',
+          authPath: '',
+          tokenUrl: '',
+          backendBaseUrl: '',
         },
       },
     },
@@ -849,6 +881,9 @@ export const BRANDS = [
       daysOffset: 2, // Días de offset para la API de guía de programación
       rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
+      epgLineColorTime: "#3333FF",
+      reminderLeadSeconds: 60,
+      reminderShowWhilePlaying: false,
     },
     
     // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
@@ -856,7 +891,9 @@ export const BRANDS = [
       epgPast: true,
       epgPagesPastEnabled: true,
       epgCardsChannelActiveBg: "rgb(0 0 0)", // Color de fondo del canal activo
-      epgCardsProgramLiveProgressBg: "#6C8EB6",// Color de la barra de progreso (programa en vivo / "Ahora")
+      epgCardsProgramLiveBg: "#6C8EB6",
+      // Color de la barra de progreso (programa en vivo / "Ahora")
+      epgCardsProgramLiveProgressBg: "#6C8EB6",
       epgCardsLaterGlobal: true, // Mostrar programas pasados en la guía
       epgCloseModalOnPlayLive: 'auto', // Control del cierre de modal al reproducir en vivo: true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
     },
@@ -998,8 +1035,8 @@ export const BRANDS = [
       },
       udid: {
         enabled: true,
-        requestPath: "/udid/request-udid-manual/",
         baseUrl: "http://127.0.0.1:8000", //"https://bt-auth.cabledelancer.com",
+        requestPath: "/udid/request-udid-manual/",
         wsUrl: "ws://127.0.0.1:8000/ws/auth/", //"wss://bt-auth.cabledelancer.com/ws/auth/",
         appType: "10foot",
         appVersion: "1.0",
@@ -1009,15 +1046,22 @@ export const BRANDS = [
         privateKeyUrl: "/cableatlantico/keys/private_key.pem",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
+        backendBaseUrl: '',
         google: {
           enabled: false,
           redirectUrl: '',
           accessToken: '',
+          authPath: '',
+          tokenUrl: '',
+          backendBaseUrl: '',
         },
         facebook: {
           enabled: false,
           redirectUrl: '',
           accessToken: '',
+          authPath: '',
+          tokenUrl: '',
+          backendBaseUrl: '',
         },
       },
     },
@@ -1053,8 +1097,8 @@ export const BRANDS = [
   {
     brand: "wind",
     appName: "windplay",
-    drm: "https://pmdw-1.in.tv.br/",
-    token: "CEVQmnhOsXvpRQZbGADl",
+    drm: 'https://cv01.panaccess.com/',
+    token: 'gQposTlrMIOYQVdYBNYC',
     os: 'HTML5',
     appVersion: '1',    
     branding: 'Panaccess',
@@ -1066,6 +1110,9 @@ export const BRANDS = [
       daysOffset: 2, // Días de offset para la API de guía de programación
       rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
+      epgLineColorTime: "#3333FF",
+      reminderLeadSeconds: 60,
+      reminderShowWhilePlaying: false,
     },
     
     // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
@@ -1074,8 +1121,7 @@ export const BRANDS = [
       epgPagesPastEnabled: true,
       epgCardsChannelActiveBg: "rgb(0 0 0)",
       epgCardsProgramLiveBg: "#6C8EB6",
-      // Color de la barra de progreso (programa en vivo / "Ahora")
-      epgCardsProgramLiveProgressBg: "#6C8EB6",
+      epgCardsProgramLiveProgressBg: "#6C8EB6",// Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsLaterGlobal: true,
       // Control del cierre de modal al reproducir en vivo:
       // true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
@@ -1258,15 +1304,22 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
+        backendBaseUrl: 'http://127.0.0.1:8000',
         google: {
           enabled: true,
           redirectUrl: '/wind/auth/google/',
           accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
+          authPath: '',
+          tokenUrl: '',
+          backendBaseUrl: '',
         },
         facebook: {
-          enabled: true,
+          enabled: false,
           redirectUrl: '',
           accessToken: '',
+          authPath: '',
+          tokenUrl: '',
+          backendBaseUrl: '',
         },
       },
     },
