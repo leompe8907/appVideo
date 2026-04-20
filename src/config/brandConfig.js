@@ -105,13 +105,13 @@ export function enrichConfigWithAssets(config) {
     ...(config.parental || {}),
   };
 
-  const epg = {
+  const EPG = {
     // Recordatorios EPG: segundos antes de start para mostrar popup.
-    // Se puede sobreescribir por marca en brands.js (config.epg.reminderLeadSeconds).
-    reminderLeadSeconds: config.epg?.reminderLeadSeconds ?? 60,
+    // Se puede sobreescribir por marca en brands.js (config.EPG.reminderLeadSeconds).
+    reminderLeadSeconds: config.EPG?.reminderLeadSeconds ?? 60,
     // Recordatorios EPG: si false, no mostrar popup mientras el player está reproduciendo.
-    reminderShowWhilePlaying: config.epg?.reminderShowWhilePlaying === true,
-    ...(config.epg || {}),
+    reminderShowWhilePlaying: config.EPG?.reminderShowWhilePlaying === true,
+    ...(config.EPG || {}),
   };
 
   const login = config.login || {};
@@ -130,7 +130,7 @@ export function enrichConfigWithAssets(config) {
     qrRegister: derivedQrRegister,
     udidLogin: derivedUdidLogin,
     parental,
-    epg,
+    EPG,
     assets: {
       logo: getBrandAsset(config.brand, "logo.png"),
       logoWhite: getBrandAsset(config.brand, "logo-white.png"),

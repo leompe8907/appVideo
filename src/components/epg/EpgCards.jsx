@@ -132,7 +132,7 @@ export function EpgCards({ onSelect }) {
   const removeReminder = useEpgReminderStore((s) => s.removeReminder);
   const hasReminder = useEpgReminderStore((s) => s.hasReminder);
 
-  const epgCardsCfg = currentBrand?.epgCards || {};
+  const epgCardsCfg = currentBrand?.EPG || {};
   const epgPastEnabled = !!epgCardsCfg.epgPast;
   const closeModalOnPlayLive =
     typeof epgCardsCfg.epgCloseModalOnPlayLive === 'boolean'

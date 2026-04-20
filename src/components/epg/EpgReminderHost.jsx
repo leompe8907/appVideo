@@ -52,10 +52,9 @@ export function EpgReminderHost() {
   const dismissReminderUntil = useEpgReminderStore((s) => s.dismissReminderUntil);
   const isDismissed = useEpgReminderStore((s) => s.isDismissed);
 
-  const leadSeconds =
-    Number(currentBrand?.epg?.reminderLeadSeconds ?? currentBrand?.epgCards?.reminderLeadSeconds ?? 60) || 60;
+  const leadSeconds = Number(currentBrand?.EPG?.reminderLeadSeconds ?? 60) || 60;
   const leadMs = Math.max(5, leadSeconds) * 1000;
-  const showWhilePlaying = currentBrand?.epg?.reminderShowWhilePlaying === true;
+  const showWhilePlaying = currentBrand?.EPG?.reminderShowWhilePlaying === true;
   const isPlayerActive = Boolean(playerState?.url);
 
   const [nowMs, setNowMs] = useState(() => Date.now());

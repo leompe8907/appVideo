@@ -61,7 +61,7 @@ export function applyTheme(brandConfig) {
   const ui = brandConfig.ui;
   const sidebar = ui.sidebar || {};
   const bouquets = brandConfig.bouquets || {};
-  const epgCards = brandConfig.epgCards || {};
+  const epgCards = brandConfig.EPG || {};
   const assets = brandConfig.assets || {};
   const playerLoading = ui.playerLoading || {};
   const playerLoadingPremium = playerLoading.premium !== false;

@@ -115,13 +115,20 @@
  *   @param {number} parental.parentalControlMultiTtlMs - TTL (ms) para unlock temporal global cuando en el bouquet hay 2+ canales
  *     con `parentalControl:true`. Default: 40 minutos.
  *
- * @param {Object} epg - Configuración de EPG por marca (misma forma en todas las marcas):
- *   @param {number} epg.daysOffset
- *   @param {number} epg.rowsOnInit
- *   @param {number} epg.hoursLimit
- *   @param {string} epg.epgLineColorTime - Color guía (alineado con ui.epgLineColorTime de la marca).
- *   @param {number} epg.reminderLeadSeconds - Segundos antes de start para popup de recordatorio. Default: 60.
- *   @param {boolean} epg.reminderShowWhilePlaying - Si true, el popup puede mostrarse con playback activo.
+ * @param {Object} EPG - Configuración de EPG por marca (guía + cards):
+ *   @param {number} EPG.daysOffset
+ *   @param {number} EPG.rowsOnInit
+ *   @param {number} EPG.hoursLimit
+ *   @param {string} EPG.epgLineColorTime - Color guía (alineado con ui.epgLineColorTime de la marca).
+ *   @param {number} EPG.reminderLeadSeconds - Segundos antes de start para popup de recordatorio. Default: 60.
+ *   @param {boolean} EPG.reminderShowWhilePlaying - Si true, el popup puede mostrarse con playback activo.
+ *   @param {boolean} EPG.epgPast
+ *   @param {boolean} EPG.epgPagesPastEnabled
+ *   @param {string} EPG.epgCardsChannelActiveBg
+ *   @param {string} EPG.epgCardsProgramLiveBg
+ *   @param {string} EPG.epgCardsProgramLiveProgressBg
+ *   @param {boolean} EPG.epgCardsLaterGlobal
+ *   @param {boolean|'auto'} EPG.epgCloseModalOnPlayLive
  */
 export const BRANDS = [
   // Bromteck
@@ -137,18 +144,14 @@ export const BRANDS = [
     developedBy: "Network Broadcast",
     version: "1.0.2",
 
-    // EPG: parámetros generales para la API de guía de programación (mismo valor en todas las marcas)
-    epg: {
+    // EPG: configuración unificada (guía + cards)
+    EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
       rowsOnInit: 200, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#2CE308",
       reminderLeadSeconds: 60,
       reminderShowWhilePlaying: false,
-    },
-
-    // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
-    epgCards: {
       epgPast: true,
       epgPagesPastEnabled: false,
       epgCardsChannelActiveBg: "#0A4385",
@@ -379,18 +382,14 @@ export const BRANDS = [
     developedBy: "inTV&#174,",
     version: "2.0.2",
 
-    // EPG: parámetros generales para la API de guía de programación (mismo valor en todas las marcas)
-    epg: {
+    // EPG: configuración unificada (guía + cards)
+    EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
       rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#3333FF",
       reminderLeadSeconds: 60,
       reminderShowWhilePlaying: false,
-    },
-    
-    // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
-    epgCards: {
       epgPast: true,
       epgPagesPastEnabled: true,
       epgCardsChannelActiveBg: "rgb(0 0 0)",
@@ -632,18 +631,14 @@ export const BRANDS = [
     developedBy: "Gigmax",
     version: "2.0.3",
 
-    // EPG: parámetros generales para la API de guía de programación (mismo valor en todas las marcas)
-    epg: {
+    // EPG: configuración unificada (guía + cards)
+    EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
       rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#2CE308",
       reminderLeadSeconds: 60,
       reminderShowWhilePlaying: false,
-    },
-    
-    // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
-    epgCards: {
       epgPast: true,
       epgPagesPastEnabled: true,
       epgCardsChannelActiveBg: "#0A4385",
@@ -857,18 +852,14 @@ export const BRANDS = [
     developedBy: "Cabledelancer",
     version: "1.0.2",
 
-    // EPG: parámetros generales para la API de guía de programación (mismo valor en todas las marcas)
-    epg: {
+    // EPG: configuración unificada (guía + cards)
+    EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
       rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#3333FF",
       reminderLeadSeconds: 60,
       reminderShowWhilePlaying: false,
-    },
-    
-    // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
-    epgCards: {
       epgPast: true,
       epgPagesPastEnabled: true,
       epgCardsChannelActiveBg: "rgb(0 0 0)", // Color de fondo del canal activo
@@ -1081,18 +1072,15 @@ export const BRANDS = [
     developedBy: "windplay",
     version: "1.0.0",
 
-    // EPG: parámetros generales para la API de guía de programación (mismo valor en todas las marcas)
-    epg: {
+    // EPG: configuración unificada (guía + cards)
+    EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
       rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#3333FF",
       reminderLeadSeconds: 60,
       reminderShowWhilePlaying: false,
-    },
-    
-    // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
-    epgCards: {
+      // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
       epgPast: false,
       epgPagesPastEnabled: true,
       epgCardsChannelActiveBg: "rgb(0 0 0)",
