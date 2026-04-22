@@ -551,7 +551,7 @@ export const BRANDS = [
         modalCloseText: "#ffffff",
       },
       backgroundImage: {
-        enabled: true,
+        enabled: false,
         assetPath: "backgroundalt.webp",
       },
       qrRegister: {
