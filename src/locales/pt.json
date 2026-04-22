@@ -273,6 +273,8 @@
     "title": "Controle parental",
     "subtitle": "Bloqueie o acesso aos canais com PIN (sem ocultá-los).",
     "enabled": "Ativar controle parental",
+    "statusEnabled": "Ativado",
+    "statusDisabled": "Desativado",
     "pin": "PIN",
     "setPin": "Definir PIN",
     "changePin": "Alterar PIN",

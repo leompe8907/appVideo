@@ -1,8 +1,13 @@
+@use '../mixins' as *;
+
 .parental-page {
   padding: 18px 18px 28px;
   color: var(--text-color, #fff);
   max-width: 100%;
   overflow-x: hidden; /* nunca scroll horizontal */
+  overflow-y: auto; /* permitir scroll vertical */
+  max-height: 100vh;
+  @include scrollbar-hidden; /* ocultar barra sin perder scroll */
 }
 
 .parental-header {

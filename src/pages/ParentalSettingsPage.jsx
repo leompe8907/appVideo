@@ -123,7 +123,9 @@ export function ParentalSettingsPage() {
             className={`parental-toggle${parental.enabled ? ' active' : ''}`}
             onClick={() => parental.setEnabled(!parental.enabled)}
           >
-            {parental.enabled ? t('common.on', { defaultValue: 'ON' }) : t('common.off', { defaultValue: 'OFF' })}
+            {parental.enabled
+              ? t('parental.statusEnabled', { defaultValue: 'Activado' })
+              : t('parental.statusDisabled', { defaultValue: 'Desactivado' })}
           </button>
         </div>
 

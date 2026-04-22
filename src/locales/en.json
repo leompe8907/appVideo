@@ -273,6 +273,8 @@
     "title": "Parental control",
     "subtitle": "Block access to channels with a PIN (without hiding them).",
     "enabled": "Enable parental control",
+    "statusEnabled": "Enabled",
+    "statusDisabled": "Disabled",
     "pin": "PIN",
     "setPin": "Set PIN",
     "changePin": "Change PIN",

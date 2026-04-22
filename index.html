@@ -23,19 +23,16 @@
         inset: 0;
         z-index: 9999;
         background: #000;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 1rem;
+        display: block;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
       }
       #app-boot-shell .app-boot-splash {
+        position: absolute;
+        inset: 0;
         display: block;
-        width: min(72vw, 560px);
-        height: auto;
-        max-height: 72vh;
-        object-fit: contain;
+        width: 100vw;
+        height: 100vh;
+        object-fit: cover;
       }
     </style>
   </head>
