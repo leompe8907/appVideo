@@ -10,15 +10,18 @@ export function useParentalGate() {
   const channel = useParentalGateStore((s) => s.channel);
   const title = useParentalGateStore((s) => s.title);
   const message = useParentalGateStore((s) => s.message);
+  const gateKind = useParentalGateStore((s) => s.gateKind);
   const requestPlayChannel = useParentalGateStore((s) => s.requestPlayChannel);
   const requestPlayMedia = useParentalGateStore((s) => s.requestPlayMedia);
+  const requestSetupPin = useParentalGateStore((s) => s.requestSetupPin);
   const closeGate = useParentalGateStore((s) => s.closeGate);
   const submitPin = useParentalGateStore((s) => s.submitPin);
 
   return {
-    gate: { open, channel, title, message },
+    gate: { open, channel, title, message, gateKind },
     requestPlayChannel,
     requestPlayMedia,
+    requestSetupPin,
     closeGate,
     submitPin,
   };

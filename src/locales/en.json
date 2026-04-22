@@ -273,6 +273,8 @@
     "title": "Parental control",
     "subtitle": "Block access to channels with a PIN (without hiding them).",
     "enabled": "Enable parental control",
+    "setupPinMessage": "To use parental control, you must set a PIN first.",
+    "goToSettings": "Set PIN",
     "statusEnabled": "Enabled",
     "statusDisabled": "Disabled",
     "pin": "PIN",
@@ -310,6 +312,7 @@
   },
   "pinGate": {
     "enterPin": "Enter PIN",
+    "maskInput": "••••",
     "wrongPin": "Wrong PIN",
     "keypad": "Numeric keypad",
     "cancel": "Cancel",

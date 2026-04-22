@@ -13,7 +13,7 @@ const initial = {
   playFn: null,
   title: '',
   message: '',
-  gateKind: 'channel', // 'channel' | 'rating' | 'parentalControl'
+  gateKind: 'channel', // 'channel' | 'rating' | 'parentalControl' | 'setupPin'
   purpose: 'playback', // 'playback' | 'action'
   unlockScope: 'channel', // 'channel' | 'global'
   pcUnlockMode: null, // 'session' | 'ttl' | null
@@ -50,6 +50,21 @@ function getAdultCountInBouquet(channel) {
 export const useParentalGateStore = create((set, get) => ({
   ...initial,
 
+  requestSetupPin: ({ title, message, channel } = {}) => {
+    set({
+      open: true,
+      channel: channel || null,
+      playFn: null,
+      title: typeof title === 'string' ? title : '',
+      message: typeof message === 'string' ? message : '',
+      gateKind: 'setupPin',
+      purpose: 'action',
+      unlockScope: 'global',
+      lastFocusedEl: document.activeElement,
+    });
+    return true;
+  },
+
   closeGate: () => {
     const el = get().lastFocusedEl;
     set({ ...initial });
@@ -72,15 +87,25 @@ export const useParentalGateStore = create((set, get) => ({
       return true;
     }
 
-    // Evitar lockout: si no hay PIN configurado, dejar pasar (la UI de settings fuerza el setPin).
-    if (!parental.hasPinConfigured?.()) {
-      playFn();
-      return true;
-    }
+    // Si no hay PIN configurado, NO permitir reproducir contenido bloqueado:
+    // guiar al usuario a configurar el PIN primero.
+    const hasPin = parental.hasPinConfigured?.() === true;
 
     // Acciones administrativas (p.ej. desbloquear en settings) deben pedir PIN SIEMPRE
     // cuando control parental está activo y hay PIN, aunque exista unlock temporal vigente.
     if (purpose === 'action') {
+      if (!hasPin) {
+        return get().requestSetupPin({
+          channel,
+          title: typeof title === 'string' && title ? title : i18n.t('parental.title', { defaultValue: 'Control parental' }),
+          message:
+            typeof message === 'string' && message
+              ? message
+              : i18n.t('parental.setupPinMessage', {
+                  defaultValue: 'Para usar el control parental debes configurar un PIN.',
+                }),
+        });
+      }
       set({
         open: true,
         channel,
@@ -100,6 +125,15 @@ export const useParentalGateStore = create((set, get) => ({
 
     // 1) Si el canal está bloqueado, aplicar gate por canal.
     if (blocked && !unlocked) {
+      if (!hasPin) {
+        return get().requestSetupPin({
+          channel,
+          title: i18n.t('parental.title', { defaultValue: 'Control parental' }),
+          message: i18n.t('parental.setupPinMessage', {
+            defaultValue: 'Para usar el control parental debes configurar un PIN.',
+          }),
+        });
+      }
       set({
         open: true,
         channel,

@@ -273,6 +273,8 @@
     "title": "Controle parental",
     "subtitle": "Bloqueie o acesso aos canais com PIN (sem ocultá-los).",
     "enabled": "Ativar controle parental",
+    "setupPinMessage": "Para usar o controle parental, você precisa configurar um PIN.",
+    "goToSettings": "Configurar PIN",
     "statusEnabled": "Ativado",
     "statusDisabled": "Desativado",
     "pin": "PIN",
@@ -310,6 +312,7 @@
   },
   "pinGate": {
     "enterPin": "Digite o PIN",
+    "maskInput": "••••",
     "wrongPin": "PIN incorreto",
     "keypad": "Teclado numérico",
     "cancel": "Cancelar",

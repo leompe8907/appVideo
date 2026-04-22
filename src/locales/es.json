@@ -275,6 +275,8 @@
     "enabled": "Activar control parental",
     "statusEnabled": "Activado",
     "statusDisabled": "Desactivado",
+    "setupPinMessage": "Para usar el control parental debes configurar un PIN.",
+    "goToSettings": "Configurar PIN",
     "pin": "PIN",
     "setPin": "Configurar PIN",
     "changePin": "Cambiar PIN",
@@ -310,6 +312,7 @@
   },
   "pinGate": {
     "enterPin": "Ingresa el PIN",
+    "maskInput": "••••",
     "wrongPin": "PIN incorrecto",
     "keypad": "Teclado numérico",
     "cancel": "Cancelar",

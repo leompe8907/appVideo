@@ -178,7 +178,7 @@ export function PlayerHud({ className = '' }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isTV } = useDevice();
-  const { requestPlayChannel } = useParentalGate();
+  const { requestPlayChannel, requestSetupPin } = useParentalGate();
   const parental = useParental();
   const {
     state,
@@ -409,18 +409,33 @@ export function PlayerHud({ className = '' }) {
   if (!hasContent) return null;
 
   const currentChannelId = isLiveService ? getChannelStableId(state.item) : '';
-  const currentChannelBlocked =
-    parental.enabled && currentChannelId ? parental.isChannelBlocked(currentChannelId) : false;
+  // El estado de bloqueo es independiente de si el control parental está habilitado.
+  // Si el usuario bloquea un canal desde el Player, activamos el control parental automáticamente.
+  const currentChannelBlocked = currentChannelId ? parental.isChannelBlocked(currentChannelId) : false;
 
   const toggleCurrentChannelBlock = () => {
     if (!isLiveService) return;
-    if (!parental.enabled) return;
     if (!currentChannelId) return;
+
+    // Si el usuario quiere bloquear y no hay PIN, guiar a configuración.
+    if (!currentChannelBlocked && parental.hasPinConfigured?.() !== true) {
+      requestSetupPin?.({
+        channel: state.item,
+        title: t('parental.title', { defaultValue: 'Control parental' }),
+        message: t('parental.setupPinMessage', { defaultValue: 'Para usar el control parental debes configurar un PIN.' }),
+      });
+      return;
+    }
+
+    const ensureParentalEnabled = () => {
+      if (parental.enabled) return;
+      parental.setEnabled(true);
+    };
 
     const doToggle = () => parental.toggleBlock(currentChannelId);
 
     // Si está bloqueado -> desbloquear requiere PIN (acción administrativa).
-    if (currentChannelBlocked && parental.hasPinConfigured()) {
+    if (currentChannelBlocked && parental.enabled && parental.hasPinConfigured()) {
       requestPlayChannel({
         channel: state.item,
         purpose: 'action',
@@ -432,6 +447,7 @@ export function PlayerHud({ className = '' }) {
     }
 
     // Si está permitido -> bloquear no requiere PIN.
+    if (!currentChannelBlocked) ensureParentalEnabled();
     doToggle();
   };
 
@@ -584,7 +600,7 @@ export function PlayerHud({ className = '' }) {
           >
             EPG
           </FocusableButton>
-          {isLiveService && parental.enabled && (
+          {isLiveService && (
             <FocusableButton
               type="button"
               className="player-hud__iconbtn"
