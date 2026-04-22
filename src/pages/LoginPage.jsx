@@ -479,9 +479,10 @@ export function LoginPage() {
                     onSuccess={handleGoogleCredentialSuccess}
                     onError={() => setError(t('login.googleSignInFailed'))}
                     useOneTap={false}
-                    theme="outline"
+                    theme="filled_black"
                     size="large"
-                    width="384"
+                    shape="rectangular"
+                    width="320"
                     text="continue_with"
                     locale={(i18n.language || 'es').replace('_', '-')}
                   />
