@@ -57,7 +57,7 @@ export function SmartCardPage() {
   // Backstop: si ya existe una licencia activa en storage, activarla automáticamente
   // para que el usuario no quede atascado en esta pantalla.
   const autoActivateAttemptedRef = useRef(false);
-  const { isTV } = useDevice();
+  useDevice();
 
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
 

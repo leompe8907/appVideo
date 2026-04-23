@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDevice } from '../../contexts/DeviceContext';
 
 /**
  * Card navegable compatible con TV y PC
@@ -26,6 +27,7 @@ function FocusableCard({
   ...restProps
 }) {
   const navigate = useNavigate();
+  const { isTV } = useDevice();
 
   // Handler para cuando se presiona Enter/OK
   const handleEnterPress = () => {

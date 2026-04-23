@@ -370,7 +370,7 @@ function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled 
 /**
  * Componente de tarjeta para agregar perfil
  */
-function AddProfileCard({ index, onAdd }) {
+function AddProfileCard({ onAdd }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
 

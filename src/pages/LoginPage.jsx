@@ -319,11 +319,7 @@ export function LoginPage() {
   // RENDER
   // ============================================
 
-  if (isLoading || !currentBrand) {
-    return <div className="loading">{t('common.loading')}</div>;
-  }
-
-  const logoPath = getImage('logo.png');
+  const logoPath = currentBrand ? getImage('logo.png') : '';
   const loginBackgroundConfig = currentBrand?.login?.backgroundImage;
   const hasCustomLoginBg = loginBackgroundConfig?.enabled === true;
   const loginBgAssetPathRaw =
@@ -335,9 +331,11 @@ export function LoginPage() {
       ? `${loginBgAssetPathRaw}.png`
       : loginBgAssetPathRaw;
 
-  const backgroundPath = hasCustomLoginBg && loginBgAssetPath
-    ? getImage(loginBgAssetPath)
-    : (currentBrand.assets?.background || getImage('background.png'));
+  const backgroundPath = currentBrand
+    ? (hasCustomLoginBg && loginBgAssetPath
+        ? getImage(loginBgAssetPath)
+        : (currentBrand.assets?.background || getImage('background.png')))
+    : '';
 
   // Precargar el background para evitar que se "pinte por partes" mientras se descarga/decodifica.
   // Si el preload falla, igual mostramos el fondo para no bloquear la pantalla.
@@ -346,15 +344,23 @@ export function LoginPage() {
     setIsLoginBgReady(false);
     if (!backgroundPath) {
       setIsLoginBgReady(true);
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }
     preloadImage(backgroundPath)
       .catch(() => null)
       .finally(() => {
         if (!cancelled) setIsLoginBgReady(true);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [backgroundPath]);
+
+  if (isLoading || !currentBrand) {
+    return <div className="loading">{t('common.loading')}</div>;
+  }
 
   const socialLogin = currentBrand?.login?.socialLogin || {};
   const googleSocial = socialLogin.google || {};

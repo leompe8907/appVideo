@@ -26,7 +26,6 @@ const routerBasename = (() => {
 
 const rootEl = document.getElementById('root');
 if (!rootEl) {
-  // eslint-disable-next-line no-console
   console.error('[main] No se encontró #root en el DOM');
 } else {
   ReactDOM.render(

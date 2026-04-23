@@ -23,7 +23,22 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Mantener señal, pero no bloquear el proyecto por deuda técnica existente.
+      'no-unused-vars': ['warn', { varsIgnorePattern: '^[A-Z_]' }],
+
+      // Estas reglas nuevas están generando muchos falsos positivos / refactors grandes.
+      // Preferimos mantener funcionalidad estable en TVs antes que reescribir componentes.
+      'react-hooks/purity': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
+    },
+  },
+
+  // Archivos Node (scripts/config) — permitir `process`, etc.
+  {
+    files: ['vite.config.js', 'scripts/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 ])

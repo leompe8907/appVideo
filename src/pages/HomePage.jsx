@@ -58,7 +58,6 @@ export function HomePage() {
 
   useLayoutEffect(() => {
     if (!debugEnabled) return;
-    // eslint-disable-next-line no-console
     console.log('[HomePage]', 'isPlayerActive', isPlayerActive, {
       type: playerState?.type,
       id: playerState?.id,

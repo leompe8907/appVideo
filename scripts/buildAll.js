@@ -17,7 +17,7 @@ for (const brand of brands) {
     console.log(`✅ ${brand} completado\n`);
   } catch (error) {
     failed++;
-    console.error(`❌ ${brand} falló\n`);
+    console.error(`❌ ${brand} falló\n`, error?.message || error);
   }
 }
 

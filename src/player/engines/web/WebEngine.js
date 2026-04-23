@@ -40,7 +40,6 @@ export class WebEngine extends BaseEngine {
 
   _log(...args) {
     if (!this._debug) return;
-    // eslint-disable-next-line no-console
     console.log('[WebEngine]', ...args);
   }
 

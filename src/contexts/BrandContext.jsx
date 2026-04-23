@@ -16,6 +16,7 @@ const BrandContext = createContext(null);
  * Hook para usar el Brand Context
  * @returns {object} Contexto del brand actual
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useBrand = () => {
   const context = useContext(BrandContext);
   if (!context) {

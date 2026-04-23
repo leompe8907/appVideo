@@ -31,7 +31,7 @@ export function parseEpgDateToMs(dateLike) {
 
   // Si explícitamente trae TZ, respetamos el parser nativo.
   // Ejemplos: 2026-04-08T12:34:00Z, 2026-04-08T12:34:00+02:00
-  const hasExplicitTz = /([zZ]|[+\-]\d{2}:?\d{2})$/.test(s);
+  const hasExplicitTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(s);
   if (!hasExplicitTz) {
     const m = s.match(NAIVE_UTC_RE);
     if (m) {

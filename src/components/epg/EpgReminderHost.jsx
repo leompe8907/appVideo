@@ -88,7 +88,7 @@ export function EpgReminderHost() {
   useEffect(() => {
     if (!due) return;
     setOpenId(due.id);
-  }, [due?.id]);
+  }, [due]);
 
   const active = due && openId === due.id ? due : null;
   const countdown = active ? formatCountdown(active.startMs - nowMs) : '00:00';

@@ -22,7 +22,7 @@ function SearchTab({ id, label, active, hidden, onSelect }) {
   );
 }
 
-function ResultItem({ item, index, onSelect }) {
+function ResultItem({ item, onSelect }) {
   const { t } = useTranslation();
 
   const [imgSrc, setImgSrc] = useState(item.logo || '');

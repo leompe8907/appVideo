@@ -43,8 +43,8 @@ export function getEnabledFeatures(brandConfig) {
   }
 
   return Object.entries(brandConfig.features)
-    .filter(([_, enabled]) => enabled === true)
-    .map(([name, _]) => name);
+    .filter(([, enabled]) => enabled === true)
+    .map(([name]) => name);
 }
 
 /**

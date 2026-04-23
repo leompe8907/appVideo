@@ -6,7 +6,7 @@
 
 import { useTranslation } from 'react-i18next';
 
-export function VodSeeMoreCard({ focusKeyPrefix, onSelect, label, textInPoster }) {
+export function VodSeeMoreCard({ onSelect, label, textInPoster }) {
   const { t } = useTranslation();
   const displayLabel = label ?? t('vod.seeMore');
 

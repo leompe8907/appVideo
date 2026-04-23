@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
@@ -126,7 +126,6 @@ export function EpgCards({ onSelect }) {
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
   const { requestPlayChannel } = useParentalGate();
-  const { isTV } = useDevice();
   const navigate = useNavigate();
   const addReminder = useEpgReminderStore((s) => s.addReminder);
   const removeReminder = useEpgReminderStore((s) => s.removeReminder);
@@ -134,11 +133,6 @@ export function EpgCards({ onSelect }) {
 
   const epgCardsCfg = currentBrand?.EPG || {};
   const epgPastEnabled = !!epgCardsCfg.epgPast;
-  const closeModalOnPlayLive =
-    typeof epgCardsCfg.epgCloseModalOnPlayLive === 'boolean'
-      ? epgCardsCfg.epgCloseModalOnPlayLive
-      : isTV;
-
   const [detail, setDetail] = useState(null); // { channel, event, isLive }
 
   const showRating = !!currentBrand?.features?.showRating;

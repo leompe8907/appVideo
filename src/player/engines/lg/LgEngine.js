@@ -19,7 +19,7 @@ export class LgEngine extends BaseTvEngine {
     this._pendingPlay = false;
   }
 
-  tryActivateNativeAdapter(_container) {
+  tryActivateNativeAdapter() {
     try {
       const injectedAdapter = window?.__LG_PLAYER_ADAPTER__;
       if (injectedAdapter && typeof injectedAdapter.load === 'function') {

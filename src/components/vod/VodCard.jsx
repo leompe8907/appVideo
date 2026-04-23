@@ -6,7 +6,7 @@
 
 import { getVodImageUrl } from '../../services/vodService';
 
-export function VodCard({ item, index, onSelect, focusKeyPrefix = 'vod-card', baseUrl }) {
+export function VodCard({ item, onSelect, baseUrl }) {
   const posterUrl =
     item.posterListURL ||
     item.posterInfoURL ||

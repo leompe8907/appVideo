@@ -19,7 +19,9 @@ const getStoredLanguage = () => {
   try {
     const stored = localStorage.getItem('app_language');
     if (stored && (stored === 'es' || stored === 'en' || stored === 'pt')) return stored;
-  } catch (_) {}
+  } catch {
+    // noop
+  }
   const browser = (navigator.language || navigator.userLanguage || '').toLowerCase();
   if (browser.startsWith('en')) return 'en';
   if (browser.startsWith('pt')) return 'pt';

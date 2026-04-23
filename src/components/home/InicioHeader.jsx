@@ -9,10 +9,6 @@ import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
  * Cabecera de Inicio: tres zonas horizontales (izquierda, centro, derecha).
  * La configuración por marca vive en `currentBrand.header` (brands.js).
  */
-function pad2(n) {
-  return String(n).padStart(2, '0');
-}
-
 function fmtHHmm(dateLike) {
   const ms = parseEpgDateToMs(dateLike);
   return ms == null ? '' : formatHHmmFromMs(ms);

@@ -36,7 +36,7 @@ function getBouquetLayoutType(rawBouquet) {
           parsed.design ||
           parsed.type ||
           null;
-      } catch (e) {
+      } catch {
         // Si falla el JSON, usamos el string tal cual
         rawLayout = trimmed;
       }

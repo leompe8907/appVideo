@@ -59,7 +59,7 @@ function ProtectedRoute({ children }) {
 }
 
 function App() {
-  const { t } = useTranslation();
+  useTranslation();
 
   return (
     <>

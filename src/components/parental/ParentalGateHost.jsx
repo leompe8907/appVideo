@@ -17,7 +17,7 @@ export function ParentalGateHost() {
     const name = gate?.channel?.name ? String(gate.channel.name) : '';
     const base = t('parental.channelBlockedTitle', { defaultValue: 'Canal bloqueado' });
     return name ? `${base}: ${name}` : base;
-  }, [gate?.title, gate?.channel?.name]);
+  }, [gate?.title, gate?.channel?.name, t]);
 
   const isSetupPin = gate?.gateKind === 'setupPin';
 

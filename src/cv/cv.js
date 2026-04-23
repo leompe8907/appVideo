@@ -177,7 +177,7 @@ export let CV = {
       // Hacer una llamada simple para validar
       await this.call("getCategories", {});
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   },

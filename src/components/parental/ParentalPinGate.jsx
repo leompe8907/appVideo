@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 
@@ -18,7 +18,7 @@ export function ParentalPinGate({
 
   const digits = useMemo(() => ['1','2','3','4','5','6','7','8','9','0'], []);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!open) return;
     const value = String(pin || '');
     if (!value) {
@@ -31,18 +31,18 @@ export function ParentalPinGate({
       setPin('');
       try { pinInputRef.current?.focus?.(); } catch { /* noop */ }
     }
-  };
+  }, [open, pin, onSubmit, t]);
 
   useEffect(() => {
     if (!open) return;
     setPin('');
     setError('');
-    const t = setTimeout(() => {
+    const tm = setTimeout(() => {
       try {
         pinInputRef.current?.focus?.();
       } catch { /* noop */ }
     }, 0);
-    return () => clearTimeout(t);
+    return () => clearTimeout(tm);
   }, [open]);
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export function ParentalPinGate({
     };
     window.addEventListener('keydown', onKey, { capture: true });
     return () => window.removeEventListener('keydown', onKey, { capture: true });
-  }, [open, pin]);
+  }, [open, handleSubmit, onCancel]);
 
   if (!open) return null;
 
@@ -102,7 +102,7 @@ export function ParentalPinGate({
         {error ? <div className="parental-pin-error">{error}</div> : null}
 
         <div className="parental-pin-pad" aria-label={t('pinGate.keypad', { defaultValue: 'Teclado numérico' })}>
-          {digits.map((d, idx) => (
+          {digits.map((d) => (
             <button
               key={d}
               type="button"

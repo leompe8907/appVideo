@@ -92,7 +92,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
       if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean);
       if (typeof v === 'string') {
         return v
-          .split(/[,\|;]/g)
+          .split(/[,|;]/g)
           .map((x) => String(x).trim())
           .filter(Boolean);
       }

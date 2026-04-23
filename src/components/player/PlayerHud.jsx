@@ -196,7 +196,6 @@ export function PlayerHud({ className = '' }) {
     backward,
     skipLiveBy,
     goLive,
-    containerRef,
   } = usePlayer();
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
@@ -226,7 +225,6 @@ export function PlayerHud({ className = '' }) {
 
   const log = (...args) => {
     if (!debugEnabled) return;
-    // eslint-disable-next-line no-console
     console.log('[PlayerHud]', ...args);
   };
 
@@ -262,7 +260,7 @@ export function PlayerHud({ className = '' }) {
     const nowEnd = toMs(now?.endDate ?? now?.end);
     const nowRange = nowStart != null && nowEnd != null ? `${formatHHmm(nowStart)} - ${formatHHmm(nowEnd)}` : '';
     return { logo, lcn, name, nowTitle, nextTitle, nowRange };
-  }, [state?.item, liveNowTickMs, nowNext]);
+  }, [state?.item, nowNext]);
 
   const channelList = useMemo(() => {
     const streams = epg?.streams || [];
@@ -415,6 +413,37 @@ export function PlayerHud({ className = '' }) {
     return () => clearInterval(timer);
   }, [state?.type, liveWindow, hasContent]);
 
+  useEffect(() => {
+    const onFsChange = () => {
+      const fs = Boolean(document.fullscreenElement);
+      setIsFullscreen(fs);
+      try {
+        document.documentElement.style.setProperty('--player-video-object-fit', fs ? 'cover' : 'contain');
+      } catch {
+        // noop
+      }
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    // Inicializar en montaje (por si el HUD aparece ya en fullscreen)
+    onFsChange();
+    if (debugEnabled) {
+      const onVisibility = () => log('document:visibilitychange', { state: document.visibilityState });
+      const onBlur = () => log('window:blur');
+      const onFocus = () => log('window:focus');
+      document.addEventListener('visibilitychange', onVisibility);
+      window.addEventListener('blur', onBlur);
+      window.addEventListener('focus', onFocus);
+      return () => {
+        document.removeEventListener('fullscreenchange', onFsChange);
+        document.removeEventListener('visibilitychange', onVisibility);
+        window.removeEventListener('blur', onBlur);
+        window.removeEventListener('focus', onFocus);
+      };
+    }
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debugEnabled]);
+
   if (!hasContent) return null;
 
   const currentChannelId = isLiveService ? getChannelStableId(state.item) : '';
@@ -531,37 +560,6 @@ export function PlayerHud({ className = '' }) {
   };
 
   const shouldUseEpgInfoModal = state?.type === 'service' && !!state?.item && !!nowNext?.now;
-
-  useEffect(() => {
-    const onFsChange = () => {
-      const fs = Boolean(document.fullscreenElement);
-      setIsFullscreen(fs);
-      try {
-        document.documentElement.style.setProperty('--player-video-object-fit', fs ? 'cover' : 'contain');
-      } catch {
-        // noop
-      }
-    };
-    document.addEventListener('fullscreenchange', onFsChange);
-    // Inicializar en montaje (por si el HUD aparece ya en fullscreen)
-    onFsChange();
-    if (debugEnabled) {
-      const onVisibility = () => log('document:visibilitychange', { state: document.visibilityState });
-      const onBlur = () => log('window:blur');
-      const onFocus = () => log('window:focus');
-      document.addEventListener('visibilitychange', onVisibility);
-      window.addEventListener('blur', onBlur);
-      window.addEventListener('focus', onFocus);
-      return () => {
-        document.removeEventListener('fullscreenchange', onFsChange);
-        document.removeEventListener('visibilitychange', onVisibility);
-        window.removeEventListener('blur', onBlur);
-        window.removeEventListener('focus', onFocus);
-      };
-    }
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debugEnabled]);
 
   const toggleFullscreen = async () => {
     try {

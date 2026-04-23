@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
@@ -229,8 +229,8 @@ export function CatchupPage() {
     }
   }, [currentBrand, enabled, catchup.status, loadCatchup]);
 
-  const groups = catchup.groups || [];
-  const recorded = catchup.recorded || [];
+  const groups = useMemo(() => catchup.groups || [], [catchup.groups]);
+  const recorded = useMemo(() => catchup.recorded || [], [catchup.recorded]);
 
   const allEvents = useMemo(() => {
     return groups.flatMap((g) => g?.events || []);
@@ -287,7 +287,7 @@ export function CatchupPage() {
       message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
       playFn: () => play({ type: 'catchup', id: catchupId, url, item: { catchupId }, autoPlay: true }),
     });
-  }, [location.state, enabled, play]);
+  }, [location.state, enabled, play, requestPlayMedia, t]);
 
   const layoutsToShow = useMemo(() => {
     if (showAllLayouts) return ['legacy', 'timeline', 'netflix'];

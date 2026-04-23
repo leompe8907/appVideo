@@ -165,7 +165,7 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, l
  * - event_and_logo: logo arriba + imagen de evento abajo + barra de tiempo (timeship)
  * - event_line: igual que event pero con tamaño mayor
  */
-function ChannelCard({ channel, index, layoutType, onSelect, onFocus, focusKey }) {
+function ChannelCard({ channel, layoutType, onSelect, onFocus }) {
   const { isTV } = useDevice();
   const parental = useParental();
   const [focused, setFocused] = useState(false);

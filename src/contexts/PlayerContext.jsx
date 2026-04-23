@@ -45,11 +45,10 @@ export function PlayerProvider({ children }) {
     }
   };
 
-  const log = (...args) => {
+  const log = useCallback((...args) => {
     if (!debugRef.current) return;
-    // eslint-disable-next-line no-console
     console.log('[PlayerContext]', ...args);
-  };
+  }, []);
 
   const [state, setState] = useState({
     type: null, // 'service' | 'vod' | 'catchup'
@@ -93,16 +92,6 @@ export function PlayerProvider({ children }) {
       seekTimeoutRef.current = null;
     }, 20000);
   }, [clearSeekTimeout]);
-
-  // Firma estable para evitar recrear engine en cada resize/fullscreen.
-  // NOTA: userAgent fue removido porque puede cambiar en algunos WebViews sin que
-  // la plataforma real cambie, lo que causaba recreación del engine durante playback.
-  const engineSignature = [
-    deviceInfo?.isTV ? 'tv' : 'pc',
-    String(currentBrand?.brand || ''),
-    String(currentBrand?.player?.nativeAdaptersEnabled === true),
-    String(currentBrand?.player?.enginePolicy || 'auto'),
-  ].join('::');
 
   // Crear engine UNA SOLA VEZ al montar el provider.
   // El engine se mantiene vivo durante toda la sesión para evitar:
