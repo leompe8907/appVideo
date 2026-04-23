@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
 import '../epg/epg-common.scss';
+import AppIcon from '../AppIcon';
 
 function fmtHHmm(ms) {
   if (!ms || Number.isNaN(ms)) return '';
@@ -206,7 +207,7 @@ export function EpgEventModal({
               type="button"
               id="epg-event-close"
             >
-              {t('common.close', { defaultValue: 'Cerrar' })}
+              <AppIcon name="close" size={18} />
             </FocusableButton>
           </div>
         </div>

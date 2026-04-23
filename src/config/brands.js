@@ -1210,7 +1210,7 @@ export const BRANDS = [
     features: {
       profiles: true,
       showRating: true, // Equivalente a showRating en 10foot
-      osms: false, // Equivalente a osmsEnabled en 10foot
+      osms: true, // Equivalente a osmsEnabled en 10foot
     },
     login: {
       theme: {

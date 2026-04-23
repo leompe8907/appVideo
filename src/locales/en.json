@@ -24,7 +24,22 @@
     "tvRadioServices": "TV and radio services",
     "tvRadioPlaceholder": "Module in preparation for TV and radio services.",
     "catchup": "Catch-up",
-    "osms": "OSMS"
+    "osms": "OSMS",
+    "osmsPlaceholder": "Module in preparation for OSMS."
+  },
+  "osms": {
+    "title": "OSMS",
+    "detail": "Message detail",
+    "empty": "No messages available.",
+    "selectOne": "Select a message to view details.",
+    "date": "Date",
+    "message": "Message",
+    "noMessage": "No message",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "markSeen": "Mark as seen",
+    "new": "New",
+    "disabled": "OSMS is not enabled for this brand."
   },
   "search": {
     "placeholder": "Search...",

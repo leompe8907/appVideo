@@ -12,6 +12,7 @@ import panaccessService from '../../services/panaccessService';
 import { getVodImageUrl } from '../../services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
 import { FocusableButton } from '../navigation/FocusableButton';
+import AppIcon from '../AppIcon';
 
 export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }) {
   const { t } = useTranslation();
@@ -162,7 +163,7 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
       <div className="vod-detail-modal vod-detail-modal--classic">
         {!isTV && (
           <button type="button" className="vod-detail-close vod-detail-close--classic" onClick={onClose} aria-label={t('common.close')}>
-            {t('common.close')}
+            <AppIcon name="close" size={18} className="vod-detail-close-icon" />
           </button>
         )}
 
@@ -180,7 +181,9 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
                   id="vod-classic-play"
                   aria-label={t('vod.play')}
                 >
-                  <i className="vod-classic-play-icon" aria-hidden>▶</i>
+                  <i className="vod-classic-play-icon" aria-hidden>
+                    <AppIcon name="play" size={20} />
+                  </i>
                 </FocusableButton>
               </div>
               <div className="vod-classic-top-right">
@@ -277,7 +280,9 @@ function ClassicEpisodeItem({ episode, index, onPlay }) {
   return (
     <li className="vod-classic-episode-item">
       <FocusableButton type="button" className="vod-classic-episode-btn" onClick={onPlay}>
-        <span className="vod-classic-episode-play" aria-hidden>▶</span>
+        <span className="vod-classic-episode-play" aria-hidden>
+          <AppIcon name="play" size={16} />
+        </span>
         <span className="vod-classic-episode-name">{name}</span>
       </FocusableButton>
     </li>

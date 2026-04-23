@@ -21,6 +21,7 @@ const HomePage = lazy(() => import('./pages/HomePage'));
 const EpgCardsPage = lazy(() => import('./pages/EpgCardsPage'));
 const CatchupPage = lazy(() => import('./pages/CatchupPage'));
 const ParentalSettingsPage = lazy(() => import('./pages/ParentalSettingsPage'));
+const OsmsPage = lazy(() => import('./pages/OsmsPage'));
 const HomePlaceholderPage = lazy(() =>
   import('./pages/HomePage').then((m) => ({ default: m.HomePlaceholderPage }))
 );
@@ -83,7 +84,7 @@ function App() {
                 <Route path="epg" element={<PreloadGate required="epg"> <Suspense fallback={<Loading />}> <EpgCardsPage /></Suspense></PreloadGate>}/>
                 <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>}/>
                 <Route path="control-parental" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><ParentalSettingsPage /></Suspense></PreloadGate>}/>
-                <Route path="osms" element={<Suspense fallback={<Loading />}><HomePlaceholderPage title={t('sidebar.osms')} description={t('sidebar.osmsPlaceholder')} /></Suspense>}/>
+                <Route path="osms" element={<Suspense fallback={<Loading />}><OsmsPage /></Suspense>}/>
                 <Route path="*" element={<Navigate to="/home/inicio" replace />} />
               </Route>
               {/* Fallback */}

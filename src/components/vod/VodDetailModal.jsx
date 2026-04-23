@@ -11,6 +11,7 @@ import panaccessService from '../../services/panaccessService';
 import { getVodImageUrl } from '../../services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
 import { FocusableButton } from '../navigation/FocusableButton';
+import AppIcon from '../AppIcon';
 
 const DESCRIPTION_MAX_LENGTH = 180;
 
@@ -202,7 +203,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
             onClick={onClose}
             aria-label={t('common.close')}
           >
-            {t('common.close')}
+            <AppIcon name="close" size={18} className="vod-detail-close-icon" />
           </button>
         )}
 
@@ -285,7 +286,9 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
                   onClick={handlePlayCurrent}
                   id="vod-detail-play"
                 >
-                  <span className="vod-detail-play-icon" aria-hidden>▶</span>
+                  <span className="vod-detail-play-icon" aria-hidden>
+                    <AppIcon name="play" size={18} />
+                  </span>
                   {t('vod.play')}
                 </FocusableButton>
               </div>
@@ -316,7 +319,9 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
                 className="vod-detail-play-btn"
                 onClick={handlePlayCurrent}
               >
-                <span className="vod-detail-play-icon" aria-hidden>▶</span>
+                <span className="vod-detail-play-icon" aria-hidden>
+                  <AppIcon name="play" size={18} />
+                </span>
                 {t('vod.play')}
               </FocusableButton>
             </div>
@@ -348,7 +353,9 @@ function EpisodeItem({ episode, index, baseUrl, onPlay }) {
           ) : (
             <div className="vod-episode-thumb-placeholder" />
           )}
-          <span className="vod-episode-play-icon" aria-hidden>▶</span>
+          <span className="vod-episode-play-icon" aria-hidden>
+            <AppIcon name="play" size={16} />
+          </span>
         </div>
         <div className="vod-episode-info">
           <span className="vod-episode-name">{name}</span>

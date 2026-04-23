@@ -11,6 +11,7 @@ import { useDevice } from '../contexts/DeviceContext';
 import { DeleteProfileModal } from '../components/profile/DeleteProfileModal';
 import { MessageModal } from '../components/MessageModal';
 import { FocusableButton } from '../components/navigation/FocusableButton';
+import AppIcon from '../components/AppIcon';
 import panaccessService from '../services/panaccessService';
 import { setLoggedOut } from '../utils/userSession';
 import Img from '../constants/images';
@@ -336,7 +337,9 @@ function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled 
           </div>
           {isSelected && (
             <div className="profile-selected-indicator">
-              <span className="check-icon">✓</span>
+              <span className="check-icon" aria-hidden="true">
+                <AppIcon name="done" size={18} />
+              </span>
             </div>
           )}
         </div>

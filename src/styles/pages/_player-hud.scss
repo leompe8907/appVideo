@@ -67,6 +67,15 @@
   white-space: nowrap;
 }
 
+// SVG icons inside HUD buttons: enforce visible size/alignment (PC/TV).
+.player-hud__iconbtn > svg {
+  width: 1em;
+  height: 1em;
+  display: block;
+  flex: 0 0 auto;
+  color: inherit;
+}
+
 .player-hud__iconbtn--primary {
   background: rgba(255, 255, 255, 0.18);
 }

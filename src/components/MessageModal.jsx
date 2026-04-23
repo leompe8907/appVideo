@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../contexts/DeviceContext';
 import { FocusableButton } from './navigation/FocusableButton';
+import AppIcon from './AppIcon';
 
 export function MessageModal({ type = 'success', message, onClose }) {
   const { t } = useTranslation();
@@ -34,7 +35,7 @@ export function MessageModal({ type = 'success', message, onClose }) {
         </h2>
         <div className={`message-modal-content ${isSuccess ? 'message-modal-success' : 'message-modal-error'}`}>
           <span className="message-modal-icon" aria-hidden="true">
-            {isSuccess ? '✓' : '⚠'}
+            <AppIcon name={isSuccess ? 'done' : 'warning'} size={22} />
           </span>
           <p className="message-modal-text">{message}</p>
         </div>

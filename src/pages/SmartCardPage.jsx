@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { MessageModal } from '../components/MessageModal';
+import AppIcon from '../components/AppIcon';
 import panaccessService from '../services/panaccessService';
 import { isLicenseInUseError } from '../utils/licenseInUse';
 import {
@@ -237,7 +238,9 @@ export function SmartCardPage() {
 
         {error && (
           <div className="error-container">
-            <div className="error-icon">⚠️</div>
+            <div className="error-icon" aria-hidden="true">
+              <AppIcon name="warning" size={26} />
+            </div>
             <p className="error-text">{error}</p>
             <button type="button" className="back-button" onClick={handleBack}>
               {t('smartcard.logout')}

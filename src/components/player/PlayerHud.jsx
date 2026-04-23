@@ -9,6 +9,7 @@ import { resolveLiveWindowFromEpgItems } from '../../utils/epgCurrentEvent';
 import { usePreload } from '../../store/usePreload';
 import panaccessService from '../../services/panaccessService';
 import { useBrand } from '../../contexts/BrandContext';
+import AppIcon from '../AppIcon';
 import EpgEventModal from '../epg/EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useParental } from '../../store/useParental';
@@ -585,7 +586,7 @@ export function PlayerHud({ className = '' }) {
             onClick={() => close()}
             aria-label={t('common.back', { defaultValue: 'Volver' })}
           >
-            ⟵
+            <AppIcon name="back" size="1em" />
           </FocusableButton>
           <FocusableButton
             type="button"
@@ -598,7 +599,7 @@ export function PlayerHud({ className = '' }) {
             aria-label={t('epg.title', { defaultValue: 'EPG' })}
             title={t('epg.title', { defaultValue: 'EPG' })}
           >
-            EPG
+            <AppIcon name="list" size="1em" />
           </FocusableButton>
           {isLiveService && (
             <FocusableButton
@@ -616,7 +617,7 @@ export function PlayerHud({ className = '' }) {
                   : t('parental.block', { defaultValue: 'Bloquear canal' })
               }
             >
-              {currentChannelBlocked ? '🔓' : '🔒'}
+              <AppIcon name={currentChannelBlocked ? 'lockOpen' : 'lock'} size="1em" />
             </FocusableButton>
           )}
           <FocusableButton
@@ -625,7 +626,7 @@ export function PlayerHud({ className = '' }) {
             onClick={() => setOverlay((v) => (v === 'channels' ? '' : 'channels'))}
             aria-label={t('player.channels', { defaultValue: 'Canales' })}
           >
-            ☰
+            <AppIcon name="menu" size="1em" />
           </FocusableButton>
           <FocusableButton
             type="button"
@@ -633,7 +634,7 @@ export function PlayerHud({ className = '' }) {
             onClick={() => setOverlay((v) => (v === 'info' ? '' : 'info'))}
             aria-label={t('player.info', { defaultValue: 'Información' })}
           >
-            ⓘ
+            <AppIcon name="info" size="1em" />
           </FocusableButton>
           <FocusableButton
             type="button"
@@ -642,7 +643,7 @@ export function PlayerHud({ className = '' }) {
             aria-label={t('player.tracks', { defaultValue: 'Audio/Subtítulos' })}
             id="hud-top-tracks-btn"
           >
-            CC
+            <AppIcon name="subtitles" size="1em" />
           </FocusableButton>
         </div>
 
@@ -654,7 +655,7 @@ export function PlayerHud({ className = '' }) {
               onClick={() => (isLiveWithWindow ? skipLiveBy(-10) : backward(10))}
               aria-label={t('player.rewind10', { defaultValue: 'Retroceder 10s' })}
             >
-              ⏪
+              <AppIcon name="rewind" size="1em" />
             </FocusableButton>
             <FocusableButton
               type="button"
@@ -662,7 +663,7 @@ export function PlayerHud({ className = '' }) {
               onClick={handlePlayPause}
               aria-label={state?.isPlaying ? t('player.pause', { defaultValue: 'Pausar' }) : t('player.play', { defaultValue: 'Reproducir' })}
             >
-              {state?.isPlaying ? '⏸' : '▶'}
+              <AppIcon name={state?.isPlaying ? 'pause' : 'play'} size="1em" />
             </FocusableButton>
             <FocusableButton
               type="button"
@@ -670,7 +671,7 @@ export function PlayerHud({ className = '' }) {
               onClick={() => (isLiveWithWindow ? skipLiveBy(10) : forward(10))}
               aria-label={t('player.forward10', { defaultValue: 'Adelantar 10s' })}
             >
-              ⏩
+              <AppIcon name="forward" size="1em" />
             </FocusableButton>
           </div>
         ) : (
@@ -694,7 +695,7 @@ export function PlayerHud({ className = '' }) {
                   : t('player.fullscreen', { defaultValue: 'Pantalla completa' })
               }
             >
-              {isFullscreen ? '⤢' : '⛶'}
+              <AppIcon name={isFullscreen ? 'fullscreenExit' : 'fullscreen'} size="1em" />
             </FocusableButton>
           ) : null}
           <div className="player-hud__clock" aria-label={t('common.time', { defaultValue: 'Hora' })}>

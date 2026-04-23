@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import VodCard from './VodCard';
+import AppIcon from '../AppIcon';
 
 export function VodCategoryModal({ categoryName, vods = [], onSelectItem, onClose }) {
   const { t } = useTranslation();
@@ -26,7 +27,7 @@ export function VodCategoryModal({ categoryName, vods = [], onSelectItem, onClos
               onClick={onClose}
               aria-label={t('common.close')}
             >
-              {t('common.close')}
+              <AppIcon name="close" size={18} />
             </button>
           )}
         </div>

@@ -9,6 +9,7 @@ import ParentalGateHost from '../components/parental/ParentalGateHost';
 import EpgReminderHost from '../components/epg/EpgReminderHost';
 import { useTranslation } from 'react-i18next';
 import '../styles/pages/_home-shell.scss';
+import { useOsmsPolling } from '../hooks/useOsmsPolling';
 
 export function HomePlaceholderPage({ title, description }) {
   return (
@@ -25,6 +26,9 @@ export function HomePage() {
   const { containerRef, state: playerState, licenseInUsePrompt, confirmLicenseInUse, close } = usePlayer();
   const isPlayerActive = Boolean(playerState?.url);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+
+  // OSMS: refresco periódico y al volver a foreground (solo si la feature está habilitada por brand)
+  useOsmsPolling({ intervalMs: 2 * 60 * 1000, days: 30 });
   const debugEnabled = (() => {
     if (import.meta.env.DEV) return true;
     try {

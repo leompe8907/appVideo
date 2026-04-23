@@ -10,6 +10,7 @@ import { FocusableButton } from '../navigation/FocusableButton';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useEpgReminderStore } from '../../store/epgReminderStore';
 import { getChannelStableId } from '../../utils/channelId';
+import AppIcon from '../AppIcon';
 
 function formatCountdown(ms) {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -148,7 +149,7 @@ export function EpgReminderHost() {
               type="button"
             id="epg-reminder-close-x"
             >
-              {t('common.close', { defaultValue: 'Cerrar' })}
+              <AppIcon name="close" size={18} />
             </FocusableButton>
           </div>
         </div>

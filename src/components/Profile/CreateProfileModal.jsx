@@ -10,6 +10,7 @@ import { useDevice } from '../../contexts/DeviceContext';
 
 import { FocusableInput } from '../navigation/FocusableInput';
 import { FocusableButton } from '../navigation/FocusableButton';
+import AppIcon from '../AppIcon';
 
 import panaccessService from '../../services/panaccessService';
 import Img from '../../constants/images';
@@ -166,7 +167,11 @@ function AvatarOption({ img, selected, onSelect, disabled }) {
       aria-label={img.id.toString()}
     >
       <img src={img.img} alt="" className="create-profile-avatar-img" />
-      {selected && <span className="create-profile-avatar-check">✓</span>}
+      {selected && (
+        <span className="create-profile-avatar-check" aria-hidden="true">
+          <AppIcon name="done" size={18} />
+        </span>
+      )}
     </div>
   );
 }
