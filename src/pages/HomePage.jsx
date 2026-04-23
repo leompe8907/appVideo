@@ -7,6 +7,7 @@ import PlayerHud from '../components/player/PlayerHud';
 import ConfirmModal from '../components/ConfirmModal';
 import ParentalGateHost from '../components/parental/ParentalGateHost';
 import EpgReminderHost from '../components/epg/EpgReminderHost';
+import InactivityHost from '../components/inactivity/InactivityHost';
 import { useTranslation } from 'react-i18next';
 import '../styles/pages/_home-shell.scss';
 import { useOsmsPolling } from '../hooks/useOsmsPolling';
@@ -90,6 +91,7 @@ export function HomePage() {
       />
       <ParentalGateHost />
       <EpgReminderHost />
+      <InactivityHost />
       <div className={`home-global-player${isPlayerActive ? ' home-global-player--active' : ''}`}>
         {/*
           El motor solo debe montar el <video> en un nodo que React no reordene.

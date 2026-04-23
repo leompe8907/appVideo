@@ -1,0 +1,101 @@
+@use '../mixins' as *;
+
+.inactivity-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.inactivity-card {
+  width: min(520px, 92vw);
+  border-radius: 14px;
+  background: rgba(18, 18, 18, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  padding: 18px 18px 14px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.inactivity-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  margin-bottom: 6px;
+}
+
+.inactivity-message {
+  font-size: 14px;
+  opacity: 0.9;
+  line-height: 1.35;
+  margin-bottom: 14px;
+}
+
+.inactivity-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.inactivity-btn {
+  @include button-base;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-weight: 650;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.inactivity-btn--primary {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.screensaver {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  overflow: hidden;
+  background: #000;
+}
+
+.screensaver-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: saturate(1.02) contrast(1.02);
+  transform: scale(1.03);
+}
+
+.screensaver-dim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 40% 35%, rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.78));
+}
+
+.screensaver-brand {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.screensaver-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 8px 12px;
+  backdrop-filter: blur(8px);
+}
+

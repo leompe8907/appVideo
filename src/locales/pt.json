@@ -334,6 +334,13 @@
     "confirm": "Confirmar",
     "ok": "OK"
   },
+  "inactivity": {
+    "title": "Você ainda está aí?",
+    "message": "A reprodução será interrompida por inatividade em {{time}}.",
+    "continue": "Continuar assistindo",
+    "screensaver": "Screensaver",
+    "wakeHint": "Pressione qualquer tecla para voltar"
+  },
   "preload": {
     "message": "Preparando guia de programação...",
     "channelsProgress": "{{current}} de {{total}} canais",

@@ -334,6 +334,13 @@
     "confirm": "Confirm",
     "ok": "OK"
   },
+  "inactivity": {
+    "title": "Are you still there?",
+    "message": "Playback will stop due to inactivity in {{time}}.",
+    "continue": "Keep watching",
+    "screensaver": "Screensaver",
+    "wakeHint": "Press any key to return"
+  },
   "preload": {
     "message": "Preparing program guide...",
     "channelsProgress": "{{current}} of {{total}} channels",

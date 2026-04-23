@@ -238,8 +238,8 @@ export function PlayerHud({ className = '' }) {
     } catch {
       // noop
     }
-    // Por defecto, en DEV mantenemos el HUD visible para ajuste de UI.
-    return import.meta.env.DEV;
+    // No forzar visible por defecto (permite auto-hide en DEV/PROD).
+    return false;
   }, []);
 
   const hasContent = Boolean(state?.url);
@@ -296,6 +296,13 @@ export function PlayerHud({ className = '' }) {
     };
   }, [state?.type, state?.currentTime, state?.duration, state?.liveSecondsLate, liveWindow, liveNowTickMs]);
 
+  // Auto-hide HUD (paridad con EPG legacy): configurable por marca.
+  // Default: 6s (TV/OTT feel).
+  const hudAutoHideMs = useMemo(() => {
+    const v = Number(currentBrand?.player?.hudAutoHideMs);
+    return Number.isFinite(v) && v >= 500 ? v : 6000;
+  }, [currentBrand]);
+
   const shouldAutoHide = state?.isPlaying && !state?.isLoading && !state?.isSeeking;
 
   const clearHideTimeout = () => {
@@ -313,7 +320,7 @@ export function PlayerHud({ className = '' }) {
     hideTimeoutRef.current = setTimeout(() => {
       setVisible(false);
       hideTimeoutRef.current = null;
-    }, 4000);
+    }, hudAutoHideMs);
   };
 
   useEffect(() => {
@@ -390,16 +397,17 @@ export function PlayerHud({ className = '' }) {
     const onKeyDown = () => wakeHud();
     const onPointerDown = () => wakeHud();
     window.addEventListener('mousemove', onMouseMove, { passive: true });
-    window.addEventListener('keydown', onKeyDown);
+    // capture:true para TVs/WebViews que interceptan keydown en bubbling
+    window.addEventListener('keydown', onKeyDown, { capture: true });
     window.addEventListener('pointerdown', onPointerDown, { passive: true });
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keydown', onKeyDown, { capture: true });
       window.removeEventListener('pointerdown', onPointerDown);
       clearHideTimeout();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasContent, shouldAutoHide, forceHudVisible]);
+  }, [hasContent, shouldAutoHide, forceHudVisible, hudAutoHideMs]);
 
   useEffect(() => {
     if (!(state?.type === 'service' && liveWindow && hasContent)) return undefined;

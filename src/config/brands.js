@@ -186,6 +186,14 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      hudAutoHideMs: 6000,
+      // Inactividad (detener playback + screensaver):
+      // - inactivityTestTimeoutSec: si es > 0, fuerza el timeout (útil para QA; ej: 120 = 2 minutos).
+      // - inactivityGraceSec: segundos del countdown antes de detener.
+      // - screensaverRotateMs: rotación de imágenes del screensaver.
+      inactivityTestTimeoutSec: 120,
+      inactivityGraceSec: 60,
+      screensaverRotateMs: 9000,
       // Controles de reproducción (⏪ ⏯ ⏩) en Live/Services:
       // - false: solo mostrar en VOD/Catchup (default recomendado).
       // - true: también mostrarlos en 'service' (canales en vivo).
@@ -420,6 +428,15 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      // HUD: auto-ocultar controles tras X ms de inactividad (similar a EPG legacy).
+      hudAutoHideMs: 6000,
+      // Inactividad (detener playback + screensaver):
+      // - inactivityTestTimeoutSec: si es > 0, fuerza el timeout (útil para QA; ej: 120 = 2 minutos).
+      // - inactivityGraceSec: segundos del countdown antes de detener.
+      // - screensaverRotateMs: rotación de imágenes del screensaver.
+      inactivityTestTimeoutSec: 120,
+      inactivityGraceSec: 60,
+      screensaverRotateMs: 9000,
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
@@ -669,6 +686,11 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      hudAutoHideMs: 6000,
+      // Inactividad (detener playback + screensaver):
+      inactivityTestTimeoutSec: 120,
+      inactivityGraceSec: 60,
+      screensaverRotateMs: 9000,
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
@@ -888,6 +910,11 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      hudAutoHideMs: 6000,
+      // Inactividad (detener playback + screensaver):
+      inactivityTestTimeoutSec: 120,
+      inactivityGraceSec: 60,
+      screensaverRotateMs: 9000,
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
@@ -1110,6 +1137,11 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      hudAutoHideMs: 6000,
+      // Inactividad (detener playback + screensaver):
+      inactivityTestTimeoutSec: 120,
+      inactivityGraceSec: 60,
+      screensaverRotateMs: 9000,
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,

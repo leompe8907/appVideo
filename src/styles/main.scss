@@ -12,6 +12,7 @@
 @use 'components/app-boot-shell' as *;
 @use 'components/login' as *;
 @use 'components/confirm-modal' as *;
+@use 'components/inactivity' as *;
 @use 'components/layout' as *;
 @use 'components/pages' as *;
 @use 'pages/smartcard' as *;

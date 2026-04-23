@@ -334,6 +334,13 @@
     "confirm": "Confirmar",
     "ok": "OK"
   },
+  "inactivity": {
+    "title": "¿Sigues ahí?",
+    "message": "El contenido se detendrá por inactividad en {{time}}.",
+    "continue": "Seguir viendo",
+    "screensaver": "Screensaver",
+    "wakeHint": "Presiona cualquier tecla para volver"
+  },
   "preload": {
     "message": "Preparando guía de programación...",
     "channelsProgress": "{{current}} de {{total}} canales",
