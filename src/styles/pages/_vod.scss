@@ -205,7 +205,7 @@
 
 // VodCard
 .vod-card {
-  width: 9em;
+  width: 11.5em;
   background: transparent;
   border: none;
   padding: 0;
@@ -942,6 +942,7 @@
 
 // VodSeeMoreCard (décimo ítem "Ver más") — misma estructura que VodCard: poster + título
 .vod-see-more-card {
+  margin-left: 1.5rem;
   .vod-see-more-poster {
     @include flex-center;
     background: rgba(255, 255, 255, 0.08);
