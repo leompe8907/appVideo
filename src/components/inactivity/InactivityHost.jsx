@@ -175,10 +175,13 @@ export function InactivityHost() {
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (intervalRef.current) clearInterval(intervalRef.current);
-    if (ssIntervalRef.current) clearInterval(ssIntervalRef.current);
+    // Nota: no limpiamos ssIntervalRef acá, porque si el screensaver está activo,
+    // el cambio de estado del player (close) puede disparar este effect y apagarlo.
+
+    // Si el screensaver está activo, no rearmar timers ni resetear UI.
+    if (showScreensaver) return;
 
     setOpen(false);
-    setShowScreensaver(false);
 
     if (!isPlaybackActive) return;
     if (!Number.isFinite(inactivitySec) || inactivitySec <= 0) return;
@@ -193,9 +196,8 @@ export function InactivityHost() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
-      if (ssIntervalRef.current) clearInterval(ssIntervalRef.current);
     };
-  }, [isPlaybackActive, inactivitySec, lastInteractionAtMs, graceSec]);
+  }, [isPlaybackActive, inactivitySec, lastInteractionAtMs, graceSec, showScreensaver]);
 
   // Countdown del modal
   useEffect(() => {
