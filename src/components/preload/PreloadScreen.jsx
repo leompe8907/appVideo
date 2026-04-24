@@ -13,7 +13,7 @@ const TIPS_INTERVAL_MS = 4000;
 export function PreloadScreen() {
   const { t } = useTranslation();
   const { currentBrand, getImage } = useBrand();
-  const { epg } = usePreload();
+  const { epg, vod } = usePreload();
   const [tipIndex, setTipIndex] = useState(0);
 
   const tips = [
@@ -38,17 +38,16 @@ export function PreloadScreen() {
   const current = progress.current ?? 0;
   const total = progress.total ?? 0;
 
-  const message = epg.status === 'loading'
-    ? t('preload.message')
-    : epg.status === 'error'
+  const message =
+    epg.status === 'error' || vod.status === 'error'
       ? t('preload.error')
       : t('preload.message');
   const submessage =
     epg.status === 'loading' && total > 0
       ? t('preload.channelsProgress', { current, total })
-      : epg.status === 'ready' || epg.status === 'finishing'
-        ? t('preload.finishing')
-        : '';
+      : epg.status === 'ready' || epg.status === 'finishing' || vod.status === 'ready'
+          ? t('preload.finishing')
+          : '';
 
   return (
     <div id="scene-preload" className="scene-preload">
