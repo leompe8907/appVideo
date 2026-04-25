@@ -8,14 +8,8 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      react(),
-      !isDev && legacy({
-        targets: ['chrome >= 56', 'safari >= 10'], // Cubre Tizen 3+ y webOS 3+
-        additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
-        renderLegacyChunks: true,
-        polyfills: true,
-      }),
-    ].filter(Boolean),
+      react()
+    ],
 
     css: {
       preprocessorOptions: {
