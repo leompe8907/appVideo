@@ -169,18 +169,44 @@ function ensureStreamPlaybackUrl(stream) {
         console.warn('[tvDataService] normalizePlaybackUrl:', e?.message || e);
       }
     }
-    return stream;
-  }
-  const streamId = stream.id ?? stream.epgStreamId;
-  if (streamId == null || streamId === '') return stream;
-  try {
-    const url = panaccessService.getStreamM3u8Url({ streamId });
-    if (url) stream.url = panaccessService.normalizePlaybackUrl(url);
-  } catch (e) {
-    if (import.meta.env?.DEV) {
-      console.warn('[tvDataService] ensureStreamPlaybackUrl:', e?.message || e);
+  } else {
+    const streamId = stream.id ?? stream.epgStreamId;
+    if (streamId != null && streamId !== '') {
+      try {
+        const url = panaccessService.getStreamM3u8Url({ streamId });
+        if (url) stream.url = panaccessService.normalizePlaybackUrl(url);
+      } catch (e) {
+        if (import.meta.env?.DEV) {
+          console.warn('[tvDataService] ensureStreamPlaybackUrl:', e?.message || e);
+        }
+      }
     }
   }
+
+  // NORMALIZACIÓN DE IMÁGENES
+  // Esto previene que los logos se borren en el Player o fallan las resoluciones de URLs relativas en Vercel
+  try {
+    let img = stream.img || stream.imageUrl || stream.logoUrl || stream.logo || stream.icon || null;
+    const baseUrl = (panaccessService.brandConfig?.drm || '').replace(/\/$/, '');
+    
+    if (img && typeof img === 'string' && !img.startsWith('http') && !img.startsWith('data:')) {
+      img = img.startsWith('/') ? baseUrl + img : baseUrl + '/' + img;
+    }
+
+    if (!img) {
+      const logo2id = stream.logo2id ?? stream.logo2Id ?? stream.logo2ID ?? stream.logo_2_id;
+      if (logo2id) {
+        img = `${baseUrl}/cdn/public/images/${logo2id}/v/thumb.png`;
+      }
+    }
+
+    if (img) {
+      stream.img = img;
+    }
+  } catch(e) {
+    // ignorar fallo de imagen
+  }
+
   return stream;
 }
 

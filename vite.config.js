@@ -8,14 +8,8 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      react(),
-      !isDev && legacy({
-        targets: ['chrome >= 56', 'safari >= 10'], // Cubre Tizen 3+ y webOS 3+
-        additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
-        renderLegacyChunks: true,
-        polyfills: true,
-      }),
-    ].filter(Boolean),
+      react()
+    ],
 
     css: {
       preprocessorOptions: {
@@ -44,10 +38,9 @@ export default defineConfig(({ mode }) => {
           // Nota: evitar partir `node_modules` en múltiples vendor chunks porque puede generar
           // dependencias circulares (p.ej. react <-> libs) y romper en runtime (React undefined).
           manualChunks(id) {
-            if (id.includes('node_modules')) {
-              return 'vendor';
-            }
-
+            // Vite v4/v5 maneja excelentemente la separación automática de node_modules.
+            // Forzar todo a un único 'vendor' chunk causa dependencias circulares y rompe React en producción.
+            
             // Páginas: cada página en su propio chunk (gracias a React.lazy)
             if (id.includes('/src/pages/')) {
               const page = id.split('/').pop().replace('.jsx', '').replace('.tsx', '');
