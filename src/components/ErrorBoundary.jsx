@@ -18,6 +18,23 @@ export class ErrorBoundary extends Component {
     if (import.meta.env.DEV) {
       console.error('[ErrorBoundary]', error, info?.componentStack);
     }
+    
+    // Auto-reload si es un error de carga de chunk (típico post-deploy en Vercel por caché vieja)
+    const isChunkError = error && error.message && (
+      error.message.includes('fetch dynamically imported module') ||
+      error.message.includes('Failed to load module script') ||
+      error.message.includes('Importing a module script failed') ||
+      error.message.includes('text/html')
+    );
+    
+    if (isChunkError) {
+      const reloadKey = 'app_reloaded_from_error';
+      if (!sessionStorage.getItem(reloadKey)) {
+        sessionStorage.setItem(reloadKey, '1');
+        window.location.reload();
+        return;
+      }
+    }
   }
 
   render() {
