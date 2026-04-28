@@ -13,12 +13,7 @@ import InicioHeader from '../home/InicioHeader';
 import { useBrand } from '../../contexts/BrandContext';
 import { HomeHeaderProvider } from '../../contexts/HomeHeaderProvider';
 import { useParentalGate } from '../../hooks/useParentalGate';
-
-function findStreamById(streams, id) {
-  if (id == null || !Array.isArray(streams)) return null;
-  const sid = String(id);
-  return streams.find((s) => s && String(s.id) === sid) || null;
-}
+import { createAdActivateHandler } from '../../utils/adActivate';
 
 export function HomeShellContent() {
   const { t } = useTranslation();
@@ -48,6 +43,8 @@ export function HomeShellContent() {
     sectionKey &&
     Boolean(currentBrand?.homeShell?.ads?.[sectionKey] ?? (sectionKey === 'inicio'));
 
+  const topInBouquets = Boolean(currentBrand?.homeShell?.ads?.topInBouquets ?? false);
+
   useEffect(() => {
     if (!adsEnabled) return;
     if (ads.status === 'idle') {
@@ -56,97 +53,16 @@ export function HomeShellContent() {
   }, [ads.status, loadAds, adsEnabled]);
 
   const handleActivate = useCallback(
-    (ad) => {
-      if (!ad) return;
-
-      const actionUrl = ad.actionUrl;
-      const generic = ad.genericData != null ? String(ad.genericData) : '';
-
-      const isValidUrl =
-        actionUrl &&
-        typeof actionUrl === 'string' &&
-        actionUrl !== '#' &&
-        actionUrl !== 'null' &&
-        actionUrl !== 'undefined';
-
-      if (isValidUrl) {
-        try {
-          window.open(actionUrl, '_blank', 'noopener,noreferrer');
-        } catch {
-          window.location.href = actionUrl;
-        }
-        return;
-      }
-
-      if (generic.startsWith('stream_id')) {
-        const parts = generic.split('=');
-        const rawId = parts.length > 1 ? parts[1] : '';
-        const id = parseInt(rawId, 10);
-        if (Number.isNaN(id)) return;
-        const stream = findStreamById(epg.streams, id);
-        if (!stream) {
-          if (import.meta.env?.DEV) {
-            console.warn('[HomeShellContent] stream no encontrado para id', id);
-          }
-          return;
-        }
-        const streamId = stream.epgStreamId ?? stream.id;
-        let url = stream.url || stream.streamUrl || stream.hlsUrl || stream.hls;
-        if (!url && streamId != null) {
-          try {
-            url = panaccessService.getStreamM3u8Url({ streamId });
-          } catch (e) {
-            if (import.meta.env?.DEV) console.warn('[HomeShellContent] getStreamM3u8Url', e);
-          }
-        }
-        try {
-          url = panaccessService.normalizePlaybackUrl(url);
-        } catch (e) {
-          if (import.meta.env?.DEV) console.warn('[HomeShellContent] normalizePlaybackUrl', e);
-        }
-        if (url) {
-          requestPlayChannel({
-            channel: stream,
-            playFn: () =>
-              play({
-                type: 'service',
-                id: stream.id,
-                url,
-                item: stream,
-                autoPlay: true,
-              }),
-          });
-        }
-        return;
-      }
-
-      if (generic.startsWith('catchup_id=')) {
-        const id = parseInt(generic.split('=')[1], 10);
-        if (Number.isNaN(id)) return;
-        try {
-          const url = panaccessService.normalizePlaybackUrl(panaccessService.getCatchupM3u8Url({ catchupId: id }));
-          if (url) {
-            requestPlayMedia({
-              item: { catchupId: id },
-              ratingRaw: null,
-              title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
-              message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
-              playFn: () => play({ type: 'catchup', id, url, item: { catchupId: id }, autoPlay: true }),
-            });
-          }
-        } catch (e) {
-          if (import.meta.env?.DEV) console.warn('[HomeShellContent] catchup', e);
-        }
-        return;
-      }
-
-      if (generic.startsWith('vod_id=')) {
-        const id = parseInt(generic.split('=')[1], 10);
-        if (Number.isNaN(id)) return;
-        navigate('/home/vod', { state: { adOpenVodId: id } });
-      }
-    },
-    [epg.streams, navigate, play, requestPlayChannel, requestPlayMedia, t]
+    createAdActivateHandler({
+      epgStreams: epg.streams,
+      play,
+      requestPlayChannel,
+      requestPlayMedia,
+      t,
+      navigate,
+      panaccessService,
+    }),
+    [epg.streams, navigate, panaccessService, play, requestPlayChannel, requestPlayMedia, t]
   );
 
   const { top, bottom } = ads;
@@ -157,7 +73,7 @@ export function HomeShellContent() {
     <HomeHeaderProvider>
       <div className="home-content-stack">
         {headerEnabled && <InicioHeader sectionKey={sectionKey} />}
-        {adsEnabled && hasTop && (
+        {adsEnabled && hasTop && !(sectionKey === 'inicio' && topInBouquets === false) && (
           <AdZone
             key={`top-${top.map((a) => a.id).join('-')}`}
             zoneKey="top"

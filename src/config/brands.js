@@ -269,6 +269,7 @@ export const BRANDS = [
         serviciosTvRadio: false,
         vod: false,
         catchup: false,
+        topInBouquets: false,
       },
     },
     
@@ -532,6 +533,7 @@ export const BRANDS = [
         serviciosTvRadio: false,
         vod: false,
         catchup: false,
+        topInBouquets: false,
       },
     },
     
@@ -760,6 +762,7 @@ export const BRANDS = [
         serviciosTvRadio: false,
         vod: false,
         catchup: false,
+        topInBouquets: false,
       },
     },
     
@@ -985,6 +988,7 @@ export const BRANDS = [
         serviciosTvRadio: false,
         vod: false,
         catchup: false,
+        topInBouquets: false,
       },
     },
     
@@ -1240,6 +1244,7 @@ export const BRANDS = [
         serviciosTvRadio: false,
         vod: false,
         catchup: false,
+        topInBouquets: false,
       },
     },
     
