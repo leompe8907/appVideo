@@ -6,6 +6,7 @@ import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
 import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
 import { useParental } from '../../store/useParental';
 import { getChannelStableId } from '../../utils/channelId';
+import { proxyImageUrl } from '../../utils/imageProxy';
 
 // --- Helpers EPG para layout event_and_logo ---
 /** Parsea "YYYY-MM-DD HH:mm:ss" a "HH:mm" para mostrar en UI */
@@ -255,8 +256,9 @@ function ChannelCard({ channel, layoutType, onSelect, onFocus }) {
   };
 
   // Cadena: imagen de evento → logo del canal → placeholder (si evento o logo faltan/fallan)
-  const effectiveEventImage =
+  const effectiveEventImageRaw =
     eventImage && !eventImageFailed ? eventImage : (logoImage || placeholderImageUrl || '');
+  const effectiveEventImage = proxyImageUrl(effectiveEventImageRaw);
 
   const handleClick = (e) => {
     e.preventDefault();
