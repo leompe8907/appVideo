@@ -20,12 +20,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  max-height: 8em;
-  overflow: hidden;
+  max-height: none;
+  overflow: visible;
 }
 
 .home-ad-zone--bottom .home-ad-slide {
-  max-height: 6.5em;
+  max-height: none;
 }
 
 .home-ad-media {
@@ -39,6 +39,10 @@
 .home-ad-media--video {
   max-height: 8em;
   background: #000;
+}
+
+.home-ad-zone--bottom .home-ad-media--video {
+  max-height: 6.5em;
 }
 
 .home-ad-dots {

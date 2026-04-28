@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useBrand } from '../../contexts/BrandContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { usePreload } from '../../store/usePreload';
@@ -20,6 +20,7 @@ const ITEMS_PER_ROW = 9;
 export function VodRecommendedHomeRail() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
   const { requestPlayMedia } = useParentalGate();
@@ -44,6 +45,12 @@ export function VodRecommendedHomeRail() {
       loadVOD(currentBrand, { t, force: true, enableRetry: true });
     }
   }, [status, currentBrand, loadVOD, t]);
+
+  // Si el usuario navega (incluyendo "Home" sobre /home/inicio), cerrar el modal de detalle.
+  useEffect(() => {
+    setDetailItem(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
 
   const handleVodSelect = (item) => {
     if (!item?.id) return;

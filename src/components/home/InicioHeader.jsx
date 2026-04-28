@@ -65,6 +65,7 @@ export function InicioHeader({ sectionKey = null }) {
   const subLeft = subAreas.left || {};
   const subCenter = subAreas.center || {};
   const subRight = subAreas.right || {};
+  const subheaderEnabled = Boolean(currentBrand?.header?.subheader?.enabled ?? true);
 
   const logoSrc = currentBrand?.assets?.logo || null;
   const appName = currentBrand?.appName || 'App';
@@ -195,7 +196,11 @@ export function InicioHeader({ sectionKey = null }) {
         {renderArea(right, 'right')}
       </header>
       {sectionKey === 'inicio' && (
-        <div className="inicio-subheader" aria-label={t('inicio.subheader', { defaultValue: 'Subcabecera' })}>
+        <div
+          className="inicio-subheader"
+          aria-label={t('inicio.subheader', { defaultValue: 'Subcabecera' })}
+          style={{ display: subheaderEnabled ? 'flex' : 'none' }}
+        >
           {renderSubArea(subLeft, 'left')}
           {renderSubArea(subCenter, 'center')}
           {renderSubArea(subRight, 'right')}
