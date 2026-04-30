@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import QRCode from 'qrcode';
@@ -8,6 +8,7 @@ import { useDevice } from '../contexts/DeviceContext';
 import { FocusableInput } from '../components/navigation/FocusableInput';
 import { FocusableButton } from '../components/navigation/FocusableButton';
 import { getInitialRoute } from '../utils/navigation';
+import { getCaretInfo, getTvActionFromKeyEvent, isTextInputElement, TV_ACTION } from '../utils/tvRemote';
 import { loginAndActivateLicense } from '../services/loginFlow';
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
 import { getActiveLicense } from '../utils/userSession';
@@ -35,7 +36,8 @@ export function LoginPage() {
   const [udidQrImageSrc, setUdidQrImageSrc] = useState('');
   const [isLoginBgReady, setIsLoginBgReady] = useState(false);
 
-  console.log(`🖥️ [DEVICE] Modo: ${isTV ? 'TV' : 'PC'}`);
+  const backLongPressTimerRef = useRef(null);
+  const backLongPressTriggeredRef = useRef(false);
 
   const qrRegisterConfig = currentBrand?.login?.qrRegister || currentBrand?.qrRegister;
   const qrRegisterEnabled = !!qrRegisterConfig?.enabled;
@@ -87,7 +89,6 @@ export function LoginPage() {
   // Establecer focus inicial en TV al cargar la página
   useEffect(() => {
     if (isTV) {
-      // Pequeño delay
       const timer = setTimeout(() => {
         const usernameInput = document.getElementById('username');
         if (usernameInput) usernameInput.focus();
@@ -96,6 +97,274 @@ export function LoginPage() {
       return () => clearTimeout(timer);
     }
   }, [isTV]);
+
+  const buttonIds = useMemo(() => {
+    // Orden vertical de botones (permite extender en el futuro sin reescribir navegación)
+    // Nota: algunos botones aparecen condicionalmente.
+    return [
+      'login-submit',
+      qrRegisterEnabled ? 'login-register' : null,
+      effectiveUdidConfig?.enabled ? 'login-udid' : null,
+      // Social (en TV actualmente no se muestra GoogleOAuth, pero dejamos la puerta)
+      'login-social-google',
+      'login-social-facebook',
+    ].filter(Boolean);
+  }, [qrRegisterEnabled, effectiveUdidConfig?.enabled]);
+
+  const focusById = (id) => {
+    const el = id ? document.getElementById(id) : null;
+    if (el) {
+      try {
+        el.focus();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  };
+
+  const focusNextButton = (fromId, direction) => {
+    const idx = buttonIds.indexOf(fromId);
+    const delta = direction === 'up' ? -1 : 1;
+    let i = idx >= 0 ? idx + delta : (direction === 'up' ? buttonIds.length - 1 : 0);
+    while (i >= 0 && i < buttonIds.length) {
+      const id = buttonIds[i];
+      const el = document.getElementById(id);
+      if (el && !el.disabled && el.tabIndex !== -1) {
+        el.focus();
+        return true;
+      }
+      i += delta;
+    }
+    return false;
+  };
+
+  const exitAppBestEffort = () => {
+    // Samsung Tizen
+    try {
+      const tizenApp = window?.tizen?.application?.getCurrentApplication?.();
+      if (tizenApp?.exit) {
+        tizenApp.exit();
+        return;
+      }
+    } catch {
+      // noop
+    }
+    // webOS / browser fallback
+    try {
+      window.close();
+    } catch {
+      // noop
+    }
+  };
+
+  const armBackLongPress = () => {
+    if (backLongPressTimerRef.current) return;
+    backLongPressTriggeredRef.current = false;
+    backLongPressTimerRef.current = setTimeout(() => {
+      backLongPressTriggeredRef.current = true;
+      exitAppBestEffort();
+    }, 1600);
+  };
+
+  const clearBackLongPress = () => {
+    if (backLongPressTimerRef.current) {
+      clearTimeout(backLongPressTimerRef.current);
+      backLongPressTimerRef.current = null;
+    }
+  };
+
+  // Navegación remota (TV): LRUD determinístico para Login
+  useEffect(() => {
+    if (!isTV) return undefined;
+
+    const onKeyDown = (e) => {
+      const action = getTvActionFromKeyEvent(e);
+      if (!action) return;
+
+      // BACK: si hay modal abierto, cerrar; además armar long-press para salir.
+      if (action === TV_ACTION.BACK) {
+        // Armar long press solo en el primer keydown (ignorar repeats)
+        if (!e.repeat) armBackLongPress();
+
+        // Cerrar modales primero (BACK corto)
+        if (isQrModalOpen) {
+          e.preventDefault();
+          e.stopPropagation();
+          handleCloseQrModal();
+          // restore foco
+          setTimeout(() => focusById('login-register') || focusById('login-submit') || focusById('username'), 0);
+          return;
+        }
+        if (isUdidModalOpen) {
+          e.preventDefault();
+          e.stopPropagation();
+          handleCloseUdidModal();
+          setTimeout(() => focusById('login-udid') || focusById('login-submit') || focusById('username'), 0);
+          return;
+        }
+
+        // Si no hay modal, no consumir BACK corto (queda para el SO o para futuro confirm dialog).
+        return;
+      }
+
+      // Si hay modal abierto, atrapamos el foco adentro (mínimo viable: solo permitir ENTER en "Cerrar")
+      if (isQrModalOpen || isUdidModalOpen) {
+        if (action === TV_ACTION.ENTER) {
+          // dejar que el botón enfocado maneje click
+        } else if (action === TV_ACTION.UP || action === TV_ACTION.DOWN) {
+          // Mantener el foco en el botón de cerrar
+          e.preventDefault();
+          e.stopPropagation();
+          const closeId = isQrModalOpen ? 'login-modal-close-qr' : 'login-modal-close-udid';
+          focusById(closeId);
+        }
+        return;
+      }
+
+      const active = document.activeElement;
+      const activeId = active?.id ? String(active.id) : '';
+
+      // Inputs: permitir caret horizontal (no interceptar Left/Right) salvo casos explícitos
+      const isInput = isTextInputElement(active);
+      if (isInput) {
+        if (action === TV_ACTION.DOWN) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (activeId === 'username') {
+            focusById('password');
+            return;
+          }
+          if (activeId === 'password') {
+            focusById('login-submit');
+            return;
+          }
+        }
+
+        if (action === TV_ACTION.UP) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (activeId === 'password') {
+            focusById('username');
+            return;
+          }
+          if (activeId === 'username') {
+            // top: no-op
+            return;
+          }
+        }
+
+        if (action === TV_ACTION.RIGHT && activeId === 'password') {
+          // Regla del flujo: password -> toggle con RIGHT,
+          // pero sin romper caret: solo si el caret está al final.
+          const caret = getCaretInfo(active);
+          if (caret.end >= caret.length) {
+            e.preventDefault();
+            e.stopPropagation();
+            focusById('login-password-toggle');
+            return;
+          }
+        }
+
+        if (action === TV_ACTION.ENTER) {
+          // Best-effort: click para forzar IME en algunos runtimes.
+          try {
+            active?.focus?.();
+            active?.click?.();
+          } catch {
+            // noop
+          }
+        }
+
+        // LEFT/RIGHT sin caso especial: dejar que el input mueva el caret.
+        return;
+      }
+
+      // Toggle: navegación hacia abajo al primer botón; hacia arriba al password.
+      if (activeId === 'login-password-toggle') {
+        if (action === TV_ACTION.DOWN) {
+          e.preventDefault();
+          e.stopPropagation();
+          focusById('login-submit');
+          return;
+        }
+        if (action === TV_ACTION.UP) {
+          e.preventDefault();
+          e.stopPropagation();
+          focusById('password');
+          return;
+        }
+        if (action === TV_ACTION.LEFT) {
+          // Volver al input password (sin bloquear caret porque acá no estamos editando)
+          e.preventDefault();
+          e.stopPropagation();
+          focusById('password');
+          return;
+        }
+        // ENTER se maneja por click del botón
+        return;
+      }
+
+      // Botones: navegación vertical entre botones (extensible)
+      if (activeId && buttonIds.includes(activeId)) {
+        if (action === TV_ACTION.DOWN) {
+          e.preventDefault();
+          e.stopPropagation();
+          focusNextButton(activeId, 'down');
+          return;
+        }
+        if (action === TV_ACTION.UP) {
+          e.preventDefault();
+          e.stopPropagation();
+          // Si subimos desde el primer botón: ir a password-toggle (si existe) o password
+          const isFirst = buttonIds[0] === activeId;
+          if (isFirst) {
+            if (!focusById('login-password-toggle')) focusById('password');
+            return;
+          }
+          focusNextButton(activeId, 'up');
+          return;
+        }
+        // LEFT/RIGHT no mapeado en botones por ahora
+        return;
+      }
+
+      // Si el foco está en otro elemento, intentar llevarlo a un punto seguro.
+      if (action === TV_ACTION.DOWN) {
+        e.preventDefault();
+        e.stopPropagation();
+        focusById('login-submit') || focusById('password') || focusById('username');
+      } else if (action === TV_ACTION.UP) {
+        e.preventDefault();
+        e.stopPropagation();
+        focusById('password') || focusById('username');
+      }
+    };
+
+    const onKeyUp = (e) => {
+      const action = getTvActionFromKeyEvent(e);
+      if (action !== TV_ACTION.BACK) return;
+      clearBackLongPress();
+      // Si se disparó long-press, consumir el keyup para evitar efectos colaterales.
+      if (backLongPressTriggeredRef.current) {
+        try {
+          e.preventDefault();
+          e.stopPropagation();
+        } catch {
+          // noop
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    window.addEventListener('keyup', onKeyUp, { capture: true });
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, { capture: true });
+      window.removeEventListener('keyup', onKeyUp, { capture: true });
+      clearBackLongPress();
+    };
+  }, [isTV, isQrModalOpen, isUdidModalOpen, buttonIds]);
 
   useEffect(() => {
     if (!isQrModalOpen) return;
@@ -429,6 +698,8 @@ export function LoginPage() {
                 type="button"
                 className="password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
+                id="login-password-toggle"
+                tabIndex={0}
               >
                 {showPassword ? '🙈' : '👁️'}
               </FocusableButton>
@@ -441,6 +712,8 @@ export function LoginPage() {
             type="submit" 
             disabled={isSubmitting}
             className="login-button"
+            id="login-submit"
+            tabIndex={isSubmitting ? -1 : 0}
           >
             {isSubmitting ? t('login.submitting') : t('login.submit')}
           </FocusableButton>
@@ -452,6 +725,8 @@ export function LoginPage() {
                 type="button"
                 className="register-button"
                 onClick={handleOpenQrModal}
+                id="login-register"
+                tabIndex={0}
               >
                 {t('login.register')}
               </FocusableButton>
@@ -465,6 +740,8 @@ export function LoginPage() {
                 type="button"
                 className="udid-button"
                 onClick={handleOpenUdidModal}
+                id="login-udid"
+                tabIndex={0}
               >
                 {t('login.udidButton')}
               </FocusableButton>
@@ -500,6 +777,8 @@ export function LoginPage() {
                   type="button"
                   className="social-button google"
                   onClick={() => setError(t('login.socialBackendMissing'))}
+                  id="login-social-google"
+                  tabIndex={0}
                 >
                   {t('login.continueWithGoogle')}
                 </FocusableButton>
@@ -510,6 +789,8 @@ export function LoginPage() {
                   type="button"
                   className="social-button facebook"
                   onClick={handleFacebookClick}
+                  id="login-social-facebook"
+                  tabIndex={0}
                 >
                   {t('login.continueWithFacebook')}
                 </FocusableButton>
@@ -535,6 +816,8 @@ export function LoginPage() {
               type="button"
               className="register-close-button"
               onClick={handleCloseQrModal}
+              id="login-modal-close-qr"
+              tabIndex={0}
             >
               {t('common.close')}
             </FocusableButton>
@@ -589,6 +872,8 @@ export function LoginPage() {
                 type="button"
                 className="register-close-button"
                 onClick={handleCloseUdidModal}
+                id="login-modal-close-udid"
+                tabIndex={0}
               >
                 {t('common.close')}
               </FocusableButton>

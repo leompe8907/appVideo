@@ -74,6 +74,35 @@ export function applyTheme(brandConfig) {
     '--bouquet-timeship-color',
     bouquets.timeshipColor || ui.epgLineColorTime
   );
+
+  // Helpers color (hex -> "r, g, b") para variables rgba(var(--*-rgb), a)
+  const toRgbTuple = (color) => {
+    if (!color || typeof color !== 'string') return null;
+    const c = color.trim();
+    if (!c.startsWith('#')) return null;
+    const hex = c.slice(1);
+    if (hex.length === 3) {
+      const r = parseInt(hex[0] + hex[0], 16);
+      const g = parseInt(hex[1] + hex[1], 16);
+      const b = parseInt(hex[2] + hex[2], 16);
+      if ([r, g, b].some((n) => Number.isNaN(n))) return null;
+      return `${r}, ${g}, ${b}`;
+    }
+    if (hex.length === 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      if ([r, g, b].some((n) => Number.isNaN(n))) return null;
+      return `${r}, ${g}, ${b}`;
+    }
+    return null;
+  };
+
+  // Derivar RGB del primaryColor si es hex (para sombras/rings)
+  const primaryRgb = toRgbTuple(ui.primaryColor);
+  if (primaryRgb) {
+    root.style.setProperty('--primary-color-rgb', primaryRgb);
+  }
   // EPG (cards)
   root.style.setProperty(
     '--epg-cards-channel-active-bg',
@@ -102,6 +131,42 @@ export function applyTheme(brandConfig) {
     playerLoadingPremium ? '0 0 36px rgba(120, 170, 255, 0.32)' : 'none'
   );
   root.style.setProperty('--font-family', ui.fontFamily);
+
+  // Focus visible (PC + TV) (bandera y look & feel)
+  // Permite activar/desactivar el foco visible desde config sin cambiar CSS/JS.
+  // Default recomendado: ON (certificación 10-foot + mejor UX en PC).
+  // Compat: aceptamos `ui.focus` (nuevo) y `ui.tvFocus` (legacy).
+  const focusCfg = ui.focus || ui.tvFocus || {};
+  const focusEnabled = focusCfg.enabled !== false;
+  root.setAttribute('data-focus', focusEnabled ? 'on' : 'off');
+  // Mantener compatibilidad con builds previos (si algún CSS/QA lo usa).
+  root.setAttribute('data-tv-focus', focusEnabled ? 'on' : 'off');
+
+  // Color de foco (por marca). Si no se setea, cae al primaryColor.
+  const focusColor =
+    typeof focusCfg.color === 'string' && focusCfg.color.trim() !== ''
+      ? focusCfg.color.trim()
+      : ui.primaryColor;
+  if (focusColor) {
+    root.style.setProperty('--focus-color', focusColor);
+    const focusRgb = toRgbTuple(focusColor);
+    if (focusRgb) {
+      root.style.setProperty('--focus-color-rgb', focusRgb);
+    } else if (primaryRgb) {
+      // Si focusColor no es hex, igual dejamos un rgb consistente para box-shadows.
+      root.style.setProperty('--focus-color-rgb', primaryRgb);
+    }
+  }
+
+  // Variables opcionales (si no se setean, CSS usa defaults seguros).
+  const setOptional = (name, v) => {
+    if (v == null || v === '') return;
+    root.style.setProperty(name, String(v));
+  };
+  setOptional('--tv-focus-scale', focusCfg.scale);
+  setOptional('--tv-focus-ring', focusCfg.ring);
+  setOptional('--tv-focus-ring2', focusCfg.ring2);
+  setOptional('--tv-focus-shadow', focusCfg.shadow);
 
   // Sidebar (Home)
   root.style.setProperty('--sidebar-bg', sidebar.backgroundColor || 'rgba(0, 0, 0, 0.45)');

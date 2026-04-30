@@ -211,6 +211,18 @@ export const BRANDS = [
       // Splash
       splashDuration: 3000, // Duración en milisegundos
       splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      // Focus visible (PC + TV) - personalizable por marca
+      focus: {
+        enabled: true,
+        // Color del foco (si no se define, cae al primaryColor)
+        color: "#2CE308",
+        // Escala al enfocar (PC usa estilos base; TV aplica un boost adicional en CSS)
+        scale: 1.05,
+        // Anillos/sombra (CSS box-shadow). Usan var(--primary-color-rgb) con fallback.
+        ring: '0 0 0 4px rgba(var(--primary-color-rgb, 102, 126, 234), 0.7)',
+        ring2: '0 0 0 8px rgba(var(--primary-color-rgb, 102, 126, 234), 0.35)',
+        shadow: '0 12px 30px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55)',
+      },
       // EPG
       epgLineColorTime: "#2CE308",
       // Colores
@@ -449,6 +461,15 @@ export const BRANDS = [
       // Splash
       splashDuration: 3000, // Duración en milisegundos
       splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      // Focus visible (PC + TV) - personalizable por marca
+      focus: {
+        enabled: true,
+        color: "#ff3336",
+        scale: 1.05,
+        ring: '0 0 0 4px rgba(var(--primary-color-rgb, 102, 126, 234), 0.7)',
+        ring2: '0 0 0 8px rgba(var(--primary-color-rgb, 102, 126, 234), 0.35)',
+        shadow: '0 12px 30px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55)',
+      },
       // EPG
       epgLineColorTime: "#3333FF",
       // Colores
@@ -705,6 +726,15 @@ export const BRANDS = [
       // Splash
       splashDuration: 3000, // Duración en milisegundos
       splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      // Focus visible (PC + TV) - personalizable por marca
+      focus: {
+        enabled: true,
+        color: "#FF6B35",
+        scale: 1.05,
+        ring: '0 0 0 4px rgba(var(--primary-color-rgb, 102, 126, 234), 0.7)',
+        ring2: '0 0 0 8px rgba(var(--primary-color-rgb, 102, 126, 234), 0.35)',
+        shadow: '0 12px 30px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55)',
+      },
       // EPG
       epgLineColorTime: "#2CE308",
       // Colores
@@ -931,6 +961,15 @@ export const BRANDS = [
       // Splash
       splashDuration: 3000, // Duración en milisegundos
       splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      // Focus visible (PC + TV) - personalizable por marca
+      focus: {
+        enabled: true,
+        color: "#3333FF",
+        scale: 1.05,
+        ring: '0 0 0 4px rgba(var(--primary-color-rgb, 102, 126, 234), 0.7)',
+        ring2: '0 0 0 8px rgba(var(--primary-color-rgb, 102, 126, 234), 0.35)',
+        shadow: '0 12px 30px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55)',
+      },
       // EPG
       epgLineColorTime: "#3333FF",
       // Colores
@@ -1160,6 +1199,15 @@ export const BRANDS = [
       // Splash
       splashDuration: 3000, // Duración en milisegundos
       splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      // Focus visible (PC + TV) - personalizable por marca
+      focus: {
+        enabled: true,
+        color: "#3AA3AE",
+        scale: 1.05,
+        ring: '0 0 0 4px rgba(var(--primary-color-rgb, 102, 126, 234), 0.7)',
+        ring2: '0 0 0 8px rgba(var(--primary-color-rgb, 102, 126, 234), 0.35)',
+        shadow: '0 12px 30px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55)',
+      },
       // EPG
       epgLineColorTime: "#3333FF",
       // Colores

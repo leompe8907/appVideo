@@ -17,6 +17,63 @@ import App from './App';
 
 import './styles/main.scss';
 
+// Foco visible (PC + 10-foot): aplica/quita clase `.focused` automáticamente.
+// Controlado por bandera: html[data-focus="on|off"] (setea BrandTheme).
+// Nota: lo hacemos global para no duplicar lógica por pantalla.
+(() => {
+  if (typeof window === 'undefined') return;
+  if (window.__tvFocusWired) return;
+  window.__tvFocusWired = true;
+
+  const isInteractive = (el) => {
+    if (!el || !(el instanceof HTMLElement)) return false;
+    const tag = (el.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'button' || tag === 'select' || tag === 'textarea') return true;
+    if (tag === 'a' && el.getAttribute('href')) return true;
+    if (el.getAttribute('role') === 'button') return true;
+    if (el.tabIndex >= 0) return true;
+    return false;
+  };
+
+  const shouldApply = () => {
+    try {
+      return document.documentElement.getAttribute('data-focus') !== 'off';
+    } catch {
+      return true;
+    }
+  };
+
+  document.addEventListener(
+    'focusin',
+    (e) => {
+      if (!shouldApply()) return;
+      const el = e.target;
+      if (!isInteractive(el)) return;
+      try {
+        el.classList.add('focused');
+        el.setAttribute('data-focusable', 'true');
+      } catch {
+        // noop
+      }
+    },
+    true
+  );
+
+  document.addEventListener(
+    'focusout',
+    (e) => {
+      const el = e.target;
+      if (!isInteractive(el)) return;
+      try {
+        el.classList.remove('focused');
+      } catch {
+        // noop
+      }
+    },
+    true
+  );
+})();
+
 const routerBasename = (() => {
   const base = import.meta.env.BASE_URL || '/';
   if (base === '/') return undefined;
