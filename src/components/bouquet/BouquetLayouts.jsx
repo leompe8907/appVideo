@@ -6,6 +6,7 @@ import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
 import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
 import { useParental } from '../../store/useParental';
 import { getChannelStableId } from '../../utils/channelId';
+import { proxyImageUrl } from '../../utils/imageProxy';
 
 // --- Helpers EPG para layout event_and_logo ---
 /** Parsea "YYYY-MM-DD HH:mm:ss" a "HH:mm" para mostrar en UI */
@@ -48,14 +49,16 @@ function normalizeColor(color) {
  * Construye la URL del logo de canal a partir de logo2id.
  * Si no se puede construir, se devuelve null y se usará la ruta de img.
  */
-function buildLogoUrlFromLogo2Id(channel) {
+function buildLogoUrlFromLogo2Id(channel, baseUrl) {
   if (!channel) return null;
   const logo2id =
     channel.logo2id ?? channel.logo2Id ?? channel.logo2ID ?? channel.logo_2_id;
   if (!logo2id) return null;
 
   // Ruta estándar: cdn/public/images/(logo2id)/v/thumb.png
-  return `/cdn/public/images/${logo2id}/v/thumb.png`;
+  const path = `/cdn/public/images/${logo2id}/v/thumb.png`;
+  const base = typeof baseUrl === 'string' ? baseUrl.replace(/\/$/, '') : '';
+  return base ? `${base}${path}` : path;
 }
 
 /**
@@ -212,15 +215,33 @@ function ChannelCard({ channel, layoutType, onSelect, onFocus }) {
   const { currentBrand, getImage } = useBrand();
   const placeholderImageUrl =
     currentBrand?.assets?.placeholder || getImage?.('placeholder_220x160.png') || '';
+  const brandBaseUrl = currentBrand?.drm || currentBrand?.baseUrl || '';
 
   // Imagen de evento: EPG primero, luego fallbacks. Cadena: evento → logo → placeholder
   const eventImage = eventImageFromEpg || channel.eventImage || channel.currentEvent?.image || null;
   const fallbackLogoImage = channel.img || null;
-  const initialLogoUrl = buildLogoUrlFromLogo2Id(channel) || fallbackLogoImage;
-  const [logoImage, setLogoImage] = useState(initialLogoUrl);
+  // Preferimos URLs absolutas (drm baseUrl) para evitar 404 en deploy (Vercel) con rutas relativas /cdn/...
+  const initialLogoUrl = buildLogoUrlFromLogo2Id(channel, brandBaseUrl) || fallbackLogoImage;
+  const [logoImage, setLogoImage] = useState(() => initialLogoUrl);
   const currentEventKey = currentEpgEvent?.event_id ?? `${channel.id ?? ''}-${channel.lcn ?? ''}`;
   const [failedEventKey, setFailedEventKey] = useState(null);
   const eventImageFailed = failedEventKey != null && failedEventKey === currentEventKey;
+
+  // Si el canal se normaliza (p. ej. tvDataService convierte img a URL absoluta) o cambia de brand,
+  // re-sincronizar el logo solo si estamos en placeholder/fallback anterior.
+  useEffect(() => {
+    if (!initialLogoUrl) return;
+    setLogoImage((prev) => {
+      if (!prev) return initialLogoUrl;
+      if (prev === placeholderImageUrl) return initialLogoUrl;
+      if (fallbackLogoImage && prev === fallbackLogoImage) return initialLogoUrl;
+      // Si el prev era una ruta relativa /cdn/... y ahora tenemos baseUrl, actualizar.
+      if (typeof prev === 'string' && prev.startsWith('/cdn/public/images/') && brandBaseUrl) {
+        return initialLogoUrl;
+      }
+      return prev;
+    });
+  }, [initialLogoUrl, placeholderImageUrl, fallbackLogoImage, brandBaseUrl]);
 
   const handleLogoError = () => {
     if (fallbackLogoImage && logoImage !== fallbackLogoImage) {
@@ -235,8 +256,9 @@ function ChannelCard({ channel, layoutType, onSelect, onFocus }) {
   };
 
   // Cadena: imagen de evento → logo del canal → placeholder (si evento o logo faltan/fallan)
-  const effectiveEventImage =
+  const effectiveEventImageRaw =
     eventImage && !eventImageFailed ? eventImage : (logoImage || placeholderImageUrl || '');
+  const effectiveEventImage = proxyImageUrl(effectiveEventImageRaw);
 
   const handleClick = (e) => {
     e.preventDefault();

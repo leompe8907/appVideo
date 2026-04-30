@@ -247,6 +247,7 @@ export const BRANDS = [
         right: { enabled: true, showLogo: false, showTime: true, contentAlign: 'right' },
       },
       subheader: {
+        enabled: true,
         areas: {
           left: { enabled: true, showServiceInfo: false, contentAlign: 'left' },
           center: { enabled: true, showServiceInfo: true, contentAlign: 'center' },
@@ -268,6 +269,7 @@ export const BRANDS = [
         serviciosTvRadio: false,
         vod: false,
         catchup: false,
+        topInBouquets: false,
       },
     },
     
@@ -497,19 +499,20 @@ export const BRANDS = [
         },
       },
       subheader: {
+        enabled: false,
         areas: {
           left: { 
-            enabled: true, 
+            enabled: false, 
             showServiceInfo: true,
             contentAlign: 'left'
           },
           center: { 
-            enabled: true, 
+            enabled: false, 
             showServiceInfo: false,
             contentAlign: 'right'
           },
           right: { 
-            enabled: true, 
+            enabled: false, 
             showServiceInfo: false,
             contentAlign: 'right'
           },
@@ -530,6 +533,7 @@ export const BRANDS = [
         serviciosTvRadio: false,
         vod: false,
         catchup: false,
+        topInBouquets: false,
       },
     },
     
@@ -736,6 +740,7 @@ export const BRANDS = [
         right: { enabled: true, showLogo: false, showTime: true, contentAlign: 'right' },
       },
       subheader: {
+        enabled: true,
         areas: {
           left: { enabled: true, showServiceInfo: false, contentAlign: 'left' },
           center: { enabled: true, showServiceInfo: true, contentAlign: 'center' },
@@ -757,6 +762,7 @@ export const BRANDS = [
         serviciosTvRadio: false,
         vod: false,
         catchup: false,
+        topInBouquets: false,
       },
     },
     
@@ -960,6 +966,7 @@ export const BRANDS = [
         right: { enabled: true, showLogo: false, showTime: true, contentAlign: 'right' },
       },
       subheader: {
+        enabled: true,
         areas: {
           left: { enabled: true, showServiceInfo: false, contentAlign: 'left' },
           center: { enabled: true, showServiceInfo: true, contentAlign: 'center' },
@@ -981,6 +988,7 @@ export const BRANDS = [
         serviciosTvRadio: false,
         vod: false,
         catchup: false,
+        topInBouquets: false,
       },
     },
     
@@ -1202,6 +1210,7 @@ export const BRANDS = [
         },
       },
       subheader: {
+        enabled: true,
         areas: {
           left: { 
             enabled: true, 
@@ -1235,6 +1244,7 @@ export const BRANDS = [
         serviciosTvRadio: false,
         vod: false,
         catchup: false,
+        topInBouquets: false,
       },
     },
     

@@ -104,12 +104,20 @@ function SidebarIcon({ name }) {
   }
 }
 
-function SidebarLink({ to, label, icon, onSelect }) {
+function SidebarLink({ to, label, icon, onSelect, currentPathname, navigate }) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) => `home-sidebar-link${isActive ? ' active' : ''}`}
-      onClick={() => onSelect?.()}
+      onClick={(e) => {
+        // Si ya estamos en la misma ruta, "forzar" navegación para que la app pueda reaccionar
+        // (ej: cerrar overlays/modales montados por estado local).
+        if (currentPathname === to) {
+          e.preventDefault();
+          navigate?.(to, { replace: true, state: { _navNonce: Date.now() } });
+        }
+        onSelect?.();
+      }}
     >
       {icon ? <SidebarIcon name={icon} /> : null}
       <span className="home-sidebar-label">{label}</span>
@@ -117,12 +125,18 @@ function SidebarLink({ to, label, icon, onSelect }) {
   );
 }
 
-function SidebarLinkWithBadge({ to, label, icon, badge, onSelect }) {
+function SidebarLinkWithBadge({ to, label, icon, badge, onSelect, currentPathname, navigate }) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) => `home-sidebar-link${isActive ? ' active' : ''}`}
-      onClick={() => onSelect?.()}
+      onClick={(e) => {
+        if (currentPathname === to) {
+          e.preventDefault();
+          navigate?.(to, { replace: true, state: { _navNonce: Date.now() } });
+        }
+        onSelect?.();
+      }}
     >
       {icon ? <SidebarIcon name={icon} /> : null}
       <span className="home-sidebar-label">{label}</span>
@@ -323,15 +337,59 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       />
       <div className="home-sidebar-header">{appName || 'App'}</div>
       <nav className="home-sidebar-nav">
-        <SidebarLink to="/home/inicio" label={t('sidebar.bouquets')} icon="home" onSelect={collapseSidebar} />
-        <SidebarLink to="/home/buscador" label={t('sidebar.search', { defaultValue: 'Buscador' })} icon="search" onSelect={collapseSidebar} />
-        {showVod && <SidebarLink to="/home/vod" label={t('sidebar.movies')} icon="movies" onSelect={collapseSidebar} />}
-        <SidebarLink to="/home/epg" label={t('sidebar.channelGuide')} icon="guide" onSelect={collapseSidebar} />
+        <SidebarLink
+          to="/home/inicio"
+          label={t('sidebar.bouquets')}
+          icon="home"
+          onSelect={collapseSidebar}
+          currentPathname={location.pathname}
+          navigate={navigate}
+        />
+        <SidebarLink
+          to="/home/buscador"
+          label={t('sidebar.search', { defaultValue: 'Buscador' })}
+          icon="search"
+          onSelect={collapseSidebar}
+          currentPathname={location.pathname}
+          navigate={navigate}
+        />
+        {showVod && (
+          <SidebarLink
+            to="/home/vod"
+            label={t('sidebar.movies')}
+            icon="movies"
+            onSelect={collapseSidebar}
+            currentPathname={location.pathname}
+            navigate={navigate}
+          />
+        )}
+        <SidebarLink
+          to="/home/epg"
+          label={t('sidebar.channelGuide')}
+          icon="guide"
+          onSelect={collapseSidebar}
+          currentPathname={location.pathname}
+          navigate={navigate}
+        />
         {showTvRadioServices && (
-          <SidebarLink to="/home/servicios-tv-radio" label={t('sidebar.tvRadioServices')} icon="channels" onSelect={collapseSidebar} />
+          <SidebarLink
+            to="/home/servicios-tv-radio"
+            label={t('sidebar.tvRadioServices')}
+            icon="channels"
+            onSelect={collapseSidebar}
+            currentPathname={location.pathname}
+            navigate={navigate}
+          />
         )}
         {showCatchup && (
-          <SidebarLink to="/home/catchup" label={t('sidebar.catchup')} icon="catchup" onSelect={collapseSidebar} />
+          <SidebarLink
+            to="/home/catchup"
+            label={t('sidebar.catchup')}
+            icon="catchup"
+            onSelect={collapseSidebar}
+            currentPathname={location.pathname}
+            navigate={navigate}
+          />
         )}
         {currentBrand?.features?.osms && (
           <SidebarLinkWithBadge
@@ -340,6 +398,8 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             icon="osms"
             onSelect={collapseSidebar}
             badge={osmsUnreadCount}
+            currentPathname={location.pathname}
+            navigate={navigate}
           />
         )}
 

@@ -8,7 +8,17 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      react()
+      react(),
+      // Smart TV compatibility:
+      // Tizen 2019 (~Chromium 68/69) y webOS 2019 pueden NO soportar syntax ES2020+ (?. / ??).
+      // Esto fuerza downlevel + polyfills para builds de producción.
+      legacy({
+        // Ajustar según matriz de dispositivos objetivo.
+        // Chrome 69 cubre Tizen 2019 típico; webOS 4 usa Chrome 61.
+        targets: ['chrome 69'],
+        // Evitar polyfills excesivos, pero asegurar async/await si aparece.
+        additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
+      }),
     ],
 
     css: {

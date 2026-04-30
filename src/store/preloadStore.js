@@ -46,6 +46,7 @@ const catchupInitialState = {
 
 export const usePreloadStore = create((set, get) => {
   let loadingTimeout = null;
+  let vodTimeout = null;
   let vodLoading = false;
   let adsLoading = false;
   let catchupLoading = false;
@@ -54,6 +55,13 @@ export const usePreloadStore = create((set, get) => {
     if (loadingTimeout) {
       clearTimeout(loadingTimeout);
       loadingTimeout = null;
+    }
+  };
+
+  const clearVodTimeout = () => {
+    if (vodTimeout) {
+      clearTimeout(vodTimeout);
+      vodTimeout = null;
     }
   };
 
@@ -217,6 +225,24 @@ export const usePreloadStore = create((set, get) => {
         vod: { ...state.vod, status: 'loading', error: null, progress: { loadedCount: 0 } },
       }));
 
+      // Safety net: VOD no debe bloquear indefinidamente el flujo de preload.
+      // Si el backend queda colgado o es demasiado lento, marcamos error para permitir continuar.
+      clearVodTimeout();
+      vodTimeout = setTimeout(() => {
+        clearVodTimeout();
+        set((state) => {
+          if (state.vod.status !== 'loading') return state;
+          return {
+            ...state,
+            vod: {
+              ...state.vod,
+              status: 'error',
+              error: state.vod.error || 'Timeout al cargar VOD',
+            },
+          };
+        });
+      }, LOADING_TIMEOUT_MS);
+
       const runLoad = (extra = {}) =>
         loadVODData(brandConfig, {
           ...loadOptions,
@@ -241,6 +267,7 @@ export const usePreloadStore = create((set, get) => {
         }
 
         const { categories, allVods, vodRecommended } = payload;
+        clearVodTimeout();
         set((state) => ({
           ...state,
           vod: {
@@ -257,6 +284,7 @@ export const usePreloadStore = create((set, get) => {
       } catch (err) {
         const message = err?.message || 'Error al cargar VOD';
         if (import.meta.env?.DEV) console.warn('[PreloadStore] loadVOD error:', err);
+        clearVodTimeout();
         set((state) => {
           const prev = state.vod;
           const hasCachedData =
@@ -509,6 +537,7 @@ export const usePreloadStore = create((set, get) => {
 
     resetPreload: () => {
       clearLoadingTimeout();
+      clearVodTimeout();
       vodLoading = false;
       adsLoading = false;
       catchupLoading = false;
