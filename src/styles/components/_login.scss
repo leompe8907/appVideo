@@ -378,6 +378,19 @@
 
       // En TV (Chromium viejo), asegurar mismo ancho que los demás botones del login.
       .device-tv & {
+        // Espaciado vertical robusto (sin `gap`) entre elementos sociales.
+        // - Botón Google/Facebook (fallback)
+        // - Host de Google OAuth (PC) si llega a renderizarse
+        & > * + * {
+          margin-top: 0.95rem;
+        }
+
+        .social-button + .social-button,
+        .google-login-host + .social-button,
+        .social-button + .google-login-host {
+          margin-top: 0.95rem;
+        }
+
         .google-login-host {
           justify-content: stretch;
 
