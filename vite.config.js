@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
       legacy({
         // Ajustar según matriz de dispositivos objetivo.
         // Chrome 69 cubre Tizen 2019 típico; webOS 4 usa Chrome 61.
-        targets: ['chrome 61'],
+        targets: ['chrome 69'],
         // Evitar polyfills excesivos, pero asegurar async/await si aparece.
         additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
       }),
