@@ -38,6 +38,8 @@ export function LoginPage() {
 
   const backLongPressTimerRef = useRef(null);
   const backLongPressTriggeredRef = useRef(false);
+  const loginFormRef = useRef(null);
+  const [buttonIds, setButtonIds] = useState([]);
 
   const qrRegisterConfig = currentBrand?.login?.qrRegister || currentBrand?.qrRegister;
   const qrRegisterEnabled = !!qrRegisterConfig?.enabled;
@@ -98,18 +100,40 @@ export function LoginPage() {
     }
   }, [isTV]);
 
-  const buttonIds = useMemo(() => {
-    // Orden vertical de botones (permite extender en el futuro sin reescribir navegación)
-    // Nota: algunos botones aparecen condicionalmente.
-    return [
-      'login-submit',
-      qrRegisterEnabled ? 'login-register' : null,
-      effectiveUdidConfig?.enabled ? 'login-udid' : null,
-      // Social (en TV actualmente no se muestra GoogleOAuth, pero dejamos la puerta)
-      'login-social-google',
-      'login-social-facebook',
-    ].filter(Boolean);
-  }, [qrRegisterEnabled, effectiveUdidConfig?.enabled]);
+  // Auto-discovery de botones navegables en Login (TV).
+  // Para que un botón entre al flujo automáticamente debe tener:
+  // - `id`
+  // - `data-tv-nav="login-actions"`
+  useEffect(() => {
+    if (!isTV) return;
+    const root = loginFormRef.current;
+    if (!root) return;
+
+    const rebuild = () => {
+      try {
+        const nodes = Array.from(root.querySelectorAll('[data-tv-nav="login-actions"]'));
+        const ids = nodes
+          .map((el) => (el && el.id ? String(el.id) : ''))
+          .filter(Boolean);
+        setButtonIds(ids);
+      } catch {
+        // noop
+      }
+    };
+
+    // Post-render: asegura que los botones condicionales ya estén en el DOM.
+    const t = setTimeout(rebuild, 0);
+    return () => clearTimeout(t);
+  }, [
+    isTV,
+    // deps que cambian visibilidad de botones en el login
+    isSubmitting,
+    qrRegisterEnabled,
+    effectiveUdidConfig?.enabled,
+    // social visibility
+    currentBrand?.login?.socialLogin?.google?.enabled,
+    currentBrand?.login?.socialLogin?.facebook?.enabled,
+  ]);
 
   const focusById = (id) => {
     const el = id ? document.getElementById(id) : null;
@@ -648,8 +672,10 @@ export function LoginPage() {
     (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
   const googlePostUrl = getGoogleSocialPostUrl(currentBrand);
   const showGoogleOAuth = showGoogle && !isTV && !!googleClientId && !!googlePostUrl;
-  const showGoogleMisconfigured = showGoogle && !isTV && !!googleClientId && !googlePostUrl;
-  const showAnySocial = showGoogleOAuth || showGoogleMisconfigured || showFacebook;
+  // Opción A: si Google está habilitado, mostrar SIEMPRE un botón fallback
+  // cuando no se pueda renderizar GoogleOAuth (mismo look/UX en TV y PC).
+  const showGoogleFallbackButton = showGoogle && !showGoogleOAuth;
+  const showAnySocial = showGoogleOAuth || showGoogleFallbackButton || showFacebook;
 
   const handleFacebookClick = () => {
     const redirectUrl =
@@ -670,7 +696,7 @@ export function LoginPage() {
         {logoPath && <img src={logoPath} alt={appName} className="brand-logo" />}
         <h2>{t('login.title')}</h2>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} ref={loginFormRef}>
           {/* Username */}
           <div className="form-group">
             <label htmlFor="username">{t('login.user')}</label>
@@ -720,6 +746,7 @@ export function LoginPage() {
             className="login-button"
             id="login-submit"
             tabIndex={isSubmitting ? -1 : 0}
+            data-tv-nav="login-actions"
           >
             {isSubmitting ? t('login.submitting') : t('login.submit')}
           </FocusableButton>
@@ -733,6 +760,7 @@ export function LoginPage() {
                 onClick={handleOpenQrModal}
                 id="login-register"
                 tabIndex={0}
+                data-tv-nav="login-actions"
               >
                 {t('login.register')}
               </FocusableButton>
@@ -748,6 +776,7 @@ export function LoginPage() {
                 onClick={handleOpenUdidModal}
                 id="login-udid"
                 tabIndex={0}
+                data-tv-nav="login-actions"
               >
                 {t('login.udidButton')}
               </FocusableButton>
@@ -778,13 +807,14 @@ export function LoginPage() {
                 </div>
               )}
 
-              {showGoogleMisconfigured && (
+              {showGoogleFallbackButton && (
                 <FocusableButton
                   type="button"
                   className="social-button google"
-                  onClick={() => setError(t('login.socialBackendMissing'))}
+                  onClick={() => setError(t('login.socialNotAvailable'))}
                   id="login-social-google"
                   tabIndex={0}
+                  data-tv-nav="login-actions"
                 >
                   {t('login.continueWithGoogle')}
                 </FocusableButton>
@@ -797,6 +827,7 @@ export function LoginPage() {
                   onClick={handleFacebookClick}
                   id="login-social-facebook"
                   tabIndex={0}
+                  data-tv-nav="login-actions"
                 >
                   {t('login.continueWithFacebook')}
                 </FocusableButton>

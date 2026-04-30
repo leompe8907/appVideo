@@ -332,7 +332,7 @@ export const BRANDS = [
         url: "https://shop.fotelka.tv/?c=customer&p=register",
       },
       udid: {
-        enabled: false,
+        enabled: true,
         baseUrl: "",
         requestPath: "",
         wsUrl: "",
@@ -346,7 +346,7 @@ export const BRANDS = [
       socialLogin: {
         backendBaseUrl: '',
         google: {
-          enabled: false,
+          enabled: true,
           redirectUrl: '',
           accessToken: '',
           authPath: '',
@@ -354,7 +354,7 @@ export const BRANDS = [
           backendBaseUrl: '',
         },
         facebook: {
-          enabled: false,
+          enabled: true,
           redirectUrl: '',
           accessToken: '',
           authPath: '',
@@ -565,6 +565,25 @@ export const BRANDS = [
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
     login: {
+      socialLogin: {
+        backendBaseUrl: '',
+        google: {
+          enabled: true,
+          redirectUrl: '',
+          accessToken: '',
+          authPath: '',
+          tokenUrl: '',
+          backendBaseUrl: '',
+        },
+        facebook: {
+          enabled: true,
+          redirectUrl: '',
+          accessToken: '',
+          authPath: '',
+          tokenUrl: '',
+          backendBaseUrl: '',
+        },
+      },
       theme: {
         cardBackground: "rgba(255, 255, 255, 0.05)",
         submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
@@ -601,7 +620,7 @@ export const BRANDS = [
         url: "https://shop.fotelka.tv/?c=customer&p=register",
       },
       udid: {
-        enabled: false,
+        enabled: true,
         baseUrl: "",
         requestPath: "",
         wsUrl: "",
@@ -611,25 +630,6 @@ export const BRANDS = [
         reconnectMs: [3000, 6000, 10000],
         heartbeatMs: 30000,
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
-      },
-      socialLogin: {
-        backendBaseUrl: '',
-        google: {
-          enabled: false,
-          redirectUrl: '',
-          accessToken: '',
-          authPath: '',
-          tokenUrl: '',
-          backendBaseUrl: '',
-        },
-        facebook: {
-          enabled: false,
-          redirectUrl: '',
-          accessToken: '',
-          authPath: '',
-          tokenUrl: '',
-          backendBaseUrl: '',
-        },
       },
     },
     vod: {
