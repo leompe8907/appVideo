@@ -194,14 +194,20 @@ export function LoginPage() {
           e.stopPropagation();
           handleCloseQrModal();
           // restore foco
-          setTimeout(() => focusById('login-register') || focusById('login-submit') || focusById('username'), 0);
+          setTimeout(
+            () => focusById('login-register') || focusById('login-submit') || focusById('username'),
+            0
+          );
           return;
         }
         if (isUdidModalOpen) {
           e.preventDefault();
           e.stopPropagation();
           handleCloseUdidModal();
-          setTimeout(() => focusById('login-udid') || focusById('login-submit') || focusById('username'), 0);
+          setTimeout(
+            () => focusById('login-udid') || focusById('login-submit') || focusById('username'),
+            0
+          );
           return;
         }
 
