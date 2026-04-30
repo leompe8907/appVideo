@@ -376,6 +376,23 @@
       flex-direction: column;
       gap: 0.6rem;
 
+      // En TV (Chromium viejo), asegurar mismo ancho que los demás botones del login.
+      .device-tv & {
+        .google-login-host {
+          justify-content: stretch;
+
+          & > div {
+            width: 100%;
+            max-width: 100%;
+          }
+        }
+
+        .social-button {
+          width: 100%;
+          max-width: 100%;
+        }
+      }
+
       .google-login-host {
         display: flex;
         justify-content: center;
