@@ -5,6 +5,13 @@ import panaccessService from '../services/panaccessService';
 import { processAdsFromApi } from '../utils/adsData';
 import { mergeEpgIntoChannels } from '../utils/epgMerge';
 
+// FIX #1: Evaluar IS_DEV a nivel de módulo, fuera de cualquier closure asíncrono.
+// En closures de setTimeout/catch, `import.meta` puede ser undefined en WebKit 2019 (producción).
+const IS_DEV =
+  typeof import.meta !== 'undefined' &&
+  import.meta.env != null &&
+  import.meta.env.DEV === true;
+
 const LOADING_TIMEOUT_MS = 300000;
 
 const epgInitialState = {
@@ -44,173 +51,202 @@ const catchupInitialState = {
   lastLoadedAt: null,
 };
 
-export const usePreloadStore = create((set, get) => {
-  let loadingTimeout = null;
-  let vodTimeout = null;
-  let vodLoading = false;
-  let adsLoading = false;
-  let catchupLoading = false;
+// FIX #2: Flags de control fuera del closure de create() para evitar que el
+// code-splitting de producción las resetee al re-evaluar el módulo.
+let loadingTimeout = null;
+let vodTimeout = null;
+let vodLoading = false;
+let adsLoading = false;
+let catchupLoading = false;
 
-  const clearLoadingTimeout = () => {
-    if (loadingTimeout) {
-      clearTimeout(loadingTimeout);
-      loadingTimeout = null;
-    }
-  };
+const clearLoadingTimeout = () => {
+  if (loadingTimeout) {
+    clearTimeout(loadingTimeout);
+    loadingTimeout = null;
+  }
+};
 
-  const clearVodTimeout = () => {
-    if (vodTimeout) {
-      clearTimeout(vodTimeout);
-      vodTimeout = null;
-    }
-  };
+const clearVodTimeout = () => {
+  if (vodTimeout) {
+    clearTimeout(vodTimeout);
+    vodTimeout = null;
+  }
+};
 
+export const usePreloadStore = create(function (set, get) {
   return {
     epg: epgInitialState,
     vod: vodInitialState,
     ads: adsInitialState,
     catchup: catchupInitialState,
 
-    loadEPG: async (brandConfig, options = {}) => {
+    loadEPG: async function (brandConfig, options) {
+      var opts = options || {};
+      var force = opts.force === true;
       if (!brandConfig) return;
-      const { force = false } = options;
-      const { epg } = get();
-      if (epg.status === 'loading') return;
+      var state0 = get();
+      var epg0 = state0.epg;
+      if (epg0.status === 'loading') return;
       if (
         !force &&
-        epg.status === 'ready' &&
-        Array.isArray(epg.bouquetsWithChannels) &&
-        epg.bouquetsWithChannels.length > 0
+        epg0.status === 'ready' &&
+        Array.isArray(epg0.bouquetsWithChannels) &&
+        epg0.bouquetsWithChannels.length > 0
       ) {
         return;
       }
 
-      set((state) => ({
-        ...state,
-        epg: {
-          ...state.epg,
-          status: 'loading',
-          error: null,
-          bouquetsWithChannels: [],
-          progress: { current: 0, total: 0, percent: 0 },
-        },
-      }));
+      set(function (s) {
+        return {
+          epg: {
+            status: 'loading',
+            error: null,
+            streams: s.epg.streams,
+            bouquetsWithChannels: [],
+            progress: { current: 0, total: 0, percent: 0 },
+            lastLoadedAt: s.epg.lastLoadedAt,
+          },
+          vod: s.vod,
+          ads: s.ads,
+          catchup: s.catchup,
+        };
+      });
 
       clearLoadingTimeout();
-      loadingTimeout = setTimeout(() => {
-        if (import.meta.env?.DEV) {
+      loadingTimeout = setTimeout(function () {
+        // FIX #1: usar IS_DEV (constante de módulo) en vez de import.meta.env?.DEV
+        if (IS_DEV) {
           console.warn('[PreloadStore] Timeout en carga de EPG, marcando como listo');
         }
         clearLoadingTimeout();
-        set((state) => {
-          if (state.epg.status !== 'loading') return state;
+        set(function (s) {
+          if (s.epg.status !== 'loading') return s;
           return {
-            ...state,
             epg: {
-              ...state.epg,
               status: 'ready',
+              streams: s.epg.streams,
+              bouquetsWithChannels: s.epg.bouquetsWithChannels,
+              progress: { current: s.epg.progress.current, total: s.epg.progress.total, percent: 100 },
+              error: null,
               lastLoadedAt: Date.now(),
-              progress: { ...state.epg.progress, percent: 100 },
             },
+            vod: s.vod,
+            ads: s.ads,
+            catchup: s.catchup,
           };
         });
       }, LOADING_TIMEOUT_MS);
 
       try {
-        const bouquets = await getBouquetsWithChannels({ enableRetry: false });
-        const allStreams = bouquets.flatMap((b) => b.items || []);
-        const total = allStreams.length;
+        var bouquets = await getBouquetsWithChannels({ enableRetry: false });
+        var allStreams = bouquets.reduce(function (acc, b) {
+          return acc.concat(b.items || []);
+        }, []);
+        var total = allStreams.length;
 
         if (total === 0) {
           clearLoadingTimeout();
-          set((state) => ({
-            ...state,
-            epg: {
-              ...state.epg,
-              status: 'finishing',
-              streams: [],
-              bouquetsWithChannels: bouquets,
-              progress: { current: 0, total: 0, percent: 100 },
-            },
-          }));
-          setTimeout(() => {
-            set((state) => ({
-              ...state,
-              epg: { ...state.epg, status: 'ready', lastLoadedAt: Date.now() },
-            }));
+          set(function (s) {
+            return {
+              epg: {
+                status: 'finishing',
+                streams: [],
+                bouquetsWithChannels: bouquets,
+                progress: { current: 0, total: 0, percent: 100 },
+                error: null,
+                lastLoadedAt: s.epg.lastLoadedAt,
+              },
+              vod: s.vod,
+              ads: s.ads,
+              catchup: s.catchup,
+            };
+          });
+          setTimeout(function () {
+            set(function (s) {
+              return {
+                epg: { status: 'ready', streams: s.epg.streams, bouquetsWithChannels: s.epg.bouquetsWithChannels, progress: s.epg.progress, error: null, lastLoadedAt: Date.now() },
+                vod: s.vod,
+                ads: s.ads,
+                catchup: s.catchup,
+              };
+            });
           }, 500);
           return;
         }
 
         await loadEPGForStreams(allStreams, brandConfig, {
           maxChannels: total,
-          onProgress: (current, totalProcessed) => {
-            const percent =
+          onProgress: function (current, totalProcessed) {
+            var percent =
               totalProcessed > 0
                 ? Math.min(90, Math.max(10, Math.round((current / totalProcessed) * 100)))
                 : 10;
-            set((state) => ({
-              ...state,
-              epg: {
-                ...state.epg,
-                progress: { current, total: totalProcessed, percent },
-              },
-            }));
+            set(function (s) {
+              return {
+                epg: { status: s.epg.status, streams: s.epg.streams, bouquetsWithChannels: s.epg.bouquetsWithChannels, progress: { current: current, total: totalProcessed, percent: percent }, error: s.epg.error, lastLoadedAt: s.epg.lastLoadedAt },
+                vod: s.vod,
+                ads: s.ads,
+                catchup: s.catchup,
+              };
+            });
           },
         });
 
         clearLoadingTimeout();
-        set((state) => {
-          if (state.epg.status !== 'loading') {
-            return {
-              ...state,
-              epg: {
-                ...state.epg,
-                streams: allStreams,
-                bouquetsWithChannels: bouquets,
-                progress: { current: total, total, percent: 100 },
-                error: null,
-              },
-            };
-          }
+        set(function (s) {
+          var nextStatus = s.epg.status !== 'loading' ? s.epg.status : 'finishing';
           return {
-            ...state,
             epg: {
-              ...state.epg,
-              status: 'finishing',
+              status: nextStatus,
               streams: allStreams,
               bouquetsWithChannels: bouquets,
-              progress: { current: total, total, percent: 100 },
+              progress: { current: total, total: total, percent: 100 },
               error: null,
+              lastLoadedAt: s.epg.lastLoadedAt,
             },
+            vod: s.vod,
+            ads: s.ads,
+            catchup: s.catchup,
           };
         });
-        setTimeout(() => {
-          set((state) => {
-            if (state.epg.status !== 'finishing') return state;
-            return { ...state, epg: { ...state.epg, status: 'ready', lastLoadedAt: Date.now() } };
+        setTimeout(function () {
+          set(function (s) {
+            if (s.epg.status !== 'finishing') return s;
+            return {
+              epg: { status: 'ready', streams: s.epg.streams, bouquetsWithChannels: s.epg.bouquetsWithChannels, progress: s.epg.progress, error: null, lastLoadedAt: Date.now() },
+              vod: s.vod,
+              ads: s.ads,
+              catchup: s.catchup,
+            };
           });
         }, 500);
       } catch (err) {
         clearLoadingTimeout();
-        const message = err?.message || err?.errorInfo?.userMessage || 'Error al cargar EPG';
-        if (import.meta.env?.DEV) console.warn('[PreloadStore] loadEPG error:', err);
-        set((state) => ({
-          ...state,
-          epg: {
-            ...state.epg,
-            status: 'error',
-            error: message,
-            bouquetsWithChannels: [],
-          },
-        }));
+        var epgErrMsg = (err && err.message) || (err && err.errorInfo && err.errorInfo.userMessage) || 'Error al cargar EPG';
+        // FIX #1: IS_DEV en vez de import.meta.env?.DEV
+        if (IS_DEV) console.warn('[PreloadStore] loadEPG error:', err);
+        set(function (s) {
+          return {
+            epg: { status: 'error', streams: s.epg.streams, bouquetsWithChannels: [], progress: s.epg.progress, error: epgErrMsg, lastLoadedAt: s.epg.lastLoadedAt },
+            vod: s.vod,
+            ads: s.ads,
+            catchup: s.catchup,
+          };
+        });
       }
     },
 
-    loadVOD: async (brandConfig, options = {}) => {
+    loadVOD: async function (brandConfig, options) {
       if (!brandConfig || vodLoading) return;
-      const { force = false, ...loadOptions } = options;
-      const currentVod = get().vod;
+      var opts = options || {};
+      var force = opts.force === true;
+      var loadOptions = {};
+      // copy loadOptions excluding 'force' and 't'
+      Object.keys(opts).forEach(function (k) {
+        if (k !== 'force') loadOptions[k] = opts[k];
+      });
+
+      var currentVod = get().vod;
       if (
         !force &&
         currentVod.status === 'ready' &&
@@ -220,339 +256,357 @@ export const usePreloadStore = create((set, get) => {
         return;
       }
       vodLoading = true;
-      set((state) => ({
-        ...state,
-        vod: { ...state.vod, status: 'loading', error: null, progress: { loadedCount: 0 } },
-      }));
+      set(function (s) {
+        return {
+          epg: s.epg,
+          vod: { status: 'loading', error: null, categories: s.vod.categories, allVods: s.vod.allVods, vodRecommended: s.vod.vodRecommended, progress: { loadedCount: 0 }, lastLoadedAt: s.vod.lastLoadedAt },
+          ads: s.ads,
+          catchup: s.catchup,
+        };
+      });
 
       // Safety net: VOD no debe bloquear indefinidamente el flujo de preload.
-      // Si el backend queda colgado o es demasiado lento, marcamos error para permitir continuar.
       clearVodTimeout();
-      vodTimeout = setTimeout(() => {
+      vodTimeout = setTimeout(function () {
         clearVodTimeout();
-        set((state) => {
-          if (state.vod.status !== 'loading') return state;
+        set(function (s) {
+          if (s.vod.status !== 'loading') return s;
           return {
-            ...state,
-            vod: {
-              ...state.vod,
-              status: 'error',
-              error: state.vod.error || 'Timeout al cargar VOD',
-            },
+            epg: s.epg,
+            vod: { status: 'error', error: s.vod.error || 'Timeout al cargar VOD', categories: s.vod.categories, allVods: s.vod.allVods, vodRecommended: s.vod.vodRecommended, progress: s.vod.progress, lastLoadedAt: s.vod.lastLoadedAt },
+            ads: s.ads,
+            catchup: s.catchup,
           };
         });
       }, LOADING_TIMEOUT_MS);
 
-      const runLoad = (extra = {}) =>
-        loadVODData(brandConfig, {
-          ...loadOptions,
-          ...extra,
-          onProgress: (loadedCount) => {
-            set((state) => ({
-              ...state,
-              vod: { ...state.vod, progress: { loadedCount } },
-            }));
+      var runLoad = function (extra) {
+        return loadVODData(brandConfig, Object.assign({}, loadOptions, extra || {}, {
+          onProgress: function (loadedCount) {
+            set(function (s) {
+              return {
+                epg: s.epg,
+                vod: { status: s.vod.status, error: s.vod.error, categories: s.vod.categories, allVods: s.vod.allVods, vodRecommended: s.vod.vodRecommended, progress: { loadedCount: loadedCount }, lastLoadedAt: s.vod.lastLoadedAt },
+                ads: s.ads,
+                catchup: s.catchup,
+              };
+            });
           },
-        });
+        }));
+      };
 
       try {
-        let payload;
+        var payload;
         try {
           payload = await runLoad();
         } catch (firstError) {
-          if (import.meta.env?.DEV) {
+          // FIX #1: IS_DEV en vez de import.meta.env?.DEV
+          if (IS_DEV) {
             console.warn('[PreloadStore] loadVOD first attempt failed, retrying once:', firstError);
           }
           payload = await runLoad({ enableRetry: true });
         }
 
-        const { categories, allVods, vodRecommended } = payload;
+        var categories = payload.categories;
+        var allVods = payload.allVods;
+        var vodRecommended = payload.vodRecommended;
         clearVodTimeout();
-        set((state) => ({
-          ...state,
-          vod: {
-            ...state.vod,
-            status: 'ready',
-            categories,
-            allVods,
-            vodRecommended,
-            progress: { loadedCount: allVods.length },
-            error: null,
-            lastLoadedAt: Date.now(),
-          },
-        }));
+        set(function (s) {
+          return {
+            epg: s.epg,
+            vod: { status: 'ready', categories: categories, allVods: allVods, vodRecommended: vodRecommended, progress: { loadedCount: allVods.length }, error: null, lastLoadedAt: Date.now() },
+            ads: s.ads,
+            catchup: s.catchup,
+          };
+        });
       } catch (err) {
-        const message = err?.message || 'Error al cargar VOD';
-        if (import.meta.env?.DEV) console.warn('[PreloadStore] loadVOD error:', err);
+        var vodErrMsg = (err && err.message) || 'Error al cargar VOD';
+        if (IS_DEV) console.warn('[PreloadStore] loadVOD error:', err);
         clearVodTimeout();
-        set((state) => {
-          const prev = state.vod;
-          const hasCachedData =
-            (prev.categories?.length ?? 0) > 0 ||
-            (prev.allVods?.length ?? 0) > 0 ||
-            (prev.vodRecommended?.length ?? 0) > 0;
+        set(function (s) {
+          var prev = s.vod;
+          var hasCachedData =
+            (prev.categories && prev.categories.length > 0) ||
+            (prev.allVods && prev.allVods.length > 0) ||
+            (prev.vodRecommended && prev.vodRecommended.length > 0);
           if (hasCachedData) {
-            return { ...state, vod: { ...prev, status: 'ready', error: null } };
+            return { epg: s.epg, vod: { status: 'ready', error: null, categories: prev.categories, allVods: prev.allVods, vodRecommended: prev.vodRecommended, progress: prev.progress, lastLoadedAt: prev.lastLoadedAt }, ads: s.ads, catchup: s.catchup };
           }
-          return { ...state, vod: { ...prev, status: 'error', error: message } };
+          return { epg: s.epg, vod: { status: 'error', error: vodErrMsg, categories: prev.categories, allVods: prev.allVods, vodRecommended: prev.vodRecommended, progress: prev.progress, lastLoadedAt: prev.lastLoadedAt }, ads: s.ads, catchup: s.catchup };
         });
       } finally {
         vodLoading = false;
       }
     },
 
-    loadAds: async (options = {}) => {
+    loadAds: async function (options) {
       if (adsLoading) return;
-      const { force = false } = options;
-      const currentAds = get().ads;
-      const hasAdsData =
-        (currentAds.processed?.length ?? 0) > 0 ||
-        (currentAds.top?.length ?? 0) > 0 ||
-        (currentAds.bottom?.length ?? 0) > 0;
+      var opts = options || {};
+      var force = opts.force === true;
+      var currentAds = get().ads;
+      var hasAdsData =
+        (currentAds.processed && currentAds.processed.length > 0) ||
+        (currentAds.top && currentAds.top.length > 0) ||
+        (currentAds.bottom && currentAds.bottom.length > 0);
       if (!force && currentAds.status === 'ready' && hasAdsData) {
         return;
       }
       adsLoading = true;
-      set((state) => ({ ...state, ads: { ...state.ads, status: 'loading', error: null } }));
+      set(function (s) {
+        return { epg: s.epg, vod: s.vod, ads: { status: 'loading', error: null, processed: s.ads.processed, top: s.ads.top, bottom: s.ads.bottom, lastLoadedAt: s.ads.lastLoadedAt }, catchup: s.catchup };
+      });
+
       try {
-        const raw = await panaccessService.getAds({ enableRetry: false });
-        const list = Array.isArray(raw) ? raw : [];
-        const { processed, top, bottom } = processAdsFromApi(list);
-        set((state) => ({
-          ...state,
-          ads: { status: 'ready', processed, top, bottom, error: null, lastLoadedAt: Date.now() },
-        }));
+        var raw = await panaccessService.getAds({ enableRetry: false });
+        var list = Array.isArray(raw) ? raw : [];
+        var adsResult = processAdsFromApi(list);
+        set(function (s) {
+          return { epg: s.epg, vod: s.vod, ads: { status: 'ready', processed: adsResult.processed, top: adsResult.top, bottom: adsResult.bottom, error: null, lastLoadedAt: Date.now() }, catchup: s.catchup };
+        });
       } catch (err) {
-        const message = err?.message || err?.errorInfo?.userMessage || 'Error al cargar publicidad';
-        if (import.meta.env?.DEV) console.warn('[PreloadStore] loadAds error:', err);
-        set((state) => ({
-          ...state,
-          ads: {
-            status: 'error',
-            processed: [],
-            top: [],
-            bottom: [],
-            error: message,
-            lastLoadedAt: null,
-          },
-        }));
+        var adsErrMsg = (err && err.message) || (err && err.errorInfo && err.errorInfo.userMessage) || 'Error al cargar publicidad';
+        if (IS_DEV) console.warn('[PreloadStore] loadAds error:', err);
+        set(function (s) {
+          return { epg: s.epg, vod: s.vod, ads: { status: 'error', processed: [], top: [], bottom: [], error: adsErrMsg, lastLoadedAt: null }, catchup: s.catchup };
+        });
       } finally {
         adsLoading = false;
       }
     },
 
-    loadCatchup: async (brandConfig, options = {}) => {
+    loadCatchup: async function (brandConfig, options) {
       if (!brandConfig) return;
-      const { force = false } = options;
-      const { catchup } = get();
-      if (catchup.status === 'loading') return;
+      var opts = options || {};
+      var force = opts.force === true;
+      var catchupState = get().catchup;
+      if (catchupState.status === 'loading') return;
       if (catchupLoading) return;
       if (
         !force &&
-        catchup.status === 'ready' &&
-        ((catchup.groups?.length ?? 0) > 0 || (catchup.recorded?.length ?? 0) > 0)
+        catchupState.status === 'ready' &&
+        ((catchupState.groups && catchupState.groups.length > 0) || (catchupState.recorded && catchupState.recorded.length > 0))
       ) {
         return;
       }
       catchupLoading = true;
 
-      set((state) => ({
-        ...state,
-        catchup: {
-          ...state.catchup,
-          status: 'loading',
-          error: null,
-          groups: [],
-          recorded: [],
-          progress: { loadedGroups: 0, totalGroups: 0 },
-        },
-      }));
+      set(function (s) {
+        return {
+          epg: s.epg,
+          vod: s.vod,
+          ads: s.ads,
+          catchup: { status: 'loading', error: null, groups: [], recorded: [], progress: { loadedGroups: 0, totalGroups: 0 }, lastLoadedAt: s.catchup.lastLoadedAt },
+        };
+      });
 
-      const toMs = (v) => {
+      var toMs = function (v) {
         if (v == null) return null;
-        if (typeof v === 'number') return Number.isFinite(v) ? v : null;
-        const ms = new Date(v).getTime();
-        return Number.isFinite(ms) ? ms : null;
+        if (typeof v === 'number') return isFinite(v) ? v : null;
+        var ms = new Date(v).getTime();
+        return isFinite(ms) ? ms : null;
       };
 
-      const normalizeList = (resp, keys) => {
+      var normalizeList = function (resp, keys) {
         if (Array.isArray(resp)) return resp;
         if (resp && typeof resp === 'object') {
-          for (const k of keys) {
-            const value = resp[k];
+          for (var i = 0; i < keys.length; i++) {
+            var k = keys[i];
+            var value = resp[k];
             if (Array.isArray(value)) return value;
           }
         }
         return [];
       };
 
-      const buildGroupsWithEvents = async (enableRetry) => {
-        const groupsResp = await panaccessService.getCatchupGroups({ enableRetry });
-        const groupsList = normalizeList(groupsResp, ['catchupGroups', 'groups', 'items', 'answer']);
-        groupsList.sort((a, b) => Number(a.lcn ?? 0) - Number(b.lcn ?? 0));
+      var buildGroupsWithEvents = async function (enableRetry) {
+        var groupsResp = await panaccessService.getCatchupGroups({ enableRetry: enableRetry });
+        var groupsList = normalizeList(groupsResp, ['catchupGroups', 'groups', 'items', 'answer']);
+        groupsList.sort(function (a, b) { return Number(a.lcn || 0) - Number(b.lcn || 0); });
 
-        const totalGroups = groupsList.length;
-        const groupsWithEvents = [];
+        var totalGroups = groupsList.length;
+        var groupsWithEvents = [];
 
-        for (let i = 0; i < groupsList.length; i++) {
-          const group = groupsList[i];
+        for (var i = 0; i < groupsList.length; i++) {
+          var group = groupsList[i];
           if (!group) continue;
 
-          const epgStreamId = group.epgStreamId ?? group.epg_stream_id ?? group.epgStreamid;
-          const eventsResp = await panaccessService.getCatchupEvents({ epgStreamId, enableRetry });
-          const eventsList = normalizeList(eventsResp, ['events', 'items', 'answer']);
-          const catchupGroupId = group.catchupGroupId ?? group.catchup_group_id ?? group.id ?? null;
+          var epgStreamId = group.epgStreamId != null ? group.epgStreamId : (group.epg_stream_id != null ? group.epg_stream_id : group.epgStreamid);
+          var eventsResp = await panaccessService.getCatchupEvents({ epgStreamId: epgStreamId, enableRetry: enableRetry });
+          var eventsList = normalizeList(eventsResp, ['events', 'items', 'answer']);
+          var catchupGroupId = group.catchupGroupId != null ? group.catchupGroupId : (group.catchup_group_id != null ? group.catchup_group_id : (group.id != null ? group.id : null));
 
-          const mappedEvents = eventsList.map((ev) => {
-            const startRaw = ev.start ?? ev.startDate ?? ev.start_date ?? null;
-            const durationSeconds = Number(ev.duration ?? ev.durationSeconds ?? ev.duration_sec ?? 0);
-            const endRaw = ev.end ?? ev.endDate ?? ev.end_date ?? null;
+          var mappedEvents = eventsList.map(function (ev) {
+            var startRaw = ev.start != null ? ev.start : (ev.startDate != null ? ev.startDate : (ev.start_date != null ? ev.start_date : null));
+            var durationSeconds = Number(ev.duration != null ? ev.duration : (ev.durationSeconds != null ? ev.durationSeconds : (ev.duration_sec != null ? ev.duration_sec : 0)));
+            var endRaw = ev.end != null ? ev.end : (ev.endDate != null ? ev.endDate : (ev.end_date != null ? ev.end_date : null));
 
-            const startMs = toMs(startRaw);
-            const endMsFromDuration =
-              startMs != null && Number.isFinite(durationSeconds) && durationSeconds > 0
+            var startMs = toMs(startRaw);
+            var endMsFromDuration =
+              startMs != null && isFinite(durationSeconds) && durationSeconds > 0
                 ? startMs + durationSeconds * 1000
                 : null;
-            const endMs = endMsFromDuration ?? toMs(endRaw);
-            const resolvedCatchupId =
-              ev.catchupId ?? ev.catchup_id ?? ev.catchupEventId ?? ev.id ?? ev.eventId ?? null;
+            var endMs = endMsFromDuration != null ? endMsFromDuration : toMs(endRaw);
+            var resolvedCatchupId =
+              ev.catchupId != null ? ev.catchupId
+              : ev.catchup_id != null ? ev.catchup_id
+              : ev.catchupEventId != null ? ev.catchupEventId
+              : ev.id != null ? ev.id
+              : ev.eventId != null ? ev.eventId
+              : null;
 
-            return {
-              ...ev,
-              catchupGroupId,
-              catchupId: resolvedCatchupId,
-              startDate: startMs != null ? new Date(startMs) : null,
-              endDate: endMs != null ? new Date(endMs) : null,
-              durationSeconds: durationSeconds > 0 ? durationSeconds : ev.durationSeconds ?? ev.duration ?? null,
-            };
+            var result = {};
+            Object.keys(ev).forEach(function(k) { result[k] = ev[k]; });
+            result.catchupGroupId = catchupGroupId;
+            result.catchupId = resolvedCatchupId;
+            result.startDate = startMs != null ? new Date(startMs) : null;
+            result.endDate = endMs != null ? new Date(endMs) : null;
+            result.durationSeconds = durationSeconds > 0 ? durationSeconds : (ev.durationSeconds != null ? ev.durationSeconds : (ev.duration != null ? ev.duration : null));
+            return result;
           });
 
-          groupsWithEvents.push({ ...group, events: mappedEvents });
-          set((state) => ({
-            ...state,
-            catchup: {
-              ...state.catchup,
-              progress: { loadedGroups: i + 1, totalGroups },
-            },
-          }));
+          var groupWithEvents = {};
+          Object.keys(group).forEach(function(k) { groupWithEvents[k] = group[k]; });
+          groupWithEvents.events = mappedEvents;
+          groupsWithEvents.push(groupWithEvents);
+
+          set(function (s) {
+            return {
+              epg: s.epg,
+              vod: s.vod,
+              ads: s.ads,
+              catchup: { status: s.catchup.status, error: s.catchup.error, groups: s.catchup.groups, recorded: s.catchup.recorded, progress: { loadedGroups: i + 1, totalGroups: totalGroups }, lastLoadedAt: s.catchup.lastLoadedAt },
+            };
+          });
         }
 
         return groupsWithEvents;
       };
 
-      const prepareRecorded = (tasksList, groupsWithEvents) => {
-        const validTasks = normalizeList(tasksList, ['recordingTasks', 'items', 'tasks', 'answer']).filter((t) => {
-          const mode = Number(t.mode ?? 0);
-          const catchupId = Number(t.catchupId ?? t.catchup_id ?? t.id ?? 0);
-          const deleted = !!t.deleted;
+      var prepareRecorded = function (tasksList, groupsWithEvents) {
+        var validTasks = normalizeList(tasksList, ['recordingTasks', 'items', 'tasks', 'answer']).filter(function (t) {
+          var mode = Number(t.mode || 0);
+          var catchupId = Number(t.catchupId != null ? t.catchupId : (t.catchup_id != null ? t.catchup_id : (t.id != null ? t.id : 0)));
+          var deleted = !!t.deleted;
           return mode === 4 && catchupId > 0 && !deleted;
         });
 
-        const recorded = validTasks
-          .map((task) => {
-            const taskCatchupId = task.catchupId ?? task.catchup_id ?? task.id ?? null;
+        var recorded = validTasks
+          .map(function (task) {
+            var taskCatchupId = task.catchupId != null ? task.catchupId : (task.catchup_id != null ? task.catchup_id : (task.id != null ? task.id : null));
             if (taskCatchupId == null) return null;
 
-            const taskCatchupIdStr = String(taskCatchupId);
-            const group = groupsWithEvents.find(
-              (g) =>
-                Array.isArray(g.events) &&
-                g.events.some((ev) => String(ev?.id ?? ev?.eventId ?? ev?.catchupId ?? '') === taskCatchupIdStr)
-            );
+            var taskCatchupIdStr = String(taskCatchupId);
+            var group = null;
+            for (var gi = 0; gi < groupsWithEvents.length; gi++) {
+              var g = groupsWithEvents[gi];
+              if (!Array.isArray(g.events)) continue;
+              var found = false;
+              for (var ei = 0; ei < g.events.length; ei++) {
+                var ev = g.events[ei];
+                var evId = String(ev && ev.id != null ? ev.id : (ev && ev.eventId != null ? ev.eventId : (ev && ev.catchupId != null ? ev.catchupId : '')));
+                if (evId === taskCatchupIdStr) { found = true; break; }
+              }
+              if (found) { group = g; break; }
+            }
             if (!group) return null;
 
-            const event = group.events.find(
-              (ev) => String(ev?.id ?? ev?.eventId ?? ev?.catchupId ?? '') === taskCatchupIdStr
-            );
+            var event = null;
+            for (var ei2 = 0; ei2 < group.events.length; ei2++) {
+              var evCheck = group.events[ei2];
+              var evCheckId = String(evCheck && evCheck.id != null ? evCheck.id : (evCheck && evCheck.eventId != null ? evCheck.eventId : (evCheck && evCheck.catchupId != null ? evCheck.catchupId : '')));
+              if (evCheckId === taskCatchupIdStr) { event = evCheck; break; }
+            }
             if (!event) return null;
 
-            const startMs = toMs(task.startDate ?? task.start ?? null);
+            var startMs = toMs(task.startDate != null ? task.startDate : (task.start != null ? task.start : null));
 
-            return {
-              ...task,
-              catchupId: Number(taskCatchupIdStr),
-              startDate: startMs != null ? new Date(startMs) : null,
-              event,
-              image: group.img ?? group.imageUrl ?? group.posterUrl ?? null,
-              lcn: group.lcn ?? null,
-              catchupName: group.name ?? null,
-            };
+            var rec = {};
+            Object.keys(task).forEach(function(k) { rec[k] = task[k]; });
+            rec.catchupId = Number(taskCatchupIdStr);
+            rec.startDate = startMs != null ? new Date(startMs) : null;
+            rec.event = event;
+            rec.image = group.img != null ? group.img : (group.imageUrl != null ? group.imageUrl : (group.posterUrl != null ? group.posterUrl : null));
+            rec.lcn = group.lcn != null ? group.lcn : null;
+            rec.catchupName = group.name != null ? group.name : null;
+            return rec;
           })
           .filter(Boolean);
 
-        recorded.sort((a, b) => {
-          const aa = a.startDate?.valueOf?.() ?? 0;
-          const bb = b.startDate?.valueOf?.() ?? 0;
+        recorded.sort(function (a, b) {
+          var aa = a.startDate ? a.startDate.valueOf() : 0;
+          var bb = b.startDate ? b.startDate.valueOf() : 0;
           return aa - bb;
         });
 
         return recorded;
       };
 
-      const runLoad = async (enableRetry) => {
-        const groupsWithEvents = await buildGroupsWithEvents(enableRetry);
-        const recordedResp = await panaccessService.getRecordingTasks({ enableRetry });
-        const recorded = prepareRecorded(recordedResp, groupsWithEvents);
-        return { groupsWithEvents, recorded };
+      var runLoad = async function (enableRetry) {
+        var groupsWithEvents = await buildGroupsWithEvents(enableRetry);
+        var recordedResp = await panaccessService.getRecordingTasks({ enableRetry: enableRetry });
+        var recorded = prepareRecorded(recordedResp, groupsWithEvents);
+        return { groupsWithEvents: groupsWithEvents, recorded: recorded };
       };
 
       try {
-        let payload;
+        var payload;
         try {
           payload = await runLoad(false);
         } catch (firstError) {
-          if (import.meta.env?.DEV) {
+          // FIX #1: IS_DEV en vez de import.meta.env?.DEV
+          if (IS_DEV) {
             console.warn('[PreloadStore] loadCatchup first attempt failed, retrying once:', firstError);
           }
           payload = await runLoad(true);
         }
 
-        set((state) => ({
-          ...state,
-          catchup: {
-            ...state.catchup,
-            status: 'ready',
-            groups: payload.groupsWithEvents,
-            recorded: payload.recorded,
-            error: null,
-            progress: {
-              loadedGroups: payload.groupsWithEvents.length,
-              totalGroups: payload.groupsWithEvents.length,
+        set(function (s) {
+          return {
+            epg: s.epg,
+            vod: s.vod,
+            ads: s.ads,
+            catchup: {
+              status: 'ready',
+              groups: payload.groupsWithEvents,
+              recorded: payload.recorded,
+              error: null,
+              progress: { loadedGroups: payload.groupsWithEvents.length, totalGroups: payload.groupsWithEvents.length },
+              lastLoadedAt: Date.now(),
             },
-            lastLoadedAt: Date.now(),
-          },
-        }));
+          };
+        });
       } catch (err) {
-        const message = err?.message || 'Error al cargar catchup';
-        set((state) => {
-          const prev = state.catchup;
-          const hasCachedData = (prev.groups?.length ?? 0) > 0 || (prev.recorded?.length ?? 0) > 0;
-          if (hasCachedData) return { ...state, catchup: { ...prev, status: 'ready', error: null } };
-          return { ...state, catchup: { ...prev, status: 'error', error: message } };
+        var catchupErrMsg = (err && err.message) || 'Error al cargar catchup';
+        set(function (s) {
+          var prev = s.catchup;
+          var hasCachedData = (prev.groups && prev.groups.length > 0) || (prev.recorded && prev.recorded.length > 0);
+          if (hasCachedData) return { epg: s.epg, vod: s.vod, ads: s.ads, catchup: { status: 'ready', error: null, groups: prev.groups, recorded: prev.recorded, progress: prev.progress, lastLoadedAt: prev.lastLoadedAt } };
+          return { epg: s.epg, vod: s.vod, ads: s.ads, catchup: { status: 'error', error: catchupErrMsg, groups: prev.groups, recorded: prev.recorded, progress: prev.progress, lastLoadedAt: prev.lastLoadedAt } };
         });
       } finally {
         catchupLoading = false;
       }
     },
 
-    resetPreload: () => {
+    resetPreload: function () {
       clearLoadingTimeout();
       clearVodTimeout();
       vodLoading = false;
       adsLoading = false;
       catchupLoading = false;
-      set(() => ({
-        epg: epgInitialState,
-        vod: vodInitialState,
-        ads: adsInitialState,
-        catchup: catchupInitialState,
-      }));
+      set(function () {
+        return {
+          epg: epgInitialState,
+          vod: vodInitialState,
+          ads: adsInitialState,
+          catchup: catchupInitialState,
+        };
+      });
     },
 
-    getStreamsWithEPG: (channels) => {
-      const { epg } = get();
+    getStreamsWithEPG: function (channels) {
+      var epg = get().epg;
       return mergeEpgIntoChannels(channels || [], epg.streams);
     },
   };
 });
-

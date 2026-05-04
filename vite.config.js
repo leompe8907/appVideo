@@ -10,14 +10,15 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       // Smart TV compatibility:
-      // Tizen 2019 (~Chromium 68/69) y webOS 2019 pueden NO soportar syntax ES2020+ (?. / ??).
-      // Esto fuerza downlevel + polyfills para builds de producción.
+      // webOS 4 (2019) usa Chrome 61; Tizen 4 (2019) usa Chrome 69.
+      // NINGUNO soporta optional chaining (?.) ni nullish coalescing (??).
+      // FIX #3: targets cubre ambas plataformas. modernTargets fuerza la
+      // transpilación del chunk "moderno" también (no solo el legacy).
       legacy({
-        // Ajustar según matriz de dispositivos objetivo.
-        // Chrome 69 cubre Tizen 2019 típico; webOS 4 usa Chrome 61.
-        targets: ['chrome 69'],
-        // Evitar polyfills excesivos, pero asegurar async/await si aparece.
+        targets: ['chrome 61'],              // webOS 4 — el más restrictivo
+        modernTargets: ['chrome 69'],        // Tizen 2019 — fuerza transpilación del chunk moderno
         additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
+        renderLegacyChunks: true,
       }),
     ],
 
@@ -33,7 +34,11 @@ export default defineConfig(({ mode }) => {
 
     build: {
       outDir: brand ? `dist/${brand}` : 'dist',
-      target: 'es2017', // 2019 TVs soportan ES2017 nativamente (Chrome 68/69)
+      // FIX #3: bajar de es2017 a es2015 para que Terser transpile optional chaining (?.)
+      // y nullish coalescing (??) — ninguno de los dos está soportado en Chrome 61/69.
+      // es2015 cubre: arrow functions, const/let, template literals, destructuring,
+      // spread, clases, Promises, Symbol — todo soportado en Chrome 61+.
+      target: 'es2015',
       cssTarget: 'chrome61', // webOS 4 usa Chrome 61 internamente
       minify: 'terser',
       terserOptions: {
@@ -41,16 +46,13 @@ export default defineConfig(({ mode }) => {
           drop_console: !isDev,
           drop_debugger: true,
         },
+        // Asegurar que el output sea ES5-compatible para el chunk legacy
+        ecma: 5,
+        safari10: true,
       },
       rollupOptions: {
         output: {
-          // Code splitting habilitado.
-          // Nota: evitar partir `node_modules` en múltiples vendor chunks porque puede generar
-          // dependencias circulares (p.ej. react <-> libs) y romper en runtime (React undefined).
           manualChunks(id) {
-            // Vite v4/v5 maneja excelentemente la separación automática de node_modules.
-            // Forzar todo a un único 'vendor' chunk causa dependencias circulares y rompe React en producción.
-            
             // Páginas: cada página en su propio chunk (gracias a React.lazy)
             if (id.includes('/src/pages/')) {
               const page = id.split('/').pop().replace('.jsx', '').replace('.tsx', '');
@@ -66,9 +68,6 @@ export default defineConfig(({ mode }) => {
       },
     },
 
-    // Importante: cuando el build sale a `dist/<brand>`, ese folder se sirve como raíz.
-    // Si usáramos `base=/<brand>/`, Vite buscaría los bundles en `/<brand>/assets/...`
-    // (equivalente a `dist/<brand>/<brand>/assets/...`) y rompe `vite preview --outDir dist/<brand>`.
     base: '/',
     define: { __BRAND__: JSON.stringify(brand) },
 
