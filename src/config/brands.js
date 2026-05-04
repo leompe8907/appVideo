@@ -142,6 +142,75 @@ export const BRANDS = [
     developedBy: "Network Broadcast",
     version: "1.0.2",
 
+    login: {
+      theme: {
+        cardBackground: "rgba(255, 255, 255, 0.05)",// Fondo de la tarjeta del login
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Botón principal (Entrar)
+        submitText: "#ffffff",// Texto del botón principal
+        registerBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón de registro
+        registerText: "#ffffff",// Texto del botón de registro
+        udidBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón UDID
+        udidText: "#ffffff",// Texto del botón UDID
+        toggleBg: "rgba(255, 255, 255, 0.1)",// Fondo del botón de toggle
+        toggleText: "rgba(255, 255, 255, 0.7)",// Texto del botón de toggle
+        inputs: {
+          // Inputs (usuario/contraseña) - personalizable por marca
+          bg: "rgba(255, 255, 255, 0.1)",
+          border: "rgba(255, 255, 255, 0.2)",
+          text: "#ffffff",
+          placeholder: "rgba(255, 255, 255, 0.4)",
+          focusedBg: "rgba(255, 255, 255, 0.15)",
+          focusedBorder: null,
+          focusedShadow: null,
+        },
+        social: {
+          // Botones login social (Google/Facebook)
+          bg: "rgba(255, 255, 255, 0.08)",
+          border: "rgba(255, 255, 255, 0.22)",
+          text: "rgba(255, 255, 255, 0.92)",
+        },
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Fondo del botón cerrar modal
+        modalCloseText: "#ffffff",// Texto del botón cerrar modal
+      },
+      backgroundImage: {
+        // Personaliza el fondo del login por marca:
+        // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
+        enabled: false,
+        assetPath: "backgroundalt.webp",
+      },
+      qrRegister: {
+        enabled: true,
+        url: "https://shop.fotelka.tv/?c=customer&p=register",
+      },
+      udid: {
+        enabled: true,
+        baseUrl: "",
+        requestPath: "",
+        wsUrl: "",
+        appType: "10foot",
+        appVersion: "1.0",
+        maxReconnectAttempts: 3,
+        reconnectMs: [3000, 6000, 10000],
+        heartbeatMs: 30000,
+        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
+      socialLogin: {
+        backendBaseUrl: '',
+        google: {
+          enabled: true,
+          redirectUrl: '',
+          accessToken: '',
+          backendBaseUrl: '',
+        },
+        facebook: {
+          enabled: true,
+          redirectUrl: '',
+          accessToken: '',
+          backendBaseUrl: '',
+        },
+      },
+    },
+
     // EPG: configuración unificada (guía + cards)
     EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
@@ -289,6 +358,48 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
+
+    vod: {
+      layout: "hero",
+      add: true,
+      vodDetail: {
+        descriptionMaxLength: 180,
+        showReleaseYear: true,
+        showDuration: true,
+        showParentalRating: true,
+        showCategories: true,
+        showStarRating: true,
+        showDescription: true,
+        playButtonColor: null,
+        starRatingColor: null,
+        heroGradientOpacity: 0.95,
+        posterWidthMin: 100,
+        posterWidthMax: 200,
+        categoryTagBackground: "rgba(255, 255, 255, 0.12)",
+        categoryTagBorderColor: "rgba(255, 255, 255, 0.2)",
+        parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)",
+        contentPosition: "bottom",
+      },
+    },
+    // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
+    hashPasswordBeforeLogin: true,
+    debug: {
+      spatialNav: false, // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
+    },
+  },
+  // inTV Play
+  {
+    brand: "intv",
+    appName: "inTV Play",
+    drm: "https://pmdw-1.in.tv.br/",
+    token: "CEVQmnhOsXvpRQZbGADl",
+    os: 'HTML5',
+    appVersion: '1',
+    branding: 'Panaccess',
+    developedBy: "inTV&#174,",
+    version: "2.0.2",
+
     login: {
       theme: {
         cardBackground: "rgba(255, 255, 255, 0.05)",// Fondo de la tarjeta del login
@@ -357,46 +468,6 @@ export const BRANDS = [
         },
       },
     },
-    vod: {
-      layout: "hero",
-      add: true,
-      vodDetail: {
-        descriptionMaxLength: 180,
-        showReleaseYear: true,
-        showDuration: true,
-        showParentalRating: true,
-        showCategories: true,
-        showStarRating: true,
-        showDescription: true,
-        playButtonColor: null,
-        starRatingColor: null,
-        heroGradientOpacity: 0.95,
-        posterWidthMin: 100,
-        posterWidthMax: 200,
-        categoryTagBackground: "rgba(255, 255, 255, 0.12)",
-        categoryTagBorderColor: "rgba(255, 255, 255, 0.2)",
-        parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)",
-        contentPosition: "bottom",
-      },
-    },
-    // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
-    hashPasswordBeforeLogin: true,
-    debug: {
-      spatialNav: false, // Logs en consola (default: solo en DEV)
-      spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
-    },
-  },
-  // inTV Play
-  {
-    brand: "intv",
-    appName: "inTV Play",
-    drm: "https://pmdw-1.in.tv.br/",
-    token: "CEVQmnhOsXvpRQZbGADl",
-    os: 'HTML5',
-    appVersion: '1',
-    branding: 'Panaccess',
-    developedBy: "inTV&#174,",
-    version: "2.0.2",
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
@@ -558,70 +629,7 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
-    login: {
-      socialLogin: {
-        backendBaseUrl: '',
-        google: {
-          enabled: true,
-          redirectUrl: '',
-          accessToken: '',
-          backendBaseUrl: '',
-        },
-        facebook: {
-          enabled: true,
-          redirectUrl: '',
-          accessToken: '',
-          backendBaseUrl: '',
-        },
-      },
-      theme: {
-        cardBackground: "rgba(255, 255, 255, 0.05)",
-        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
-        submitText: "#ffffff",
-        registerBg: "rgba(255, 255, 255, 0.12)",
-        registerText: "#ffffff",
-        udidBg: "rgba(255, 255, 255, 0.12)",
-        udidText: "#ffffff",
-        toggleBg: "rgba(255, 255, 255, 0.1)",
-        toggleText: "rgba(255, 255, 255, 0.7)",
-        inputs: {
-          bg: "rgba(255, 255, 255, 0.1)",
-          border: "rgba(255, 255, 255, 0.2)",
-          text: "#ffffff",
-          placeholder: "rgba(255, 255, 255, 0.4)",
-          focusedBg: "rgba(255, 255, 255, 0.15)",
-          focusedBorder: null,
-          focusedShadow: null,
-        },
-        social: {
-          bg: "rgba(255, 255, 255, 0.08)",
-          border: "rgba(255, 255, 255, 0.22)",
-          text: "rgba(255, 255, 255, 0.92)",
-        },
-        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
-        modalCloseText: "#ffffff",
-      },
-      backgroundImage: {
-        enabled: false,
-        assetPath: "backgroundalt.webp",
-      },
-      qrRegister: {
-        enabled: true,
-        url: "https://shop.fotelka.tv/?c=customer&p=register",
-      },
-      udid: {
-        enabled: true,
-        baseUrl: "",
-        requestPath: "",
-        wsUrl: "",
-        appType: "10foot",
-        appVersion: "1.0",
-        maxReconnectAttempts: 3,
-        reconnectMs: [3000, 6000, 10000],
-        heartbeatMs: 30000,
-        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
-      },
-    },
+
     vod: {
       layout: "hero", // "hero" | "classic"
       add: true,
@@ -662,6 +670,75 @@ export const BRANDS = [
     branding: 'Panaccess',
     developedBy: "Gigmax",
     version: "2.0.3",
+
+    login: {
+      theme: {
+        cardBackground: "rgba(255, 255, 255, 0.05)",// Fondo de la tarjeta del login
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Botón principal (Entrar)
+        submitText: "#ffffff",// Texto del botón principal
+        registerBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón de registro
+        registerText: "#ffffff",// Texto del botón de registro
+        udidBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón UDID
+        udidText: "#ffffff",// Texto del botón UDID
+        toggleBg: "rgba(255, 255, 255, 0.1)",// Fondo del botón de toggle
+        toggleText: "rgba(255, 255, 255, 0.7)",// Texto del botón de toggle
+        inputs: {
+          // Inputs (usuario/contraseña) - personalizable por marca
+          bg: "rgba(255, 255, 255, 0.1)",
+          border: "rgba(255, 255, 255, 0.2)",
+          text: "#ffffff",
+          placeholder: "rgba(255, 255, 255, 0.4)",
+          focusedBg: "rgba(255, 255, 255, 0.15)",
+          focusedBorder: null,
+          focusedShadow: null,
+        },
+        social: {
+          // Botones login social (Google/Facebook)
+          bg: "rgba(255, 255, 255, 0.08)",
+          border: "rgba(255, 255, 255, 0.22)",
+          text: "rgba(255, 255, 255, 0.92)",
+        },
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Fondo del botón cerrar modal
+        modalCloseText: "#ffffff",// Texto del botón cerrar modal
+      },
+      backgroundImage: {
+        // Personaliza el fondo del login por marca:
+        // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
+        enabled: false,
+        assetPath: "backgroundalt.webp",
+      },
+      qrRegister: {
+        enabled: true,
+        url: "https://shop.fotelka.tv/?c=customer&p=register",
+      },
+      udid: {
+        enabled: true,
+        baseUrl: "",
+        requestPath: "",
+        wsUrl: "",
+        appType: "10foot",
+        appVersion: "1.0",
+        maxReconnectAttempts: 3,
+        reconnectMs: [3000, 6000, 10000],
+        heartbeatMs: 30000,
+        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
+      socialLogin: {
+        backendBaseUrl: '',
+        google: {
+          enabled: true,
+          redirectUrl: '',
+          accessToken: '',
+          backendBaseUrl: '',
+        },
+        facebook: {
+          enabled: true,
+          redirectUrl: '',
+          accessToken: '',
+          backendBaseUrl: '',
+        },
+      },
+    },
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
@@ -792,70 +869,7 @@ export const BRANDS = [
       showRating: false, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
-    login: {
-      theme: {
-        cardBackground: "rgba(255, 255, 255, 0.05)",
-        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
-        submitText: "#ffffff",
-        registerBg: "rgba(255, 255, 255, 0.12)",
-        registerText: "#ffffff",
-        udidBg: "rgba(255, 255, 255, 0.12)",
-        udidText: "#ffffff",
-        toggleBg: "rgba(255, 255, 255, 0.1)",
-        toggleText: "rgba(255, 255, 255, 0.7)",
-        inputs: {
-          bg: "rgba(255, 255, 255, 0.1)",
-          border: "rgba(255, 255, 255, 0.2)",
-          text: "#ffffff",
-          placeholder: "rgba(255, 255, 255, 0.4)",
-          focusedBg: "rgba(255, 255, 255, 0.15)",
-          focusedBorder: null,
-          focusedShadow: null,
-        },
-        social: {
-          bg: "rgba(255, 255, 255, 0.08)",
-          border: "rgba(255, 255, 255, 0.22)",
-          text: "rgba(255, 255, 255, 0.92)",
-        },
-        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
-        modalCloseText: "#ffffff",
-      },
-      backgroundImage: {
-        enabled: true,
-        assetPath: "backgroundalt.webp",
-      },
-      qrRegister: {
-        enabled: false,
-        url: "",
-      },
-      udid: {
-        enabled: false,
-        baseUrl: "",
-        requestPath: "/udid/request-udid-manual/",
-        wsUrl: "",
-        appType: "10foot",
-        appVersion: "1.0",
-        maxReconnectAttempts: 3,
-        reconnectMs: [3000, 6000, 10000],
-        heartbeatMs: 30000,
-        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
-      },
-      socialLogin: {
-        backendBaseUrl: '',
-        google: {
-          enabled: false,
-          redirectUrl: '',
-          accessToken: '',
-          backendBaseUrl: '',
-        },
-        facebook: {
-          enabled: false,
-          redirectUrl: '',
-          accessToken: '',
-          backendBaseUrl: '',
-        },
-      },
-    },
+
     vod: {
       layout: "hero",
       add: true,
@@ -895,6 +909,71 @@ export const BRANDS = [
     branding: 'Cabledelancer',
     developedBy: "Cabledelancer",
     version: "1.0.2",
+
+    login: {
+      theme: {
+        cardBackground: "rgba(255, 255, 255, 0.05)",
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
+        submitText: "#ffffff",
+        registerBg: "rgba(255, 255, 255, 0.12)",
+        registerText: "#ffffff",
+        udidBg: "rgba(255, 255, 255, 0.12)",
+        udidText: "#ffffff",
+        toggleBg: "rgba(255, 255, 255, 0.1)",
+        toggleText: "rgba(255, 255, 255, 0.7)",
+        inputs: {
+          bg: "rgba(255, 255, 255, 0.1)",
+          border: "rgba(255, 255, 255, 0.2)",
+          text: "#ffffff",
+          placeholder: "rgba(255, 255, 255, 0.4)",
+          focusedBg: "rgba(255, 255, 255, 0.15)",
+          focusedBorder: null,
+          focusedShadow: null,
+        },
+        social: {
+          bg: "rgba(255, 255, 255, 0.08)",
+          border: "rgba(255, 255, 255, 0.22)",
+          text: "rgba(255, 255, 255, 0.92)",
+        },
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
+        modalCloseText: "#ffffff",
+      },
+      backgroundImage: {
+        enabled: false,
+        assetPath: "backgroundalt.webp",
+      },
+      qrRegister: {
+        enabled: true,
+        url: "https://shop.fotelka.tv/?c=customer&p=register",
+      },
+      udid: {
+        enabled: true,
+        baseUrl: "http://127.0.0.1:8000", //"https://bt-auth.cabledelancer.com",
+        requestPath: "/udid/request-udid-manual/",
+        wsUrl: "ws://127.0.0.1:8000/ws/auth/", //"wss://bt-auth.cabledelancer.com/ws/auth/",
+        appType: "10foot",
+        appVersion: "1.0",
+        maxReconnectAttempts: 3,
+        reconnectMs: [3000, 6000, 10000],
+        heartbeatMs: 30000,
+        privateKeyUrl: "/cableatlantico/keys/private_key.pem",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
+      socialLogin: {
+        backendBaseUrl: '',
+        google: {
+          enabled: false,
+          redirectUrl: '',
+          accessToken: '',
+          backendBaseUrl: '',
+        },
+        facebook: {
+          enabled: false,
+          redirectUrl: '',
+          accessToken: '',
+          backendBaseUrl: '',
+        },
+      },
+    },    
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
@@ -1023,70 +1102,7 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
-    login: {
-      theme: {
-        cardBackground: "rgba(255, 255, 255, 0.05)",
-        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
-        submitText: "#ffffff",
-        registerBg: "rgba(255, 255, 255, 0.12)",
-        registerText: "#ffffff",
-        udidBg: "rgba(255, 255, 255, 0.12)",
-        udidText: "#ffffff",
-        toggleBg: "rgba(255, 255, 255, 0.1)",
-        toggleText: "rgba(255, 255, 255, 0.7)",
-        inputs: {
-          bg: "rgba(255, 255, 255, 0.1)",
-          border: "rgba(255, 255, 255, 0.2)",
-          text: "#ffffff",
-          placeholder: "rgba(255, 255, 255, 0.4)",
-          focusedBg: "rgba(255, 255, 255, 0.15)",
-          focusedBorder: null,
-          focusedShadow: null,
-        },
-        social: {
-          bg: "rgba(255, 255, 255, 0.08)",
-          border: "rgba(255, 255, 255, 0.22)",
-          text: "rgba(255, 255, 255, 0.92)",
-        },
-        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
-        modalCloseText: "#ffffff",
-      },
-      backgroundImage: {
-        enabled: false,
-        assetPath: "backgroundalt.webp",
-      },
-      qrRegister: {
-        enabled: true,
-        url: "https://shop.fotelka.tv/?c=customer&p=register",
-      },
-      udid: {
-        enabled: true,
-        baseUrl: "http://127.0.0.1:8000", //"https://bt-auth.cabledelancer.com",
-        requestPath: "/udid/request-udid-manual/",
-        wsUrl: "ws://127.0.0.1:8000/ws/auth/", //"wss://bt-auth.cabledelancer.com/ws/auth/",
-        appType: "10foot",
-        appVersion: "1.0",
-        maxReconnectAttempts: 3,
-        reconnectMs: [3000, 6000, 10000],
-        heartbeatMs: 30000,
-        privateKeyUrl: "/cableatlantico/keys/private_key.pem",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
-      },
-      socialLogin: {
-        backendBaseUrl: '',
-        google: {
-          enabled: false,
-          redirectUrl: '',
-          accessToken: '',
-          backendBaseUrl: '',
-        },
-        facebook: {
-          enabled: false,
-          redirectUrl: '',
-          accessToken: '',
-          backendBaseUrl: '',
-        },
-      },
-    },
+
     vod: {
       layout: "hero", // "hero" | "classic"
       add: true,
@@ -1127,6 +1143,75 @@ export const BRANDS = [
     branding: 'Panaccess',
     developedBy: "windplay",
     version: "1.0.0",
+
+    login: {
+      theme: {
+        cardBackground: "rgba(255, 255, 255, 0.05)",// Fondo de la tarjeta del login
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Botón principal (Entrar)
+        submitText: "#ffffff",// Texto del botón principal
+        registerBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón de registro
+        registerText: "#ffffff",// Texto del botón de registro
+        udidBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón UDID
+        udidText: "#ffffff",// Texto del botón UDID
+        toggleBg: "rgba(255, 255, 255, 0.1)",// Fondo del botón de toggle
+        toggleText: "rgba(255, 255, 255, 0.7)",// Texto del botón de toggle
+        inputs: {
+          // Inputs (usuario/contraseña) - personalizable por marca
+          bg: "rgba(255, 255, 255, 0.1)",
+          border: "rgba(255, 255, 255, 0.2)",
+          text: "#ffffff",
+          placeholder: "rgba(255, 255, 255, 0.4)",
+          focusedBg: "rgba(255, 255, 255, 0.15)",
+          focusedBorder: null,
+          focusedShadow: null,
+        },
+        social: {
+          // Botones login social (Google/Facebook)
+          bg: "rgba(255, 255, 255, 0.08)",
+          border: "rgba(255, 255, 255, 0.22)",
+          text: "rgba(255, 255, 255, 0.92)",
+        },
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Fondo del botón cerrar modal
+        modalCloseText: "#ffffff",// Texto del botón cerrar modal
+      },
+      backgroundImage: {
+        // Personaliza el fondo del login por marca:
+        // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
+        enabled: true,
+        assetPath: "backgroundalt.webp",
+      },
+      qrRegister: {
+        enabled: true,
+        url: "https://shop.fotelka.tv/?c=customer&p=register",
+      },
+      udid: {
+        enabled: true,
+        baseUrl: "",
+        requestPath: "",
+        wsUrl: "",
+        appType: "10foot",
+        appVersion: "1.0",
+        maxReconnectAttempts: 3,
+        reconnectMs: [3000, 6000, 10000],
+        heartbeatMs: 30000,
+        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+      },
+      socialLogin: {
+        backendBaseUrl: '',
+        google: {
+          enabled: true,
+          redirectUrl: '',
+          accessToken: '',
+          backendBaseUrl: '',
+        },
+        facebook: {
+          enabled: true,
+          redirectUrl: '',
+          accessToken: '',
+          backendBaseUrl: '',
+        },
+      },
+    },
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
@@ -1284,45 +1369,90 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
+
+    vod: {
+      layout: "hero", // "hero" | "classic"
+      add: true,
+      vodDetail: {
+        descriptionMaxLength: 180, // Caracteres máximos de la descripción antes de "Leer más" (0 = sin límite)
+        showReleaseYear: true, // Mostrar año de estreno en la metadata
+        showDuration: true, // Mostrar duración (min) en la metadata
+        showParentalRating: true, // Mostrar badge de clasificación por edades
+        showCategories: true, // Mostrar etiquetas de categorías
+        showStarRating: true, // Mostrar valoración en estrellas
+        showDescription: true, // Mostrar bloque de descripción
+        playButtonColor: null, // Color del botón Reproducir (hex/css)
+        starRatingColor: null, // Color de las estrellas rellenas (hex/css)
+        heroGradientOpacity: 0.95, // Opacidad del gradiente inferior del hero (0–1)    
+        posterWidthMin: 100, // Ancho mínimo del poster en px
+        posterWidthMax: 200, // Ancho máximo del poster en px
+        categoryTagBackground: "rgba(255, 255, 255, 0.12)", // Color/fondo de las etiquetas de categoría (css)
+        categoryTagBorderColor: "rgba(255, 255, 255, 0.2)", // Borde de las etiquetas de categoría (css)
+        parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)", // Borde del badge de clasificación por edades (css)
+        contentPosition: "middle", // "top" | "middle" | "bottom" - posición vertical del bloque poster + info
+      },
+    },
+    // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
+    hashPasswordBeforeLogin: false,
+    debug: {
+      spatialNav: false, // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
+    },
+  },
+
+  {
+    brand: "multiplustv",
+    appName: "MultiplusTV",
+    drm: "https://cv10.panaccess.com/",
+    token: "CUZwaXeVxOvrCiMmVHov",
+    os: 'HTML5',
+    appVersion: '1',    
+    branding: 'Panaccess',
+    developedBy: "MultiplusTV",
+    version: "1.0.0",
+
     login: {
       theme: {
-        // Ajustado para igualar el look & feel del mock (captura)
-        cardBackground: "rgba(0, 22, 38, 0.55)",
-        submitBg: "#3AA3AE",
-        submitText: "#ffffff",
-        registerBg: "rgba(255, 255, 255, 0.12)",
-        registerText: "#ffffff",
-        udidBg: "rgba(255, 255, 255, 0.12)",
-        udidText: "#ffffff",
-        toggleBg: "rgba(255, 255, 255, 0.1)",
-        toggleText: "rgba(255, 255, 255, 0.7)",
+        cardBackground: "rgba(255, 255, 255, 0.05)",// Fondo de la tarjeta del login
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Botón principal (Entrar)
+        submitText: "#ffffff",// Texto del botón principal
+        registerBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón de registro
+        registerText: "#ffffff",// Texto del botón de registro
+        udidBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón UDID
+        udidText: "#ffffff",// Texto del botón UDID
+        toggleBg: "rgba(255, 255, 255, 0.1)",// Fondo del botón de toggle
+        toggleText: "rgba(255, 255, 255, 0.7)",// Texto del botón de toggle
         inputs: {
-          bg: "rgba(0, 0, 0, 0.0)",
-          border: "rgba(255, 255, 255, 0.7)",
+          // Inputs (usuario/contraseña) - personalizable por marca
+          bg: "rgba(255, 255, 255, 0.1)",
+          border: "rgba(255, 255, 255, 0.2)",
           text: "#ffffff",
-          placeholder: "rgba(190, 210, 220, 0.7)",
-          focusedBg: "rgba(255, 255, 255, 0.06)",
-          focusedBorder: "rgba(255, 255, 255, 0.95)",
-          focusedShadow: "0 0 0 3px rgba(255, 255, 255, 0.18)",
+          placeholder: "rgba(255, 255, 255, 0.4)",
+          focusedBg: "rgba(255, 255, 255, 0.15)",
+          focusedBorder: null,
+          focusedShadow: null,
         },
         social: {
-          bg: "rgba(0, 22, 38, 0.55)",
-          border: "rgba(255, 255, 255, 0.28)",
-          text: "#ffffff",
+          // Botones login social (Google/Facebook)
+          bg: "rgba(255, 255, 255, 0.08)",
+          border: "rgba(255, 255, 255, 0.22)",
+          text: "rgba(255, 255, 255, 0.92)",
         },
-        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
-        modalCloseText: "#ffffff",
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Fondo del botón cerrar modal
+        modalCloseText: "#ffffff",// Texto del botón cerrar modal
       },
       backgroundImage: {
-        enabled: true,
+        // Personaliza el fondo del login por marca:
+        // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
+        enabled: false,
         assetPath: "backgroundalt.webp",
       },
       qrRegister: {
-        enabled: true,
+        enabled: false,
         url: "https://shop.fotelka.tv/?c=customer&p=register",
       },
       udid: {
-        enabled: false,
+        enabled: true,
         baseUrl: "",
         requestPath: "",
         wsUrl: "",
@@ -1334,21 +1464,179 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
-        backendBaseUrl: 'http://127.0.0.1:8000',
+        backendBaseUrl: '',
         google: {
           enabled: true,
-          redirectUrl: '/wind/auth/google/',
-          accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
+          redirectUrl: '',
+          accessToken: '',
           backendBaseUrl: '',
         },
         facebook: {
-          enabled: false,
+          enabled: true,
           redirectUrl: '',
           accessToken: '',
           backendBaseUrl: '',
         },
       },
     },
+
+    // EPG: configuración unificada (guía + cards)
+    EPG: {
+      daysOffset: 2, // Días de offset para la API de guía de programación
+      rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
+      hoursLimit: 12, // Límite de horas para la API de guía de programación
+      epgLineColorTime: "#3333FF",
+      reminderLeadSeconds: 60,
+      reminderShowWhilePlaying: false,
+      // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
+      epgPast: false,
+      epgPagesPastEnabled: true,
+      epgCardsChannelActiveBg: "rgb(0 0 0)",
+      epgCardsProgramLiveBg: "#6C8EB6",
+      epgCardsProgramLiveProgressBg: "#6C8EB6",// Color de la barra de progreso (programa en vivo / "Ahora")
+      epgCardsLaterGlobal: true,
+      // Control del cierre de modal al reproducir en vivo:
+      // true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
+      epgCloseModalOnPlayLive: 'auto',
+    },
+
+    // Catchup: pantalla independiente con 3 diseños (Legacy / Timeline / Netflix).
+    catchup: {
+      enabled: true,
+      ui: {
+        activeLayout: 'legacy',
+        showAllLayouts: false,
+      },
+      layouts: {
+        legacy: { enabled: true },
+        timeline: { enabled: true },
+        netflix: { enabled: true },
+      },
+    },
+
+    // Player: control técnico de selección de engine por marca.
+    player: {
+      nativeAdaptersEnabled: false,
+      enginePolicy: 'auto',
+      hudAutoHideMs: 6000,
+      // Inactividad (detener playback + screensaver):
+      inactivityTestTimeoutSec: 120,
+      inactivityGraceSec: 60,
+      screensaverRotateMs: 9000,
+      showPlaybackButtonsOnLive: false,
+      showSeekbarOnLive: false,
+      closeChannelSidebarOnSelect: false,
+    },
+
+    // Configuración de UI/Tema
+    ui: {
+      // Splash
+      splashDuration: 3000, // Duración en milisegundos
+      splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      // Focus visible (PC + TV) - personalizable por marca
+      focus: {
+        enabled: true,
+        color: "#3AA3AE",
+        scale: 1.05,
+        ring: '0 0 0 4px rgba(var(--primary-color-rgb, 102, 126, 234), 0.7)',
+        ring2: '0 0 0 8px rgba(var(--primary-color-rgb, 102, 126, 234), 0.35)',
+        shadow: '0 12px 30px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55)',
+      },
+      // EPG
+      epgLineColorTime: "#3333FF",
+      // Colores
+      primaryColor: "#3AA3AE",
+      secondaryColor: "#2C7F88",
+      theme: "dark",
+      // Fuente
+      fontFamily: "Roboto, sans-serif",
+      // Player loading overlay
+      playerLoading: {
+        premium: true,
+      },
+      // Sidebar Home (estructura uniforme entre marcas)
+      sidebar: {
+        backgroundColor: '#012B4F',
+        textColor: 'rgba(255, 255, 255, 0.82)',
+        submenuBackgroundColor: 'rgb(0, 0, 0)',
+        submenuTextColor: 'rgba(255, 255, 255, 0.85)',
+        fixed: true,
+      },
+    },
+
+    // Configuración específica de bouquets
+    bouquets: {
+      timeshipColor: "#3333FF",
+    },
+
+    // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    header: {
+      areas: {
+        left: { 
+          enabled: true, 
+          showLogo: true, 
+          showTime: false,
+          contentAlign: 'left'
+        },
+        center: { 
+          enabled: true, 
+          showLogo: false, 
+          showTime: false,
+          contentAlign: 'center'
+        },
+        right: { 
+          enabled: true, 
+          showLogo: false, 
+          showTime: true,
+          contentAlign: 'right'
+        },
+      },
+      subheader: {
+        enabled: true,
+        areas: {
+          left: { 
+            enabled: true, 
+            showServiceInfo: true,
+            contentAlign: 'left'
+          },
+          center: { 
+            enabled: true, 
+            showServiceInfo: false,
+            contentAlign: 'right'
+          },
+          right: { 
+            enabled: true, 
+            showServiceInfo: false,
+            contentAlign: 'right'
+          },
+        },
+      },
+    },
+
+    // Flags de HomeShell (header + ads por sección)
+    homeShell: {
+      header: {
+        inicio: true,
+        serviciosTvRadio: true,
+        vod: true,
+        catchup: true,
+      },
+      ads: {
+        inicio: true,
+        serviciosTvRadio: false,
+        vod: false,
+        catchup: false,
+        topInBouquets: false,
+      },
+    },
+    
+    // Features habilitadas/deshabilitadas
+    features: {
+      profiles: false,
+      showRating: true, // Equivalente a showRating en 10foot
+      osms: false, // Equivalente a osmsEnabled en 10foot
+    },
+
     vod: {
       layout: "hero", // "hero" | "classic"
       add: true,
