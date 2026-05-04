@@ -1,6 +1,6 @@
 /**
  * Construye la URL del endpoint REST de login social (Google / win-backend).
- * Prioridad: URL absoluta en redirectUrl o tokenUrl → base + path.
+ * Prioridad: URL absoluta en redirectUrl → base + path (redirectUrl como ruta o default /wind/auth/google/).
  */
 
 function trimTrailingSlash(s) {
@@ -28,11 +28,6 @@ export function getGoogleSocialPostUrl(brandConfig) {
     return redirectUrl;
   }
 
-  const tokenUrl = typeof google.tokenUrl === 'string' ? google.tokenUrl.trim() : '';
-  if (/^https?:\/\//i.test(tokenUrl)) {
-    return tokenUrl;
-  }
-
   const base =
     (typeof google.backendBaseUrl === 'string' && google.backendBaseUrl.trim()) ||
     (typeof social?.backendBaseUrl === 'string' && social.backendBaseUrl.trim()) ||
@@ -42,10 +37,7 @@ export function getGoogleSocialPostUrl(brandConfig) {
 
   if (!base) return '';
 
-  const path =
-    (typeof google.authPath === 'string' && google.authPath.trim()) ||
-    (redirectUrl.startsWith('/') ? redirectUrl : '') ||
-    '/wind/auth/google/';
+  const path = redirectUrl.startsWith('/') ? redirectUrl : '/wind/auth/google/';
 
   return joinBaseAndPath(base, path);
 }

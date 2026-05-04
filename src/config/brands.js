@@ -46,11 +46,9 @@
  *     @param {Object} login.socialLogin.google - Google Identity + POST a /wind/auth/google/.
  *       @param {boolean} login.socialLogin.google.enabled - Muestra el botón (solo escritorio; en TV se oculta).
  *       @param {string} login.socialLogin.google.redirectUrl - Si es absoluta (http...), URL del POST; si empieza con /, path relativo a la base.
- *       @param {string} login.socialLogin.google.authPath - Path del POST si redirectUrl no es una ruta (default /wind/auth/google/).
  *       @param {string} login.socialLogin.google.backendBaseUrl - Base solo para Google (opcional; si no, socialLogin.backendBaseUrl).
- *       @param {string} login.socialLogin.google.tokenUrl - URL completa del POST (opcional).
  *       @param {string} login.socialLogin.google.accessToken - OAuth client_id de Google (GIS); alternativa: VITE_GOOGLE_CLIENT_ID.
- *     @param {Object} login.socialLogin.facebook - Misma forma que google (enabled, redirectUrl, accessToken, authPath, tokenUrl, backendBaseUrl).
+ *     @param {Object} login.socialLogin.facebook - Misma forma que google (enabled, redirectUrl, accessToken, backendBaseUrl).
  *
  * @param {boolean} hashPasswordBeforeLogin - true: hashear contraseña en cliente antes de enviar (ej. Panaccess);
  *   false: enviar contraseña en claro (ej. backends como intv).
@@ -349,16 +347,12 @@ export const BRANDS = [
           enabled: true,
           redirectUrl: '',
           accessToken: '',
-          authPath: '',
-          tokenUrl: '',
           backendBaseUrl: '',
         },
         facebook: {
           enabled: true,
           redirectUrl: '',
           accessToken: '',
-          authPath: '',
-          tokenUrl: '',
           backendBaseUrl: '',
         },
       },
@@ -571,16 +565,12 @@ export const BRANDS = [
           enabled: true,
           redirectUrl: '',
           accessToken: '',
-          authPath: '',
-          tokenUrl: '',
           backendBaseUrl: '',
         },
         facebook: {
           enabled: true,
           redirectUrl: '',
           accessToken: '',
-          authPath: '',
-          tokenUrl: '',
           backendBaseUrl: '',
         },
       },
@@ -856,16 +846,12 @@ export const BRANDS = [
           enabled: false,
           redirectUrl: '',
           accessToken: '',
-          authPath: '',
-          tokenUrl: '',
           backendBaseUrl: '',
         },
         facebook: {
           enabled: false,
           redirectUrl: '',
           accessToken: '',
-          authPath: '',
-          tokenUrl: '',
           backendBaseUrl: '',
         },
       },
@@ -1091,16 +1077,12 @@ export const BRANDS = [
           enabled: false,
           redirectUrl: '',
           accessToken: '',
-          authPath: '',
-          tokenUrl: '',
           backendBaseUrl: '',
         },
         facebook: {
           enabled: false,
           redirectUrl: '',
           accessToken: '',
-          authPath: '',
-          tokenUrl: '',
           backendBaseUrl: '',
         },
       },
@@ -1357,16 +1339,12 @@ export const BRANDS = [
           enabled: true,
           redirectUrl: '/wind/auth/google/',
           accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
-          authPath: '',
-          tokenUrl: '',
           backendBaseUrl: '',
         },
         facebook: {
           enabled: false,
           redirectUrl: '',
           accessToken: '',
-          authPath: '',
-          tokenUrl: '',
           backendBaseUrl: '',
         },
       },
