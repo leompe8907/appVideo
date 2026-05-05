@@ -157,11 +157,14 @@ button {
 }
 
 // Focus en inputs
-input.focused,
-textarea.focused {
-  background: rgba(255, 255, 255, 0.15) !important;
-  transform: scale(1); // Inputs no escalan, solo resaltan
-  transition: all 0.2s ease !important;
+[data-focus="on"] {
+  input.focused,
+  textarea.focused {
+    background: rgba(255, 255, 255, 0.15) !important;
+    // Inputs no escalan, solo resaltan (override contra `[data-focus="on"] .focused`)
+    transform: scale(1) !important;
+    transition: all 0.2s ease !important;
+  }
 }
 
 // Focus en inputs en TV

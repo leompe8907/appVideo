@@ -184,15 +184,15 @@ export const BRANDS = [
       },
       udid: {
         enabled: true,
-        baseUrl: "",
-        requestPath: "",
-        wsUrl: "",
+        baseUrl: "http://127.0.0.1:8001", //"https://bt-auth.cabledelancer.com",
+        requestPath: "/udid/request-udid-manual/",
+        wsUrl: "ws://127.0.0.1:8001/ws/auth/", //"wss://bt-auth.cabledelancer.com/ws/auth/",
         appType: "10foot",
         appVersion: "1.0",
         maxReconnectAttempts: 3,
         reconnectMs: [3000, 6000, 10000],
         heartbeatMs: 30000,
-        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+        privateKeyUrl: "/cableatlantico/keys/private_key.pem",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
         backendBaseUrl: 'http://127.0.0.1:8000',
@@ -200,12 +200,14 @@ export const BRANDS = [
           enabled: true,
           redirectUrl: '/wind/auth/google/',
           accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
+          // Mantener look del botón fallback aunque OAuth esté configurado.
+          preferCustomButton: true,
           backendBaseUrl: '',
         },
         facebook: {
           enabled: true,
-          redirectUrl: '',
-          accessToken: '',
+          redirectUrl: '/wind/auth/facebook/',
+          accessToken: '823584907447149',
           backendBaseUrl: '',
         },
       },
@@ -458,6 +460,7 @@ export const BRANDS = [
           enabled: true,
           redirectUrl: '/wind/auth/google/',
           accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
+          preferCustomButton: true,
           backendBaseUrl: '',
         },
         facebook: {
@@ -549,7 +552,7 @@ export const BRANDS = [
       },
       // Sidebar Home (estructura uniforme entre marcas)
       sidebar: {
-        backgroundColor: '#4AC7D7',
+        backgroundColor: 'rgb(0, 4, 253)',
         textColor: 'rgba(255, 255, 255, 0.82)',
         submenuBackgroundColor: 'rgb(0, 0, 0)',
         submenuTextColor: 'rgba(255, 255, 255, 0.85)',
@@ -625,7 +628,7 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      profiles: true,
+      profiles: false,
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
@@ -729,6 +732,7 @@ export const BRANDS = [
           enabled: true,
           redirectUrl: '/wind/auth/google/',
           accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
+          preferCustomButton: true,
           backendBaseUrl: '',
         },
         facebook: {
@@ -964,6 +968,7 @@ export const BRANDS = [
           enabled: true,
           redirectUrl: '',
           accessToken: '',
+          preferCustomButton: true,
           backendBaseUrl: '',
         },
         facebook: {
@@ -1202,6 +1207,7 @@ export const BRANDS = [
           enabled: true,
           redirectUrl: '/wind/auth/google/',
           accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
+          preferCustomButton: true,
           backendBaseUrl: '',
         },
         facebook: {
@@ -1469,6 +1475,7 @@ export const BRANDS = [
           enabled: true,
           redirectUrl: '/wind/auth/google/',
           accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
+          preferCustomButton: true,
           backendBaseUrl: '',
         },
         facebook: {

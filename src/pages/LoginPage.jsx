@@ -13,8 +13,12 @@ import { loginAndActivateLicense } from '../services/loginFlow';
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
 import { getActiveLicense } from '../utils/userSession';
 import { useUdidLoginFlow } from '../hooks/useUdidLoginFlow';
-import { getGoogleSocialPostUrl } from '../utils/socialAuthUrls';
+import { getFacebookSocialPostUrl, getGoogleSocialPostUrl } from '../utils/socialAuthUrls';
 import { exchangeGoogleCredentialWithBackend } from '../services/googleSocialLogin';
+import {
+  exchangeFacebookAccessTokenWithBackend,
+  getFacebookAccessToken,
+} from '../services/facebookSocialLogin';
 import { preloadImage } from '../utils/assetLoader';
 import '../styles/components/_login.scss';
 
@@ -672,19 +676,85 @@ export function LoginPage() {
     (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
   const googlePostUrl = getGoogleSocialPostUrl(currentBrand);
   const showGoogleOAuth = showGoogle && !isTV && !!googleClientId && !!googlePostUrl;
+  // Si true, mantenemos el diseño "fallback" pero el click lo maneja GoogleLogin (invisible encima).
+  const preferCustomGoogleButton = googleSocial?.preferCustomButton === true;
   // Opción A: si Google está habilitado, mostrar SIEMPRE un botón fallback
   // cuando no se pueda renderizar GoogleOAuth (mismo look/UX en TV y PC).
   const showGoogleFallbackButton = showGoogle && !showGoogleOAuth;
   const showAnySocial = showGoogleOAuth || showGoogleFallbackButton || showFacebook;
 
   const handleFacebookClick = () => {
-    const redirectUrl =
-      typeof facebookSocial?.redirectUrl === 'string' ? facebookSocial.redirectUrl.trim() : '';
-    if (redirectUrl) {
-      window.location.assign(redirectUrl);
-      return;
-    }
-    setError(t('login.socialNotAvailable'));
+    // Implementación REST: obtener access_token (FB SDK) y hacer POST al backend.
+    (async () => {
+      if (isSubmitting || !currentBrand) return;
+      setError('');
+      setIsSubmitting(true);
+
+      try {
+        const url = getFacebookSocialPostUrl(currentBrand);
+        if (!url) {
+          setError(t('login.socialBackendMissing'));
+          return;
+        }
+
+        const appId =
+          (typeof facebookSocial?.accessToken === 'string' ? facebookSocial.accessToken.trim() : '') ||
+          '';
+        if (!appId) {
+          setError(t('login.socialNotAvailable'));
+          return;
+        }
+
+        const fbAccessToken = await getFacebookAccessToken(appId);
+        const data = await exchangeFacebookAccessTokenWithBackend(url, fbAccessToken);
+
+        const pc = data.panaccess_credentials;
+        const login1 = pc?.login1 != null ? String(pc.login1).trim() : '';
+        const pwd = pc?.password != null ? String(pc.password) : '';
+        if (!login1 || !pwd) {
+          throw new Error(t('login.errorGeneric'));
+        }
+
+        await loginAndActivateLicense(
+          currentBrand,
+          { username: login1, password: pwd },
+          {
+            autoActivateLicense: true,
+            failIfInUse: true,
+            activationRecursive: true,
+            storeClientConfig: true,
+            storeLicenses: true,
+          },
+        );
+
+        const active = getActiveLicense?.();
+        const hasActiveLicense = !!active?.licenseKey;
+        const skipSmartcard = !currentBrand?.features?.profiles && hasActiveLicense;
+        navigate(skipSmartcard ? '/home/inicio' : getInitialRoute(currentBrand));
+      } catch (err) {
+        const errorInfo = err.errorInfo || classifyError(err);
+        let messageToShow = err.message || t('login.errorGeneric');
+        switch (errorInfo.type) {
+          case ERROR_TYPES.NETWORK:
+            messageToShow = t('login.errorNetwork');
+            break;
+          case ERROR_TYPES.TIMEOUT:
+            messageToShow = t('login.errorTimeout');
+            break;
+          case ERROR_TYPES.SERVER:
+            messageToShow = t('login.errorServer');
+            break;
+          case ERROR_TYPES.AUTH:
+            messageToShow = t('login.errorAuth');
+            break;
+          default:
+            messageToShow = errorInfo.userMessage || err.message || t('login.errorGeneric');
+        }
+        setError(messageToShow);
+      } finally {
+        setIsSubmitting(false);
+      }
+    })();
   };
 
   const loginShell = (
@@ -785,7 +855,7 @@ export function LoginPage() {
 
           {showAnySocial && (
             <div className="social-login">
-              {showGoogleOAuth && (
+              {showGoogleOAuth && !preferCustomGoogleButton && (
                 <div
                   className="google-login-host"
                   style={{
@@ -804,6 +874,45 @@ export function LoginPage() {
                     text="continue_with"
                     locale={(i18n.language || 'es').replace('_', '-')}
                   />
+                </div>
+              )}
+
+              {showGoogleOAuth && preferCustomGoogleButton && (
+                <div
+                  className="google-login-host"
+                  style={{
+                    position: 'relative',
+                    width: '20rem',
+                    maxWidth: '100%',
+                    opacity: isSubmitting ? 0.65 : 1,
+                    pointerEvents: isSubmitting ? 'none' : 'auto',
+                  }}
+                >
+                  {/* Botón visible (diseño fallback). */}
+                  <FocusableButton
+                    type="button"
+                    className="social-button google"
+                    tabIndex={0}
+                    style={{ width: '100%', pointerEvents: 'none' }}
+                    aria-hidden="true"
+                  >
+                    {t('login.continueWithGoogle')}
+                  </FocusableButton>
+
+                  {/* Botón real de Google invisible por encima (captura click). */}
+                  <div style={{ position: 'absolute', inset: 0, opacity: 0.001, zIndex: 2 }}>
+                    <GoogleLogin
+                      onSuccess={handleGoogleCredentialSuccess}
+                      onError={() => setError(t('login.googleSignInFailed'))}
+                      useOneTap={false}
+                      theme="filled_black"
+                      size="large"
+                      shape="rectangular"
+                      width="320"
+                      text="continue_with"
+                      locale={(i18n.language || 'es').replace('_', '-')}
+                    />
+                  </div>
                 </div>
               )}
 

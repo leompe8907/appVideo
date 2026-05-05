@@ -52,7 +52,8 @@
   margin-bottom: 12px;
   box-sizing: border-box;
   flex-shrink: 0;
-  overflow-x: hidden;
+  // Si el input recibe estilos de foco (sombras/bordes), no recortar placeholder/efectos.
+  overflow: visible;
 }
 
 .search-input {

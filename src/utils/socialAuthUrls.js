@@ -41,3 +41,32 @@ export function getGoogleSocialPostUrl(brandConfig) {
 
   return joinBaseAndPath(base, path);
 }
+
+/**
+ * Construye la URL del endpoint de inicio OAuth de Facebook (redirección).
+ * Prioridad: URL absoluta en redirectUrl → base + path (redirectUrl como ruta o default /wind/auth/facebook/).
+ * @param {Object} brandConfig - currentBrand
+ * @returns {string} URL absoluta o cadena vacía si falta configuración
+ */
+export function getFacebookSocialPostUrl(brandConfig) {
+  const social = brandConfig?.login?.socialLogin;
+  const facebook = social?.facebook;
+  if (!facebook?.enabled) return '';
+
+  const redirectUrl = typeof facebook.redirectUrl === 'string' ? facebook.redirectUrl.trim() : '';
+  if (/^https?:\/\//i.test(redirectUrl)) {
+    return redirectUrl;
+  }
+
+  const base =
+    (typeof facebook.backendBaseUrl === 'string' && facebook.backendBaseUrl.trim()) ||
+    (typeof social?.backendBaseUrl === 'string' && social.backendBaseUrl.trim()) ||
+    (import.meta.env.VITE_SOCIAL_AUTH_BASE_URL || '').trim() ||
+    (typeof brandConfig?.api?.baseUrl === 'string' && brandConfig.api.baseUrl.trim()) ||
+    '';
+
+  if (!base) return '';
+
+  const path = redirectUrl.startsWith('/') ? redirectUrl : '/wind/auth/facebook/';
+  return joinBaseAndPath(base, path);
+}

@@ -437,6 +437,22 @@
         justify-content: center;
         width: 100%;
 
+        // Cuando el botón real de Google está invisible encima (custom button),
+        // el hover cae sobre el host, no sobre `.social-button`.
+        // Replicamos el hover para mantener consistencia visual.
+        &:hover {
+          .social-button:not(:disabled) {
+            transform: translateY(-2px);
+            filter: brightness(1.12);
+            border-color: rgba(var(--primary-color-rgb, 102, 126, 234), 0.8);
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.08),
+              0 14px 34px rgba(0, 0, 0, 0.3),
+              0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.22),
+              0 0 26px rgba(var(--primary-color-rgb, 102, 126, 234), 0.18);
+          }
+        }
+
         // PC: mostrar ring cuando el botón interno recibe foco (TAB)
         &:focus-within {
           border-radius: 12px;
