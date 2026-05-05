@@ -195,11 +195,11 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
-        backendBaseUrl: '',
+        backendBaseUrl: 'http://127.0.0.1:8000',
         google: {
           enabled: true,
-          redirectUrl: '',
-          accessToken: '',
+          redirectUrl: '/wind/auth/google/',
+          accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
           backendBaseUrl: '',
         },
         facebook: {
@@ -453,11 +453,11 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
-        backendBaseUrl: '',
+        backendBaseUrl: 'http://127.0.0.1:8000',
         google: {
           enabled: true,
-          redirectUrl: '',
-          accessToken: '',
+          redirectUrl: '/wind/auth/google/',
+          accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
           backendBaseUrl: '',
         },
         facebook: {
@@ -724,17 +724,17 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
-        backendBaseUrl: '',
+        backendBaseUrl: 'http://127.0.0.1:8000',
         google: {
           enabled: true,
-          redirectUrl: '',
-          accessToken: '',
+          redirectUrl: '/wind/auth/google/',
+          accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
           backendBaseUrl: '',
         },
         facebook: {
           enabled: true,
-          redirectUrl: '',
-          accessToken: '',
+          redirectUrl: '/wind/auth/facebook/',
+          accessToken: '823584907447149',
           backendBaseUrl: '',
         },
       },
@@ -961,7 +961,7 @@ export const BRANDS = [
       socialLogin: {
         backendBaseUrl: '',
         google: {
-          enabled: false,
+          enabled: true,
           redirectUrl: '',
           accessToken: '',
           backendBaseUrl: '',
@@ -1197,17 +1197,17 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
-        backendBaseUrl: '',
+        backendBaseUrl: 'http://127.0.0.1:8000',
         google: {
           enabled: true,
-          redirectUrl: '',
-          accessToken: '',
+          redirectUrl: '/wind/auth/google/',
+          accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
           backendBaseUrl: '',
         },
         facebook: {
           enabled: true,
-          redirectUrl: '',
-          accessToken: '',
+          redirectUrl: '/wind/auth/facebook/',
+          accessToken: '823584907447149',
           backendBaseUrl: '',
         },
       },
@@ -1399,7 +1399,7 @@ export const BRANDS = [
       spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
     },
   },
-
+  // MultiplusTV
   {
     brand: "multiplustv",
     appName: "MultiplusTV",
@@ -1464,11 +1464,11 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
-        backendBaseUrl: '',
+        backendBaseUrl: 'http://127.0.0.1:8000/',
         google: {
           enabled: true,
-          redirectUrl: '',
-          accessToken: '',
+          redirectUrl: '/wind/auth/google/',
+          accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
           backendBaseUrl: '',
         },
         facebook: {
