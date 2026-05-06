@@ -49,7 +49,6 @@ export function VodRecommendedHomeRail() {
   // Si el usuario navega (incluyendo "Home" sobre /home/inicio), cerrar el modal de detalle.
   useEffect(() => {
     setDetailItem(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);
 
   const handleVodSelect = (item) => {

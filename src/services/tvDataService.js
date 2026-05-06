@@ -203,7 +203,7 @@ function ensureStreamPlaybackUrl(stream) {
     if (img) {
       stream.img = img;
     }
-  } catch(e) {
+  } catch {
     // ignorar fallo de imagen
   }
 

@@ -2,7 +2,7 @@
  * Contenido principal de Home: publicidad superior, Outlet de rutas, publicidad inferior.
  */
 
-import { useCallback, useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { usePlayer } from '../../contexts/PlayerContext';
@@ -52,17 +52,18 @@ export function HomeShellContent() {
     }
   }, [ads.status, loadAds, adsEnabled]);
 
-  const handleActivate = useCallback(
-    createAdActivateHandler({
-      epgStreams: epg.streams,
-      play,
-      requestPlayChannel,
-      requestPlayMedia,
-      t,
-      navigate,
-      panaccessService,
-    }),
-    [epg.streams, navigate, panaccessService, play, requestPlayChannel, requestPlayMedia, t]
+  const handleActivate = useMemo(
+    () =>
+      createAdActivateHandler({
+        epgStreams: epg.streams,
+        play,
+        requestPlayChannel,
+        requestPlayMedia,
+        t,
+        navigate,
+        panaccessService,
+      }),
+    [epg.streams, navigate, play, requestPlayChannel, requestPlayMedia, t]
   );
 
   const { top, bottom } = ads;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import QRCode from 'qrcode';
@@ -58,6 +58,10 @@ export function LoginPage() {
     wsUrl: udidLoginConfig?.wsUrl || currentBrand?.api?.wsUrl || '',
   };
 
+  const handleCloseQrModal = useCallback(() => {
+    setIsQrModalOpen(false);
+  }, []);
+
   const handleUdidCredentials = async (credentials) => {
     await loginAndActivateLicense(currentBrand, {
       username: credentials.username,
@@ -91,6 +95,11 @@ export function LoginPage() {
     onCredentials: handleUdidCredentials,
     t,
   });
+
+  const handleCloseUdidModal = useCallback(() => {
+    udidFlow.cancel();
+    setIsUdidModalOpen(false);
+  }, [udidFlow]);
 
   // Establecer focus inicial en TV al cargar la página
   useEffect(() => {
@@ -139,73 +148,73 @@ export function LoginPage() {
     currentBrand?.login?.socialLogin?.facebook?.enabled,
   ]);
 
-  const focusById = (id) => {
-    const el = id ? document.getElementById(id) : null;
-    if (el) {
-      try {
-        el.focus();
-        return true;
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  };
-
-  const focusNextButton = (fromId, direction) => {
-    const idx = buttonIds.indexOf(fromId);
-    const delta = direction === 'up' ? -1 : 1;
-    let i = idx >= 0 ? idx + delta : (direction === 'up' ? buttonIds.length - 1 : 0);
-    while (i >= 0 && i < buttonIds.length) {
-      const id = buttonIds[i];
-      const el = document.getElementById(id);
-      if (el && !el.disabled && el.tabIndex !== -1) {
-        el.focus();
-        return true;
-      }
-      i += delta;
-    }
-    return false;
-  };
-
-  const exitAppBestEffort = () => {
-    // Samsung Tizen
-    try {
-      const tizenApp = window?.tizen?.application?.getCurrentApplication?.();
-      if (tizenApp?.exit) {
-        tizenApp.exit();
-        return;
-      }
-    } catch {
-      // noop
-    }
-    // webOS / browser fallback
-    try {
-      window.close();
-    } catch {
-      // noop
-    }
-  };
-
-  const armBackLongPress = () => {
-    if (backLongPressTimerRef.current) return;
-    backLongPressTriggeredRef.current = false;
-    backLongPressTimerRef.current = setTimeout(() => {
-      backLongPressTriggeredRef.current = true;
-      exitAppBestEffort();
-    }, 1600);
-  };
-
-  const clearBackLongPress = () => {
-    if (backLongPressTimerRef.current) {
-      clearTimeout(backLongPressTimerRef.current);
-      backLongPressTimerRef.current = null;
-    }
-  };
-
   // Navegación remota (TV): LRUD determinístico para Login
   useEffect(() => {
     if (!isTV) return undefined;
+
+    const focusById = (id) => {
+      const el = id ? document.getElementById(id) : null;
+      if (el) {
+        try {
+          el.focus();
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      return false;
+    };
+
+    const focusNextButton = (fromId, direction) => {
+      const idx = buttonIds.indexOf(fromId);
+      const delta = direction === 'up' ? -1 : 1;
+      let i = idx >= 0 ? idx + delta : (direction === 'up' ? buttonIds.length - 1 : 0);
+      while (i >= 0 && i < buttonIds.length) {
+        const id = buttonIds[i];
+        const el = document.getElementById(id);
+        if (el && !el.disabled && el.tabIndex !== -1) {
+          el.focus();
+          return true;
+        }
+        i += delta;
+      }
+      return false;
+    };
+
+    const exitAppBestEffort = () => {
+      // Samsung Tizen
+      try {
+        const tizenApp = window?.tizen?.application?.getCurrentApplication?.();
+        if (tizenApp?.exit) {
+          tizenApp.exit();
+          return;
+        }
+      } catch {
+        // noop
+      }
+      // webOS / browser fallback
+      try {
+        window.close();
+      } catch {
+        // noop
+      }
+    };
+
+    const armBackLongPress = () => {
+      if (backLongPressTimerRef.current) return;
+      backLongPressTriggeredRef.current = false;
+      backLongPressTimerRef.current = setTimeout(() => {
+        backLongPressTriggeredRef.current = true;
+        exitAppBestEffort();
+      }, 1600);
+    };
+
+    const clearBackLongPress = () => {
+      if (backLongPressTimerRef.current) {
+        clearTimeout(backLongPressTimerRef.current);
+        backLongPressTimerRef.current = null;
+      }
+    };
 
     const onKeyDown = (e) => {
       const action = getTvActionFromKeyEvent(e);
@@ -398,7 +407,14 @@ export function LoginPage() {
       window.removeEventListener('keyup', onKeyUp, { capture: true });
       clearBackLongPress();
     };
-  }, [isTV, isQrModalOpen, isUdidModalOpen, buttonIds]);
+  }, [
+    isTV,
+    isQrModalOpen,
+    isUdidModalOpen,
+    buttonIds,
+    handleCloseQrModal,
+    handleCloseUdidModal,
+  ]);
 
   useEffect(() => {
     if (!isQrModalOpen) return;
@@ -473,18 +489,9 @@ export function LoginPage() {
     setIsQrModalOpen(true);
   };
 
-  const handleCloseQrModal = () => {
-    setIsQrModalOpen(false);
-  };
-
   const handleOpenUdidModal = () => {
     setIsUdidModalOpen(true);
     udidFlow.start();
-  };
-
-  const handleCloseUdidModal = () => {
-    udidFlow.cancel();
-    setIsUdidModalOpen(false);
   };
 
   const formatRemaining = (seconds) => {
