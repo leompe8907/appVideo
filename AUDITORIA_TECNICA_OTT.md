@@ -34,16 +34,16 @@ main.jsx
 
 ### Inventario de módulos
 
-| Categoría | Módulos |
-|---|---|
-| **Páginas** (15) | Splash, Login, Profile, SmartCard, PreloadData, Home, Bouquet, TvRadio, Vod, Search, EpgCards, Catchup, ParentalSettings, Osms |
-| **Contextos** (5) | Brand, Device, Player, HomeHeader, PlayerContext |
-| **Stores Zustand** (6) | preloadStore, inactivityStore, osmsStore, parentalStore, parentalGateStore, epgReminderStore |
-| **Hooks** (7) | useAuthValidator, useDeviceDetection, useDeviceTime, useDebouncedValue, useOsmsPolling, useParentalGate, useUdidLoginFlow |
-| **Servicios** (8) | panaccessService, tvDataService, loginFlow, epgService, vodService, osmsService, facebookSocialLogin, googleSocialLogin |
-| **Player Engines** | WebEngine (HLS.js), LgEngine (webOS Luna/DRM), SamsungEngine (AVPlay/Tizen) |
-| **Workers** | epgWorkerClient (Blob inline) |
-| **Config** | brands.js (1688 líneas), brandConfig.js, defaultBrand.js |
+| Categoría              | Módulos                                                                                                                        |
+|------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+| **Páginas** (15)       | Splash, Login, Profile, SmartCard, PreloadData, Home, Bouquet, TvRadio, Vod, Search, EpgCards, Catchup, ParentalSettings, Osms |
+| **Contextos** (5)      | Brand, Device, Player, HomeHeader, PlayerContext                                                                               |
+| **Stores Zustand** (6) | preloadStore, inactivityStore, osmsStore, parentalStore, parentalGateStore, epgReminderStore                                   |
+| **Hooks** (7)          | useAuthValidator, useDeviceDetection, useDeviceTime, useDebouncedValue, useOsmsPolling, useParentalGate, useUdidLoginFlow      |
+| **Servicios** (8)      | panaccessService, tvDataService, loginFlow, epgService, vodService, osmsService, facebookSocialLogin, googleSocialLogin        |
+| **Player Engines**     | WebEngine (HLS.js), LgEngine (webOS Luna/DRM), SamsungEngine (AVPlay/Tizen)                                                    |
+| **Workers**            | epgWorkerClient (Blob inline)                                                                                                  |
+| **Config**             | brands.js (1688 líneas), brandConfig.js, defaultBrand.js                                                                       |
 
 ---
 
@@ -64,18 +64,18 @@ PlayerContext (engine singleton) → WebEngine / LgEngine / SamsungEngine
 
 ### Dependencias críticas evaluadas para WebKit 2019
 
-| Librería | Versión | Estado |
-|---|---|---|
-| `react` | 18.3.1 | ✅ Compatible (con `ReactDOM.render`) |
-| `react-router-dom` | 7.11.0 | ⚠️ v7 sin SSR — no usa APIs incompatibles; ok |
-| `hls.js` | 1.6.15 | ⚠️ Solo se activa en `WebEngine` (browser/PC); LG/Samsung usan native. Sin riesgo en TV |
-| `zustand` | 5.0.12 | ⚠️ Zustand 5 usa `useSyncExternalStore` (React 18+) — ok con React 18.3 |
-| `@react-oauth/google` | 0.13.5 | ⚠️ Usa `crypto.subtle` y APIs modernas. **Correctamente deshabilitado en TV** (`!isTV`) |
-| `crypto-js` | 4.2.0 | ✅ Puro JS, compatible |
-| `qrcode` | 1.5.4 | ✅ Compatible |
-| `bootstrap` | 5.3.8 | ⚠️ CSS Grid/Flexbox — ok en Chrome 61+; algunos props muy nuevos pueden fallar |
-| `@vitejs/plugin-legacy` | 8.0.1 | ✅ Configurado correctamente para Chrome 61 |
-| `node-forge` | 1.0.0 | ✅ Puro JS, compatible |
+| Librería                | Versión| Estado                                                                                    |
+|-------------------------|--------|-------------------------------------------------------------------------------------------|
+| `react`                 | 18.3.1 | ✅ Compatible (con `ReactDOM.render`)                                                    |
+| `react-router-dom`      | 7.11.0 | ⚠️ v7 sin SSR — no usa APIs incompatibles; ok                                            |
+| `hls.js`                | 1.6.15 | ⚠️ Solo se activa en `WebEngine` (browser/PC); LG/Samsung usan native. Sin riesgo en TV  |
+| `zustand`               | 5.0.12 | ⚠️ Zustand 5 usa `useSyncExternalStore` (React 18+) — ok con React 18.3                  |
+| `@react-oauth/google`   | 0.13.5 | ⚠️ Usa `crypto.subtle` y APIs modernas. **Correctamente deshabilitado en TV** (`!isTV`)  |
+| `crypto-js`             | 4.2.0  | ✅ Puro JS, compatible                                                                   |
+| `qrcode`                | 1.5.4  | ✅ Compatible                                                                            |
+| `bootstrap`             | 5.3.8  | ⚠️ CSS Grid/Flexbox — ok en Chrome 61+; algunos props muy nuevos pueden fallar           |
+| `@vitejs/plugin-legacy` | 8.0.1  | ✅ Configurado correctamente para Chrome 61                                              |
+| `node-forge`            | 1.0.0  | ✅ Puro JS, compatible                                                                   |
 
 ---
 
