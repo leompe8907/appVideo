@@ -1141,7 +1141,7 @@ export const BRANDS = [
   {
     brand: "wind",
     appName: "windplay",
-    drm: "https://pmdw-1.in.tv.br/",
+    drm: "https://middleware.wind.do",
     token: "CEVQmnhOsXvpRQZbGADl",
     os: 'HTML5',
     appVersion: '1',    
