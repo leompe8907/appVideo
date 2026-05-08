@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
@@ -13,6 +13,10 @@ import {
   setActiveLicense,
 } from '../utils/userSession';
 import { useDevice } from '../contexts/DeviceContext';
+import {
+  SMARTCARD_FOCUS_IDS,
+  useSmartcardTvNavigation,
+} from '../hooks/useSmartcardTvNavigation';
 import '../styles/pages/_smartcard.scss';
 
 // Normaliza la estructura de una licencia (alineado con 10foot)
@@ -57,7 +61,8 @@ export function SmartCardPage() {
   // Backstop: si ya existe una licencia activa en storage, activarla automáticamente
   // para que el usuario no quede atascado en esta pantalla.
   const autoActivateAttemptedRef = useRef(false);
-  useDevice();
+  const containerRef = useRef(null);
+  const { isTV } = useDevice();
 
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
 
@@ -138,11 +143,33 @@ export function SmartCardPage() {
     activate();
   }, [isLoading, error, licenses, navigate, t]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     panaccessService.logout();
     setLoggedOut();
     navigate('/login');
-  };
+  }, [navigate]);
+
+  const handleCloseResultModal = useCallback(() => {
+    setResultModal(null);
+  }, []);
+
+  const handleCancelConfirmInUse = useCallback(() => {
+    setConfirmLicenseInUse(null);
+  }, []);
+
+  useSmartcardTvNavigation({
+    isTV,
+    containerRef,
+    isLoading,
+    hasError: !!error,
+    hasLicenses: Array.isArray(licenses) && licenses.length > 0,
+    isSettingLicense,
+    isConfirmInUseOpen: !!confirmLicenseInUse,
+    isResultModalOpen: !!resultModal,
+    onCancelConfirmInUse: handleCancelConfirmInUse,
+    onCloseResultModal: handleCloseResultModal,
+    onLogoutBack: handleBack,
+  });
 
   const handleLicenseSelect = async (license, failIfInUse = true) => {
     if (isSettingLicense) return;
@@ -201,9 +228,7 @@ export function SmartCardPage() {
         <MessageModal
           type={resultModal.type}
           message={resultModal.text}
-          onClose={() => {
-            setResultModal(null);
-          }}
+          onClose={handleCloseResultModal}
         />
       )}
 
@@ -213,11 +238,13 @@ export function SmartCardPage() {
             <h4 className="confirm-in-use-title">{t('smartcard.licenseInUseConfirm')}</h4>
             <div className="confirm-in-use-actions">
               <FocusableConfirmButton
+                id={SMARTCARD_FOCUS_IDS.CONFIRM_YES}
                 onClick={() => handleConfirmLicenseInUse(true)}
               >
                 {t('smartcard.licenseInUseYes')}
               </FocusableConfirmButton>
               <FocusableConfirmButton
+                id={SMARTCARD_FOCUS_IDS.CONFIRM_NO}
                 onClick={() => handleConfirmLicenseInUse(false)}
               >
                 {t('smartcard.licenseInUseNo')}
@@ -228,7 +255,7 @@ export function SmartCardPage() {
       )}
 
       <div className="smartcard-overlay" />
-      <div className="smartcard-container">
+      <div className="smartcard-container" ref={containerRef}>
         {isLoading && (
           <div className="loading-container">
             <div className="loading-spinner" />
@@ -242,7 +269,12 @@ export function SmartCardPage() {
               <AppIcon name="warning" size={26} />
             </div>
             <p className="error-text">{error}</p>
-            <button type="button" className="back-button" onClick={handleBack}>
+            <button
+              type="button"
+              className="back-button"
+              id={SMARTCARD_FOCUS_IDS.BACK_BUTTON}
+              onClick={handleBack}
+            >
               {t('smartcard.logout')}
             </button>
           </div>
@@ -277,7 +309,12 @@ export function SmartCardPage() {
         {!isLoading && !error && licenses && validLicenses.length === 0 && (
           <div className="no-data-container">
             <p className="no-licenses">{t('smartcard.noLicenses')}</p>
-            <button type="button" className="back-button" onClick={handleBack}>
+            <button
+              type="button"
+              className="back-button"
+              id={SMARTCARD_FOCUS_IDS.BACK_BUTTON}
+              onClick={handleBack}
+            >
               {t('smartcard.logout')}
             </button>
           </div>
@@ -287,10 +324,11 @@ export function SmartCardPage() {
   );
 }
 
-function FocusableConfirmButton({ children, onClick }) {
+function FocusableConfirmButton({ children, onClick, id }) {
   return (
     <button
       type="button"
+      id={id}
       className="confirm-in-use-btn"
       onClick={onClick}
       tabIndex={0}
@@ -323,6 +361,7 @@ function LicenseListItem({ license, index, onSelect, isSettingLicense }) {
       onKeyDown={handleKeyDown}
       tabIndex={isSettingLicense ? -1 : 0}
       role="listitem"
+      data-tv-nav="smartcard-item"
       aria-label={t('smartcard.selectLicense', { title: norm.key || t('smartcard.licenseNumber', { index: index + 1 }) })}
     >
       <b>{norm.key}</b>
@@ -348,6 +387,7 @@ function LicenseListLogoutItem({ onLogout, isSettingLicense }) {
       }}
       tabIndex={isSettingLicense ? -1 : 0}
       role="listitem"
+      data-tv-nav="smartcard-item"
       aria-label={t('smartcard.logout')}
     >
       <b>{t('smartcard.logout')}</b>

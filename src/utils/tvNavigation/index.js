@@ -1,8 +1,11 @@
 export {
   focusById,
+  focusElement,
   focusFirstAvailable,
   findFocusableIds,
+  findFocusableElements,
   focusNextInList,
+  focusNextElementInList,
 } from './focus';
 
 export {
