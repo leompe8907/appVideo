@@ -223,11 +223,11 @@ export function SplashPage() {
     <div className="splash-page">
       <div className="splash-content">
         {splashImage && (
-          <img 
-            src={splashImage} 
-            alt={t('splash.alt', { appName })}
-            className="splash-image"
-          />
+        <div
+          className="splash-image-container"
+          style={{ backgroundImage: 'url(' + splashImage + ')' }}
+          aria-label={t('splash.alt', { appName })}
+        />
         )}
       </div>
     </div>
