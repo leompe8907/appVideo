@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
@@ -7,6 +7,7 @@ import { usePreload } from '../store/usePreload';
 import panaccessService from '../services/panaccessService';
 import { getSearchDebounceMs, searchAll } from '../services/searchService';
 import { useParentalGate } from '../hooks/useParentalGate';
+import EpgEventModal from '../components/epg/EpgEventModal';
 import '../styles/pages/_search.scss';
 
 function SearchTab({ id, label, active, hidden, onSelect }) {
@@ -140,9 +141,8 @@ export function SearchPage() {
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all'); // all | service | vod | catchup | epg
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [selectedEpgItem, setSelectedEpgItem] = useState(null);
   const inputRef = useRef(null);
-  // Ref para que el efecto de carga siempre use la función t más reciente
-  // sin añadirla como dependencia (evita re-disparos por cambio de referencia)
   const tRef = useRef(t);
   useEffect(() => { tRef.current = t; });
 
@@ -203,18 +203,21 @@ export function SearchPage() {
   }, [resultsAll]);
 
   const isEmptyQuery = !debouncedQuery || debouncedQuery.trim().length === 0;
-  const hideVodTab = !isEmptyQuery && grouped.vods.length === 0;
-  const hideCatchupTab = !isEmptyQuery && grouped.catchups.length === 0;
-  const hideEpgTab = !isEmptyQuery && grouped.epgEvents.length === 0;
-  const hasServices = (epg.streams?.length ?? 0) > 0;
+  const hideServiceTab = isEmptyQuery || grouped.services.length === 0;
+  const hideVodTab = isEmptyQuery || grouped.vods.length === 0;
+  const hideCatchupTab = isEmptyQuery || grouped.catchups.length === 0;
+  const hideEpgTab = isEmptyQuery || grouped.epgEvents.length === 0;
+  const totalCategories = [grouped.services, grouped.vods, grouped.catchups, grouped.epgEvents].filter(a => a.length > 0).length;
+  const hideAllTab = isEmptyQuery || totalCategories === 0;
 
-  // Tab efectivo: si el tab activo queda sin resultados, hacer fallback a 'all'
   const effectiveTab = useMemo(() => {
+    if (activeTab === 'all' && hideAllTab) return 'all';
+    if (activeTab === 'service' && hideServiceTab) return 'all';
     if (activeTab === 'vod' && hideVodTab) return 'all';
     if (activeTab === 'catchup' && hideCatchupTab) return 'all';
     if (activeTab === 'epg' && hideEpgTab) return 'all';
     return activeTab;
-  }, [activeTab, hideVodTab, hideCatchupTab, hideEpgTab]);
+  }, [activeTab, hideAllTab, hideServiceTab, hideVodTab, hideCatchupTab, hideEpgTab]);
 
   const visibleCount = useMemo(() => {
     if (effectiveTab === 'all') return grouped.services.length + grouped.vods.length + grouped.catchups.length + grouped.epgEvents.length;
@@ -291,40 +294,82 @@ export function SearchPage() {
     }
 
     if (item.type === 'epg') {
-      const channel = item?.raw?.channel;
-      if (!channel) return;
-      let url =
-        channel.url ||
-        channel.streamUrl ||
-        channel.hlsUrl ||
-        channel.hls ||
-        null;
-
-      if (!url) {
-        const streamId = channel.id ?? channel.epgStreamId;
-        if (streamId != null && streamId !== '') {
-          try {
-            url = panaccessService.getStreamM3u8Url({ streamId });
-          } catch {
-            // noop
-          }
-        }
-      }
-
-      if (!url) return;
-      try {
-        url = panaccessService.normalizePlaybackUrl(url);
-      } catch {
-        // noop
-      }
-      if (!url) return;
-      requestPlayChannel({
-        channel,
-        playFn: () =>
-          play({ type: 'service', id: channel.id ?? channel.lcn ?? undefined, url, item: channel, autoPlay: true }),
-      });
+      setSelectedEpgItem(item);
     }
   };
+
+  const handleEpgModalClose = useCallback(() => {
+    setSelectedEpgItem(null);
+  }, []);
+
+  const handleEpgPlayLive = useCallback(() => {
+    if (!selectedEpgItem) return;
+    const channel = selectedEpgItem?.raw?.channel;
+    if (!channel) return;
+
+    let url =
+      channel.url ||
+      channel.streamUrl ||
+      channel.hlsUrl ||
+      channel.hls ||
+      null;
+
+    if (!url) {
+      const streamId = channel.id ?? channel.epgStreamId;
+      if (streamId != null && streamId !== '') {
+        try {
+          url = panaccessService.getStreamM3u8Url({ streamId });
+        } catch {
+          // noop
+        }
+      }
+    }
+
+    if (!url) return;
+    try {
+      url = panaccessService.normalizePlaybackUrl(url);
+    } catch {
+      // noop
+    }
+    if (!url) return;
+
+    setSelectedEpgItem(null);
+    requestPlayChannel({
+      channel,
+      playFn: () =>
+        play({ type: 'service', id: channel.id ?? channel.lcn ?? undefined, url, item: channel, autoPlay: true }),
+    });
+  }, [selectedEpgItem, play, requestPlayChannel]);
+
+  const handleEpgWatchCatchup = useCallback((catchupId) => {
+    if (!catchupId) return;
+    setSelectedEpgItem(null);
+    try {
+      const url = panaccessService.getCatchupM3u8Url({ catchupId });
+      const normalized = panaccessService.normalizePlaybackUrl(url);
+      if (normalized) {
+        requestPlayMedia({
+          item: { catchupId },
+          ratingRaw: selectedEpgItem?.raw?.event?.parentalRating ?? null,
+          title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+          message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
+          playFn: () =>
+            play({ type: 'catchup', id: catchupId, url: normalized, item: { catchupId }, autoPlay: true }),
+        });
+      }
+    } catch {
+      // noop
+    }
+  }, [selectedEpgItem, play, requestPlayMedia, t]);
+
+  const epgModalIsLive = useMemo(() => {
+    if (!selectedEpgItem) return false;
+    const now = Date.now();
+    const startMs = selectedEpgItem.startMs;
+    const endMs = selectedEpgItem.endMs;
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return false;
+    return now >= startMs && now <= endMs;
+  }, [selectedEpgItem]);
 
   return (
     <div className="search-page">
@@ -353,13 +398,15 @@ export function SearchPage() {
           </button>
         </div>
 
-        <div className="search-tabs" role="tablist" aria-label={t('search.tabs', { defaultValue: 'Tabs de búsqueda' })}>
-          <SearchTab id="all" label={t('search.tabAll', { defaultValue: 'Todos' })} active={activeTab === 'all'} onSelect={setActiveTab} />
-          <SearchTab id="service" label={t('search.tabServices', { defaultValue: 'Servicios' })} active={activeTab === 'service'} hidden={!hasServices} onSelect={setActiveTab} />
-          <SearchTab id="epg" label={t('search.tabEpg', { defaultValue: 'EPG' })} active={activeTab === 'epg'} hidden={hideEpgTab} onSelect={setActiveTab} />
-          <SearchTab id="vod" label={t('search.tabVod', { defaultValue: 'VOD' })} active={activeTab === 'vod'} hidden={hideVodTab} onSelect={setActiveTab} />
-          <SearchTab id="catchup" label={t('search.tabCatchup', { defaultValue: 'Catchup' })} active={activeTab === 'catchup'} hidden={hideCatchupTab} onSelect={setActiveTab} />
-        </div>
+        {!hideAllTab && (
+          <div className="search-tabs" role="tablist" aria-label={t('search.tabs', { defaultValue: 'Tabs de búsqueda' })}>
+            <SearchTab id="all" label={t('search.tabAll', { defaultValue: 'Todos' })} active={activeTab === 'all'} hidden={totalCategories < 2} onSelect={setActiveTab} />
+            <SearchTab id="service" label={t('search.tabServices', { defaultValue: 'Servicios' })} active={activeTab === 'service'} hidden={hideServiceTab} onSelect={setActiveTab} />
+            <SearchTab id="epg" label={t('search.tabEpg', { defaultValue: 'EPG' })} active={activeTab === 'epg'} hidden={hideEpgTab} onSelect={setActiveTab} />
+            <SearchTab id="vod" label={t('search.tabVod', { defaultValue: 'VOD' })} active={activeTab === 'vod'} hidden={hideVodTab} onSelect={setActiveTab} />
+            <SearchTab id="catchup" label={t('search.tabCatchup', { defaultValue: 'Catchup' })} active={activeTab === 'catchup'} hidden={hideCatchupTab} onSelect={setActiveTab} />
+          </div>
+        )}
 
         <div className="search-results">
           {isEmptyQuery ? (
@@ -419,6 +466,19 @@ export function SearchPage() {
           )}
         </div>
       </div>
+
+      <EpgEventModal
+        open={!!selectedEpgItem}
+        channel={selectedEpgItem?.raw?.channel ?? null}
+        event={selectedEpgItem?.raw?.event ?? null}
+        isLive={epgModalIsLive}
+        nowMs={Date.now()}
+        canPlayLive={true}
+        showActions={true}
+        onClose={handleEpgModalClose}
+        onPlayLive={handleEpgPlayLive}
+        onWatchCatchup={handleEpgWatchCatchup}
+      />
     </div>
   );
 }

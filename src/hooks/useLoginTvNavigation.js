@@ -223,13 +223,8 @@ export function useLoginTvNavigation({
       }
 
       if (action === TV_ACTION.ENTER) {
-        // Best-effort: forzar IME en algunos runtimes haciendo focus + click.
-        try {
-          active?.focus?.();
-          active?.click?.();
-        } catch {
-          // noop
-        }
+        e.preventDefault();
+        return;
       }
       // LEFT/RIGHT sin caso especial: dejar que el input mueva el caret.
     };

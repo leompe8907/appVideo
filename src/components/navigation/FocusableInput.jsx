@@ -12,6 +12,7 @@ export const FocusableInput = forwardRef(function FocusableInput(
   const { isTV } = useDevice();
   const innerRef = useRef(null);
   const [isEditing, setIsEditing] = useState(false);
+  const isEditingRef = useRef(false);
 
   const setRefs = (el) => {
     innerRef.current = el;
@@ -28,34 +29,51 @@ export const FocusableInput = forwardRef(function FocusableInput(
   useEffect(() => {
     if (!isTV) return;
     setIsEditing(false);
+    isEditingRef.current = false;
   }, [isTV]);
 
   const onKeyDown = (e) => {
     inputProps.onKeyDown?.(e);
     if (!isTV) return;
-    if (e.defaultPrevented) return;
     if (inputProps.disabled) return;
     if (e.key === 'Enter' || e.keyCode === 13) {
-      // Pasar a modo edición y re-enfocar para forzar IME.
       e.preventDefault();
       e.stopPropagation();
-      setIsEditing(true);
-      requestAnimationFrame(() => {
-        const el = innerRef.current;
-        if (!el) return;
-        try {
-          el.readOnly = false;
-          el.focus({ preventScroll: true });
-          el.click?.();
-          // Llevar caret al final (opcional, suele ser lo esperado en TV).
-          if (typeof el.value === 'string') {
-            const len = el.value.length;
-            el.setSelectionRange?.(len, len);
+
+      if (isEditingRef.current) {
+        // Ya estaba editando → salir de edición, cerrar teclado virtual.
+        setIsEditing(false);
+        isEditingRef.current = false;
+        requestAnimationFrame(() => {
+          const el = innerRef.current;
+          if (!el) return;
+          try {
+            el.readOnly = true;
+            el.blur();
+          } catch {
+            // noop
           }
-        } catch {
-          // noop
-        }
-      });
+        });
+      } else {
+        // No estaba editando → entrar en edición, abrir IME.
+        setIsEditing(true);
+        isEditingRef.current = true;
+        requestAnimationFrame(() => {
+          const el = innerRef.current;
+          if (!el) return;
+          try {
+            el.readOnly = false;
+            el.focus({ preventScroll: true });
+            el.click?.();
+            if (typeof el.value === 'string') {
+              const len = el.value.length;
+              el.setSelectionRange?.(len, len);
+            }
+          } catch {
+            // noop
+          }
+        });
+      }
     }
   };
 
@@ -73,8 +91,8 @@ export const FocusableInput = forwardRef(function FocusableInput(
   const onBlur = (e) => {
     inputProps.onBlur?.(e);
     if (!isTV) return;
-    // Al salir del input volvemos a modo navegación (readOnly).
     setIsEditing(false);
+    isEditingRef.current = false;
     try {
       if (innerRef.current) innerRef.current.readOnly = true;
     } catch {
