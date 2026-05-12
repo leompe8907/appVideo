@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import { usePreload } from '../store/usePreload';
@@ -8,6 +7,8 @@ import panaccessService from '../services/panaccessService';
 import { getSearchDebounceMs, searchAll } from '../services/searchService';
 import { useParentalGate } from '../hooks/useParentalGate';
 import EpgEventModal from '../components/epg/EpgEventModal';
+import VodDetailModal from '../components/vod/VodDetailModal';
+import VodDetailModalClassic from '../components/vod/VodDetailModalClassic';
 import '../styles/pages/_search.scss';
 
 function SearchTab({ id, label, active, hidden, onSelect }) {
@@ -132,7 +133,6 @@ function SearchSection({ title, items, baseIndex, onSelect }) {
 
 export function SearchPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
   const { requestPlayChannel, requestPlayMedia } = useParentalGate();
@@ -142,6 +142,7 @@ export function SearchPage() {
   const [activeTab, setActiveTab] = useState('all'); // all | service | vod | catchup | epg
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedEpgItem, setSelectedEpgItem] = useState(null);
+  const [selectedVodItem, setSelectedVodItem] = useState(null);
   const inputRef = useRef(null);
   const tRef = useRef(t);
   useEffect(() => { tRef.current = t; });
@@ -232,7 +233,7 @@ export function SearchPage() {
     if (!item) return;
 
     if (item.type === 'vod') {
-      navigate('/home/vod', { state: { adOpenVodId: item.id } });
+      setSelectedVodItem(item.raw || item);
       return;
     }
 
@@ -362,6 +363,21 @@ export function SearchPage() {
     }
   }, [selectedEpgItem, play, requestPlayMedia, t]);
 
+  const vodLayout = currentBrand?.vod?.layout === 'classic' ? 'classic' : 'hero';
+  const vodCategories = vod.categories || [];
+
+  const handleVodPlay = useCallback((params) => {
+    if (!params?.url) return;
+    setSelectedVodItem(null);
+    requestPlayMedia({
+      item: params.item,
+      ratingRaw: params?.item?.parentalRating,
+      title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+      message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
+      playFn: () => play(params),
+    });
+  }, [play, requestPlayMedia, t]);
+
   const epgModalIsLive = useMemo(() => {
     if (!selectedEpgItem) return false;
     const now = Date.now();
@@ -479,6 +495,23 @@ export function SearchPage() {
         onPlayLive={handleEpgPlayLive}
         onWatchCatchup={handleEpgWatchCatchup}
       />
+
+      {selectedVodItem && vodLayout === 'classic' && (
+        <VodDetailModalClassic
+          item={selectedVodItem}
+          categories={vodCategories}
+          onClose={() => setSelectedVodItem(null)}
+          onPlay={handleVodPlay}
+        />
+      )}
+      {selectedVodItem && vodLayout === 'hero' && (
+        <VodDetailModal
+          item={selectedVodItem}
+          categories={vodCategories}
+          onClose={() => setSelectedVodItem(null)}
+          onPlay={handleVodPlay}
+        />
+      )}
     </div>
   );
 }
