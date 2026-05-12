@@ -216,19 +216,28 @@ export function SplashPage() {
     );
   }
 
-  // Obtener imagen de splash (puede ser .png, .gif, .webp, .jpg según configuración)
+  const splashVideo = currentBrand.assets?.splashVideo;
   const splashImage = currentBrand.assets?.splash || getImage('splash.png') || getImage('splash.gif');
 
   return (
     <div className="splash-page">
       <div className="splash-content">
-        {splashImage && (
-        <div
-          className="splash-image-container"
-          style={{ backgroundImage: 'url(' + splashImage + ')' }}
-          aria-label={t('splash.alt', { appName })}
-        />
-        )}
+        {splashVideo ? (
+          <video
+            className="splash-video"
+            src={splashVideo}
+            autoPlay
+            muted
+            playsInline
+            aria-label={t('splash.alt', { appName })}
+          />
+        ) : splashImage ? (
+          <div
+            className="splash-image-container"
+            style={{ backgroundImage: 'url(' + splashImage + ')' }}
+            aria-label={t('splash.alt', { appName })}
+          />
+        ) : null}
       </div>
     </div>
   );

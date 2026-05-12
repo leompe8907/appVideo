@@ -1,7 +1,6 @@
 /**
- * Estilos página VOD y componentes (VodCard, VodDetailModal).
- */
-
+* Estilos página VOD y componentes (VodCard, VodDetailModal).
+*/
 @use '../variables' as *;
 @use '../mixins' as *;
 
@@ -192,6 +191,7 @@
       .vod-card {
         scroll-snap-align: center;
         flex-shrink: 0;
+        margin-left: 0.5rem;
       }
     }
   }
@@ -1004,8 +1004,8 @@
   position: relative;
   width: 100%;
   // Base en em (escala con html font-size) con tope por viewport.
-  max-width: min(70em, 95vw);
-  max-height: min(42em, 90vh);
+  max-width: min(95vw);
+  max-height: min(90vh);
   display: flex;
   flex-direction: column;
   background: rgba(28, 28, 28, 0.98);
@@ -1062,25 +1062,43 @@
 // Grid con columnas fijas para navegación espacial predecible en TV (derecha/abajo coherentes)
 .vod-category-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  grid-auto-rows: minmax(20rem, auto);
+  // En PC/notebook: columnas fluidas que se adaptan al ancho disponible.
+  // En TV, .device-tv sobreescribe esto con 7 columnas fijas.
+  grid-template-columns: repeat(auto-fill, minmax(clamp(8rem, 12vw, 11.5rem), 1fr));
+  // Sin grid-auto-rows: cada fila toma la altura natural de su contenido.
+  // Fijar la altura de fila con aspect-ratio variable causaba solapamiento.
   height: min(34em, 80vh);
-  gap: 1.25rem;
-  padding: 1.5rem 3rem 2rem 3rem;
+  gap: clamp(0.6rem, 1.2vw, 1.25rem);
+  padding: 1.5rem clamp(1rem, 2.5vw, 3rem) 2rem clamp(1rem, 2.5vw, 3rem);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
   align-content: start;
-  justify-items: center;
-  align-items: center;
+  // Sin align-items: center — alineaba las cards al centro de la fila y
+  // dejaba espacio vacío arriba/abajo que se superponía con la fila siguiente.
+  align-items: start;
+
+  // En TV: mantener las 7 columnas fijas para que la navegación espacial
+  // (arriba/abajo/izq/der) sea predecible y coherente.
+  .device-tv & {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1.25rem;
+    padding: 1.5rem 3rem 2rem 3rem;
+  }
 
   .vod-card {
     margin: 0;
     min-width: 0;
-    min-height: 0;
     display: flex;
     flex-direction: column;
+    // En PC las cards llenan su celda del grid en lugar de tener ancho fijo.
+    width: 100%;
+  }
+
+  // En TV restaurar el ancho fijo original.
+  .device-tv & .vod-card {
+    width: 11.5em;
   }
 
   .vod-card-poster {
@@ -1090,5 +1108,4 @@
   .vod-card-title {
     flex-shrink: 0;
   }
-
 }

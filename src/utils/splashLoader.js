@@ -1,5 +1,5 @@
 /**
- * Helper para cargar imagen de splash según configuración
+ * Helper para cargar imagen/video de splash según configuración
  */
 
 import { getBrandAsset } from './assetLoader';
@@ -12,13 +12,22 @@ import { getBrandAsset } from './assetLoader';
  */
 export function getSplashPath(brand, splashAnimado) {
   if (splashAnimado === true) {
-    // Si es animado, buscar .gif
     return getBrandAsset(brand, 'splash.gif');
   } else {
-    // Si no es animado, intentar en orden: .png, .webp, .jpg
-    // Por defecto usar .png (el más común)
     return getBrandAsset(brand, 'splash.png');
   }
+}
+
+/**
+ * Obtiene la ruta del video de splash si está configurado.
+ * @param {string} brand - Nombre de la marca
+ * @param {string|boolean} splashVideo - Nombre del archivo de video (ej: 'splash.mp4') o true para usar 'splash.mp4' por defecto
+ * @returns {string|null} Ruta del video o null si no aplica
+ */
+export function getSplashVideoPath(brand, splashVideo) {
+  if (!splashVideo) return null;
+  const filename = typeof splashVideo === 'string' ? splashVideo : 'splash.mp4';
+  return getBrandAsset(brand, filename);
 }
 
 /**

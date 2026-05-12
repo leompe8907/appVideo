@@ -8,13 +8,17 @@
 @use '../mixins' as *;
 
 .panaccess-login {
+  // 100dvh descuenta la barra del browser en notebooks/móviles; fallback a 100vh para TVs/Chromium viejo.
   min-height: 100vh;
+  min-height: 100dvh;
   max-height: 100vh;
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  // Padding vertical adaptativo: en pantallas bajas se reduce automáticamente.
+  padding: clamp(0.5rem, 2vh, 1.5rem) 1.5rem;
   background: #0a0a0a;
   background-size: cover;
   background-position: center;
@@ -39,12 +43,14 @@
     position: relative;
     z-index: 1;
     text-align: center;
-    margin-bottom: 1.75rem;
+    // Margen inferior adaptativo: se reduce en pantallas con poca altura.
+    margin-bottom: clamp(0.75rem, 2vh, 1.75rem);
     flex-shrink: 0;
 
     .brand-logo {
       max-width: 16rem;
-      max-height: 7rem;
+      // Alto adaptativo: en notebooks se achica para no ocupar demasiado espacio vertical.
+      max-height: clamp(4rem, 8vh, 7rem);
       width: auto;
       height: auto;
       object-fit: contain;
@@ -60,7 +66,8 @@
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 1.125rem;
-    padding: 2rem;
+    // Padding adaptativo: se comprime en pantallas bajas.
+    padding: clamp(1rem, 3vh, 2rem) clamp(1rem, 2vw, 2rem);
     max-width: 26rem;
     width: 100%;
     flex-shrink: 0;
@@ -74,22 +81,23 @@
       width: min(100%, 13rem);
       max-width: 100%;
       height: auto;
-      max-height: clamp(3.25rem, 7.5vh, 5rem);
+      max-height: clamp(2.5rem, 6vh, 5rem);
       object-fit: contain;
       filter: drop-shadow(0 4px 26px rgba(255, 255, 255, 0.22));
     }
 
     h2 {
-      font-size: 1.5rem;
+      font-size: clamp(1.1rem, 2.5vh, 1.5rem);
       font-weight: 600;
       color: white;
-      margin: 0 0 1.25rem;
+      margin: 0 0 clamp(0.6rem, 1.5vh, 1.25rem);
       text-align: center;
       letter-spacing: 0.5px;
     }
 
     .form-group {
-      margin-bottom: 1rem;
+      // Margen inferior adaptativo.
+      margin-bottom: clamp(0.5rem, 1.5vh, 1rem);
 
       label {
         display: block;
@@ -106,7 +114,7 @@
         background: var(--login-input-bg, rgba(255, 255, 255, 0.1));
         border: 1px solid var(--login-input-border, rgba(255, 255, 255, 0.2));
         color: var(--login-input-text, white);
-        padding: 0.95rem 1rem;
+        padding: clamp(0.6rem, 1.5vh, 0.95rem) 1rem;
         border-radius: 0.625rem;
         font-size: 1rem;
         transition: all $transition-normal;
@@ -257,7 +265,7 @@
       font-weight: 600;
       letter-spacing: 1px;
       text-transform: uppercase;
-      padding: 0.9rem 1rem;
+      padding: clamp(0.6rem, 1.5vh, 0.9rem) 1rem;
       font-size: 1rem;
       transition: all $transition-normal;
 
@@ -397,10 +405,10 @@
     }
 
     .social-login {
-      margin-top: 0.9rem;
+      margin-top: clamp(0.5rem, 1.5vh, 0.9rem);
       display: flex;
       flex-direction: column;
-      gap: 0.6rem;
+      gap: clamp(0.4rem, 1vh, 0.6rem);
 
       // En TV (Chromium viejo), asegurar mismo ancho que los demás botones del login.
       .device-tv & {
@@ -629,6 +637,78 @@
       display: flex;
       flex-direction: column;
       gap: 0.6rem;
+    }
+  }
+
+  // ─── Pantallas de altura reducida (notebooks 13"-14", viewport < 700px alto) ───
+  // Ocultar el logo externo a la card (login-brand-section) para ganar espacio,
+  // y reducir aún más los espaciados internos de la card.
+  @media (max-height: 700px) {
+    padding: 0.5rem 1.5rem;
+
+    .login-brand-section {
+      display: none; // Ya hay logo dentro de la card; evitamos duplicado y ganamos espacio.
+    }
+
+    .login-card {
+      padding: 0.9rem 1.25rem;
+
+      .brand-logo {
+        max-height: 3rem;
+        margin-bottom: 0.6rem;
+      }
+
+      h2 {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .form-group {
+        margin-bottom: 0.5rem;
+
+        label {
+          margin-bottom: 0.2rem;
+          font-size: 0.75rem;
+        }
+
+        input {
+          padding: 0.55rem 0.75rem;
+          font-size: 0.9rem;
+        }
+
+        .password-row {
+          .password-toggle {
+            width: 2.6rem;
+            height: 2.6rem;
+            font-size: 1.1rem;
+          }
+        }
+      }
+
+      .login-button {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+      }
+
+      .register-section {
+        margin-top: 0.4rem;
+
+        .register-hint {
+          margin-bottom: 0.3rem;
+          font-size: 0.78rem;
+        }
+      }
+
+      .social-login {
+        margin-top: 0.5rem;
+        gap: 0.4rem;
+
+        .social-button {
+          height: 2.5rem;
+          padding: 0.5rem 1rem;
+          font-size: 0.9rem;
+        }
+      }
     }
   }
 

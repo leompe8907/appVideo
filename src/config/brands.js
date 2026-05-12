@@ -12,7 +12,8 @@
  *
  * @param {Object} ui - Configuración de interfaz y tema:
  *   @param {number} ui.splashDuration - Tiempo en milisegundos que se muestra la pantalla de splash al iniciar.
- *   @param {boolean} ui.splashAnimado - true: usa imagen animada (.gif); false: usa imagen estática (.png/.webp/.jpg).
+ *   @param {boolean} ui.splashAnimado - true: usa imagen animada (.gif o video); false: usa imagen estática (.png/.webp/.jpg).
+ *   @param {string|boolean} [ui.splashVideo] - Nombre del archivo de video para splash (ej: 'splash.mp4'). Solo aplica si splashAnimado es true. Si es true usa 'splash.mp4' por defecto.
  *   @param {string} ui.epgLineColorTime - Color (hex) de la línea de tiempo actual en la guía de programación (EPG).
  *   @param {string} ui.primaryColor - Color principal de la marca (botones, acentos, etc.).
  *   @param {string} ui.secondaryColor - Color secundario (hover, fondos, etc.).
@@ -279,7 +280,7 @@ export const BRANDS = [
     ui: {
       // Splash
       splashDuration: 3000, // Duración en milisegundos
-      splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      splashAnimado: false, // Si es true busca .gif o video (ver splashVideo), si es false busca .png/.webp/.jpg
       // Focus visible (PC + TV) - personalizable por marca
       focus: {
         enabled: true,
@@ -528,7 +529,7 @@ export const BRANDS = [
     ui: {
       // Splash
       splashDuration: 3000, // Duración en milisegundos
-      splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      splashAnimado: false, // Si es true busca .gif o video (ver splashVideo), si es false busca .png/.webp/.jpg
       // Focus visible (PC + TV) - personalizable por marca
       focus: {
         enabled: true,
@@ -796,7 +797,7 @@ export const BRANDS = [
     ui: {
       // Splash
       splashDuration: 3000, // Duración en milisegundos
-      splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      splashAnimado: false, // Si es true busca .gif o video (ver splashVideo), si es false busca .png/.webp/.jpg
       // Focus visible (PC + TV) - personalizable por marca
       focus: {
         enabled: true,
@@ -1030,7 +1031,7 @@ export const BRANDS = [
     ui: {
       // Splash
       splashDuration: 3000, // Duración en milisegundos
-      splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      splashAnimado: false, // Si es true busca .gif o video (ver splashVideo), si es false busca .png/.webp/.jpg
       // Focus visible (PC + TV) - personalizable por marca
       focus: {
         enabled: true,
@@ -1270,8 +1271,9 @@ export const BRANDS = [
     // Configuración de UI/Tema
     ui: {
       // Splash
-      splashDuration: 3000, // Duración en milisegundos
-      splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      splashDuration: 5000, // Duración en milisegundos
+      splashAnimado: true, // Si es true busca .gif o video (ver splashVideo), si es false busca .png/.webp/.jpg
+      splashVideo: "splash.mp4",
       // Focus visible (PC + TV) - personalizable por marca
       focus: {
         enabled: true,
@@ -1539,7 +1541,7 @@ export const BRANDS = [
     ui: {
       // Splash
       splashDuration: 3000, // Duración en milisegundos
-      splashAnimado: false, // Si es true busca .gif, si es false busca .png/.webp/.jpg
+      splashAnimado: false, // Si es true busca .gif o video (ver splashVideo), si es false busca .png/.webp/.jpg
       // Focus visible (PC + TV) - personalizable por marca
       focus: {
         enabled: true,
