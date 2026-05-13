@@ -1,7 +1,8 @@
 /**
  * Página VOD: categorías desde PreloadContext (recomendados solo en Inicio).
  * Por género: 9 ítems + "Ver más" que abre modal con todo el género.
- * Al seleccionar un ítem (película o serie) se abre el modal de detalle; desde ahí se reproduce.
+ * Al seleccionar un ítem se abre el detalle; si el ítem viene del modal de género ("Ver más"),
+ * al cerrar el detalle se vuelve a ese modal (TV y web). Desde la fila principal se cierra el modal de género.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -58,15 +59,25 @@ export function VodPage() {
     if (status !== 'ready' || !Array.isArray(allVods)) return;
     const item = allVods.find((v) => String(v.id) === String(id));
     const timer = setTimeout(() => {
-      if (item) setDetailItem(item);
+      if (item) {
+        setCategoryModal(null);
+        setDetailItem(item);
+      }
       navigate('/home/vod', { replace: true, state: {} });
     }, 0);
     return () => clearTimeout(timer);
   }, [location.state, allVods, status, navigate]);
 
-  const handleVodSelect = (item) => {
+  /** Desde la fila principal: cerrar modal de género si estuviera abierto (p. ej. web). */
+  const handleVodSelectFromRow = (item) => {
     if (!item?.id) return;
     setCategoryModal(null);
+    setDetailItem(item);
+  };
+
+  /** Desde "Ver más" / modal de categoría: mantener el modal para volver al grid del género al cerrar el detalle. */
+  const handleVodSelectFromCategoryModal = (item) => {
+    if (!item?.id) return;
     setDetailItem(item);
   };
 
@@ -136,7 +147,7 @@ export function VodPage() {
                         key={v.id ?? i}
                         item={v}
                         index={i}
-                        onSelect={handleVodSelect}
+                        onSelect={handleVodSelectFromRow}
                         focusKeyPrefix={`vod-cat-${cat.id ?? catIndex}`}
                         baseUrl={baseUrl}
                       />
@@ -163,7 +174,7 @@ export function VodPage() {
         <VodCategoryModal
           categoryName={categoryModal.name}
           vods={categoryModal.vods}
-          onSelectItem={handleVodSelect}
+          onSelectItem={handleVodSelectFromCategoryModal}
           onClose={() => setCategoryModal(null)}
         />
       )}
