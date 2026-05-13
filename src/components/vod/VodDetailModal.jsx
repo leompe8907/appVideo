@@ -169,7 +169,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
     try {
       const url = panaccessService.getVodM3u8Url({ vodId });
       onPlay?.({ type: 'vod', id: vodId, url, item: vodItem, autoPlay: true });
-      onClose?.();
+      // No cerrar aquí: al salir del reproductor se debe volver a este detalle (TV y web).
     } catch (e) {
       setError(e?.message || t('vod.errorPlay'));
     }
