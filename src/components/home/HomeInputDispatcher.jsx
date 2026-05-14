@@ -85,6 +85,7 @@ export function HomeInputDispatcher({ isPlayerActive }) {
       }
 
       if (action === TV_ACTION.LEFT) {
+        if (active.closest('.home-ad-zone')) return;
         if (active.closest('[data-home-spatial-delegate="true"]')) return;
         if (!mainEl.contains(active)) return;
 

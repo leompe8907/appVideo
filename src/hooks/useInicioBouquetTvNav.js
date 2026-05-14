@@ -7,6 +7,7 @@ import { shouldDeferHomeShellNavigation } from '../utils/homeShellOverlays';
 import {
   focusElementSafe,
   scrollElementIntoVisibleScrollAncestors,
+  getVisibleFocusablesInContainer,
 } from '../utils/homeShellNavigation';
 import { buildInicioBouquetChannelRows, findChannelCardCellInRows } from '../utils/inicioBouquetTvGrid';
 
@@ -79,31 +80,30 @@ export function useInicioBouquetTvNav(opts = {}) {
     const scrollRoot = document.querySelector(scrollRootSelector);
     if (!(scrollRoot instanceof HTMLElement)) return undefined;
 
+    const queryMainContent = () =>
+      document.querySelector('main.home-content[data-home-scope="content"]');
+    const queryContentStack = () => queryMainContent()?.querySelector?.('.home-content-stack') ?? null;
+
     const onFocusIn = (e) => {
       if (shouldDeferHomeShellNavigation()) return;
       const t = e.target;
       if (!(t instanceof HTMLElement)) return;
       const card = t.closest('.channel-card');
-      if (!card || !scrollRoot.contains(card)) return;
-      const wall = scrollRoot.querySelector('.bouquet-wall');
-      if (!wall || !wall.contains(card)) return;
-      scrollElementIntoVisibleScrollAncestors(card, scrollRoot);
+      if (card && scrollRoot.contains(card)) {
+        const wall = scrollRoot.querySelector('.bouquet-wall');
+        if (wall?.contains(card)) {
+          scrollElementIntoVisibleScrollAncestors(card, scrollRoot);
+          return;
+        }
+      }
+      if (t.closest('.bouquet-vod-recommended .vod-row-cards') && scrollRoot.contains(t)) {
+        scrollElementIntoVisibleScrollAncestors(t, scrollRoot);
+      }
     };
 
     const onKeyDown = (e) => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (shouldDeferHomeShellNavigation()) return;
-
-      const active = document.activeElement;
-      if (!active || !(active instanceof HTMLElement)) return;
-
-      if (!scrollRoot.contains(active)) return;
-
-      const card = active.closest('.channel-card');
-      if (!card || !scrollRoot.contains(card)) return;
-
-      const wall = scrollRoot.querySelector('.bouquet-wall');
-      if (!wall || !wall.contains(card)) return;
 
       const action = getTvActionFromKeyEvent(e);
       if (
@@ -114,6 +114,65 @@ export function useInicioBouquetTvNav(opts = {}) {
       ) {
         return;
       }
+
+      const active = document.activeElement;
+      if (!active || !(active instanceof HTMLElement)) return;
+
+      const main = queryMainContent();
+      const stack = queryContentStack();
+
+      // Banner superior: DOWN → primer canal del muro (Inicio)
+      if (action === TV_ACTION.DOWN && active.closest('.home-ad-zone[data-ad-zone="top"]')) {
+        const firstCard = scrollRoot.querySelector('.bouquet-wall .channel-card');
+        if (firstCard instanceof HTMLElement) {
+          e.preventDefault();
+          e.stopPropagation();
+          focusElementSafe(firstCard);
+          scrollElementIntoVisibleScrollAncestors(firstCard, scrollRoot);
+        }
+        return;
+      }
+
+      // Banner inferior: UP → carril VOD recomendados (primer foco visible)
+      if (action === TV_ACTION.UP && active.closest('.home-ad-zone[data-ad-zone="bottom"]')) {
+        const vodRow = scrollRoot.querySelector('.bouquet-vod-recommended .vod-row-cards');
+        if (vodRow instanceof HTMLElement) {
+          const list = getVisibleFocusablesInContainer(vodRow);
+          const target = list[0];
+          if (target instanceof HTMLElement) {
+            e.preventDefault();
+            e.stopPropagation();
+            focusElementSafe(target);
+            scrollElementIntoVisibleScrollAncestors(target, scrollRoot);
+          }
+        }
+        return;
+      }
+
+      // Carril VOD: DOWN → banner inferior (fuera del scroll del bouquet)
+      if (action === TV_ACTION.DOWN && scrollRoot.contains(active)) {
+        const vodRail = scrollRoot.querySelector('.bouquet-vod-recommended .vod-row-cards');
+        if (vodRail instanceof HTMLElement && vodRail.contains(active)) {
+          const bottom = main?.querySelector?.('.home-ad-zone[data-ad-zone="bottom"]');
+          if (bottom instanceof HTMLElement) {
+            e.preventDefault();
+            e.stopPropagation();
+            focusElementSafe(bottom);
+            if (stack instanceof HTMLElement) {
+              scrollElementIntoVisibleScrollAncestors(bottom, stack);
+            }
+          }
+          return;
+        }
+      }
+
+      if (!scrollRoot.contains(active)) return;
+
+      const card = active.closest('.channel-card');
+      if (!card || !scrollRoot.contains(card)) return;
+
+      const wall = scrollRoot.querySelector('.bouquet-wall');
+      if (!wall || !wall.contains(card)) return;
 
       const rows = buildInicioBouquetChannelRows(wall);
       const pos = findChannelCardCellInRows(card, rows);
@@ -142,13 +201,42 @@ export function useInicioBouquetTvNav(opts = {}) {
         }
       }
 
+      if (!target && action === TV_ACTION.UP && pos.ri === 0) {
+        let topZone = scrollRoot.querySelector('.home-ad-zone[data-ad-zone="top"]');
+        if (!(topZone instanceof HTMLElement)) {
+          topZone = main?.querySelector?.('.home-ad-zone[data-ad-zone="top"]') ?? null;
+        }
+        if (topZone instanceof HTMLElement) {
+          e.preventDefault();
+          e.stopPropagation();
+          focusElementSafe(topZone);
+          if (stack instanceof HTMLElement) {
+            scrollElementIntoVisibleScrollAncestors(topZone, stack);
+          }
+        }
+        return;
+      }
+
+      if (!target && action === TV_ACTION.DOWN && pos.ri === rows.length - 1) {
+        const vodRow = scrollRoot.querySelector('.bouquet-vod-recommended .vod-row-cards');
+        if (vodRow instanceof HTMLElement) {
+          const list = getVisibleFocusablesInContainer(vodRow);
+          const v0 = list[0];
+          if (v0 instanceof HTMLElement) {
+            e.preventDefault();
+            e.stopPropagation();
+            focusElementSafe(v0);
+            scrollElementIntoVisibleScrollAncestors(v0, scrollRoot);
+          }
+        }
+        return;
+      }
+
       if (target && target !== card) {
         e.preventDefault();
         e.stopPropagation();
         focusElementSafe(target);
-        if (scrollRoot instanceof HTMLElement) {
-          scrollElementIntoVisibleScrollAncestors(target, scrollRoot);
-        }
+        scrollElementIntoVisibleScrollAncestors(target, scrollRoot);
       }
     };
 

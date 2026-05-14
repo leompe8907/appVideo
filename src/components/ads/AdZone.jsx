@@ -3,8 +3,8 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { useDevice } from '../../contexts/DeviceContext';
 import { getDisplayTimeMs, isVideoUrl } from '../../utils/adsData';
+import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
 
 function AdMedia({ ad, className = '' }) {
   if (!ad?.file) return null;
@@ -36,7 +36,6 @@ function AdMedia({ ad, className = '' }) {
 }
 
 export function AdZone({ zoneKey, ads, onActivate }) {
-  const { isTV } = useDevice();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState(false);
 
@@ -72,13 +71,25 @@ export function AdZone({ zoneKey, ads, onActivate }) {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const tv = getTvActionFromKeyEvent(e);
+    if (tv === TV_ACTION.ENTER) {
       e.preventDefault();
       handleActivate();
-    } else if (e.key === 'ArrowLeft') {
-      go(-1);
-    } else if (e.key === 'ArrowRight') {
-      go(1);
+      return;
+    }
+    if (tv === TV_ACTION.LEFT) {
+      if (count > 1) {
+        e.preventDefault();
+        go(-1);
+      }
+      return;
+    }
+    if (tv === TV_ACTION.RIGHT) {
+      if (count > 1) {
+        e.preventDefault();
+        go(1);
+      }
     }
   };
 
@@ -90,7 +101,7 @@ export function AdZone({ zoneKey, ads, onActivate }) {
     <div
       className={`home-ad-zone home-ad-zone--${zoneKey}`}
       data-ad-zone={zoneKey}
-      tabIndex={isTV ? -1 : (dismissed ? -1 : 0)}
+      tabIndex={dismissed ? -1 : 0}
       role="region"
       aria-label={zoneKey === 'top' ? 'Publicidad superior' : 'Publicidad inferior'}
       onClick={handleActivate}
