@@ -50,7 +50,18 @@ export function ParentalPinGate({
     const onKey = (e) => {
       const key = e.key || e.code;
       const code = e.keyCode || e.which;
-      const isBack = key === 'Backspace' || key === 'Back' || key === 'Escape' || code === 8 || code === 27;
+      const keyStr = String(key || '');
+      const isReturnLike =
+        keyStr === 'Return' || keyStr === 'GoBack' || keyStr === 'BrowserBack';
+      const isTvBackCodes = code === 10009 || code === 461;
+      const isBack =
+        keyStr === 'Backspace' ||
+        keyStr === 'Back' ||
+        keyStr === 'Escape' ||
+        code === 8 ||
+        code === 27 ||
+        isReturnLike ||
+        isTvBackCodes;
       const isEnter = key === 'Enter' || code === 13 || code === 29443;
       if (isBack) {
         e.preventDefault();

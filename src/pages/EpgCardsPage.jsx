@@ -5,7 +5,7 @@ export function EpgCardsPage() {
   return (
     <div className="epg-page">
       <div className="epg-page-overlay" />
-      <div className="epg-page-content">
+      <div className="epg-page-content" data-home-spatial-delegate="true">
         <EpgCards />
       </div>
     </div>

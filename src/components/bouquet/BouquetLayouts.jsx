@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
-import { useDevice } from '../../contexts/DeviceContext';
 import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
 import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
 import { useParental } from '../../store/useParental';
@@ -169,7 +168,6 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, l
  * - event_line: igual que event pero con tamaño mayor
  */
 function ChannelCard({ channel, layoutType, onSelect, onFocus }) {
-  const { isTV } = useDevice();
   const parental = useParental();
   const [focused, setFocused] = useState(false);
 
@@ -295,7 +293,7 @@ function ChannelCard({ channel, layoutType, onSelect, onFocus }) {
       onBlur={() => setFocused(false)}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      tabIndex={isTV ? -1 : 0}
+      tabIndex={0}
       role="button"
       data-lcn={channel.lcn}
       data-id={channel.id}

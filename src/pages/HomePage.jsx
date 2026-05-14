@@ -11,6 +11,7 @@ import InactivityHost from '../components/inactivity/InactivityHost';
 import { useTranslation } from 'react-i18next';
 import '../styles/pages/_home-shell.scss';
 import { useOsmsPolling } from '../hooks/useOsmsPolling';
+import { HomeInputDispatcher } from '../components/home/HomeInputDispatcher';
 
 export function HomePlaceholderPage({ title, description }) {
   return (
@@ -76,6 +77,7 @@ export function HomePage() {
 
   return (
     <div className={`home-shell${isPlayerActive ? ' home-shell--player-active' : ''}`}>
+      <HomeInputDispatcher isPlayerActive={isPlayerActive} />
       <ConfirmModal
         open={!!licenseInUsePrompt}
         title={t('smartcard.licenseInUseConfirm')}
@@ -121,7 +123,7 @@ export function HomePage() {
       >
         {!isPlayerActive && sidebarExpanded && <div className="home-shell-dim" aria-hidden="true" />}
         <Sidebar expanded={sidebarExpanded} onExpandedChange={setSidebarExpanded} />
-        <main className="home-content">
+        <main className="home-content" data-home-scope="content">
           <HomeShellContent />
         </main>
       </div>

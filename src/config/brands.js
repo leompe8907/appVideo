@@ -629,7 +629,7 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      profiles: true,
+      profiles: false,
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
@@ -1143,7 +1143,7 @@ export const BRANDS = [
     brand: "wind",
     appName: "windplay",
     drm: "https://middleware.wind.do/",
-    token: "dMCAXWddYckMbxVMFXDn",//SM dMCAXWddYckMbxVMFXDn ,LG CfeTUXTyhseXRvqosAve
+    token: "CfeTUXTyhseXRvqosAve",//SM dMCAXWddYckMbxVMFXDn ,LG CfeTUXTyhseXRvqosAve, otro KTpUXYXTxjWHwuzfxogw
     os: 'HTML5',
     appVersion: '1',    
     branding: 'Panaccess',
@@ -1373,7 +1373,7 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      profiles: true,
+      profiles: false,
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },

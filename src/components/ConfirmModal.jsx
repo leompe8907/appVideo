@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
 
 export function ConfirmModal({
   open,
@@ -13,11 +14,43 @@ export function ConfirmModal({
   useEffect(() => {
     if (!open) return undefined;
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') onCancel?.();
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const action = getTvActionFromKeyEvent(e);
+      const hasCancel = typeof onCancel === 'function';
+      const hasConfirm = typeof onConfirm === 'function';
+
+      if (action === TV_ACTION.BACK) {
+        if (hasCancel) {
+          e.preventDefault();
+          e.stopPropagation();
+          onCancel();
+          return;
+        }
+        if (hasConfirm) {
+          e.preventDefault();
+          e.stopPropagation();
+          onConfirm();
+        }
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        if (hasCancel) {
+          e.preventDefault();
+          e.stopPropagation();
+          onCancel();
+          return;
+        }
+        if (hasConfirm) {
+          e.preventDefault();
+          e.stopPropagation();
+          onConfirm();
+        }
+      }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onCancel]);
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [open, onCancel, onConfirm]);
 
   if (!open) return null;
 

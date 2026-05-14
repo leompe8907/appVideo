@@ -15,6 +15,7 @@ import { useHomeHeader } from '../contexts/homeHeaderContext';
 import { usePreload } from '../store/usePreload';
 import { AdZone } from '../components/ads/AdZone';
 import { createAdActivateHandler } from '../utils/adActivate';
+import { useInicioBouquetTvNav } from '../hooks/useInicioBouquetTvNav';
 import '../styles/pages/_bouquet.scss';
 
 export function BouquetPage() {
@@ -25,6 +26,8 @@ export function BouquetPage() {
   const navigate = useNavigate();
   const { currentBrand } = useBrand();
   const { epg, ads } = usePreload();
+
+  useInicioBouquetTvNav();
 
   const topInBouquets = Boolean(currentBrand?.homeShell?.ads?.topInBouquets ?? false);
   const shouldRenderTopInside = topInBouquets === false;

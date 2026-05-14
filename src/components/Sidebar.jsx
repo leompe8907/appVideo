@@ -1,13 +1,41 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBrand } from '../contexts/BrandContext';
+import { useDevice } from '../contexts/DeviceContext';
 import { usePreload } from '../store/usePreload';
 import { useOsmsStore } from '../store/osmsStore';
 import panaccessService from '../services/panaccessService';
 import { hasTvRadioServiceBouquets } from '../services/tvDataService';
 import { setLoggedOut, getActiveLicense, getCredentials } from '../utils/userSession';
 import ConfirmModal from './ConfirmModal';
+import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
+import { shouldDeferHomeShellNavigation } from '../utils/homeShellOverlays';
+import { focusElementSafe } from '../utils/homeShellNavigation';
+
+/**
+ * Orden TV de ítems enfocables del sidebar (nav + ajustes + submenú si está abierto).
+ * @param {HTMLElement} root
+ * @param {boolean} settingsOpen
+ * @returns {HTMLElement[]}
+ */
+function getOrderedSidebarFocusTargets(root, settingsOpen) {
+  const nav = root.querySelector('nav.home-sidebar-nav');
+  if (!(nav instanceof HTMLElement)) return [];
+  /** @type {HTMLElement[]} */
+  const out = [];
+  nav.querySelectorAll('a.home-sidebar-link').forEach((a) => {
+    if (a instanceof HTMLElement) out.push(a);
+  });
+  const settingsBtn = root.querySelector('button.home-sidebar-settings-btn');
+  if (settingsBtn instanceof HTMLElement) out.push(settingsBtn);
+  if (settingsOpen) {
+    root.querySelectorAll('.home-sidebar-submenu .home-sidebar-sublink').forEach((b) => {
+      if (b instanceof HTMLElement) out.push(b);
+    });
+  }
+  return out;
+}
 
 function SidebarIcon({ name }) {
   const common = {
@@ -155,6 +183,7 @@ function SidebarLinkWithBadge({ to, label, icon, badge, onSelect, currentPathnam
  */
 export function Sidebar({ expanded = false, onExpandedChange }) {
   const { t } = useTranslation();
+  const { isTV } = useDevice();
   const navigate = useNavigate();
   const location = useLocation();
   const rootRef = useRef(null);
@@ -251,6 +280,11 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
 
   const collapseSidebar = () => setExpandedSafe(false);
 
+  /** En TV el rail se mantiene al navegar por teclado; en escritorio se colapsa al cambiar de sección. */
+  const collapseAfterNav = () => {
+    if (!isTV) collapseSidebar();
+  };
+
   const scheduleCollapseIfOutside = () => {
     if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
     blurTimerRef.current = setTimeout(() => {
@@ -282,15 +316,57 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     setSettingsOpen(false);
   }, [expanded]);
 
-  // Si la ruta cambia (navegación desde cualquier origen), colapsar el sidebar.
+  // Si la ruta cambia (navegación desde cualquier origen), colapsar el sidebar (no TV: foco LRUD).
   useEffect(() => {
-    collapseSidebar();
+    if (!isTV) collapseSidebar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, [location.pathname, isTV]);
+
+  // TV: UP/DOWN entre enlaces del menú, ajustes y submenú (capture; tras `HomeInputDispatcher`).
+  useLayoutEffect(() => {
+    if (!isTV) return undefined;
+    const onKeyDown = (e) => {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (shouldDeferHomeShellNavigation()) return;
+      const action = getTvActionFromKeyEvent(e);
+      if (action !== TV_ACTION.UP && action !== TV_ACTION.DOWN) return;
+
+      const root = rootRef.current;
+      if (!root) return;
+      const active = document.activeElement;
+      if (!active || !(active instanceof HTMLElement) || !root.contains(active)) return;
+
+      const targets = getOrderedSidebarFocusTargets(root, settingsOpen);
+      const visible = targets.filter((t) => {
+        try {
+          if (t.hasAttribute('disabled')) return false;
+          const style = window.getComputedStyle(t);
+          if (style.visibility === 'hidden' || style.display === 'none') return false;
+          const r = t.getBoundingClientRect();
+          return r.width >= 2 && r.height >= 2;
+        } catch {
+          return false;
+        }
+      });
+      const idx = visible.indexOf(active);
+      if (idx < 0) return;
+
+      const nextIdx = action === TV_ACTION.UP ? idx - 1 : idx + 1;
+      if (nextIdx < 0 || nextIdx >= visible.length) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      focusElementSafe(visible[nextIdx]);
+    };
+
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [isTV, settingsOpen]);
 
   return (
     <aside
       ref={rootRef}
+      data-home-scope="sidebar"
       className={[
         'home-sidebar',
         expanded ? '' : 'home-sidebar--collapsed',
@@ -341,7 +417,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
           to="/home/inicio"
           label={t('sidebar.bouquets')}
           icon="home"
-          onSelect={collapseSidebar}
+          onSelect={collapseAfterNav}
           currentPathname={location.pathname}
           navigate={navigate}
         />
@@ -349,7 +425,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
           to="/home/buscador"
           label={t('sidebar.search', { defaultValue: 'Buscador' })}
           icon="search"
-          onSelect={collapseSidebar}
+          onSelect={collapseAfterNav}
           currentPathname={location.pathname}
           navigate={navigate}
         />
@@ -358,7 +434,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             to="/home/vod"
             label={t('sidebar.movies')}
             icon="movies"
-            onSelect={collapseSidebar}
+            onSelect={collapseAfterNav}
             currentPathname={location.pathname}
             navigate={navigate}
           />
@@ -367,7 +443,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
           to="/home/epg"
           label={t('sidebar.channelGuide')}
           icon="guide"
-          onSelect={collapseSidebar}
+          onSelect={collapseAfterNav}
           currentPathname={location.pathname}
           navigate={navigate}
         />
@@ -376,7 +452,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             to="/home/servicios-tv-radio"
             label={t('sidebar.tvRadioServices')}
             icon="channels"
-            onSelect={collapseSidebar}
+            onSelect={collapseAfterNav}
             currentPathname={location.pathname}
             navigate={navigate}
           />
@@ -386,7 +462,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             to="/home/catchup"
             label={t('sidebar.catchup')}
             icon="catchup"
-            onSelect={collapseSidebar}
+            onSelect={collapseAfterNav}
             currentPathname={location.pathname}
             navigate={navigate}
           />
@@ -396,7 +472,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             to="/home/osms"
             label={t('sidebar.osms')}
             icon="osms"
-            onSelect={collapseSidebar}
+            onSelect={collapseAfterNav}
             badge={osmsUnreadCount}
             currentPathname={location.pathname}
             navigate={navigate}
@@ -425,7 +501,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
                 className="home-sidebar-sublink"
                 onClick={() => {
                   navigate('/home/control-parental');
-                  collapseSidebar();
+                  collapseAfterNav();
                 }}
               >
                 {t('parental.title', { defaultValue: 'Control parental' })}
@@ -435,7 +511,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
                 className="home-sidebar-sublink"
                 onClick={() => {
                   setAboutModal(true);
-                  collapseSidebar();
+                  collapseAfterNav();
                 }}
               >
                 {t('common.about', { defaultValue: 'Acerca de' })}
@@ -445,7 +521,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
                 className="home-sidebar-sublink"
                 onClick={() => {
                   handleRefresh();
-                  collapseSidebar();
+                  collapseAfterNav();
                 }}
               >
                 {t('common.refresh', { defaultValue: 'Refrescar' })}
@@ -455,7 +531,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
                 className="home-sidebar-sublink"
                 onClick={() => {
                   setConfirmAction('logout');
-                  collapseSidebar();
+                  collapseAfterNav();
                 }}
               >
                 {t('common.logout', { defaultValue: 'Cerrar sesión' })}
@@ -465,7 +541,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
                 className="home-sidebar-sublink home-sidebar-sublink--danger"
                 onClick={() => {
                   setConfirmAction('exit');
-                  collapseSidebar();
+                  collapseAfterNav();
                 }}
               >
                 {t('common.exit', { defaultValue: 'Salir' })}

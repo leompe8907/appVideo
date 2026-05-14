@@ -702,3 +702,13 @@
     }
   }
 }
+
+/* TV: al ajustar scroll al foco, sin animación smooth (menos latencia). */
+.device-tv .bouquet-page {
+  .bouquet-inicio-scroll,
+  .bouquet-row-carousel .horizontal-slide,
+  .bouquet-grid-horizontal .horizontal-slide--grid-row,
+  .bouquet-vod-recommended .vod-row-cards {
+    scroll-behavior: auto;
+  }
+}
