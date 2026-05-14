@@ -309,8 +309,7 @@
     background: rgba(255, 255, 255, 0.04);
     border: 2px solid transparent;
     box-shadow: 0 0 0 rgba(0, 0, 0, 0.8);
-    transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out,
-      transform 0.1s ease-out;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
     cursor: pointer;
     position: relative;
 
@@ -553,23 +552,25 @@
       box-shadow: 1px 0px 11px 5px rgba(244,0,0,0.61);
       -webkit-box-shadow: 1px 0px 11px 5px rgba(244,0,0,0.61);
       -moz-box-shadow: 1px 0px 11px 5px rgba(244,0,0,0.61);
-      transition: box-shadow 0.2s ease-in-out;
       border-radius: 20px;
       transform: scale(1.02);
-      transition: transform 0.2s ease-in-out;
-
     }
   }
 
   /* Control parental: canales bloqueados se ven “opacados” pero siguen enfocados/seleccionables */
   .channel-card.channel-card--blocked {
-    opacity: 0.5;
-    filter: saturate(0.75);
+    opacity: 0.7;
+    filter: grayscale(0.25); /* Reemplazar saturate por grayscale menos costoso */
   }
 
   .channel-card.channel-card--blocked.focused {
-    opacity: 0.85; /* Mantener legibilidad cuando está enfocado */
-    filter: saturate(0.95);
+    opacity: 0.9; /* Mantener legibilidad cuando está enfocado */
+    filter: grayscale(0.1); /* Consistente con el estado normal, menos impacto en el rendimiento */
+  }
+
+  .channel-card {
+    /* Añadir will-change para optimización de hardware */
+    will-change: transform, box-shadow, border-color;
   }
 
   .channel-card-lock {

@@ -138,7 +138,7 @@ button {
     0 4px 20px rgba(var(--focus-color-rgb, 102, 126, 234), 0.3) !important;
   transform: scale(var(--tv-focus-scale, 1.02));
   z-index: 10;
-  transition: all 0.2s ease !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
 
 // Estilos mejorados para TV (más visibles)
@@ -147,9 +147,8 @@ button {
     // En TV, el focus debe ser muy visible
     border-width: 3px !important;
     border-color: var(--focus-color, var(--primary-color, #667eea)) !important;
-    box-shadow: 
+    box-shadow:
       var(--tv-focus-ring, 0 0 0 4px rgba(var(--focus-color-rgb, 102, 126, 234), 0.6)),
-      var(--tv-focus-ring2, 0 0 0 8px rgba(var(--focus-color-rgb, 102, 126, 234), 0.3)),
       var(--tv-focus-shadow, 0 6px 30px rgba(var(--focus-color-rgb, 102, 126, 234), 0.5)) !important;
     transform: scale(var(--tv-focus-scale, 1.05));
     z-index: 100;
