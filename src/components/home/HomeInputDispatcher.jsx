@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDevice } from '../../contexts/DeviceContext';
 import { getTvActionFromKeyEvent, isTextInputElement, TV_ACTION } from '../../utils/tvRemote';
@@ -7,7 +7,16 @@ import {
   isEpgEventModalOverlayInDom,
   shouldDeferHomeShellNavigation,
 } from '../../utils/homeShellOverlays';
-import { focusElementSafe, getVisibleFocusablesInContainer } from '../../utils/homeShellNavigation';
+import {
+  focusElementSafe,
+  getVisibleFocusablesInContainer,
+  scrollElementIntoVisibleScrollAncestors,
+} from '../../utils/homeShellNavigation';
+import {
+  clearMainShellFocusMemory,
+  getRestoredMainFocusTargetIfValid,
+  rememberMainShellFocus,
+} from '../../utils/homeShellLastContentFocus';
 import { isLeftmostChannelCardInInicioWall } from '../../utils/inicioBouquetTvGrid';
 import { isLeftmostVodRecommendedRailFocusable } from '../../utils/inicioVodRecommendedHomeRail';
 
@@ -21,6 +30,10 @@ export function HomeInputDispatcher({ isPlayerActive }) {
   const { isTV } = useDevice();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    clearMainShellFocusMemory();
+  }, [location.pathname]);
 
   useLayoutEffect(() => {
     const onKeyDown = (e) => {
@@ -76,8 +89,32 @@ export function HomeInputDispatcher({ isPlayerActive }) {
 
       if (action === TV_ACTION.RIGHT) {
         if (!sidebar.contains(active)) return;
+        if (active.matches('button.home-sidebar-settings-btn')) return;
+        if (active.matches('button.home-sidebar-sublink')) {
+          const submenu = active.closest('.home-sidebar-submenu');
+          if (submenu) {
+            const subs = Array.from(submenu.querySelectorAll('button.home-sidebar-sublink'));
+            const idx = subs.indexOf(active);
+            if (idx >= 0 && idx < subs.length - 1) return;
+          }
+        }
         e.preventDefault();
         e.stopPropagation();
+        const restored = getRestoredMainFocusTargetIfValid(mainEl);
+        if (restored && focusElementSafe(restored)) {
+          const bouquetScroll = restored.closest('.bouquet-inicio-scroll');
+          if (bouquetScroll instanceof HTMLElement) {
+            scrollElementIntoVisibleScrollAncestors(restored, bouquetScroll);
+          } else {
+            const stack = mainEl.querySelector('.home-content-stack');
+            if (stack instanceof HTMLElement) {
+              scrollElementIntoVisibleScrollAncestors(restored, stack);
+            }
+          }
+          clearMainShellFocusMemory();
+          return;
+        }
+        clearMainShellFocusMemory();
         const list = getVisibleFocusablesInContainer(mainEl);
         const target = list[0];
         if (target) focusElementSafe(target);
@@ -109,6 +146,7 @@ export function HomeInputDispatcher({ isPlayerActive }) {
 
         e.preventDefault();
         e.stopPropagation();
+        rememberMainShellFocus(active);
         const activeLink =
           sidebar.querySelector('a.home-sidebar-link.active') ||
           sidebar.querySelector('a.home-sidebar-link');

@@ -11,7 +11,7 @@ import { setLoggedOut, getActiveLicense, getCredentials } from '../utils/userSes
 import ConfirmModal from './ConfirmModal';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
 import { shouldDeferHomeShellNavigation } from '../utils/homeShellOverlays';
-import { focusElementSafe } from '../utils/homeShellNavigation';
+import { focusElementSafe, scrollElementIntoVisibleScrollAncestors } from '../utils/homeShellNavigation';
 
 /**
  * Orden TV de ítems enfocables del sidebar (nav + ajustes + submenú si está abierto).
@@ -322,19 +322,132 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, isTV]);
 
-  // TV: UP/DOWN entre enlaces del menú, ajustes y submenú (capture; tras `HomeInputDispatcher`).
+  // TV: UP/DOWN entre ítems; ENTER en enlaces / ajustes / submenú; scroll del rail al mover foco.
   useLayoutEffect(() => {
     if (!isTV) return undefined;
     const onKeyDown = (e) => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (shouldDeferHomeShellNavigation()) return;
       const action = getTvActionFromKeyEvent(e);
-      if (action !== TV_ACTION.UP && action !== TV_ACTION.DOWN) return;
 
       const root = rootRef.current;
       if (!root) return;
       const active = document.activeElement;
       if (!active || !(active instanceof HTMLElement) || !root.contains(active)) return;
+
+      const isRoughlyVisibleEl = (el) => {
+        try {
+          if (!(el instanceof HTMLElement) || el.hasAttribute('disabled')) return false;
+          const style = window.getComputedStyle(el);
+          if (style.visibility === 'hidden' || style.display === 'none') return false;
+          const r = el.getBoundingClientRect();
+          return r.width >= 2 && r.height >= 2;
+        } catch {
+          return false;
+        }
+      };
+
+      const getVisibleSublinks = () =>
+        Array.from(root.querySelectorAll('.home-sidebar-submenu button.home-sidebar-sublink')).filter(
+          isRoughlyVisibleEl
+        );
+
+      if (action === TV_ACTION.RIGHT) {
+        if (active.matches('button.home-sidebar-settings-btn')) {
+          e.preventDefault();
+          e.stopPropagation();
+          const focusFirstSub = () => {
+            const subs = getVisibleSublinks();
+            const first = subs[0];
+            if (first instanceof HTMLElement) {
+              focusElementSafe(first);
+              scrollElementIntoVisibleScrollAncestors(first, root);
+            }
+          };
+          if (!settingsOpen) {
+            setSettingsOpen(true);
+            requestAnimationFrame(() => requestAnimationFrame(focusFirstSub));
+          } else {
+            requestAnimationFrame(focusFirstSub);
+          }
+          return;
+        }
+        if (active.matches('button.home-sidebar-sublink')) {
+          const subs = getVisibleSublinks();
+          const i = subs.indexOf(active);
+          if (i >= 0 && i < subs.length - 1) {
+            e.preventDefault();
+            e.stopPropagation();
+            const next = subs[i + 1];
+            focusElementSafe(next);
+            scrollElementIntoVisibleScrollAncestors(next, root);
+            return;
+          }
+          return;
+        }
+      }
+
+      if (action === TV_ACTION.LEFT) {
+        if (active.matches('button.home-sidebar-sublink')) {
+          e.preventDefault();
+          e.stopPropagation();
+          setSettingsOpen(false);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const r = rootRef.current;
+              if (!r) return;
+              const btn = r.querySelector('button.home-sidebar-settings-btn');
+              if (btn instanceof HTMLElement) {
+                focusElementSafe(btn);
+                scrollElementIntoVisibleScrollAncestors(btn, r);
+              }
+            });
+          });
+          return;
+        }
+      }
+
+      if (action === TV_ACTION.ENTER) {
+        if (active.matches('button.home-sidebar-settings-btn')) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!settingsOpen) {
+            setSettingsOpen(true);
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                const r = rootRef.current;
+                if (!r) return;
+                const subs = Array.from(
+                  r.querySelectorAll('.home-sidebar-submenu button.home-sidebar-sublink')
+                ).filter(isRoughlyVisibleEl);
+                const first = subs[0];
+                if (first instanceof HTMLElement) {
+                  focusElementSafe(first);
+                  scrollElementIntoVisibleScrollAncestors(first, r);
+                }
+              });
+            });
+          } else {
+            setSettingsOpen(false);
+          }
+          return;
+        }
+        if (active.matches('a.home-sidebar-link')) {
+          e.preventDefault();
+          e.stopPropagation();
+          active.click();
+          return;
+        }
+        if (active.matches('button.home-sidebar-sublink')) {
+          e.preventDefault();
+          e.stopPropagation();
+          active.click();
+          return;
+        }
+        return;
+      }
+
+      if (action !== TV_ACTION.UP && action !== TV_ACTION.DOWN) return;
 
       const targets = getOrderedSidebarFocusTargets(root, settingsOpen);
       const visible = targets.filter((t) => {
@@ -356,7 +469,9 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
 
       e.preventDefault();
       e.stopPropagation();
-      focusElementSafe(visible[nextIdx]);
+      const nextEl = visible[nextIdx];
+      focusElementSafe(nextEl);
+      scrollElementIntoVisibleScrollAncestors(nextEl, root);
     };
 
     window.addEventListener('keydown', onKeyDown, { capture: true });
