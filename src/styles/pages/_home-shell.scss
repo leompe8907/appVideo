@@ -537,6 +537,12 @@ $home-sidebar-duration: 380ms;
   position: relative;
 }
 
+/* TV: separa el contenido del outlet del banner inferior del shell (evita sensación de solapamiento). */
+.device-tv .home-content-outlet {
+  padding-bottom: 0.9rem;
+  box-sizing: border-box;
+}
+
 .home-placeholder {
   color: #fff;
   padding: 2rem;

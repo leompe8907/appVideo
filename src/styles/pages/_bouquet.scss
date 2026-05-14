@@ -715,14 +715,14 @@
 
   /* Más aire entre filas de bouquets y tarjetas; espacio inferior para ver la última fila completa al enfocar. */
   .bouquet-inicio-scroll {
-    scroll-padding-block-end: 2.75rem;
-    padding-bottom: 2.5rem;
+    scroll-padding-block-end: 3.5rem;
+    padding-bottom: 3.25rem;
   }
 
   .bouquet-wall {
     gap: 1.25rem;
     padding-top: 1rem;
-    padding-bottom: 0.5rem;
+    padding-bottom: 1rem;
   }
 
   .bouquet-grid-horizontal-rows {
@@ -733,18 +733,21 @@
     gap: 1rem;
     padding-left: 0.5rem;
     padding-right: 0.5rem;
+    padding-bottom: 0.75rem;
   }
 
   .bouquet-row-carousel .horizontal-slide {
     gap: 2rem;
     padding-left: 0.5rem;
     padding-right: 0.5rem;
+    padding-bottom: 0.75rem;
   }
 
   .bouquet-grid-vertical-content {
     gap: 0.75rem;
     padding-left: 0.45rem;
     padding-right: 0.45rem;
+    padding-bottom: 0.65rem;
   }
 
   .channel-card {

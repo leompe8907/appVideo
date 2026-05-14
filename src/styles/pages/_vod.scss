@@ -1109,3 +1109,19 @@
     flex-shrink: 0;
   }
 }
+
+/* TV: más aire al pie de la página VOD (carriles por género) respecto al borde / banner inferior. */
+.device-tv .vod-page {
+  .vod-content {
+    padding-bottom: 2.85rem;
+    scroll-padding-block-end: 2rem;
+  }
+
+  .vod-row {
+    margin-bottom: 1.75rem;
+  }
+
+  .vod-row:last-child .vod-row-cards {
+    padding-bottom: 1.5rem;
+  }
+}

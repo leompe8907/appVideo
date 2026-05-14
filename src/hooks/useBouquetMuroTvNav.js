@@ -198,6 +198,52 @@ export function useBouquetMuroTvNav(opts) {
         }
       }
 
+      if (bridgesVod) {
+        const vodRail = scrollRoot.querySelector('.bouquet-vod-recommended .vod-row-cards');
+        if (vodRail instanceof HTMLElement && vodRail.contains(active)) {
+          const list = getVisibleFocusablesInContainer(vodRail);
+          const vi = list.indexOf(active);
+          if (vi >= 0) {
+            if (action === TV_ACTION.RIGHT && vi + 1 < list.length) {
+              e.preventDefault();
+              e.stopPropagation();
+              const t = list[vi + 1];
+              focusElementSafe(t);
+              scrollElementIntoVisibleScrollAncestors(t, scrollRoot);
+              scrollElementIntoVisibleScrollAncestors(t, vodRail);
+              return;
+            }
+            if (action === TV_ACTION.LEFT && vi > 0) {
+              e.preventDefault();
+              e.stopPropagation();
+              const t = list[vi - 1];
+              focusElementSafe(t);
+              scrollElementIntoVisibleScrollAncestors(t, scrollRoot);
+              scrollElementIntoVisibleScrollAncestors(t, vodRail);
+              return;
+            }
+            if (action === TV_ACTION.UP) {
+              const wall = scrollRoot.querySelector('.bouquet-wall');
+              if (wall instanceof HTMLElement) {
+                const rows = buildInicioBouquetChannelRows(wall);
+                if (rows.length) {
+                  const lastRow = rows[rows.length - 1];
+                  const ti = Math.min(vi, lastRow.length - 1);
+                  const tc = lastRow[ti];
+                  if (tc instanceof HTMLElement) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    focusElementSafe(tc);
+                    scrollElementIntoVisibleScrollAncestors(tc, scrollRoot);
+                    return;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
       if (!scrollRoot.contains(active)) return;
 
       const card = active.closest('.channel-card');
