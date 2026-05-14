@@ -6,6 +6,7 @@ import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
 import { useParental } from '../../store/useParental';
 import { getChannelStableId } from '../../utils/channelId';
 import { proxyImageUrl } from '../../utils/imageProxy';
+import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
 
 // --- Helpers EPG para layout event_and_logo ---
 /** Parsea "YYYY-MM-DD HH:mm:ss" a "HH:mm" para mostrar en UI */
@@ -269,7 +270,8 @@ function ChannelCard({ channel, layoutType, onSelect, onFocus }) {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (getTvActionFromKeyEvent(e) === TV_ACTION.ENTER) {
       e.preventDefault();
       onFocus?.();
       onSelect?.();

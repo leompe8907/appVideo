@@ -713,7 +713,43 @@
     scroll-behavior: auto;
   }
 
+  /* Más aire entre filas de bouquets y tarjetas; espacio inferior para ver la última fila completa al enfocar. */
+  .bouquet-inicio-scroll {
+    scroll-padding-block-end: 2.75rem;
+    padding-bottom: 2.5rem;
+  }
+
+  .bouquet-wall {
+    gap: 1.25rem;
+    padding-top: 1rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .bouquet-grid-horizontal-rows {
+    gap: 0.65rem;
+  }
+
+  .bouquet-grid-horizontal .horizontal-slide--grid-row {
+    gap: 1rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .bouquet-row-carousel .horizontal-slide {
+    gap: 2rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .bouquet-grid-vertical-content {
+    gap: 0.75rem;
+    padding-left: 0.45rem;
+    padding-right: 0.45rem;
+  }
+
   .channel-card {
+    scroll-margin-block: 0.5rem 2.75rem;
+    scroll-margin-inline: 0.75rem;
     transition: border-color 0.08s ease-out;
 
     &:hover,

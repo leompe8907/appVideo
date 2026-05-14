@@ -100,23 +100,35 @@ export function scrollElementIntoVisibleScrollAncestors(el, topAncestor, opts = 
   }
 
   for (const container of chain) {
-    const cr = container.getBoundingClientRect();
-    const er = el.getBoundingClientRect();
     try {
       const style = window.getComputedStyle(container);
       const canY = style.overflowY === 'auto' || style.overflowY === 'scroll';
       const canX = style.overflowX === 'auto' || style.overflowX === 'scroll';
+
+      let er = el.getBoundingClientRect();
+      let cr = container.getBoundingClientRect();
+
       if (canY && container.scrollHeight > container.clientHeight + 1) {
         if (er.top < cr.top + margin) {
           container.scrollTop += er.top - cr.top - margin;
-        } else if (er.bottom > cr.bottom - margin) {
+        }
+        er = el.getBoundingClientRect();
+        cr = container.getBoundingClientRect();
+        if (er.bottom > cr.bottom - margin) {
           container.scrollTop += er.bottom - cr.bottom + margin;
         }
       }
+
+      er = el.getBoundingClientRect();
+      cr = container.getBoundingClientRect();
+
       if (canX && container.scrollWidth > container.clientWidth + 1) {
         if (er.left < cr.left + margin) {
           container.scrollLeft += er.left - cr.left - margin;
-        } else if (er.right > cr.right - margin) {
+        }
+        er = el.getBoundingClientRect();
+        cr = container.getBoundingClientRect();
+        if (er.right > cr.right - margin) {
           container.scrollLeft += er.right - cr.right + margin;
         }
       }

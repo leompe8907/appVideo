@@ -10,6 +10,7 @@ import { usePreload } from '../store/usePreload';
 import { hasTvRadioServiceBouquets } from '../services/tvDataService';
 import panaccessService from '../services/panaccessService';
 import { useHomeHeader } from '../contexts/homeHeaderContext';
+import { useBouquetMuroTvNav } from '../hooks/useBouquetMuroTvNav';
 import '../styles/pages/_bouquet.scss';
 
 export function TvRadioServicesPage() {
@@ -17,6 +18,8 @@ export function TvRadioServicesPage() {
   const { requestPlayChannel } = useParentalGate();
   const { epg } = usePreload();
   const { setFocusedChannel } = useHomeHeader();
+
+  useBouquetMuroTvNav({ route: 'serviciosTvRadio' });
 
   const handleChannelSelect = (channel) => {
     if (import.meta.env?.DEV) {

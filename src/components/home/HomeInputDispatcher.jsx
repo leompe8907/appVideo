@@ -90,12 +90,17 @@ export function HomeInputDispatcher({ isPlayerActive }) {
         if (!mainEl.contains(active)) return;
 
         const path = location.pathname || '';
-        const inicioScroll =
-          path === '/home/inicio' ? document.querySelector('.bouquet-inicio-scroll') : null;
+        const bouquetScrollRoot =
+          path === '/home/inicio' || path === '/home/servicios-tv-radio'
+            ? document.querySelector('.bouquet-inicio-scroll')
+            : null;
         const fromBouquetRowLeftEdge =
-          inicioScroll instanceof HTMLElement && isLeftmostChannelCardInInicioWall(active, inicioScroll);
+          bouquetScrollRoot instanceof HTMLElement &&
+          isLeftmostChannelCardInInicioWall(active, bouquetScrollRoot);
         const fromVodRailLeftEdge =
-          inicioScroll instanceof HTMLElement && isLeftmostVodRecommendedRailFocusable(active, inicioScroll);
+          path === '/home/inicio' &&
+          bouquetScrollRoot instanceof HTMLElement &&
+          isLeftmostVodRecommendedRailFocusable(active, bouquetScrollRoot);
 
         const list = getVisibleFocusablesInContainer(mainEl);
         const fromFirstMainFocusable = list.length > 0 && list[0] === active;
