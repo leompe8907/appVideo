@@ -50,6 +50,89 @@ export function getAllLimits(brandConfig) {
   return brandConfig?.limits || {};
 }
 
+/** Mismo orden que antes: alineado con Login (`background.png`). */
+const HOME_BG_EXTENSIONS = ['png', 'webp', 'jpg', 'jpeg', 'svg'];
+
+let homeBackgroundProbeToken = 0;
+
+/** URL del fondo home resuelta por marca en la sesión (evita re-sondear). */
+const homeBackgroundResolvedUrlByBrand = new Map();
+
+function probeImageUrlLoads(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = src;
+  });
+}
+
+/**
+ * Limpia la caché del fondo home (llamar al invalidar la marca en runtime).
+ */
+export function invalidateHomeBackgroundCache() {
+  homeBackgroundProbeToken += 1;
+  homeBackgroundResolvedUrlByBrand.clear();
+}
+
+/**
+ * Prueba `background.{ext}` en orden y fija una sola `--home-background-image`.
+ * Cancela sondas previas si cambia la marca antes de terminar.
+ */
+export function scheduleHomeBackgroundResolution(brandConfig) {
+  const root = document.documentElement;
+  const brandId = brandConfig?.brand;
+  const assets = brandConfig?.assets;
+
+  homeBackgroundProbeToken += 1;
+  const token = homeBackgroundProbeToken;
+
+  if (!assets?.get) {
+    root.style.setProperty('--home-background-image', 'none');
+    return;
+  }
+
+  const cached =
+    typeof brandId === 'string' && brandId.trim() !== ''
+      ? homeBackgroundResolvedUrlByBrand.get(brandId)
+      : null;
+  if (cached) {
+    root.style.setProperty('--home-background-image', `url("${cached}")`);
+    return;
+  }
+
+  root.style.setProperty('--home-background-image', 'none');
+
+  const seen = new Set();
+  const urls = [];
+  for (const ext of HOME_BG_EXTENSIONS) {
+    const u = assets.get(`background.${ext}`);
+    if (u && !seen.has(u)) {
+      seen.add(u);
+      urls.push(u);
+    }
+  }
+
+  void (async () => {
+    for (const url of urls) {
+      if (token !== homeBackgroundProbeToken) return;
+      // Secuencial a propósito: parar en la primera carga válida.
+      // eslint-disable-next-line no-await-in-loop
+      const ok = await probeImageUrlLoads(url);
+      if (ok && token === homeBackgroundProbeToken) {
+        root.style.setProperty('--home-background-image', `url("${url}")`);
+        if (typeof brandId === 'string' && brandId.trim() !== '') {
+          homeBackgroundResolvedUrlByBrand.set(brandId, url);
+        }
+        return;
+      }
+    }
+    if (token === homeBackgroundProbeToken) {
+      root.style.setProperty('--home-background-image', 'none');
+    }
+  })();
+}
+
 /**
  * Aplica tema dinámicamente al documento
  * @param {Object} brandConfig - Configuración de la marca
@@ -62,7 +145,6 @@ export function applyTheme(brandConfig) {
   const sidebar = ui.sidebar || {};
   const bouquets = brandConfig.bouquets || {};
   const epgCards = brandConfig.EPG || {};
-  const assets = brandConfig.assets || {};
   const playerLoading = ui.playerLoading || {};
   const playerLoadingPremium = playerLoading.premium !== false;
 
@@ -174,16 +256,8 @@ export function applyTheme(brandConfig) {
   root.style.setProperty('--sidebar-submenu-bg', sidebar.submenuBackgroundColor || 'rgba(0, 0, 0, 0.55)');
   root.style.setProperty('--sidebar-submenu-text', sidebar.submenuTextColor || 'rgba(255, 255, 255, 0.85)');
 
-  // Background compartido Home (sin tocar sidebar).
-  // Probamos varias extensiones manteniendo el mismo nombre base `background.*`.
-  // Ponemos `png` primero para que sea idéntico al usado por Login (background.png)
-  // y caiga a otros formatos si no existe.
-  const bgExts = ['png', 'webp', 'jpg', 'jpeg', 'svg'];
-  const bgUrls = bgExts
-    .map((ext) => (assets.get ? assets.get(`background.${ext}`) : null))
-    .filter(Boolean)
-    .map((u) => `url("${u}")`);
-  root.style.setProperty('--home-background-image', bgUrls.join(', ') || 'none');
+  // Fondo home: una sola imagen (ver `scheduleHomeBackgroundResolution`).
+  scheduleHomeBackgroundResolution(brandConfig);
 
   // Login (colores por marca): `login.theme`
   const loginTheme = brandConfig?.login?.theme || {};

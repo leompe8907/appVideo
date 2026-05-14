@@ -703,12 +703,52 @@
   }
 }
 
-/* TV: al ajustar scroll al foco, sin animación smooth (menos latencia). */
+/* TV: scroll sin smooth + foco ligero (sin escala/sombras pesadas ni filtros). */
 .device-tv .bouquet-page {
   .bouquet-inicio-scroll,
   .bouquet-row-carousel .horizontal-slide,
   .bouquet-grid-horizontal .horizontal-slide--grid-row,
   .bouquet-vod-recommended .vod-row-cards {
     scroll-behavior: auto;
+  }
+
+  .channel-card {
+    transition: border-color 0.08s ease-out;
+
+    &:hover,
+    &.focused {
+      transform: none !important;
+      box-shadow: none !important;
+      -webkit-box-shadow: none !important;
+      -moz-box-shadow: none !important;
+      border-radius: $border-radius-sm;
+      border-width: 3px !important;
+      border-color: var(--focus-color, rgba(255, 255, 255, 0.92)) !important;
+      transition: border-color 0.08s ease-out !important;
+      z-index: 1 !important;
+    }
+  }
+
+  .channel-card.channel-card--blocked {
+    filter: none !important;
+    opacity: 0.52;
+  }
+
+  .channel-card.channel-card--blocked.focused {
+    opacity: 0.88;
+    filter: none !important;
+  }
+
+  .channel-timeship .channel-timeship-progress {
+    transition: none !important;
+  }
+
+  .bouquet-row {
+    transition: border-color 0.08s ease-out, background-color 0.08s ease-out;
+
+    &:hover,
+    &.focused {
+      transform: none !important;
+    }
   }
 }

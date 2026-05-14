@@ -1,6 +1,7 @@
 import { getBrandConfig } from "./brands";
 import { DEFAULT_BRAND } from "./defaultBrand";
 import { getBrandAsset } from "../utils/assetLoader";
+import { invalidateHomeBackgroundCache } from "../utils/config";
 import { getSplashPath, getSplashVideoPath } from "../utils/splashLoader";
 
 const isDev = import.meta.env.DEV;
@@ -84,6 +85,7 @@ export function getActiveBrandConfig() {
  */
 export function invalidateBrandCache() {
   _cache = { key: null, config: null };
+  invalidateHomeBackgroundCache();
 }
 
 /**
