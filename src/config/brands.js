@@ -907,8 +907,8 @@ export const BRANDS = [
   {
     brand: "cableatlantico",
     appName: "delancertv",
-    drm: 'https://cv01.panaccess.com/', //"https://mw.cabledelancer.com/",
-    token: "gQposTlrMIOYQVdYBNYC", //"ZteKaVByMTRHfqeHXtWK",
+    drm: 'https://mw.cabledelancer.com/', //"https://cv01.panaccess.com/"
+    token: "ZteKaVByMTRHfqeHXtWK", //"gQposTlrMIOYQVdYBNYC",
     os: 'HTML5',
     appVersion: '1',
     branding: 'Cabledelancer',
