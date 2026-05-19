@@ -6,6 +6,7 @@
 import { createCVClient } from '../cv/cv';
 import { retryOperation } from '../cv/errorClassifier';
 import i18n from '../locales/i18n';
+import * as userSession from '../utils/userSession';
 
 class PanaccessService {
   constructor() {
@@ -86,11 +87,10 @@ class PanaccessService {
       throw new Error('Servicio no inicializado');
     }
 
-    // Restaurar sessionId del localStorage si el cliente no está autenticado
-    const sessionIdFromStorage = localStorage.getItem("sessionId");
+    const sessionIdFromStorage = userSession.getSessionId();
     if (!this.client.isAuthenticated() && sessionIdFromStorage) {
       this.client.sessionId = sessionIdFromStorage;
-      console.log('[PanaccessService] SessionId restaurado desde localStorage');
+      console.log('[PanaccessService] SessionId restaurado desde storage de marca');
     }
 
     if (!this.client.isAuthenticated()) {
@@ -98,8 +98,8 @@ class PanaccessService {
     }
 
     const apiCall = async () => {
-      const sessionId = localStorage.getItem("sessionId");
-      const udid = localStorage.getItem("udid");
+      const sessionId = userSession.getSessionId();
+      const udid = userSession.getUdidOrCreate();
 
       if (!sessionId) {
         const error = new Error("Falta el sessionId.");
@@ -640,7 +640,7 @@ class PanaccessService {
       throw new Error('Servicio no inicializado. Llama a initialize() primero.');
     }
     const { vodId } = options;
-    const sessionId = localStorage.getItem('sessionId') || this.client.sessionId || '';
+    const sessionId = userSession.getSessionId() || this.client.sessionId || '';
     const base = (this.client.baseUrl || '').replace(/\/?$/, '');
     return `${base}/index.php?requestMode=function&f=getVodM3u8&plain=true&vodId=${vodId}&sessionId=${sessionId}&m3u8`;
   }
@@ -655,7 +655,7 @@ class PanaccessService {
       throw new Error('Servicio no inicializado. Llama a initialize() primero.');
     }
     const { catchupId } = options;
-    const sessionId = localStorage.getItem('sessionId') || this.client.sessionId || '';
+    const sessionId = userSession.getSessionId() || this.client.sessionId || '';
     const base = (this.client.baseUrl || '').replace(/\/?$/, '');
     return `${base}/index.php?requestMode=function&f=getCatchupM3u8&plain=true&catchupId=${catchupId}&sessionId=${sessionId}&m3u8`;
   }
@@ -670,7 +670,7 @@ class PanaccessService {
       throw new Error('Servicio no inicializado. Llama a initialize() primero.');
     }
     const { streamId } = options;
-    const sessionId = localStorage.getItem('sessionId') || this.client.sessionId || '';
+    const sessionId = userSession.getSessionId() || this.client.sessionId || '';
     const base = (this.client.baseUrl || '').replace(/\/?$/, '');
     return `${base}/index.php?requestMode=function&f=getStreamM3u8&plain=true&streamId=${streamId}&sessionId=${sessionId}&m3u8`;
   }
@@ -690,7 +690,7 @@ class PanaccessService {
     if (!url || typeof url !== 'string') return url;
     if (!this.client) return url;
 
-    const currentSessionId = localStorage.getItem('sessionId') || this.client.sessionId || '';
+    const currentSessionId = userSession.getSessionId() || this.client.sessionId || '';
     if (!currentSessionId) return url;
 
     // Reemplazar sessionId si existe

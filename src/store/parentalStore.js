@@ -1,21 +1,17 @@
 import { create } from 'zustand';
 import { derivePinHash, timingSafeEqual } from '../utils/pinHash';
-import { getActiveBrandConfig } from '../config/brandConfig';
+import { getBrandItem, resolveBrandId, setBrandItem } from '../utils/brandStorage';
 
 const DEFAULT_UNLOCK_TTL_MS = 15 * 60 * 1000;
 const DEFAULT_RATING_UNLOCK_TTL_MS = 15 * 60 * 1000;
 const DEFAULT_PARENTALCONTROL_MULTI_TTL_MS = 40 * 60 * 1000;
 const STORAGE_VERSION = 1;
 
-function getStorageKey() {
-  const brand = getActiveBrandConfig()?.brand || getActiveBrandConfig()?.id || '';
-  const suffix = String(brand || 'default');
-  return `parental.v${STORAGE_VERSION}.${suffix}`;
-}
+const PARENTAL_STORAGE_KEY = `parental.v${STORAGE_VERSION}`;
 
 function safeRead() {
   try {
-    const raw = localStorage.getItem(getStorageKey());
+    const raw = getBrandItem(resolveBrandId(), PARENTAL_STORAGE_KEY);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch {
@@ -25,7 +21,7 @@ function safeRead() {
 
 function safeWrite(payload) {
   try {
-    localStorage.setItem(getStorageKey(), JSON.stringify(payload));
+    setBrandItem(resolveBrandId(), PARENTAL_STORAGE_KEY, JSON.stringify(payload));
   } catch {
     // noop
   }
@@ -55,7 +51,10 @@ const initial = {
 export const useParentalStore = create((set, get) => {
   const hydrate = () => {
     const data = safeRead();
-    if (!data || data.version !== STORAGE_VERSION) return;
+    if (!data || data.version !== STORAGE_VERSION) {
+      set({ ...initial });
+      return;
+    }
     set((s) => ({
       ...s,
       enabled: data.enabled === true,
@@ -104,6 +103,10 @@ export const useParentalStore = create((set, get) => {
 
     hydrate,
     persist,
+
+    resetOnLogout: () => {
+      set({ ...initial });
+    },
 
     setEnabled: (enabled) => {
       const nextEnabled = Boolean(enabled);

@@ -1,7 +1,8 @@
 /**
- * Preferencias de usuario por marca: favoritos, canales bloqueados, historial de video.
- * Claves en localStorage con prefijo por brand para multi-marca.
+ * Preferencias de usuario por marca (favoritos, historial, idioma del reproductor).
  */
+
+import { getBrandItem, removeBrandItem, resolveBrandId, setBrandItem } from './brandStorage';
 
 const KEYS = {
   favorites: 'USER_FAVORITES_KEY',
@@ -12,16 +13,15 @@ const KEYS = {
   playerSubtitleLang: 'playerSubtitleLang',
 };
 
-function storageKey(brandId, key) {
-  const brand = brandId || 'default';
-  return `pref_${brand}_${key}`;
+function brand(brandId) {
+  return resolveBrandId(brandId);
 }
 
 // --- Favoritos (LCN o IDs de canal) ---
 
 export function getFavorites(brandId) {
   try {
-    const raw = localStorage.getItem(storageKey(brandId, KEYS.favorites));
+    const raw = getBrandItem(brand(brandId), KEYS.favorites);
     if (raw == null || raw === '') return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -31,15 +31,14 @@ export function getFavorites(brandId) {
 }
 
 export function setFavorites(brandId, favorites) {
-  const key = storageKey(brandId, KEYS.favorites);
+  const id = brand(brandId);
   if (favorites == null || !Array.isArray(favorites)) {
-    localStorage.removeItem(key);
+    removeBrandItem(id, KEYS.favorites);
     return;
   }
-  localStorage.setItem(key, JSON.stringify(favorites));
+  setBrandItem(id, KEYS.favorites, JSON.stringify(favorites));
 }
 
-/** Devuelve true si el LCN/canal está en favoritos (corrige el bug del proyecto antiguo que devolvía indexOf). */
 export function hasFavorite(brandId, lcn) {
   const list = getFavorites(brandId);
   return list.indexOf(Number(lcn)) >= 0;
@@ -62,7 +61,7 @@ export function toggleFavorite(brandId, lcn) {
 
 export function getLockedChannels(brandId) {
   try {
-    const raw = localStorage.getItem(storageKey(brandId, KEYS.lockedChannels));
+    const raw = getBrandItem(brand(brandId), KEYS.lockedChannels);
     if (raw == null || raw === '') return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -72,12 +71,12 @@ export function getLockedChannels(brandId) {
 }
 
 export function setLockedChannels(brandId, channelIds) {
-  const key = storageKey(brandId, KEYS.lockedChannels);
+  const id = brand(brandId);
   if (channelIds == null || !Array.isArray(channelIds)) {
-    localStorage.removeItem(key);
+    removeBrandItem(id, KEYS.lockedChannels);
     return;
   }
-  localStorage.setItem(key, JSON.stringify(channelIds.map(Number)));
+  setBrandItem(id, KEYS.lockedChannels, JSON.stringify(channelIds.map(Number)));
 }
 
 export function hasChannelLocked(brandId, serviceTVId) {
@@ -99,11 +98,11 @@ export function toggleLockedChannel(brandId, serviceTVId) {
   return true;
 }
 
-// --- Historial de video [{ type, id, time }, ...] ---
+// --- Historial de video ---
 
 export function getVideoHistory(brandId) {
   try {
-    const raw = localStorage.getItem(storageKey(brandId, KEYS.videoHistory));
+    const raw = getBrandItem(brand(brandId), KEYS.videoHistory);
     if (raw == null || raw === '') return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -121,7 +120,7 @@ export function setVideoHistoryFor(brandId, videoHistory) {
   } else {
     list.push({ type, id, time });
   }
-  localStorage.setItem(storageKey(brandId, KEYS.videoHistory), JSON.stringify(list));
+  setBrandItem(brand(brandId), KEYS.videoHistory, JSON.stringify(list));
 }
 
 export function getVideoHistoryFor(brandId, type, id) {
@@ -130,14 +129,14 @@ export function getVideoHistoryFor(brandId, type, id) {
   return item ? item.time : 0;
 }
 
-// --- Datos por canal (audio/subtítulos seleccionados) ---
+// --- Datos por canal (audio/subtítulos) ---
 
 const PROP_AUDIO = 'audio';
 const PROP_SUBTITLES = 'subtitles';
 
 export function getChannelData(brandId) {
   try {
-    const raw = localStorage.getItem(storageKey(brandId, KEYS.channelData));
+    const raw = getBrandItem(brand(brandId), KEYS.channelData);
     if (raw == null || raw === '') return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -154,7 +153,7 @@ export function setChannelData(brandId, channelId, propKey, value) {
   } else {
     channelData.push({ channel: channelId, [propKey]: value });
   }
-  localStorage.setItem(storageKey(brandId, KEYS.channelData), JSON.stringify(channelData));
+  setBrandItem(brand(brandId), KEYS.channelData, JSON.stringify(channelData));
 }
 
 export function getAudioAndSubtitle(brandId, channelId) {
@@ -164,24 +163,26 @@ export function getAudioAndSubtitle(brandId, channelId) {
   return [entry[PROP_AUDIO] ?? null, entry[PROP_SUBTITLES] ?? null];
 }
 
-// --- Idioma de reproductor (audio/subtítulos) global ---
+// --- Idioma de reproductor por marca ---
 
-export function getPlayerAudioLang() {
-  const lang = localStorage.getItem(KEYS.playerAudioLang);
+export function getPlayerAudioLang(brandId) {
+  const lang = getBrandItem(brand(brandId), KEYS.playerAudioLang);
   return lang && lang.length > 0 ? lang : null;
 }
 
-export function setPlayerAudioLang(language) {
-  if (language != null) localStorage.setItem(KEYS.playerAudioLang, language);
-  else localStorage.removeItem(KEYS.playerAudioLang);
+export function setPlayerAudioLang(language, brandId) {
+  const id = brand(brandId);
+  if (language != null) setBrandItem(id, KEYS.playerAudioLang, language);
+  else removeBrandItem(id, KEYS.playerAudioLang);
 }
 
-export function getPlayerSubtitleLang() {
-  const lang = localStorage.getItem(KEYS.playerSubtitleLang);
+export function getPlayerSubtitleLang(brandId) {
+  const lang = getBrandItem(brand(brandId), KEYS.playerSubtitleLang);
   return lang && lang.length > 0 ? lang : null;
 }
 
-export function setPlayerSubtitleLang(language) {
-  if (language != null) localStorage.setItem(KEYS.playerSubtitleLang, language);
-  else localStorage.removeItem(KEYS.playerSubtitleLang);
+export function setPlayerSubtitleLang(language, brandId) {
+  const id = brand(brandId);
+  if (language != null) setBrandItem(id, KEYS.playerSubtitleLang, language);
+  else removeBrandItem(id, KEYS.playerSubtitleLang);
 }

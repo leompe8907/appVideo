@@ -1,10 +1,19 @@
 /**
- * Sesión de usuario centralizada.
- * Una sola fuente de verdad para sessionId, credenciales, udid y datos de licencia.
+ * Sesión de usuario centralizada por marca.
+ * Credenciales, sessionId, udid y licencias viven en `{brand}.{key}`.
  */
 
 import CryptoJS from 'crypto-js';
 import getUdid from '../cv/udid';
+import {
+  clearBrandStorage,
+  clearLegacyGlobalSessionKeys,
+  getBrandItem,
+  removeBrandItem,
+  resolveBrandId,
+  setBrandItem,
+} from './brandStorage';
+import { resetBrandStoresOnLogout } from './brandLogout';
 
 const STORAGE_KEYS = {
   sessionId: 'sessionId',
@@ -17,64 +26,73 @@ const STORAGE_KEYS = {
   licensePin: 'licensePin',
 };
 
+function brandId(override) {
+  return resolveBrandId(override);
+}
+
 export function getSecretKey() {
   return import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
 }
 
-export function getSessionId() {
-  return localStorage.getItem(STORAGE_KEYS.sessionId) || '';
+export function getSessionId(brand) {
+  return getBrandItem(brandId(brand), STORAGE_KEYS.sessionId) || '';
 }
 
-export function setSessionId(sessionId) {
+export function setSessionId(sessionId, brand) {
+  const id = brandId(brand);
   if (sessionId != null && sessionId !== '') {
-    localStorage.setItem(STORAGE_KEYS.sessionId, String(sessionId));
+    setBrandItem(id, STORAGE_KEYS.sessionId, String(sessionId));
   } else {
-    localStorage.removeItem(STORAGE_KEYS.sessionId);
+    removeBrandItem(id, STORAGE_KEYS.sessionId);
   }
 }
 
 /**
  * Guarda sesión tras login exitoso (credenciales se encriptan).
- * @param {{ username: string, password: string, sessionId: string, udid?: string }}
+ * @param {{ username: string, password: string, sessionId: string, udid?: string, brandId?: string }}
  */
-export function setLoggedIn({ username, password, sessionId, udid }) {
+export function setLoggedIn({ username, password, sessionId, udid, brandId: brand }) {
+  const id = brandId(brand);
   const key = getSecretKey();
   const encUser = CryptoJS.AES.encrypt(String(username).trim(), key).toString();
   const encPass = CryptoJS.AES.encrypt(String(password).trim(), key).toString();
-  localStorage.setItem(STORAGE_KEYS.username, encUser);
-  localStorage.setItem(STORAGE_KEYS.password, encPass);
-  setSessionId(sessionId);
-  const finalUdid = udid || getUdidOrCreate();
-  localStorage.setItem(STORAGE_KEYS.udid, finalUdid);
+  setBrandItem(id, STORAGE_KEYS.username, encUser);
+  setBrandItem(id, STORAGE_KEYS.password, encPass);
+  setSessionId(sessionId, id);
+  const finalUdid = udid || getUdidOrCreate(id);
+  setBrandItem(id, STORAGE_KEYS.udid, finalUdid);
 }
 
 /**
- * Obtiene udid; si no existe, genera uno y lo guarda.
+ * Obtiene udid de la marca; si no existe, genera uno y lo guarda.
  */
-export function getUdidOrCreate() {
-  let udid = localStorage.getItem(STORAGE_KEYS.udid);
+export function getUdidOrCreate(brand) {
+  const id = brandId(brand);
+  let udid = getBrandItem(id, STORAGE_KEYS.udid);
   if (!udid) {
-    udid = getUdid();
-    localStorage.setItem(STORAGE_KEYS.udid, udid);
+    udid = getUdid(id);
+    setBrandItem(id, STORAGE_KEYS.udid, udid);
   }
   return udid;
 }
 
-export function hasCredentials() {
-  const u = localStorage.getItem(STORAGE_KEYS.username);
-  const p = localStorage.getItem(STORAGE_KEYS.password);
+export function hasCredentials(brand) {
+  const id = brandId(brand);
+  const u = getBrandItem(id, STORAGE_KEYS.username);
+  const p = getBrandItem(id, STORAGE_KEYS.password);
   return !!(u && u.length > 0 && p && p.length > 0);
 }
 
 /**
  * Devuelve { username, password } desencriptados o null si no hay credenciales válidas.
  */
-export function getCredentials() {
-  if (!hasCredentials()) return null;
+export function getCredentials(brand) {
+  if (!hasCredentials(brand)) return null;
+  const id = brandId(brand);
   const key = getSecretKey();
   try {
-    const encUser = localStorage.getItem(STORAGE_KEYS.username);
-    const encPass = localStorage.getItem(STORAGE_KEYS.password);
+    const encUser = getBrandItem(id, STORAGE_KEYS.username);
+    const encPass = getBrandItem(id, STORAGE_KEYS.password);
     const username = CryptoJS.AES.decrypt(encUser, key).toString(CryptoJS.enc.Utf8);
     const password = CryptoJS.AES.decrypt(encPass, key).toString(CryptoJS.enc.Utf8);
     if (!username || !password) return null;
@@ -86,15 +104,15 @@ export function getCredentials() {
 
 /**
  * Intenta obtener credenciales con SECRET_KEY; si falla, prueba con fallbackKey (ej. brand.token).
- * Útil para migración de credenciales encriptadas con la clave antigua.
  */
-export function getCredentialsWithFallback(fallbackKey) {
-  const cred = getCredentials();
+export function getCredentialsWithFallback(fallbackKey, brand) {
+  const cred = getCredentials(brand);
   if (cred) return cred;
-  if (!fallbackKey || !hasCredentials()) return null;
+  if (!fallbackKey || !hasCredentials(brand)) return null;
+  const id = brandId(brand);
   try {
-    const encUser = localStorage.getItem(STORAGE_KEYS.username);
-    const encPass = localStorage.getItem(STORAGE_KEYS.password);
+    const encUser = getBrandItem(id, STORAGE_KEYS.username);
+    const encPass = getBrandItem(id, STORAGE_KEYS.password);
     const username = CryptoJS.AES.decrypt(encUser, fallbackKey).toString(CryptoJS.enc.Utf8);
     const password = CryptoJS.AES.decrypt(encPass, fallbackKey).toString(CryptoJS.enc.Utf8);
     if (!username || !password) return null;
@@ -105,34 +123,25 @@ export function getCredentialsWithFallback(fallbackKey) {
 }
 
 /**
- * Cierra sesión y limpia datos de sesión y opcionalmente licencia/config.
- * @param {{ clearLicense?: boolean, clearClientConfig?: boolean }}
+ * Cierra sesión: borra todo el storage de la marca activa (credenciales, prefs, parental, etc.).
+ * @param {{ brandId?: string }} options
  */
 export function setLoggedOut(options = {}) {
-  const { clearLicense = true, clearClientConfig = true } = options;
-  localStorage.removeItem(STORAGE_KEYS.sessionId);
-  localStorage.removeItem(STORAGE_KEYS.username);
-  localStorage.removeItem(STORAGE_KEYS.password);
-  localStorage.removeItem(STORAGE_KEYS.udid);
-  if (clearLicense) {
-    localStorage.removeItem(STORAGE_KEYS.licenses);
-    localStorage.removeItem(STORAGE_KEYS.license);
-    localStorage.removeItem(STORAGE_KEYS.licensePin);
-  }
-  if (clearClientConfig) {
-    localStorage.removeItem(STORAGE_KEYS.clientConfig);
-  }
+  const id = brandId(options.brandId);
+  clearBrandStorage(id);
+  clearLegacyGlobalSessionKeys();
+  resetBrandStoresOnLogout();
 }
 
-export function isAuthenticated() {
-  return !!getSessionId();
+export function isAuthenticated(brand) {
+  return !!getSessionId(brand);
 }
 
 // --- Licencias (para reactivación) ---
 
-export function getLicenses() {
+export function getLicenses(brand) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.licenses);
+    const raw = getBrandItem(brandId(brand), STORAGE_KEYS.licenses);
     if (raw == null || raw === '') return [];
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
     return Array.isArray(parsed) ? parsed : [];
@@ -141,35 +150,38 @@ export function getLicenses() {
   }
 }
 
-export function setLicenses(licenses) {
+export function setLicenses(licenses, brand) {
+  const id = brandId(brand);
   if (licenses == null) {
-    localStorage.removeItem(STORAGE_KEYS.licenses);
+    removeBrandItem(id, STORAGE_KEYS.licenses);
     return;
   }
-  localStorage.setItem(STORAGE_KEYS.licenses, JSON.stringify(Array.isArray(licenses) ? licenses : []));
+  setBrandItem(id, STORAGE_KEYS.licenses, JSON.stringify(Array.isArray(licenses) ? licenses : []));
 }
 
-export function getActiveLicense() {
-  const key = localStorage.getItem(STORAGE_KEYS.license);
-  const pin = localStorage.getItem(STORAGE_KEYS.licensePin);
+export function getActiveLicense(brand) {
+  const id = brandId(brand);
+  const key = getBrandItem(id, STORAGE_KEYS.license);
+  const pin = getBrandItem(id, STORAGE_KEYS.licensePin);
   return key && key.length > 0 ? { licenseKey: key, pin: pin || '' } : null;
 }
 
-export function setActiveLicense({ licenseKey, pin }) {
+export function setActiveLicense({ licenseKey, pin }, brand) {
+  const id = brandId(brand);
   if (licenseKey != null && String(licenseKey).trim() !== '') {
-    localStorage.setItem(STORAGE_KEYS.license, String(licenseKey).trim());
-    localStorage.setItem(STORAGE_KEYS.licensePin, pin != null ? String(pin) : '');
+    setBrandItem(id, STORAGE_KEYS.license, String(licenseKey).trim());
+    setBrandItem(id, STORAGE_KEYS.licensePin, pin != null ? String(pin) : '');
   } else {
-    localStorage.removeItem(STORAGE_KEYS.license);
-    localStorage.removeItem(STORAGE_KEYS.licensePin);
+    removeBrandItem(id, STORAGE_KEYS.license);
+    removeBrandItem(id, STORAGE_KEYS.licensePin);
   }
 }
 
 // --- Config del cliente (getClientConfig) ---
 
-export function getClientConfig() {
+export function getClientConfig(brand) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.clientConfig);
+    const raw = getBrandItem(brandId(brand), STORAGE_KEYS.clientConfig);
     if (raw == null || raw === '') return null;
     return typeof raw === 'string' ? JSON.parse(raw) : raw;
   } catch {
@@ -177,31 +189,22 @@ export function getClientConfig() {
   }
 }
 
-export function setClientConfig(config) {
+export function setClientConfig(config, brand) {
+  const id = brandId(brand);
   if (config == null) {
-    localStorage.removeItem(STORAGE_KEYS.clientConfig);
+    removeBrandItem(id, STORAGE_KEYS.clientConfig);
     return;
   }
-  localStorage.setItem(STORAGE_KEYS.clientConfig, JSON.stringify(config));
+  setBrandItem(id, STORAGE_KEYS.clientConfig, JSON.stringify(config));
 }
 
-/**
- * Config efectivo: el backend puede devolver { answer: config }; usamos config.answer ?? config.
- * @param {Object} raw
- * @returns {Object|null}
- */
 function getEffectiveClientConfig(raw) {
   if (!raw || typeof raw !== 'object') return null;
   return raw.answer ?? raw;
 }
 
-/**
- * Obtiene la URL del CDN de EPG a partir del config del cliente (getClientConfig).
- * Equivalente a User.epgCdnUrl en el proyecto EPG (setConfig → epgCdnGroupId + cdnServers).
- * @returns {string}
- */
-export function getEpgCdnUrl() {
-  const config = getEffectiveClientConfig(getClientConfig());
+export function getEpgCdnUrl(brand) {
+  const config = getEffectiveClientConfig(getClientConfig(brand));
   if (!config?.cdnServers?.length || config.epgCdnGroupId == null) return '';
   const cdn = config.epgCdnGroupId;
   const server = config.cdnServers.find((s) => String(s.id) === String(cdn));
@@ -209,13 +212,8 @@ export function getEpgCdnUrl() {
   return typeof server.urls[0] === 'string' ? server.urls[0] : '';
 }
 
-/**
- * Obtiene el nombre del operador a partir del config del cliente (getClientConfig).
- * Equivalente a User.operatorName en el proyecto EPG (setConfig → subscriber.operator).
- * @returns {string}
- */
-export function getOperatorName() {
-  const config = getEffectiveClientConfig(getClientConfig());
+export function getOperatorName(brand) {
+  const config = getEffectiveClientConfig(getClientConfig(brand));
   const op = config?.subscriber?.operator;
   return op != null && String(op).trim() !== '' ? String(op).trim() : '';
 }

@@ -1,17 +1,12 @@
 import { create } from 'zustand';
-import { getActiveBrandConfig } from '../config/brandConfig';
+import { getBrandItem, resolveBrandId, setBrandItem } from '../utils/brandStorage';
 
 const STORAGE_VERSION = 1;
-
-function getStorageKey() {
-  const brand = getActiveBrandConfig()?.brand || getActiveBrandConfig()?.id || '';
-  const suffix = String(brand || 'default');
-  return `epg.reminders.v${STORAGE_VERSION}.${suffix}`;
-}
+const EPG_REMINDERS_KEY = `epg.reminders.v${STORAGE_VERSION}`;
 
 function safeRead() {
   try {
-    const raw = localStorage.getItem(getStorageKey());
+    const raw = getBrandItem(resolveBrandId(), EPG_REMINDERS_KEY);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch {
@@ -21,7 +16,7 @@ function safeRead() {
 
 function safeWrite(payload) {
   try {
-    localStorage.setItem(getStorageKey(), JSON.stringify(payload));
+    setBrandItem(resolveBrandId(), EPG_REMINDERS_KEY, JSON.stringify(payload));
   } catch {
     // noop
   }
@@ -39,7 +34,10 @@ function normalizeId(r) {
 export const useEpgReminderStore = create((set, get) => {
   const hydrate = () => {
     const data = safeRead();
-    if (!data || data.version !== STORAGE_VERSION) return;
+    if (!data || data.version !== STORAGE_VERSION) {
+      set({ ...initial });
+      return;
+    }
     set((s) => ({
       ...s,
       reminders: Array.isArray(data.reminders) ? data.reminders : [],
@@ -64,6 +62,10 @@ export const useEpgReminderStore = create((set, get) => {
     ...initial,
     hydrate,
     persist,
+
+    resetOnLogout: () => {
+      set({ ...initial });
+    },
 
     addReminder: (reminder) => {
       if (!reminder) return;

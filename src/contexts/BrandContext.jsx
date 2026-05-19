@@ -9,6 +9,8 @@ import { getBrandConfig } from '../config/brands';
 import { getBrandAsset } from '../utils/assetLoader';
 import { applyTheme } from '../utils/config';
 import panaccessService from '../services/panaccessService';
+import { useParentalStore } from '../store/parentalStore';
+import { useEpgReminderStore } from '../store/epgReminderStore';
 
 const BrandContext = createContext(null);
 
@@ -81,7 +83,14 @@ export const BrandProvider = ({ children }) => {
       setCurrentBrand(brandConfig);
       setError(null);
       setIsLoading(false);
-      
+
+      try {
+        useParentalStore.getState().hydrate?.();
+        useEpgReminderStore.getState().hydrate?.();
+      } catch {
+        // noop
+      }
+
       // Guardar brand en localStorage para persistencia
       if (brandConfig?.brand) {
         localStorage.setItem('brand', brandConfig.brand);

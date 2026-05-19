@@ -96,7 +96,7 @@
     "googlePanaccessMissing": "The server did not return access credentials. Check that your account is registered.",
     "register": "Register",
     "registerTitle": "QR Registration",
-    "registerHint": "Scan this QR code to complete your registration.",
+    "registerHint": "Scan this QR code to complete registration.",
     "registerUnavailable": "The QR code could not be generated right now.",
     "udidButton": "Sign in with code",
     "udidTitle": "UDID Login",

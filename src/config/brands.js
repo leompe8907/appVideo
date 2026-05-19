@@ -1142,8 +1142,8 @@ export const BRANDS = [
   {
     brand: "wind",
     appName: "windplay",
-    drm: "https://middleware.wind.do/",
-    token: "CfeTUXTyhseXRvqosAve",//SM dMCAXWddYckMbxVMFXDn ,LG CfeTUXTyhseXRvqosAve, otro KTpUXYXTxjWHwuzfxogw
+    drm: "https://middleware.wind.do/",//drm: "https://cv01.panaccess.com/",
+    token: "CfeTUXTyhseXRvqosAve", //token: "gQposTlrMIOYQVdYBNYC",//SM  ,LG CfeTUXTyhseXRvqosAve, otro FdETWuaTIamNPqVcVEei, 
     os: 'HTML5',
     appVersion: '1',    
     branding: 'Panaccess',

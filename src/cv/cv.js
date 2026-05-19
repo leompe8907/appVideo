@@ -1,6 +1,7 @@
 import CryptoJS from "crypto-js";
 import getUdid from "./udid";
 import { createTimeoutPromise, classifyError } from "./errorClassifier";
+import * as userSession from "../utils/userSession";
 
 export let CV = {
   baseUrl: "",
@@ -157,7 +158,7 @@ export let CV = {
         throw new Error("No se recibió sesión. Verifica usuario y contraseña.");
       }
       this.sessionId = sessionId;
-      localStorage.setItem("sessionId", this.sessionId);
+      userSession.setSessionId(this.sessionId);
       return this.sessionId;
     } catch (error) {
       throw new Error("Login failed: " + error.message);
@@ -165,7 +166,7 @@ export let CV = {
   },
 
   logout() {
-    localStorage.removeItem("sessionId");
+    userSession.setSessionId(null);
     this.sessionId = null;
   },
 

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { fetchOsms, getNewestOsmTime } from '../services/osmsService';
+import { getBrandItem, resolveBrandId, setBrandItem } from '../utils/brandStorage';
 
 const LS_LAST_COUNT = 'osms.lastCount';
 const LS_LAST_NEWEST_TIME = 'osms.lastNewestTime';
@@ -8,7 +9,7 @@ const LS_LAST_SEEN_NEWEST_TIME = 'osms.lastSeenNewestTime';
 
 function safeGet(key) {
   try {
-    return localStorage.getItem(key);
+    return getBrandItem(resolveBrandId(), key);
   } catch {
     return null;
   }
@@ -16,7 +17,7 @@ function safeGet(key) {
 
 function safeSet(key, value) {
   try {
-    localStorage.setItem(key, value);
+    setBrandItem(resolveBrandId(), key, value);
   } catch {
     // noop
   }

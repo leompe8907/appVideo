@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getUdid } from '../cv/udid';
 import { decryptEncryptedCredentials } from '../services/udidCrypto';
+import { setBrandItem } from '../utils/brandStorage';
 
 const DEFAULT_RECONNECT_MS = [3000, 6000, 10000];
 const UDID_DEBUG =
@@ -487,7 +488,7 @@ export function useUdidLoginFlow({ config, appName, onCredentials, t }) {
       }
 
       activeCodeRef.current = udidCode;
-      localStorage.setItem('external_login_udid', udidCode);
+      setBrandItem(null, 'external_login_udid', udidCode);
       setCode(udidCode);
       const finalExpiresAt = Date.now() + expiresInMinutes * 60 * 1000;
       expiresAtRef.current = finalExpiresAt;

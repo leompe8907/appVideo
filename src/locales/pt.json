@@ -96,7 +96,7 @@
     "googlePanaccessMissing": "O servidor não devolveu credenciais de acesso. Verifique se a sua conta está registada.",
     "register": "Registrar",
     "registerTitle": "Registro por QR",
-    "registerHint": "Escaneie este QR code para concluir seu cadastro.",
+    "registerHint": "Escaneie este QR code para concluir registrarte.",
     "registerUnavailable": "Nao foi possivel gerar o QR code neste momento.",
     "udidButton": "Entrar com codigo",
     "udidTitle": "Login por UDID",
