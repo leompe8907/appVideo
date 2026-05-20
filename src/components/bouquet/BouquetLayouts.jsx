@@ -73,6 +73,13 @@ function getChannelLayoutVariant(layoutType) {
     return 'logo';
   }
   if (
+    value === 'service_layout_logo_with_number' ||
+    value === 'logo_with_number' ||
+    value === 'logo+lcn'
+  ) {
+    return 'logo_with_number';
+  }
+  if (
     value === 'service_layout_event_normal' ||
     value === 'event_normal' ||
     value === 'event'
@@ -142,6 +149,7 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, l
     <div
       className="bouquet-row-carousel"
       data-bouquet-id={bouquet.bouquetId ?? bouquet.id ?? ''}
+      data-layout={layoutType ?? ''}
     >
       <h4 className="bouquet-heading">{title}</h4>
       <div className="horizontal-slide">
@@ -167,6 +175,7 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, l
  * - event: imagen del evento (o logo si no hay)
  * - event_and_logo: logo arriba + imagen de evento abajo + barra de tiempo (timeship)
  * - event_line: igual que event pero con tamaño mayor
+ * - logo_with_number: logo centrado en tarjeta + LCN abajo a la derecha + nombre debajo
  */
 function ChannelCard({ channel, layoutType, onSelect, onFocus }) {
   const parental = useParental();
@@ -175,7 +184,15 @@ function ChannelCard({ channel, layoutType, onSelect, onFocus }) {
   const bgColor = normalizeColor(channel.backgroundColor ?? channel.bgColor);
   const variant = getChannelLayoutVariant(layoutType);
   const style =
-    variant === 'event_and_logo' ? {} : bgColor ? { backgroundColor: bgColor } : {};
+    variant === 'event_and_logo' || variant === 'logo_with_number'
+      ? {}
+      : bgColor
+        ? { backgroundColor: bgColor }
+        : {};
+  const logoWithNumberFrameStyle = bgColor ? { backgroundColor: bgColor } : undefined;
+  const channelLcn =
+    channel.lcn ?? channel.LCN ?? channel.logicalChannelNumber ?? channel.logical_channel_number;
+  const showLcn = channelLcn != null && String(channelLcn).trim() !== '';
 
   const channelId = getChannelStableId(channel);
   const isBlocked = parental.enabled && channelId ? parental.isChannelBlocked(channelId) : false;
@@ -394,6 +411,27 @@ function ChannelCard({ channel, layoutType, onSelect, onFocus }) {
               </div>
             </div>
           </div>
+        </>
+      ) : variant === 'logo_with_number' ? (
+        <>
+          <div className="channel-card-lwn-frame" style={logoWithNumberFrameStyle}>
+            <img
+              src={logoImage || placeholderImageUrl}
+              alt={channel.name || ''}
+              className="channel-card-lwn-logo"
+              onError={handleLogoError}
+            />
+            {showLcn ? (
+              <span className="channel-card-lwn-lcn" aria-hidden="true">
+                {channelLcn}
+              </span>
+            ) : null}
+          </div>
+          {channel.name ? (
+            <span className="channel-card-lwn-name" title={channel.name}>
+              {channel.name}
+            </span>
+          ) : null}
         </>
       ) : (
         <>

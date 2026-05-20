@@ -279,6 +279,12 @@
       padding: 0 0.25rem;
     }
 
+    .bouquet-row-carousel[data-layout='service_layout_logo_with_number'] .horizontal-slide {
+      height: 18rem;
+      align-items: flex-start;
+      padding-top: 0.35rem;
+    }
+
     .horizontal-slide {
       margin-left: 1.25rem;
       width: 100%;
@@ -459,6 +465,90 @@
           overflow: hidden;
           flex: 1;
           min-height: 0;
+        }
+      }
+    }
+
+    /* service_layout_logo_with_number: tarjeta vertical con logo, LCN y nombre debajo */
+    &.channel-card--logo_with_number {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      width: 12.5rem;
+      height: auto;
+      min-height: auto;
+      padding: 0;
+      background: transparent;
+      background-color: transparent;
+      border-color: transparent;
+      overflow: visible;
+
+      .channel-card-lwn-frame {
+        position: relative;
+        flex: 0 0 auto;
+        width: 100%;
+        aspect-ratio: 5 / 4;
+        min-height: auto;
+        border-radius: 1rem;
+        background-color: #152a52;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75em 0.7em 1.15em;
+        box-sizing: border-box;
+        border: 2px solid transparent;
+        transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+      }
+
+      .channel-card-lwn-logo {
+        display: block;
+        max-width: 82%;
+        max-height: 78%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+      }
+
+      .channel-card-lwn-lcn {
+        position: absolute;
+        right: 0.55em;
+        bottom: 0.35em;
+        font-size: 1.45rem;
+        font-weight: 600;
+        line-height: 1;
+        color: #fff;
+        font-variant-numeric: tabular-nums;
+        pointer-events: none;
+      }
+
+      .channel-card-lwn-name {
+        flex: 0 0 auto;
+        margin-top: 0.4em;
+        font-size: 0.88rem;
+        font-weight: 500;
+        line-height: 1.25;
+        color: #fff;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+      }
+
+      &:hover,
+      &.focused {
+        transform: none;
+        border-color: transparent;
+        box-shadow: none;
+        -webkit-box-shadow: none;
+        -moz-box-shadow: none;
+
+        .channel-card-lwn-frame {
+          transform: translateY(-2px) scale(1.02);
+          border-color: rgba(255, 255, 255, 0.6);
+          box-shadow: 1px 0 11px 5px rgba(244, 0, 0, 0.61);
+          -webkit-box-shadow: 1px 0 11px 5px rgba(244, 0, 0, 0.61);
+          -moz-box-shadow: 1px 0 11px 5px rgba(244, 0, 0, 0.61);
         }
       }
     }
@@ -766,6 +856,27 @@
       border-color: var(--focus-color, rgba(255, 255, 255, 0.92)) !important;
       transition: border-color 0.08s ease-out !important;
       z-index: 1 !important;
+    }
+
+    &.channel-card--logo_with_number {
+      border-color: transparent !important;
+      border-width: 2px !important;
+
+      &:hover,
+      &.focused {
+        border-color: transparent !important;
+        border-width: 2px !important;
+
+        .channel-card-lwn-frame {
+          transform: none !important;
+          border-radius: 1rem;
+          border-width: 3px !important;
+          border-color: var(--focus-color, rgba(255, 255, 255, 0.92)) !important;
+          box-shadow: none !important;
+          -webkit-box-shadow: none !important;
+          -moz-box-shadow: none !important;
+        }
+      }
     }
   }
 

@@ -64,6 +64,13 @@ function getBouquetLayoutType(rawBouquet) {
     return 'service_layout_logo_normal';
   }
   if (
+    value === 'service_layout_logo_with_number' ||
+    value === 'logo_with_number' ||
+    value === 'logo+lcn'
+  ) {
+    return 'service_layout_logo_with_number';
+  }
+  if (
     value === 'service_layout_event_normal' ||
     value === 'event_normal' ||
     value === 'event'
