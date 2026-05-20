@@ -1191,7 +1191,7 @@ export const BRANDS = [
         url: "https://shop.fotelka.tv/?c=customer&p=register",
       },
       udid: {
-        enabled: true,
+        enabled: false,
         baseUrl: "",
         requestPath: "",
         wsUrl: "",
@@ -1333,7 +1333,7 @@ export const BRANDS = [
         },
       },
       subheader: {
-        enabled: true,
+        enabled: false,
         areas: {
           left: { 
             enabled: true, 

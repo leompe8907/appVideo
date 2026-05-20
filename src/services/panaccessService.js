@@ -25,6 +25,7 @@ class PanaccessService {
 
       this.brandConfig = brandConfig;
       this.client = createCVClient(brandConfig);
+      this.client.lang = (i18n?.language || 'es').split('-')[0].toUpperCase();
 
       console.log('[PanaccessService] Inicializado correctamente');
     } catch (error) {
@@ -49,12 +50,17 @@ class PanaccessService {
         const clientId = typeof parameters.clientId === 'string' ? parameters.clientId.trim() : parameters.clientId;
         const pwd = typeof parameters.pwd === 'string' ? parameters.pwd.trim() : parameters.pwd;
         const hashPassword = this.brandConfig.hashPasswordBeforeLogin !== false;
+        const lang = (i18n?.language || 'es').split('-')[0].toUpperCase();
         await this.client.init({
           baseUrl: this.brandConfig.drm,
           apiToken: parameters.apiToken || this.brandConfig.token,
           username: clientId,
           password: pwd,
           hashPassword,
+          os: this.brandConfig?.os || 'HTML5',
+          appVersion: this.brandConfig?.appVersion || this.brandConfig?.version || '1',
+          branding: this.brandConfig?.branding || 'Panaccess',
+          lang,
           mode: 'json',
           fetchTimeout: 30000,
         });
@@ -168,6 +174,14 @@ class PanaccessService {
   async validateSession() {
     if (!this.client) {
       return false;
+    }
+    const sessionIdFromStorage = userSession.getSessionId();
+    if (sessionIdFromStorage) {
+      this.client.sessionId = sessionIdFromStorage;
+      this.client.os = this.brandConfig?.os || this.client.os || 'HTML5';
+      this.client.appVersion = this.brandConfig?.appVersion || this.brandConfig?.version || this.client.appVersion || '1';
+      this.client.branding = this.brandConfig?.branding || this.client.branding || 'Panaccess';
+      this.client.lang = (i18n?.language || 'es').split('-')[0].toUpperCase();
     }
     return await this.client.validateSession();
   }
@@ -443,7 +457,7 @@ class PanaccessService {
     }
     const { ...apiOptions } = options;
     try {
-      const result = await this.callAuthenticatedApi('getAvailableStreams', {}, apiOptions);
+      const result = await this.callAuthenticatedApi('getAvailableStreams', { ip: true }, apiOptions);
       return result;
     } catch (error) {
       const customError = new Error('Error al obtener los streams disponibles.');

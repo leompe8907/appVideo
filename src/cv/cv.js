@@ -12,6 +12,10 @@ export let CV = {
   apiToken: "",
   username: "",
   password: "",
+  os: "HTML5",
+  appVersion: "1",
+  branding: "Panaccess",
+  lang: "ES",
 
   async init(options) {
     this.baseUrl = options.baseUrl || this.baseUrl;
@@ -22,6 +26,10 @@ export let CV = {
     this.username = options.username;
     this.password = options.password;
     this.apiToken = options.apiToken || this.apiToken;
+    this.os = options.os || this.os;
+    this.appVersion = options.appVersion || this.appVersion;
+    this.branding = options.branding || this.branding;
+    this.lang = options.lang || this.lang;
 
     // Algunos backends (ej. intv) esperan contraseña en claro y hashean en servidor
     const hashPassword = options.hashPassword !== false;
@@ -41,18 +49,51 @@ export let CV = {
     }
   },
 
-  async call(funcName, parameters = {}) {
-    const url = `${this.baseUrl}?f=${funcName}&requestMode=function`;
-
-    if (this.sessionId && funcName !== "login") {
-      parameters.sessionId = this.sessionId;
+  normalizeBaseUrl(url) {
+    if (!url || typeof url !== "string") return url;
+    const trimmed = url.trim();
+    try {
+      const parsed = new URL(trimmed);
+      const path = parsed.pathname.endsWith("/") ? parsed.pathname : `${parsed.pathname}/`;
+      return `${parsed.origin}${path}`;
+    } catch {
+      return trimmed.endsWith("/") ? trimmed : `${trimmed}/`;
     }
+  },
+
+  /**
+   * Payload POST alineado con 10foot get_result_post: f, requestMode, apiToken y l en el body.
+   */
+  buildPayload(funcName, parameters = {}) {
+    const payload = {
+      ...parameters,
+      f: funcName,
+      requestMode: "function",
+    };
+
+    if (this.apiToken && payload.apiToken == null) {
+      payload.apiToken = this.apiToken;
+    }
+    if (payload.l == null && this.lang) {
+      payload.l = this.lang;
+    }
+
+    const skipSessionId = funcName === "login" || funcName === "clientLogin";
+    if (this.sessionId && !skipSessionId && payload.sessionId == null) {
+      payload.sessionId = this.sessionId;
+    }
+
+    return payload;
+  },
+
+  async call(funcName, parameters = {}) {
+    const url = this.normalizeBaseUrl(this.baseUrl);
+    const payload = this.buildPayload(funcName, parameters);
 
     if (this.mode === "jsonp") {
-      return this.callJsonp(url, parameters);
-    } else {
-      return this.callJson(url, parameters);
+      return this.callJsonp(url, payload);
     }
+    return this.callJson(url, payload);
   },
 
   async callJson(url, parameters) {
@@ -129,7 +170,7 @@ export let CV = {
       parameters.jsonp = `window.${callbackName}`;
       const paramString = this.serialize(parameters);
       const script = document.createElement("script");
-      script.src = `${url}&${paramString}`;
+      script.src = `${url}?${paramString}`;
       document.head.appendChild(script);
       document.head.removeChild(script);
     });
@@ -137,17 +178,24 @@ export let CV = {
 
   serialize(obj) {
     return Object.entries(obj)
-      .map(([key, val]) => `${encodeURIComponent(key)}=${encodeURIComponent(val)}`)
+      .filter(([, val]) => val !== undefined && val !== null)
+      .map(([key, val]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(val))}`)
       .join("&");
   },
 
   async login(apiToken, username, password) {
+    const previousSessionId = this.sessionId;
+    this.sessionId = null;
     try {
       const result = await this.call("clientLogin", {
         apiToken,
         clientId: username,
         pwd: password,
         udid: getUdid(),
+        os: this.os,
+        appVersion: this.appVersion,
+        branding: this.branding,
+        l: this.lang,
       });
       // Normalizar: la API puede devolver string o array con un elemento
       let sessionId = result;
@@ -161,6 +209,7 @@ export let CV = {
       userSession.setSessionId(this.sessionId);
       return this.sessionId;
     } catch (error) {
+      this.sessionId = previousSessionId;
       throw new Error("Login failed: " + error.message);
     }
   },
@@ -175,9 +224,14 @@ export let CV = {
    */
   async validateSession() {
     try {
-      // Hacer una llamada simple para validar
-      await this.call("getCategories", {});
-      return true;
+      const result = await this.call("loggedIn", {
+        os: this.os,
+        appVersion: this.appVersion,
+        branding: this.branding,
+        l: this.lang,
+        udid: getUdid(),
+      });
+      return Boolean(result);
     } catch {
       return false;
     }
@@ -206,6 +260,9 @@ export function createCVClient(brandConfig) {
   // Inicializar con la configuración del brand
   cvInstance.baseUrl = brandConfig.drm || "";
   cvInstance.apiToken = brandConfig.token || "";
+  cvInstance.os = brandConfig.os || "HTML5";
+  cvInstance.appVersion = brandConfig.appVersion || brandConfig.version || "1";
+  cvInstance.branding = brandConfig.branding || "Panaccess";
   cvInstance.mode = "json";
   cvInstance.jsonpTimeout = 5000;
   cvInstance.fetchTimeout = 30000;
