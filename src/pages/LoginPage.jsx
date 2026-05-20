@@ -8,7 +8,7 @@ import { useDevice } from '../contexts/DeviceContext';
 import { FocusableInput } from '../components/navigation/FocusableInput';
 import { FocusableButton } from '../components/navigation/FocusableButton';
 import { getInitialRoute } from '../utils/navigation';
-import { loginAndActivateLicense } from '../services/loginFlow';
+import { clearSessionBeforeNewLogin, loginAndActivateLicense } from '../services/loginFlow';
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
 import { getActiveLicense } from '../utils/userSession';
 import { useUdidLoginFlow } from '../hooks/useUdidLoginFlow';
@@ -60,6 +60,7 @@ export function LoginPage() {
   }, []);
 
   const handleUdidCredentials = async (credentials) => {
+    clearSessionBeforeNewLogin();
     await loginAndActivateLicense(currentBrand, {
       username: credentials.username,
       password: credentials.password,
@@ -211,6 +212,7 @@ export function LoginPage() {
           throw new Error(t('login.googlePanaccessMissing'));
         }
 
+        clearSessionBeforeNewLogin();
         await loginAndActivateLicense(
           currentBrand,
           { username: login1, password: pwd },
@@ -266,6 +268,7 @@ export function LoginPage() {
     setError('');
 
     try {
+      clearSessionBeforeNewLogin();
       await loginAndActivateLicense(currentBrand, {
         username: username.trim(),
         password: password.trim(),
@@ -410,6 +413,7 @@ export function LoginPage() {
           throw new Error(t('login.errorGeneric'));
         }
 
+        clearSessionBeforeNewLogin();
         await loginAndActivateLicense(
           currentBrand,
           { username: login1, password: pwd },

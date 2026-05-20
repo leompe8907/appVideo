@@ -21,37 +21,19 @@ export function PreloadDataPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentBrand } = useBrand();
-  const { epg, vod, catchup, ads, loadEPG, loadVOD, loadCatchup, loadAds } = usePreload();
+  const { epg, vod, loadEPG, loadVOD, loadCatchup, loadAds } = usePreload();
 
-  // Disparar cargas iniciales centralizadas
+  // Siempre forzar recarga al entrar en /preload (p. ej. tras cambio de usuario o "Actualizar").
   useEffect(() => {
     if (!currentBrand) return;
 
-    if (epg.status === 'idle') {
-      loadEPG(currentBrand);
+    loadEPG(currentBrand, { force: true });
+    loadVOD(currentBrand, { t, force: true });
+    if (currentBrand?.catchup?.enabled !== false) {
+      loadCatchup(currentBrand, { force: true });
     }
-    if (vod.status === 'idle') {
-      loadVOD(currentBrand, { t });
-    }
-    if (currentBrand?.catchup?.enabled !== false && catchup.status === 'idle') {
-      // Catchup no bloquea salida de preload; se carga en paralelo para decidir visibilidad en sidebar.
-      loadCatchup(currentBrand);
-    }
-    if (ads.status === 'idle') {
-      loadAds();
-    }
-  }, [
-    currentBrand,
-    epg.status,
-    vod.status,
-    catchup.status,
-    ads.status,
-    loadEPG,
-    loadVOD,
-    loadCatchup,
-    loadAds,
-    t,
-  ]);
+    loadAds({ force: true });
+  }, [currentBrand, location.search, loadEPG, loadVOD, loadCatchup, loadAds, t]);
 
   // Cuando EPG y VOD estén listos (o en error), redirigir a Home/Bouquets
   useEffect(() => {

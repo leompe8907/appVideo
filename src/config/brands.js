@@ -948,7 +948,7 @@ export const BRANDS = [
         assetPath: "backgroundalt.webp",
       },
       qrRegister: {
-        enabled: true,
+        enabled: false,
         url: "https://shop.fotelka.tv/?c=customer&p=register",
       },
       udid: {
@@ -966,7 +966,7 @@ export const BRANDS = [
       socialLogin: {
         backendBaseUrl: '',
         google: {
-          enabled: true,
+          enabled: false,
           redirectUrl: '',
           accessToken: '',
           preferCustomButton: true,
@@ -1078,8 +1078,8 @@ export const BRANDS = [
       subheader: {
         enabled: true,
         areas: {
-          left: { enabled: true, showServiceInfo: false, contentAlign: 'left' },
-          center: { enabled: true, showServiceInfo: true, contentAlign: 'center' },
+          left: { enabled: true, showServiceInfo: true, contentAlign: 'left' },
+          center: { enabled: true, showServiceInfo: false, contentAlign: 'center' },
           right: { enabled: true, showServiceInfo: false, contentAlign: 'right' },
         },
       },

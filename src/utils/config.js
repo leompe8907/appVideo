@@ -117,7 +117,6 @@ export function scheduleHomeBackgroundResolution(brandConfig) {
     for (const url of urls) {
       if (token !== homeBackgroundProbeToken) return;
       // Secuencial a propósito: parar en la primera carga válida.
-      // eslint-disable-next-line no-await-in-loop
       const ok = await probeImageUrlLoads(url);
       if (ok && token === homeBackgroundProbeToken) {
         root.style.setProperty('--home-background-image', `url("${url}")`);

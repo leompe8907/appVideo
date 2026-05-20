@@ -5,6 +5,18 @@
 
 import panaccessService from './panaccessService';
 import * as userSession from '../utils/userSession';
+/**
+ * Limpia sesión, storage de marca y caché en memoria antes de un login manual
+ * (otro usuario en el mismo dispositivo). No usar en reactivación automática (splash).
+ */
+export function clearSessionBeforeNewLogin() {
+  try {
+    panaccessService.logout?.();
+  } catch {
+    // noop
+  }
+  userSession.setLoggedOut();
+}
 
 const DEFAULT_OPTIONS = {
   autoActivateLicense: false,
