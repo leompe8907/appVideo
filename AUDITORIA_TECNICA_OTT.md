@@ -1,9 +1,32 @@
 # Auditoría Técnica OTT — Reporte Completo
 
-**Fecha:** 6 de mayo de 2026  
+**Fecha informe:** 6 de mayo de 2026  
+**Última revisión de implementación:** 20 de mayo de 2026  
 **Stack:** React 18.3 + Vite 7 + React Router v7 + Zustand 5  
 **Target:** LG webOS 4.x (Chrome 61) / Samsung Tizen 4.x (Chrome 69)  
 **Auditado por:** Agente de IA — Cursor Sonnet 4.6
+
+---
+
+## Estado de implementación (20 may 2026)
+
+| ID | Hallazgo / propuesta | Estado |
+|---|---|---|
+| CRÍTICO-1 | Stale closure `currentBrand` en PlayerContext | ✅ `brandRef` |
+| CRÍTICO-2 | Worker EPG `postMessage` + funciones en fechas | ✅ timestamps numéricos |
+| CRÍTICO-3 | Memory leak / engine sin listeners al cambiar plataforma | ✅ `window.location.reload()` si TV↔PC |
+| CRÍTICO-4 | Credenciales en logs | ✅ `logger.js` + `debugApi` |
+| CRÍTICO-5 | `escape()` en LgEngine | ✅ `encodeURIComponent` |
+| CRÍTICO-6 | `popstate` recarga brand en cada navegación | ✅ listener eliminado |
+| MEJORA-6 | Reset `panaccessService` al cambiar marca | ✅ `reset()` + `changeBrand` |
+| B.1 | Catchup paralelo (batch 4) | ✅ |
+| B.2 | Selectores granulares progreso EPG | ✅ `useEpgProgress`, etc. |
+| B.3 | Validación de sesión unificada | ✅ `sessionValidator` global + throttle 5 min |
+| C.2 | Logger centralizado | ✅ |
+| C.3 | Health check compatibilidad | ✅ `compatCheck.js` en `main.jsx` |
+| C.4 | Validación schema `brands.js` | ✅ `validateBrandConfig` (DEV) |
+| B.4 | Refactor LoginPage | ⏳ Parcial (~744 líneas) |
+| C.1 | Vitest | ⏳ Pendiente |
 
 ---
 

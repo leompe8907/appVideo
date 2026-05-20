@@ -1,11 +1,16 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthValidator } from './hooks/useAuthValidator';
-
+import { useBrand } from './contexts/BrandContext';
 import { isAuthenticated } from './utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
 import { PreloadGate } from './components/preload/PreloadGate';
+import {
+  startSessionValidator,
+  stopSessionValidator,
+  setOnSessionInvalid,
+} from './utils/sessionValidator';
 
 // Lazy loading de páginas
 const SplashPage = lazy(() => import('./pages/SplashPage'));
@@ -60,6 +65,26 @@ function ProtectedRoute({ children }) {
 
 function App() {
   useTranslation();
+  const navigate = useNavigate();
+  const { currentBrand } = useBrand();
+
+  useEffect(() => {
+    setOnSessionInvalid(() => {
+      navigate('/', { replace: true });
+    });
+    return () => setOnSessionInvalid(null);
+  }, [navigate]);
+
+  useEffect(() => {
+    if (currentBrand?.token) {
+      startSessionValidator(currentBrand);
+    } else {
+      stopSessionValidator();
+    }
+    return () => {
+      stopSessionValidator();
+    };
+  }, [currentBrand]);
 
   return (
     <>

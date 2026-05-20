@@ -81,6 +81,20 @@ export function getActiveBrandConfig() {
 }
 
 /**
+ * Valida que la configuración de marca tenga campos mínimos.
+ * @param {Object} config
+ * @returns {string[]} Claves faltantes o inválidas
+ */
+export function validateBrandConfig(config) {
+  if (!config || typeof config !== 'object') return ['config'];
+  const required = ['brand', 'appName', 'drm', 'token'];
+  return required.filter(function (k) {
+    const v = config[k];
+    return v == null || (typeof v === 'string' && v.trim() === '');
+  });
+}
+
+/**
  * Invalida la caché (útil tras changeBrand sin reload).
  */
 export function invalidateBrandCache() {

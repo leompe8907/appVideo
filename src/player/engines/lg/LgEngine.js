@@ -269,9 +269,9 @@ export class LgEngine extends BaseTvEngine {
       }
     }
     try {
-      return escape(JSON.stringify(options));
+      return encodeURIComponent(JSON.stringify(options));
     } catch {
-      return escape('{}');
+      return encodeURIComponent('{}');
     }
   }
 

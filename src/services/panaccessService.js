@@ -7,9 +7,18 @@ import { createCVClient } from '../cv/cv';
 import { retryOperation } from '../cv/errorClassifier';
 import i18n from '../locales/i18n';
 import * as userSession from '../utils/userSession';
+import logger from '../utils/logger';
 
 class PanaccessService {
   constructor() {
+    this.client = null;
+    this.brandConfig = null;
+  }
+
+  /**
+   * Limpia cliente y config (p. ej. al cambiar de marca en la misma sesión).
+   */
+  reset() {
     this.client = null;
     this.brandConfig = null;
   }
@@ -23,11 +32,17 @@ class PanaccessService {
         throw new Error('brandConfig es requerido');
       }
 
+      const prevBrand = this.brandConfig?.brand;
+      const nextBrand = brandConfig?.brand;
+      if (prevBrand && nextBrand && prevBrand !== nextBrand) {
+        this.reset();
+      }
+
       this.brandConfig = brandConfig;
       this.client = createCVClient(brandConfig);
       this.client.lang = (i18n?.language || 'es').split('-')[0].toUpperCase();
 
-      console.log('[PanaccessService] Inicializado correctamente');
+      logger.log('[PanaccessService] Inicializado correctamente');
     } catch (error) {
       console.error('[PanaccessService] Error en inicialización:', error);
       throw error;
@@ -43,7 +58,7 @@ class PanaccessService {
     }
 
     try {
-      console.log("Llamando a la API (login):", method, parameters);
+      logger.debugApi("Login", method, parameters);
 
       // Para clientLogin, usar init() del cliente
       if (method === 'clientLogin' && parameters.clientId && parameters.pwd) {
@@ -66,7 +81,7 @@ class PanaccessService {
         });
 
         const sessionId = this.client.sessionId;
-        console.log("Respuesta de la API (login):", sessionId);
+        logger.debugApi("Login Result", method, sessionId);
         if (!sessionId || (typeof sessionId === 'string' && sessionId.trim() === '') || (Array.isArray(sessionId) && sessionId.length === 0)) {
           throw new Error('No se recibió sesión. Verifica usuario y contraseña.');
         }
@@ -74,7 +89,7 @@ class PanaccessService {
       } else {
         // Para otros métodos, usar call directamente
         const result = await this.client.call(method, parameters);
-        console.log("Respuesta de la API (login):", result);
+        logger.debugApi("Login Result", method, result);
         return result;
       }
     } catch (error) {
@@ -96,7 +111,7 @@ class PanaccessService {
     const sessionIdFromStorage = userSession.getSessionId();
     if (!this.client.isAuthenticated() && sessionIdFromStorage) {
       this.client.sessionId = sessionIdFromStorage;
-      console.log('[PanaccessService] SessionId restaurado desde storage de marca');
+      logger.log('[PanaccessService] SessionId restaurado desde storage de marca');
     }
 
     if (!this.client.isAuthenticated()) {
@@ -139,9 +154,9 @@ class PanaccessService {
         parameters.udid = udid;
       }
 
-      console.log("Llamando a la API (autenticada):", method, parameters);
+      logger.debugApi("Authenticated", method, parameters);
       const result = await this.client.call(method, parameters);
-      console.log("Respuesta de la API (autenticada):", result);
+      logger.debugApi("Authenticated Result", method, result);
       return result;
     };
 
@@ -192,7 +207,7 @@ class PanaccessService {
   logout() {
     if (this.client) {
       this.client.logout();
-      console.log('[PanaccessService] Sesión cerrada');
+      logger.log('[PanaccessService] Sesión cerrada');
     }
   }
 

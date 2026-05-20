@@ -4,6 +4,7 @@ import {
   getActiveBrandConfig,
   enrichConfigWithAssets,
   invalidateBrandCache,
+  validateBrandConfig,
 } from '../config/brandConfig';
 import { getBrandConfig } from '../config/brands';
 import { getBrandAsset } from '../utils/assetLoader';
@@ -67,6 +68,13 @@ export const BrandProvider = ({ children }) => {
         return;
       }
 
+      if (import.meta.env.DEV) {
+        const missing = validateBrandConfig(brandConfig);
+        if (missing.length > 0) {
+          console.warn('[BrandContext] Config incompleta, faltan:', missing.join(', '));
+        }
+      }
+
       // Aplicar tema
       applyTheme(brandConfig);
       document.title = `${brandConfig.appName} - Cargando...`;
@@ -111,6 +119,7 @@ export const BrandProvider = ({ children }) => {
     // Guardar brand en localStorage para persistencia
     localStorage.setItem('brand', brandId);
     invalidateBrandCache();
+    panaccessService.reset();
 
     if (reload) {
       // Recargar la página con el nuevo brand en la URL
@@ -125,13 +134,7 @@ export const BrandProvider = ({ children }) => {
     // Cargar brand inicialmente
     loadBrandConfig();
     
-    // Escuchar cambios en popstate (navegación del navegador)
-    const handlePopState = () => {
-      loadBrandConfig();
-    };
-    window.addEventListener('popstate', handlePopState);
-    
-    // También verificar si cambia el localStorage desde otra pestaña
+    // Verificar si cambia el localStorage desde otra pestaña
     const handleStorageChange = (e) => {
       if (e.key === 'brand') {
         loadBrandConfig();
@@ -140,7 +143,6 @@ export const BrandProvider = ({ children }) => {
     window.addEventListener('storage', handleStorageChange);
     
     return () => {
-      window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);

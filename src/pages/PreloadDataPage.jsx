@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
 import { usePreload } from '../store/usePreload';
+import { useEpgStatus, useVodStatus } from '../store/preloadStore';
 import { PreloadScreen } from '../components/preload/PreloadScreen';
 
 export function PreloadDataPage() {
@@ -21,7 +22,9 @@ export function PreloadDataPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentBrand } = useBrand();
-  const { epg, vod, loadEPG, loadVOD, loadCatchup, loadAds } = usePreload();
+  const epgStatus = useEpgStatus();
+  const vodStatus = useVodStatus();
+  const { loadEPG, loadVOD, loadCatchup, loadAds } = usePreload();
 
   // Siempre forzar recarga al entrar en /preload (p. ej. tras cambio de usuario o "Actualizar").
   useEffect(() => {
@@ -37,8 +40,8 @@ export function PreloadDataPage() {
 
   // Cuando EPG y VOD estén listos (o en error), redirigir a Home/Bouquets
   useEffect(() => {
-    const epgReady = epg.status === 'ready' || epg.status === 'error';
-    const vodReady = vod.status === 'ready' || vod.status === 'error';
+    const epgReady = epgStatus === 'ready' || epgStatus === 'error';
+    const vodReady = vodStatus === 'ready' || vodStatus === 'error';
 
     if (epgReady && vodReady) {
       const params = new URLSearchParams(location.search);
@@ -49,7 +52,7 @@ export function PreloadDataPage() {
           : '/home/inicio';
       navigate(safeTarget, { replace: true });
     }
-  }, [epg.status, vod.status, navigate, location.search]);
+  }, [epgStatus, vodStatus, navigate, location.search]);
 
   return <PreloadScreen />;
 }

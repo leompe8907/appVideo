@@ -6,14 +6,24 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
-import { usePreload } from '../../store/usePreload';
+import {
+  useEpgProgress,
+  useEpgStatus,
+  useVodStatus,
+  useEpgError,
+  useVodError,
+} from '../../store/preloadStore';
 
 const TIPS_INTERVAL_MS = 4000;
 
 export function PreloadScreen() {
   const { t } = useTranslation();
   const { currentBrand, getImage } = useBrand();
-  const { epg, vod } = usePreload();
+  const epgStatus = useEpgStatus();
+  const vodStatus = useVodStatus();
+  const epgError = useEpgError();
+  const vodError = useVodError();
+  const progress = useEpgProgress() || { percent: 0, current: 0, total: 0 };
   const [tipIndex, setTipIndex] = useState(0);
 
   const tips = [
@@ -33,19 +43,18 @@ export function PreloadScreen() {
 
   const logoPath = currentBrand?.assets?.logo || getImage('logo.png');
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
-  const progress = epg?.progress || { percent: 0, current: 0, total: 0 };
   const percent = progress.percent ?? 0;
   const current = progress.current ?? 0;
   const total = progress.total ?? 0;
 
   const message =
-    epg.status === 'error' || vod.status === 'error'
+    epgStatus === 'error' || vodStatus === 'error' || epgError || vodError
       ? t('preload.error')
       : t('preload.message');
   const submessage =
-    epg.status === 'loading' && total > 0
+    epgStatus === 'loading' && total > 0
       ? t('preload.channelsProgress', { current, total })
-      : epg.status === 'ready' || epg.status === 'finishing' || vod.status === 'ready'
+      : epgStatus === 'ready' || epgStatus === 'finishing' || vodStatus === 'ready'
           ? t('preload.finishing')
           : '';
 

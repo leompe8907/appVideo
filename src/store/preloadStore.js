@@ -425,56 +425,83 @@ export const usePreloadStore = create(function (set, get) {
 
         var totalGroups = groupsList.length;
         var groupsWithEvents = [];
+        var BATCH_SIZE = 4;
+        var loadedGroupsCount = 0;
 
-        for (var i = 0; i < groupsList.length; i++) {
-          var group = groupsList[i];
-          if (!group) continue;
+        set(function (s) {
+          return {
+            epg: s.epg,
+            vod: s.vod,
+            ads: s.ads,
+            catchup: { status: s.catchup.status, error: s.catchup.error, groups: s.catchup.groups, recorded: s.catchup.recorded, progress: { loadedGroups: 0, totalGroups: totalGroups }, lastLoadedAt: s.catchup.lastLoadedAt },
+          };
+        });
 
-          var epgStreamId = group.epgStreamId != null ? group.epgStreamId : (group.epg_stream_id != null ? group.epg_stream_id : group.epgStreamid);
-          var eventsResp = await panaccessService.getCatchupEvents({ epgStreamId: epgStreamId, enableRetry: enableRetry });
-          var eventsList = normalizeList(eventsResp, ['events', 'items', 'answer']);
-          var catchupGroupId = group.catchupGroupId != null ? group.catchupGroupId : (group.catchup_group_id != null ? group.catchup_group_id : (group.id != null ? group.id : null));
+        for (var start = 0; start < groupsList.length; start += BATCH_SIZE) {
+          var batch = groupsList.slice(start, start + BATCH_SIZE);
+          var results = await Promise.all(batch.map(async function(group) {
+            if (!group) return { group: null, eventsList: [] };
 
-          var mappedEvents = eventsList.map(function (ev) {
-            var startRaw = ev.start != null ? ev.start : (ev.startDate != null ? ev.startDate : (ev.start_date != null ? ev.start_date : null));
-            var durationSeconds = Number(ev.duration != null ? ev.duration : (ev.durationSeconds != null ? ev.durationSeconds : (ev.duration_sec != null ? ev.duration_sec : 0)));
-            var endRaw = ev.end != null ? ev.end : (ev.endDate != null ? ev.endDate : (ev.end_date != null ? ev.end_date : null));
+            var epgStreamId = group.epgStreamId != null ? group.epgStreamId : (group.epg_stream_id != null ? group.epg_stream_id : group.epgStreamid);
+            try {
+              var eventsResp = await panaccessService.getCatchupEvents({ epgStreamId: epgStreamId, enableRetry: enableRetry });
+              var eventsList = normalizeList(eventsResp, ['events', 'items', 'answer']);
+              return { group: group, eventsList: eventsList };
+            } catch (err) {
+              if (IS_DEV) console.warn('[PreloadStore] Error loading catchup events for group:', group, err);
+              return { group: group, eventsList: [] };
+            }
+          }));
 
-            var startMs = toMs(startRaw);
-            var endMsFromDuration =
-              startMs != null && isFinite(durationSeconds) && durationSeconds > 0
-                ? startMs + durationSeconds * 1000
+          results.forEach(function (res) {
+            var group = res.group;
+            var eventsList = res.eventsList;
+            if (!group) return;
+
+            var catchupGroupId = group.catchupGroupId != null ? group.catchupGroupId : (group.catchup_group_id != null ? group.catchup_group_id : (group.id != null ? group.id : null));
+
+            var mappedEvents = eventsList.map(function (ev) {
+              var startRaw = ev.start != null ? ev.start : (ev.startDate != null ? ev.startDate : (ev.start_date != null ? ev.start_date : null));
+              var durationSeconds = Number(ev.duration != null ? ev.duration : (ev.durationSeconds != null ? ev.durationSeconds : (ev.duration_sec != null ? ev.duration_sec : 0)));
+              var endRaw = ev.end != null ? ev.end : (ev.endDate != null ? ev.endDate : (ev.end_date != null ? ev.end_date : null));
+
+              var startMs = toMs(startRaw);
+              var endMsFromDuration =
+                startMs != null && isFinite(durationSeconds) && durationSeconds > 0
+                  ? startMs + durationSeconds * 1000
+                  : null;
+              var endMs = endMsFromDuration != null ? endMsFromDuration : toMs(endRaw);
+              var resolvedCatchupId =
+                ev.catchupId != null ? ev.catchupId
+                : ev.catchup_id != null ? ev.catchup_id
+                : ev.catchupEventId != null ? ev.catchupEventId
+                : ev.id != null ? ev.id
+                : ev.eventId != null ? ev.eventId
                 : null;
-            var endMs = endMsFromDuration != null ? endMsFromDuration : toMs(endRaw);
-            var resolvedCatchupId =
-              ev.catchupId != null ? ev.catchupId
-              : ev.catchup_id != null ? ev.catchup_id
-              : ev.catchupEventId != null ? ev.catchupEventId
-              : ev.id != null ? ev.id
-              : ev.eventId != null ? ev.eventId
-              : null;
 
-            var result = {};
-            Object.keys(ev).forEach(function(k) { result[k] = ev[k]; });
-            result.catchupGroupId = catchupGroupId;
-            result.catchupId = resolvedCatchupId;
-            result.startDate = startMs != null ? new Date(startMs) : null;
-            result.endDate = endMs != null ? new Date(endMs) : null;
-            result.durationSeconds = durationSeconds > 0 ? durationSeconds : (ev.durationSeconds != null ? ev.durationSeconds : (ev.duration != null ? ev.duration : null));
-            return result;
+              var result = {};
+              Object.keys(ev).forEach(function(k) { result[k] = ev[k]; });
+              result.catchupGroupId = catchupGroupId;
+              result.catchupId = resolvedCatchupId;
+              result.startDate = startMs != null ? new Date(startMs) : null;
+              result.endDate = endMs != null ? new Date(endMs) : null;
+              result.durationSeconds = durationSeconds > 0 ? durationSeconds : (ev.durationSeconds != null ? ev.durationSeconds : (ev.duration != null ? ev.duration : null));
+              return result;
+            });
+
+            var groupWithEvents = {};
+            Object.keys(group).forEach(function(k) { groupWithEvents[k] = group[k]; });
+            groupWithEvents.events = mappedEvents;
+            groupsWithEvents.push(groupWithEvents);
+            loadedGroupsCount++;
           });
-
-          var groupWithEvents = {};
-          Object.keys(group).forEach(function(k) { groupWithEvents[k] = group[k]; });
-          groupWithEvents.events = mappedEvents;
-          groupsWithEvents.push(groupWithEvents);
-
+          
           set(function (s) {
             return {
               epg: s.epg,
               vod: s.vod,
               ads: s.ads,
-              catchup: { status: s.catchup.status, error: s.catchup.error, groups: s.catchup.groups, recorded: s.catchup.recorded, progress: { loadedGroups: i + 1, totalGroups: totalGroups }, lastLoadedAt: s.catchup.lastLoadedAt },
+              catchup: { status: s.catchup.status, error: s.catchup.error, groups: s.catchup.groups, recorded: s.catchup.recorded, progress: { loadedGroups: loadedGroupsCount, totalGroups: totalGroups }, lastLoadedAt: s.catchup.lastLoadedAt },
             };
           });
         }
@@ -610,3 +637,10 @@ export const usePreloadStore = create(function (set, get) {
     },
   };
 });
+
+/** Selectores granulares: evitan re-renders al cambiar solo progreso EPG */
+export const useEpgProgress = () => usePreloadStore((s) => s.epg.progress);
+export const useEpgStatus = () => usePreloadStore((s) => s.epg.status);
+export const useVodStatus = () => usePreloadStore((s) => s.vod.status);
+export const useEpgError = () => usePreloadStore((s) => s.epg.error);
+export const useVodError = () => usePreloadStore((s) => s.vod.error);

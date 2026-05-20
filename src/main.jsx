@@ -14,6 +14,7 @@ import { DeviceProvider } from './contexts/DeviceContext';
 import { AppQueryProvider } from './query/QueryProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import App from './App';
+import { runCompatCheck, showCompatError } from './utils/compatCheck';
 
 import './styles/main.scss';
 
@@ -81,9 +82,12 @@ const routerBasename = (() => {
   return trimmed || undefined;
 })();
 
+const compatIssues = runCompatCheck();
 const rootEl = document.getElementById('root');
 if (!rootEl) {
   console.error('[main] No se encontró #root en el DOM');
+} else if (compatIssues.length > 0) {
+  showCompatError(compatIssues);
 } else {
   ReactDOM.render(
     <ErrorBoundary>

@@ -22,11 +22,17 @@ export function usePlayer() {
 export function PlayerProvider({ children }) {
   const deviceInfo = useDevice();
   const { currentBrand } = useBrand();
+  const brandRef = useRef(currentBrand);
   const containerRef = useRef(null);
   const engineRef = useRef(null);
   const seekTimeoutRef = useRef(null);
   const recoveryRef = useRef({ inProgress: false, lastKey: '' });
   const debugRef = useRef(false);
+
+  // Mantener brandRef sincronizado para evitar stale closures en el primer useEffect
+  useEffect(() => {
+    brandRef.current = currentBrand;
+  }, [currentBrand]);
 
   const isDebugEnabled = () => {
     if (import.meta.env.DEV) return true;
@@ -164,7 +170,8 @@ export function PlayerProvider({ children }) {
     };
 
     const tryRecoverAfterError = async (err, snapshot) => {
-      if (!currentBrand) return false;
+      const brand = brandRef.current;
+      if (!brand) return false;
       if (!snapshot?.url) return false;
 
       const active = userSession.getActiveLicense?.();
@@ -182,7 +189,7 @@ export function PlayerProvider({ children }) {
 
       try {
         if (!panaccessService.client) {
-          await panaccessService.initialize(currentBrand);
+          await panaccessService.initialize(brand);
         }
 
         // Intento 1 (legacy): fallar si está en uso, para saber si hay takeover.
@@ -306,40 +313,22 @@ export function PlayerProvider({ children }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Array vacío: engine se crea UNA SOLA VEZ al montar
 
-  // Efecto separado: recrear engine SOLO si la plataforma cambia realmente (TV ↔ PC).
-  // Esto normalmente NO ocurre durante una sesión normal, solo si el usuario cambia
-  // de dispositivo (ej. de TV a PC o viceversa) sin recargar la página.
+  // Si la plataforma cambia (TV ↔ PC) sin recargar, recargar la app: recrear el engine
+  // aquí dejaría listeners del PlayerContext sin enganchar (handlers viven en el mount inicial).
   const currentPlatform = deviceInfo?.isTV ? 'tv' : 'pc';
   useEffect(() => {
-    // Solo actuar si el engine ya fue creado inicialmente
     if (!engineRef.current) return;
-    
-    // Verificar si la plataforma cambió respecto a la que creó el engine actual
+
     const enginePlatform = engineRef.current.platform || 'unknown';
     if (enginePlatform !== 'unknown' && enginePlatform !== currentPlatform) {
-      log('engine:platformChanged', { from: enginePlatform, to: currentPlatform });
-      
-      // Destruir engine actual
-      engineRef.current.off(PLAYER_ENGINE_EVENTS.TIME_UPDATE, () => {});
-      engineRef.current.destroy();
-      engineRef.current = null;
-      
-      // Crear nuevo engine para la nueva plataforma
-      const newEngine = createEngine(deviceInfo);
-      newEngine.platform = currentPlatform; // Marcar con plataforma actual
-      engineRef.current = newEngine;
-      
-      if (containerRef.current) {
-        newEngine.init(containerRef.current);
-        log('engine:recreated (platform change)', { platform: currentPlatform });
-      }
-    } else if (engineRef.current) {
-      // Marcar engine con plataforma actual si no tiene marca
-      if (!engineRef.current.platform) {
-        engineRef.current.platform = currentPlatform;
-      }
+      log('engine:platformChanged -> reload', { from: enginePlatform, to: currentPlatform });
+      window.location.reload();
+      return;
     }
-  }, [currentPlatform, deviceInfo, containerRef, log]);
+    if (!engineRef.current.platform) {
+      engineRef.current.platform = currentPlatform;
+    }
+  }, [currentPlatform, log]);
 
   const play = ({ type, id, url, item, autoPlay = true, mediaOption = {}, drmConfig = {} }) => {
     const engine = engineRef.current;
@@ -532,11 +521,12 @@ export function PlayerProvider({ children }) {
       const prompt = licenseInUsePrompt;
       setLicenseInUsePrompt(null);
       if (!accept || !prompt?.licenseKey) return false;
-      if (!currentBrand) return false;
+      const brand = brandRef.current;
+      if (!brand) return false;
 
       try {
         if (!panaccessService.client) {
-          await panaccessService.initialize(currentBrand);
+          await panaccessService.initialize(brand);
         }
         await panaccessService.setStreamingLicense({
           licenseKey: prompt.licenseKey,

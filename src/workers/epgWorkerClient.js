@@ -37,10 +37,10 @@ function filterAndEnrichEvents(data, epgHoursLimit, nowMs) {
     var endMs = toMs(event && event.end);
     if (startMs == null || endMs == null) return;
     var hoursDiff = Math.abs(startMs - now) / (1000 * 60 * 60);
-    if (hoursDiff <= limit) {
+      if (hoursDiff <= limit) {
       out.push(Object.assign({}, event, {
-        startDate: { valueOf: function () { return startMs; } },
-        endDate: { valueOf: function () { return endMs; } }
+        startDate: startMs,
+        endDate: endMs
       }));
     }
   });
