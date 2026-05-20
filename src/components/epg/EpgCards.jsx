@@ -9,7 +9,7 @@ import panaccessService from '../../services/panaccessService';
 import EpgEventModal from './EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useEpgReminderStore } from '../../store/epgReminderStore';
-import { getChannelStableId } from '../../utils/channelId';
+import { getChannelStableId, dedupeStreams } from '../../utils/channelId';
 import '../epg/epg-common.scss';
 
 function asMs(dateLike) {
@@ -145,8 +145,7 @@ export function EpgCards({ onSelect }) {
   }, []);
 
   const channels = useMemo(() => {
-    const streams = epg?.streams || [];
-    // Mantener orden estable por LCN si existe (no depende del tick)
+    const streams = dedupeStreams(epg?.streams || []);
     return [...streams].sort((a, b) => Number(a.lcn ?? 0) - Number(b.lcn ?? 0));
   }, [epg?.streams]);
 
@@ -274,7 +273,7 @@ export function EpgCards({ onSelect }) {
           })();
 
           return (
-            <div key={channel.id ?? channel.lcn} className="epg-cards-row">
+            <div key={getChannelStableId(channel) || channel.lcn} className="epg-cards-row">
               <div
                 className="epg-cards-channel"
                 style={

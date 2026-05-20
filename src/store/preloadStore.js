@@ -4,6 +4,7 @@ import { loadVODData } from '../services/vodService';
 import panaccessService from '../services/panaccessService';
 import { processAdsFromApi } from '../utils/adsData';
 import { mergeEpgIntoChannels } from '../utils/epgMerge';
+import { dedupeStreams } from '../utils/channelId';
 
 // FIX #1: Evaluar IS_DEV a nivel de módulo, fuera de cualquier closure asíncrono.
 // En closures de setTimeout/catch, `import.meta` puede ser undefined en WebKit 2019 (producción).
@@ -139,9 +140,10 @@ export const usePreloadStore = create(function (set, get) {
 
       try {
         var bouquets = await getBouquetsWithChannels({ enableRetry: false });
-        var allStreams = bouquets.reduce(function (acc, b) {
+        var allStreamsRaw = bouquets.reduce(function (acc, b) {
           return acc.concat(b.items || []);
         }, []);
+        var allStreams = dedupeStreams(allStreamsRaw);
         var total = allStreams.length;
 
         if (total === 0) {
