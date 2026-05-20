@@ -7,6 +7,11 @@ import { useParental } from '../../store/useParental';
 import { getChannelStableId } from '../../utils/channelId';
 import { proxyImageUrl } from '../../utils/imageProxy';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
+import {
+  getBouquetGridHorizontalClasses,
+  getBouquetGridVerticalClasses,
+  getBouquetRowCarouselClasses,
+} from '../../utils/bouquetLayoutClasses';
 
 // --- Helpers EPG para layout event_and_logo ---
 /** Parsea "YYYY-MM-DD HH:mm:ss" a "HH:mm" para mostrar en UI */
@@ -145,14 +150,16 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, l
   const items = Array.isArray(bouquet?.items) ? bouquet.items : [];
   if (items.length === 0) return null;
 
+  const { carousel: carouselClass, track: trackClass } = getBouquetRowCarouselClasses(layoutType);
+
   return (
     <div
-      className="bouquet-row-carousel"
+      className={carouselClass}
       data-bouquet-id={bouquet.bouquetId ?? bouquet.id ?? ''}
       data-layout={layoutType ?? ''}
     >
       <h4 className="bouquet-heading">{title}</h4>
-      <div className="horizontal-slide">
+      <div className={trackClass}>
         {items.map((channel, index) => (
           <ChannelCard
             key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
@@ -477,18 +484,18 @@ export function BouquetGridHorizontal({ bouquet, onChannelSelect, onChannelFocus
     rows[rowIndex].push({ channel, index });
   });
 
+  const { root: gridClass, track: trackClass } = getBouquetGridHorizontalClasses(layoutType);
+
   return (
     <div
-      className="bouquet-grid-horizontal"
+      className={gridClass}
       data-bouquet-id={bouquet.bouquetId ?? bouquet.id ?? ''}
+      data-layout={layoutType ?? ''}
     >
       <h4 className="bouquet-heading">{title}</h4>
       <div className="bouquet-grid-horizontal-rows">
         {rows.map((row, rowIndex) => (
-          <div
-            key={`row-${rowIndex}`}
-            className="horizontal-slide horizontal-slide--grid-row"
-          >
+          <div key={`row-${rowIndex}`} className={trackClass}>
             {row.map(({ channel, index }) => (
               <ChannelCard
                 key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
@@ -523,13 +530,16 @@ export function BouquetGridVertical({ bouquet, onChannelSelect, onChannelFocus, 
   const items = Array.isArray(bouquet?.items) ? bouquet.items : [];
   if (items.length === 0) return null;
 
+  const { root: gridClass, track: trackClass } = getBouquetGridVerticalClasses(layoutType);
+
   return (
     <div
-      className="bouquet-grid-vertical"
+      className={gridClass}
       data-bouquet-id={bouquet.bouquetId ?? bouquet.id ?? ''}
+      data-layout={layoutType ?? ''}
     >
       <h4 className="bouquet-heading">{title}</h4>
-      <div className="bouquet-grid-vertical-content">
+      <div className={trackClass}>
         {items.map((channel, index) => (
           <ChannelCard
             key={channel.id ?? `${index}-${channel.lcn ?? ''}`}

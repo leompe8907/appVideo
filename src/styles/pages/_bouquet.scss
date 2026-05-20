@@ -279,12 +279,7 @@
       padding: 0 0.25rem;
     }
 
-    .bouquet-row-carousel[data-layout='service_layout_logo_with_number'] .horizontal-slide {
-      height: 18rem;
-      align-items: flex-start;
-      padding-top: 0.35rem;
-    }
-
+    /* Carril base + modificadores por layout (ver bouquetLayoutClasses.js) */
     .horizontal-slide {
       margin-left: 1.25rem;
       width: 100%;
@@ -304,6 +299,18 @@
         display: none;
       }
     }
+
+    .horizontal-slide--logo-with-number {
+      height: auto;
+      align-items: flex-start;
+      padding-top: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    /* Ejemplos para orientar cada diseño sin tocar el carril base:
+    .horizontal-slide--event-and-logo { align-items: flex-start; height: 17rem; }
+    .horizontal-slide--event-line { height: 20rem; }
+    */
   }
 
   .channel-card {
