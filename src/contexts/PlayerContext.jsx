@@ -250,8 +250,10 @@ export function PlayerProvider({ children }) {
 
     const handleStateChange = ({ state }) => {
       log('engine:event statechange', state);
-      if (state === 'loading' || state === 'loaded') {
+      if (state === 'loading') {
         setState((s) => ({ ...s, isLoading: true }));
+      } else if (state === 'loaded') {
+        setState((s) => ({ ...s, isLoading: false }));
       } else if (state === 'seeking') {
         armSeekTimeout();
         setState((s) => ({ ...s, isSeeking: true, isLoading: true }));

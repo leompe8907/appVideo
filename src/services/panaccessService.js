@@ -704,6 +704,21 @@ class PanaccessService {
     return `${base}/index.php?requestMode=function&f=getStreamM3u8&plain=true&streamId=${streamId}&sessionId=${sessionId}&m3u8`;
   }
 
+  isWindMiddlewareHost(url) {
+    return typeof url === 'string' && /middleware\.wind\.do/i.test(url);
+  }
+
+  /** Wind en navegador: m3u8 directo (requestMode=function del EPG → manifestParsingError en hls.js). */
+  getDirectM3u8StreamUrl(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { streamId } = options;
+    const sessionId = userSession.getSessionId() || this.client.sessionId || '';
+    const base = (this.client.baseUrl || '').replace(/\/?$/, '');
+    return `${base}/index.php?requestMode=m3u8&streamId=${encodeURIComponent(streamId)}&sessionId=${encodeURIComponent(sessionId)}`;
+  }
+
   /**
    * Normaliza una URL de playback para asegurar que el sessionId sea el actual.
    * Paridad con legacy: `home.js:updateUrlSessionIfNeeded`.
@@ -730,6 +745,21 @@ class PanaccessService {
       );
     }
 
+    // Wind: getStreamM3u8 (function) no devuelve M3U8 en HTML5 (no EXTM3U).
+    // El manifiesto válido es requestMode=m3u8&streamId&sessionId (descarga .ts).
+    if (this.isWindMiddlewareHost(normalized)) {
+      const windStream = normalized.match(/(?:^|[?&])streamId=([^&]+)/i);
+      if (windStream?.[1]) {
+        try {
+          return this.getDirectM3u8StreamUrl({
+            streamId: decodeURIComponent(windStream[1]),
+          });
+        } catch {
+          // continuar
+        }
+      }
+    }
+
     const lower = normalized.toLowerCase();
     const looksLikePanaccessFunction =
       lower.includes('index.php') &&
@@ -738,8 +768,6 @@ class PanaccessService {
     const looksLikeMiddlewareM3u8 =
       lower.includes('index.php') && lower.includes('requestmode=m3u8');
 
-    // Wind y similares: EPG trae requestMode=m3u8 sin sesión → API function (10foot cv.js).
-    // intv y otros con sessionId en m3u8 directo: no reescribir (reproducen con esa URL).
     if (looksLikeMiddlewareM3u8 && !normalized.includes('sessionId=')) {
       const streamMatch = normalized.match(/(?:^|[?&])streamId=([^&]+)/i);
       if (streamMatch?.[1]) {

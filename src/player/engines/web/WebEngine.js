@@ -9,6 +9,12 @@ import {
   PLAYER_ENGINE_STATES,
 } from '../contracts';
 import { isHlsUrl } from './hlsSupport';
+import {
+  applyStreamrootHlsSessionConfig,
+  buildStreamrootHlsPluginOptions,
+} from './sessionHlsXhr';
+import { isWindMiddlewareHost } from './windHlsManifest';
+import { createWindModernHls, destroyWindModernHls } from './windModernHls';
 
 let videoElementIdSeq = 0;
 
@@ -27,6 +33,173 @@ export class WebEngine extends BaseEngine {
     this._handlers = null;
     this._debug = false;
     this._lastTracksSnapshotKey = '';
+    this._windBlobUrl = null;
+    this._windDirectMode = false;
+    this._windModernHls = null;
+    this._windVideoHandlers = null;
+    this._suppressVjsErrors = false;
+    this._windLevelAttempt = 0;
+  }
+
+  _destroyWindModernHls() {
+    if (this._windModernHls) {
+      destroyWindModernHls({ hls: this._windModernHls });
+      this._windModernHls = null;
+    }
+  }
+
+  _revokeWindBlob() {
+    if (this._windBlobUrl) {
+      try {
+        URL.revokeObjectURL(this._windBlobUrl);
+      } catch {
+        // noop
+      }
+      this._windBlobUrl = null;
+    }
+  }
+
+  _getTechVideo(player = this.player) {
+    if (!player) return null;
+    return player.el()?.querySelector?.('video') || player.el() || null;
+  }
+
+  _disposeHlsSource(player) {
+    if (!player) return;
+    this._suppressVjsErrors = true;
+    try {
+      const tech = player.tech(true);
+      if (tech?.hlsProvider?.dispose) {
+        tech.hlsProvider.dispose();
+        tech.hlsProvider = null;
+      }
+    } catch {
+      // noop
+    }
+    const videoEl = this._getTechVideo(player);
+    if (videoEl) {
+      try {
+        videoEl.removeAttribute('src');
+        videoEl.load();
+      } catch {
+        // noop
+      }
+    }
+    queueMicrotask(() => {
+      this._suppressVjsErrors = false;
+    });
+  }
+
+  _clearWindDirectMode() {
+    this._windDirectMode = false;
+    this._unbindWindVideoHandlers();
+  }
+
+  _bindWindVideoHandlers(player, { autoPlay } = {}) {
+    const videoEl = this._getTechVideo(player);
+    if (!videoEl) return;
+
+    this._unbindWindVideoHandlers();
+
+    this._windVideoHandlers = {
+      onError: () => {
+        const err = videoEl.error;
+        this._log('wind native:error', err);
+        this.emit(
+          PLAYER_ENGINE_EVENTS.ERROR,
+          err || new Error('Error de reproducción HLS nativo (Wind)'),
+        );
+      },
+      onTimeUpdate: () => {
+        const now = Date.now();
+        if (now - this.lastTimeUpdateEmitMs < this.timeUpdateThrottleMs) return;
+        this.lastTimeUpdateEmitMs = now;
+        this.emit(PLAYER_ENGINE_EVENTS.TIME_UPDATE, {
+          currentTime: videoEl.currentTime,
+          duration: Number.isFinite(videoEl.duration) ? videoEl.duration : 0,
+        });
+      },
+      onPlay: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
+      },
+      onPause: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
+      },
+    };
+
+    videoEl.addEventListener('error', this._windVideoHandlers.onError);
+    videoEl.addEventListener('timeupdate', this._windVideoHandlers.onTimeUpdate);
+    videoEl.addEventListener('play', this._windVideoHandlers.onPlay);
+    videoEl.addEventListener('pause', this._windVideoHandlers.onPause);
+  }
+
+  _unbindWindVideoHandlers() {
+    const videoEl = this._getTechVideo();
+    const h = this._windVideoHandlers;
+    if (!videoEl || !h) {
+      this._windVideoHandlers = null;
+      return;
+    }
+    videoEl.removeEventListener('error', h.onError);
+    videoEl.removeEventListener('timeupdate', h.onTimeUpdate);
+    videoEl.removeEventListener('play', h.onPlay);
+    videoEl.removeEventListener('pause', h.onPause);
+    this._windVideoHandlers = null;
+  }
+
+  _loadWindStream(player, url, { autoPlay = false, type } = {}) {
+    this._windLevelAttempt = 0;
+    this._revokeWindBlob();
+    this._clearWindDirectMode();
+    this._destroyWindModernHls();
+    this._disposeHlsSource(player);
+
+    const videoEl = this._getTechVideo(player);
+    if (!videoEl) {
+      this.emit(PLAYER_ENGINE_EVENTS.ERROR, new Error('Sin elemento video para Wind'));
+      return;
+    }
+
+    const onLoaded = () => {
+      this._windDirectMode = true;
+      this._log('wind modern hls loaded');
+      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADED, type });
+      this._emitTracksChange();
+      this._bindWindVideoHandlers(player, { autoPlay });
+      // play() lo dispara windModernHls tras FRAG_BUFFERED (evita play antes de buffer)
+      if (autoPlay && videoEl.readyState >= 2) {
+        videoEl.play().catch((err) => {
+          if (err?.name === 'AbortError') return;
+          this._log('wind play error', err);
+          this.emit(PLAYER_ENGINE_EVENTS.ERROR, err);
+        });
+      }
+    };
+
+    createWindModernHls(videoEl, url, {
+      onLoaded,
+      onError: (data) => {
+        this._log('wind modern hls fatal', data);
+        this._destroyWindModernHls();
+        this._revokeWindBlob();
+        this._clearWindDirectMode();
+        const msg =
+          data?.details === 'codecUnsupported' ||
+          data?.details === 'bufferIncompatibleCodecsError' ||
+          data?.details === 'bufferAddCodecError'
+            ? 'Audio/vídeo no compatible con el navegador (suele ser AC-3 o MPEG-2; en web hace falta H.264 + AAC)'
+            : data?.details || data?.type || 'Error HLS Wind';
+        this.emit(PLAYER_ENGINE_EVENTS.ERROR, new Error(msg));
+      },
+    })
+      .then(({ hls, blobUrl }) => {
+        this._windModernHls = hls;
+        if (blobUrl) this._windBlobUrl = blobUrl;
+      })
+      .catch((err) => {
+        this._log('wind modern hls init failed', err);
+        this.emit(PLAYER_ENGINE_EVENTS.ERROR, err);
+      });
   }
 
   _isDebugEnabled() {
@@ -52,6 +225,9 @@ export class WebEngine extends BaseEngine {
   }
 
   _disposePlayer() {
+    this._revokeWindBlob();
+    this._destroyWindModernHls();
+    this._clearWindDirectMode();
     if (!this.player) return;
     try {
       this.player.dispose();
@@ -97,16 +273,15 @@ export class WebEngine extends BaseEngine {
       preload: 'auto',
       fluid: false,
       inactivityTimeout: 0,
+      ...buildStreamrootHlsPluginOptions(),
     });
+    applyStreamrootHlsSessionConfig(this.player);
 
     if (this._debug) {
-      try {
-        const html5 = videojs.getTech('Html5');
-        const handlers = html5?.registeredSourceHandlers?.() ?? html5?.registeredSourceHandlers ?? [];
-        this._log('html5 sourceHandlers', handlers.length, handlers.map((h) => h.name || h.canPlayType?.name));
-      } catch {
-        // noop
-      }
+      this._log('videojs+hls', {
+        hasWindowVideojs: typeof window !== 'undefined' && !!window.videojs,
+        hlsHandlerRegistered: typeof window !== 'undefined' && !!window.hlsSourceHandler,
+      });
     }
 
     this.video = this.player.el().querySelector('video') || this.player.el();
@@ -152,7 +327,9 @@ export class WebEngine extends BaseEngine {
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.SEEKED });
       },
       onError: () => {
+        if (this._suppressVjsErrors) return;
         const err = player.error();
+        if (this._windDirectMode) return;
         this._log('player:error', err);
         this.emit(PLAYER_ENGINE_EVENTS.ERROR, err || new Error('Error de reproducción Video.js'));
       },
@@ -197,6 +374,15 @@ export class WebEngine extends BaseEngine {
     const player = this.player;
     const useHls = isHlsUrl(url);
 
+    if (useHls && isWindMiddlewareHost(url)) {
+      this._loadWindStream(player, url, { autoPlay, type });
+      return;
+    }
+
+    this._clearWindDirectMode();
+    this._destroyWindModernHls();
+    this._revokeWindBlob();
+
     const emitLoadedAndMaybePlay = () => {
       this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADED, type });
       this._emitTracksChange();
@@ -205,8 +391,8 @@ export class WebEngine extends BaseEngine {
 
     player.one('loadeddata', emitLoadedAndMaybePlay);
 
-    // Paridad nbplayer.playContent: type application/x-mpegURL para HLS (Panaccess, Wind, in.tv, etc.)
     if (useHls) {
+      applyStreamrootHlsSessionConfig(player, undefined, url);
       player.src({ src: url, type: 'application/x-mpegURL' });
     } else {
       player.src({ src: url });
@@ -216,6 +402,18 @@ export class WebEngine extends BaseEngine {
   play() {
     if (!this.player) return;
     this._log('play()');
+    if (this._windDirectMode) {
+      const videoEl = this._getTechVideo();
+      const p = videoEl?.play?.();
+      if (p && typeof p.catch === 'function') {
+        p.catch((err) => {
+          if (err?.name === 'AbortError') return;
+          this._log('play() error', err);
+          this.emit(PLAYER_ENGINE_EVENTS.ERROR, err);
+        });
+      }
+      return;
+    }
     const p = this.player.play();
     if (p && typeof p.catch === 'function') {
       p.catch((err) => {
@@ -228,16 +426,30 @@ export class WebEngine extends BaseEngine {
   pause() {
     if (!this.player) return;
     this._log('pause()');
+    if (this._windDirectMode) {
+      this._getTechVideo()?.pause?.();
+      return;
+    }
     this.player.pause();
   }
 
   stop() {
     if (!this.player) return;
-    this.player.pause();
-    try {
-      this.player.currentTime(0);
-    } catch {
-      // noop
+    if (this._windDirectMode) {
+      const videoEl = this._getTechVideo();
+      videoEl?.pause?.();
+      try {
+        if (videoEl) videoEl.currentTime = 0;
+      } catch {
+        // noop
+      }
+    } else {
+      this.player.pause();
+      try {
+        this.player.currentTime(0);
+      } catch {
+        // noop
+      }
     }
     this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
   }
@@ -246,19 +458,30 @@ export class WebEngine extends BaseEngine {
     if (!this.player) return;
     const target = Number.isFinite(seconds) ? seconds : 0;
     this.emit(PLAYER_ENGINE_EVENTS.SEEK_START, { target });
+    if (this._windDirectMode) {
+      const videoEl = this._getTechVideo();
+      if (videoEl) videoEl.currentTime = Math.max(0, target);
+      return;
+    }
     this.player.currentTime(Math.max(0, target));
   }
 
   forward(seconds = DEFAULT_SEEK_STEP_SECONDS) {
     if (!this.player) return;
     const step = Number.isFinite(seconds) ? seconds : DEFAULT_SEEK_STEP_SECONDS;
-    this.seek((this.player.currentTime() || 0) + step);
+    const t = this._windDirectMode
+      ? this._getTechVideo()?.currentTime || 0
+      : this.player.currentTime() || 0;
+    this.seek(t + step);
   }
 
   backward(seconds = DEFAULT_SEEK_STEP_SECONDS) {
     if (!this.player) return;
     const step = Number.isFinite(seconds) ? seconds : DEFAULT_SEEK_STEP_SECONDS;
-    this.seek((this.player.currentTime() || 0) - step);
+    const t = this._windDirectMode
+      ? this._getTechVideo()?.currentTime || 0
+      : this.player.currentTime() || 0;
+    this.seek(t - step);
   }
 
   setPlaybackRate(rate = 1) {
