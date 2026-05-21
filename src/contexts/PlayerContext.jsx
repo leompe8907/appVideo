@@ -332,10 +332,23 @@ export function PlayerProvider({ children }) {
 
   const play = ({ type, id, url, item, autoPlay = true, mediaOption = {}, drmConfig = {} }) => {
     const engine = engineRef.current;
-    if (!engine || !url) {
+    if (!url) {
       console.warn('[PlayerProvider] No hay engine o URL para reproducir');
       return;
     }
+    if (!engine) {
+      console.warn('[PlayerProvider] No hay engine para reproducir');
+      return;
+    }
+
+    try {
+      url = panaccessService.normalizePlaybackUrl(url);
+    } catch (e) {
+      if (import.meta.env?.DEV) {
+        console.warn('[PlayerProvider] normalizePlaybackUrl:', e?.message || e);
+      }
+    }
+
     log('action:play', { type, id, url });
 
     // Si el engine nunca se inicializó, o el nodo contenedor cambió (ej. remount), inicializar ahora

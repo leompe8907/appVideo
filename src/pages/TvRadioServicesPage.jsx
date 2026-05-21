@@ -52,6 +52,14 @@ export function TvRadioServicesPage() {
       return;
     }
 
+    try {
+      url = panaccessService.normalizePlaybackUrl(url);
+    } catch (e) {
+      if (import.meta.env?.DEV) {
+        console.warn('[TvRadioServicesPage] normalizePlaybackUrl:', e?.message || e);
+      }
+    }
+
     requestPlayChannel({
       channel,
       playFn: () =>

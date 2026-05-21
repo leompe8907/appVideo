@@ -6,8 +6,8 @@ import { getActiveBrandConfig } from '../../config/brandConfig';
 
 /**
  * Fábrica de engines de reproducción.
- * Por ahora solo hay WebEngine (HTML5 video).
- * En el futuro se pueden añadir TizenEngine / WebOSEngine según la plataforma.
+ * PC/web: WebEngine (Video.js 6.6 + plugin hls.js de 10foot).
+ * TV: LgEngine / SamsungEngine cuando nativeAdapters está activo.
  */
 export function createEngine(deviceInfo) {
   const brandConfig = getActiveBrandConfig();

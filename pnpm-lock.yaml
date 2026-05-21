@@ -20,9 +20,6 @@ importers:
       crypto-js:
         specifier: ^4.2.0
         version: 4.2.0
-      hls.js:
-        specifier: ^1.6.15
-        version: 1.6.15
       i18next:
         specifier: ^24.2.3
         version: 24.2.3
@@ -47,6 +44,9 @@ importers:
       sass:
         specifier: ^1.97.0
         version: 1.97.0
+      video.js:
+        specifier: 6.6.3
+        version: 6.6.3
       zustand:
         specifier: ^5.0.12
         version: 5.0.12(@types/react@19.2.7)(react@18.3.1)
@@ -1242,6 +1242,9 @@ packages:
     peerDependencies:
       '@babel/core': ^7.4.0 || ^8.0.0-0 <8.0.0
 
+  babel-runtime@6.26.0:
+    resolution: {integrity: sha512-ITKNuq2wKlW1fJg9sSW52eepoYgZBggvOAHC0u/CYu/qxQ9EVzThCgR69BnSXLHjy2f7SY5zaQ4yt7H9ZVxY2g==}
+
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
 
@@ -1321,6 +1324,10 @@ packages:
   core-js-compat@3.49.0:
     resolution: {integrity: sha512-VQXt1jr9cBz03b331DFDCCP90b3fanciLkgiOoy8SBHy06gNf+vQ1A3WFLqG7I8TipYIKeYK9wxd0tUrvHcOZA==}
 
+  core-js@2.6.12:
+    resolution: {integrity: sha512-Kb2wC0fvsWfQrgk8HU5lW6U/Lcs8+9aaYcy4ZFc6DDlo4nZ7n70dEgE5rtR0oG6ufKDUnrwfWL1mXR5ljDatrQ==}
+    deprecated: core-js@<3.23.3 is no longer maintained and not recommended for usage due to the number of issues. Because of the V8 engine whims, feature detection in old core-js versions could cause a slowdown up to 100x even if nothing is polyfilled. Some versions have web compatibility issues. Please, upgrade your dependencies to the actual version of core-js.
+
   core-js@3.49.0:
     resolution: {integrity: sha512-es1U2+YTtzpwkxVLwAFdSpaIMyQaq0PBgm3YD1W3Qpsn1NAmO3KSgZfu+oGSWVu6NvLHoHCV/aYcsE5wiB7ALg==}
 
@@ -1363,11 +1370,18 @@ packages:
   dijkstrajs@1.0.3:
     resolution: {integrity: sha512-qiSlmBq9+BCdCA/L46dw8Uy93mloxsPSbwnm5yrKn2vMPiy8KyAskTF6zuV/j5BMsmOGZDPs7KjU+mjb670kfA==}
 
+  dom-walk@0.1.2:
+    resolution: {integrity: sha512-6QvTW9mrGeIegrFXdtQi9pk7O/nSK6lSdXW2eqUspN5LWD7UTji2Fqw5V2YLjBpHEoU9Xl/eUWNpDeZvoyOv2w==}
+
   electron-to-chromium@1.5.267:
     resolution: {integrity: sha512-0Drusm6MVRXSOJpGbaSVgcQsuB4hEkMpHXaVstcPmhu5LIedxs1xNK/nIxmQIU/RPC0+1/o0AVZfBTkTNJOdUw==}
 
   emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
+
+  es5-shim@4.6.7:
+    resolution: {integrity: sha512-jg21/dmlrNQI7JyyA2w7n+yifSxBng0ZralnSfVZjoCawgNTCnS+yBCyVM9DL5itm7SUnDGgv7hcq2XCZX4iRQ==}
+    engines: {node: '>=0.4.0'}
 
   esbuild@0.25.12:
     resolution: {integrity: sha512-bbPBYYrtZbkt6Os6FiTLCTFxvq4tt3JKall1vRwshA3fdVztsLAatFaZobhkBC8/BrPetoa0oksYoKXoG4ryJg==}
@@ -1496,6 +1510,9 @@ packages:
     resolution: {integrity: sha512-XxwI8EOhVQgWp6iDL+3b0r86f4d6AX6zSU55HfB4ydCEuXLXc5FcYeOu+nnGftS4TEju/11rt4KJPTMgbfmv4A==}
     engines: {node: '>=10.13.0'}
 
+  global@4.3.2:
+    resolution: {integrity: sha512-/4AybdwIDU4HkCUbJkZdWpe4P6vuw/CUtu+0I1YlLIPe7OlUO7KNJ+q/rO70CW2/NW6Jc6I62++Hzsf5Alu6rQ==}
+
   globals@14.0.0:
     resolution: {integrity: sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ==}
     engines: {node: '>=18'}
@@ -1517,9 +1534,6 @@ packages:
 
   hermes-parser@0.25.1:
     resolution: {integrity: sha512-6pEjquH3rqaI6cYAXYPcz9MS4rY6R4ngRgrgfDshRptUZIc3lw0MCIJIGDj9++mfySOuPTHB4nrSW99BCvOPIA==}
-
-  hls.js@1.6.15:
-    resolution: {integrity: sha512-E3a5VwgXimGHwpRGV+WxRTKeSp2DW5DI5MWv34ulL3t5UNmyJWCQ1KmLEHbYzcfThfXG8amBL+fCYPneGHC4VA==}
 
   html-parse-stringify@3.0.1:
     resolution: {integrity: sha512-KknJ50kTInJ7qIScF3jeaFRpMpE8/lfiTdzf/twXyPBLAGrLRTmkz3AdTnKeh40X8k9L2fdYwEp/42WGXIRGcg==}
@@ -1547,6 +1561,9 @@ packages:
     resolution: {integrity: sha512-JmXMZ6wuvDmLiHEml9ykzqO6lwFbof0GG4IkcGaENdCRDDmMVnny7s5HsIgHCbaq0w2MyPhDqkhTUgS2LU2PHA==}
     engines: {node: '>=0.8.19'}
 
+  individual@2.0.0:
+    resolution: {integrity: sha512-pWt8hBCqJsUWI/HtcfWod7+N9SgAqyPEaF7JQjwzjn5vGrpg6aQ5qeAFQ7dx//UH4J1O+7xqew+gCeeFt6xN/g==}
+
   is-core-module@2.16.1:
     resolution: {integrity: sha512-UfoeMA6fIJ8wTYFEUjelnaGI67v6+N7qXJEvQuIGa99l4xsCruSYOVSQ0uPANn4dAzm8lkYPaKLrrijLq7x23w==}
     engines: {node: '>= 0.4'}
@@ -1558,6 +1575,9 @@ packages:
   is-fullwidth-code-point@3.0.0:
     resolution: {integrity: sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg==}
     engines: {node: '>=8'}
+
+  is-function@1.0.2:
+    resolution: {integrity: sha512-lw7DUp0aWXYg+CBCN+JKkcE0Q2RayZnSvnZBlwgxHBQhqt5pZNVy4Ri7H9GmmXkdu7LUthszM+Tor1u/2iBcpQ==}
 
   is-glob@4.0.3:
     resolution: {integrity: sha512-xelSayHH36ZgE7ZWhli7pW34hNbNl8Ojv5KVmkJD4hBdD3th8Tfk9vYasLM+mXWOZhFkgZfxhLSnrwRr4elSSg==}
@@ -1635,6 +1655,9 @@ packages:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
     engines: {node: '>=8.6'}
 
+  min-document@2.19.2:
+    resolution: {integrity: sha512-8S5I8db/uZN8r9HSLFVWPdJCvYOejMcEC82VIzNUc6Zkklf/d1gg2psfE79/vyhWOj4+J8MtwmoOz3TmvaGu5A==}
+
   minimatch@3.1.2:
     resolution: {integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==}
 
@@ -1687,6 +1710,9 @@ packages:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
 
+  parse-headers@2.0.6:
+    resolution: {integrity: sha512-Tz11t3uKztEW5FEVZnj1ox8GKblWn+PvHY9TmJV5Mll2uHEwRdR/5Li1OlXoECjLYkApdhWy44ocONwXLiKO5A==}
+
   path-exists@4.0.0:
     resolution: {integrity: sha512-ak9Qy5Q7jYb2Wwcey5Fpvg2KoAc/ZIhLSLOSBmRmygPsGwkVVt0fZa0qrtMz+m6tJTAHfZQ8FnmB4MG4LWy7/w==}
     engines: {node: '>=8'}
@@ -1720,6 +1746,10 @@ packages:
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
+
+  process@0.5.2:
+    resolution: {integrity: sha512-oNpcutj+nYX2FjdEW7PGltWhXulAnFlM0My/k48L90hARCOJtvBbQXc/6itV2jDvU5xAAtonP+r6wmQgCcbAUA==}
+    engines: {node: '>= 0.6.0'}
 
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
@@ -1783,6 +1813,9 @@ packages:
   regenerate@1.4.2:
     resolution: {integrity: sha512-zrceR/XhGYU/d/opr2EKO7aRHUeiBI8qjtfHqADTwZd6Szfy16la6kqD0MIUs5z5hx6AaKa+PixpPrR289+I0A==}
 
+  regenerator-runtime@0.11.1:
+    resolution: {integrity: sha512-MguG95oij0fC3QV3URf4V2SDYGJhJnJGqvIIgdECeODCT98wSWDAJ94SSuVpYQUoTcGUIL6L4yNB7j1DFFHSBg==}
+
   regenerator-runtime@0.14.1:
     resolution: {integrity: sha512-dYnhHh0nJoMfnkZs6GmmhFknAGRrLznOu5nc9ML+EJxGvrx6H7teuevqVqCuPcPK//3eDrrjQhehXVx9cnkGdw==}
 
@@ -1817,6 +1850,12 @@ packages:
     resolution: {integrity: sha512-w8GmOxZfBmKknvdXU1sdM9NHcoQejwF/4mNgj2JuEEdRaHwwF12K7e9eXn1nLZ07ad+du76mkVsyeb2rKGllsA==}
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
+
+  rust-result@1.0.0:
+    resolution: {integrity: sha512-6cJzSBU+J/RJCF063onnQf0cDUOHs9uZI1oroSGnHOph+CQTIJ5Pp2hK5kEQq1+7yE/EEWfulSNXAQ2jikPthA==}
+
+  safe-json-parse@4.0.0:
+    resolution: {integrity: sha512-RjZPPHugjK0TOzFrLZ8inw44s9bKox99/0AZW9o/BEQVrJfhI+fIHMErnPyRa89/yRXUUr93q+tiN6zhoVV4wQ==}
 
   sass@1.97.0:
     resolution: {integrity: sha512-KR0igP1z4avUJetEuIeOdDlwaUDvkH8wSx7FdSjyYBS3dpyX3TzHfAMO0G1Q4/3cdjcmi3r7idh+KCmKqS+KeQ==}
@@ -1891,6 +1930,10 @@ packages:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
     engines: {node: '>=8.0'}
 
+  tsml@1.0.1:
+    resolution: {integrity: sha512-3KmepnH9SUsoOVtg013CRrL7c+AK7ECaquAsJdvu4288EDJuraqBlP4PDXT/rLEJ9YDn4jqLAzRJsnFPx+V6lg==}
+    deprecated: no longer maintained
+
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
@@ -1919,6 +1962,18 @@ packages:
 
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
+
+  video.js@6.6.3:
+    resolution: {integrity: sha512-kSTpyEEBt29LAiNHHK5HCnyWfTsnsSWEjTAjuHcAPfhChmw4uLN/vL9iVMNeDP8t/wf/9CL30hzOa42VdRcmTg==}
+
+  videojs-font@2.1.0:
+    resolution: {integrity: sha512-zFqWpLrXf1q8NtYx5qtZhMC6SLUFScDmR6j+UGPogobxR21lvXShhnzcNNMdOxJUuFLiToJ/BPpFUQwX4xhpvA==}
+
+  videojs-ie8@1.1.2:
+    resolution: {integrity: sha512-0Zb2T4MLkpfZbeGMK/Z93b8Lrepr+rLFoHgQV1CoDeFqXvH7b+Vsd/VHoILGxQrgCSHFQ7mAODR6oyMjuiD4/g==}
+
+  videojs-vtt.js@0.12.4:
+    resolution: {integrity: sha512-JQ5eozH5SLOL5xI8ALb1aWf9HjcewQmOytf1gPIsFBTQlSgtSdJ8E8x0GO0ZEXVtFCaPDFiYWAhrjuTI125tBQ==}
 
   vite@7.2.7:
     resolution: {integrity: sha512-ITcnkFeR3+fI8P1wMgItjGrR10170d8auB4EpMLPqmx6uxElH3a/hHGQabSHKdqd4FXWO1nFIp9rRn7JQ34ACQ==}
@@ -1979,6 +2034,13 @@ packages:
   wrap-ansi@6.2.0:
     resolution: {integrity: sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==}
     engines: {node: '>=8'}
+
+  xhr@2.4.0:
+    resolution: {integrity: sha512-TUbBsdAuJbX8olk9hsDwGK8P1ri1XlV+PdEWkYw+HQQbpkiBR8PLgD1F3kQDPBs9l4Px34hP9rCYAZOCCAENbw==}
+
+  xtend@4.0.2:
+    resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
+    engines: {node: '>=0.4'}
 
   y18n@4.0.3:
     resolution: {integrity: sha512-JKhqTOwSrqNA1NY5lSztJ1GrBiUodLMmIZuLiDaMRJ+itFd+ABVE8XBjOvIWL+rSqNDC74LCSFmlb/U4UZ4hJQ==}
@@ -3220,6 +3282,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  babel-runtime@6.26.0:
+    dependencies:
+      core-js: 2.6.12
+      regenerator-runtime: 0.11.1
+
   balanced-match@1.0.2: {}
 
   baseline-browser-mapping@2.9.7: {}
@@ -3292,6 +3359,8 @@ snapshots:
     dependencies:
       browserslist: 4.28.1
 
+  core-js@2.6.12: {}
+
   core-js@3.49.0: {}
 
   cross-env@7.0.3:
@@ -3321,9 +3390,13 @@ snapshots:
 
   dijkstrajs@1.0.3: {}
 
+  dom-walk@0.1.2: {}
+
   electron-to-chromium@1.5.267: {}
 
   emoji-regex@8.0.0: {}
+
+  es5-shim@4.6.7: {}
 
   esbuild@0.25.12:
     optionalDependencies:
@@ -3488,6 +3561,11 @@ snapshots:
     dependencies:
       is-glob: 4.0.3
 
+  global@4.3.2:
+    dependencies:
+      min-document: 2.19.2
+      process: 0.5.2
+
   globals@14.0.0: {}
 
   globals@16.5.0: {}
@@ -3503,8 +3581,6 @@ snapshots:
   hermes-parser@0.25.1:
     dependencies:
       hermes-estree: 0.25.1
-
-  hls.js@1.6.15: {}
 
   html-parse-stringify@3.0.1:
     dependencies:
@@ -3525,6 +3601,8 @@ snapshots:
 
   imurmurhash@0.1.4: {}
 
+  individual@2.0.0: {}
+
   is-core-module@2.16.1:
     dependencies:
       hasown: 2.0.2
@@ -3532,6 +3610,8 @@ snapshots:
   is-extglob@2.1.1: {}
 
   is-fullwidth-code-point@3.0.0: {}
+
+  is-function@1.0.2: {}
 
   is-glob@4.0.3:
     dependencies:
@@ -3599,6 +3679,10 @@ snapshots:
       picomatch: 2.3.1
     optional: true
 
+  min-document@2.19.2:
+    dependencies:
+      dom-walk: 0.1.2
+
   minimatch@3.1.2:
     dependencies:
       brace-expansion: 1.1.12
@@ -3647,6 +3731,8 @@ snapshots:
     dependencies:
       callsites: 3.1.0
 
+  parse-headers@2.0.6: {}
+
   path-exists@4.0.0: {}
 
   path-key@3.1.1: {}
@@ -3669,6 +3755,8 @@ snapshots:
       source-map-js: 1.2.1
 
   prelude-ls@1.2.1: {}
+
+  process@0.5.2: {}
 
   punycode@2.3.1: {}
 
@@ -3718,6 +3806,8 @@ snapshots:
       regenerate: 1.4.2
 
   regenerate@1.4.2: {}
+
+  regenerator-runtime@0.11.1: {}
 
   regenerator-runtime@0.14.1: {}
 
@@ -3775,6 +3865,14 @@ snapshots:
       '@rollup/rollup-win32-x64-gnu': 4.53.3
       '@rollup/rollup-win32-x64-msvc': 4.53.3
       fsevents: 2.3.3
+
+  rust-result@1.0.0:
+    dependencies:
+      individual: 2.0.0
+
+  safe-json-parse@4.0.0:
+    dependencies:
+      rust-result: 1.0.0
 
   sass@1.97.0:
     dependencies:
@@ -3846,6 +3944,8 @@ snapshots:
       is-number: 7.0.0
     optional: true
 
+  tsml@1.0.1: {}
+
   type-check@0.4.0:
     dependencies:
       prelude-ls: 1.2.1
@@ -3870,6 +3970,27 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
+
+  video.js@6.6.3:
+    dependencies:
+      babel-runtime: 6.26.0
+      global: 4.3.2
+      safe-json-parse: 4.0.0
+      tsml: 1.0.1
+      videojs-font: 2.1.0
+      videojs-ie8: 1.1.2
+      videojs-vtt.js: 0.12.4
+      xhr: 2.4.0
+
+  videojs-font@2.1.0: {}
+
+  videojs-ie8@1.1.2:
+    dependencies:
+      es5-shim: 4.6.7
+
+  videojs-vtt.js@0.12.4:
+    dependencies:
+      global: 4.3.2
 
   vite@7.2.7(sass@1.97.0)(terser@5.46.1):
     dependencies:
@@ -3899,6 +4020,15 @@ snapshots:
       ansi-styles: 4.3.0
       string-width: 4.2.3
       strip-ansi: 6.0.1
+
+  xhr@2.4.0:
+    dependencies:
+      global: 4.3.2
+      is-function: 1.0.2
+      parse-headers: 2.0.6
+      xtend: 4.0.2
+
+  xtend@4.0.2: {}
 
   y18n@4.0.3: {}
 

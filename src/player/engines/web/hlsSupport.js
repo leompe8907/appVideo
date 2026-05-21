@@ -6,6 +6,7 @@ export function isHlsUrl(url) {
   const lower = url.toLowerCase();
   if (lower.includes('.m3u8')) return true;
   if (lower.includes('application/vnd.apple.mpegurl')) return true;
+  if (lower.includes('requestmode=m3u8')) return true;
   // Panaccess y backends similares: parámetro m3u8
   if (/(?:^|[?&])m3u8(?:=|&|$)/i.test(url)) return true;
   if (lower.includes('format=m3u8') || lower.includes('type=m3u8')) return true;

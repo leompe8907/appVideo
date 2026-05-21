@@ -71,6 +71,14 @@ export function BouquetPage() {
       return;
     }
 
+    try {
+      url = panaccessService.normalizePlaybackUrl(url);
+    } catch (e) {
+      if (import.meta.env?.DEV) {
+        console.warn('[BouquetPage] normalizePlaybackUrl:', e?.message || e);
+      }
+    }
+
     requestPlayChannel({
       channel,
       playFn: () =>

@@ -722,23 +722,42 @@ class PanaccessService {
     const currentSessionId = userSession.getSessionId() || this.client.sessionId || '';
     if (!currentSessionId) return url;
 
-    // Reemplazar sessionId si existe
-    if (url.includes('sessionId=')) {
-      return url.replace(/sessionId=([^&]+)/, `sessionId=${encodeURIComponent(currentSessionId)}`);
+    let normalized = url;
+    if (normalized.includes('sessionId=')) {
+      normalized = normalized.replace(
+        /sessionId=([^&]+)/,
+        `sessionId=${encodeURIComponent(currentSessionId)}`,
+      );
     }
 
-    // Solo inyectar sessionId en URLs "function m3u8" típicas de Panaccess
-    const lower = url.toLowerCase();
+    const lower = normalized.toLowerCase();
     const looksLikePanaccessFunction =
-      lower.includes('index.php') && lower.includes('requestmode=function') && /(?:^|[?&])m3u8(?:=|&|$)/i.test(url);
+      lower.includes('index.php') &&
+      lower.includes('requestmode=function') &&
+      /(?:^|[?&])m3u8(?:=|&|$)/i.test(normalized);
+    const looksLikeMiddlewareM3u8 =
+      lower.includes('index.php') && lower.includes('requestmode=m3u8');
 
-    if (!looksLikePanaccessFunction) return url;
+    // Wind y similares: EPG trae requestMode=m3u8 sin sesión → API function (10foot cv.js).
+    // intv y otros con sessionId en m3u8 directo: no reescribir (reproducen con esa URL).
+    if (looksLikeMiddlewareM3u8 && !normalized.includes('sessionId=')) {
+      const streamMatch = normalized.match(/(?:^|[?&])streamId=([^&]+)/i);
+      if (streamMatch?.[1]) {
+        try {
+          return this.getStreamM3u8Url({ streamId: streamMatch[1] });
+        } catch {
+          // fallback: inyectar sessionId abajo
+        }
+      }
+    }
 
-    // Insertar antes de fragment si existiera
-    const [basePart, hashPart] = url.split('#');
+    if (!looksLikePanaccessFunction && !looksLikeMiddlewareM3u8) return normalized;
+    if (normalized.includes('sessionId=')) return normalized;
+
+    const [basePart, hashPart] = normalized.split('#');
     const glue = basePart.includes('?') ? '&' : '?';
-    const normalized = `${basePart}${glue}sessionId=${encodeURIComponent(currentSessionId)}`;
-    return hashPart != null ? `${normalized}#${hashPart}` : normalized;
+    const withSession = `${basePart}${glue}sessionId=${encodeURIComponent(currentSessionId)}`;
+    return hashPart != null ? `${withSession}#${hashPart}` : withSession;
   }
 
   /**
