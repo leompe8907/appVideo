@@ -1,8 +1,9 @@
 import React from 'react';
 
 /**
- * Wrapper simple de <button>.
- * Se eliminó completamente la lógica de navegación por foco/control remoto.
+ * Botón de aplicación (HTML <button>).
+ * No usa props de navegación espacial legacy (p. ej. focusKey, isFocusable de norigin).
+ * La navegación TV en listas/grids va por tabindex nativo, data-tv-nav y hooks en utils/tvNavigation.
  *
  * @param {Object} props
  * @param {React.ReactNode} props.children - Contenido del botón

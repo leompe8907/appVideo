@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -152,7 +152,6 @@ function ChannelSidebar({
                   onSelectChannel?.(ch);
                   if (autoCloseOnSelect) onClose?.();
                 }}
-                focusKey={`player-sidebar-channel-${id}`}
                 role="listitem"
               >
                 {chLogo ? (
@@ -241,6 +240,17 @@ export function PlayerHud({ className = '' }) {
   }, []);
 
   const hasContent = Boolean(state?.url);
+  const hasTrackOptions = useMemo(() => {
+    const audioCount = (tracks?.audio || []).length;
+    const textCount = (tracks?.text || []).length;
+    return audioCount > 1 || textCount > 0;
+  }, [tracks?.audio, tracks?.text]);
+
+  const closePlayerOverlay = useCallback(() => {
+    setOverlay('');
+    setTracksPopoverPos(null);
+  }, []);
+
   const isLiveService = state?.type === 'service' && !!state?.item;
   const liveWindow = useMemo(() => resolveLiveWindow(state?.item), [state?.item]);
   const nowNext = useMemo(() => {
@@ -317,14 +327,38 @@ export function PlayerHud({ className = '' }) {
     if (overlay) return;
     hideTimeoutRef.current = setTimeout(() => {
       setVisible(false);
+      setOverlay('');
+      setTracksPopoverPos(null);
       hideTimeoutRef.current = null;
     }, hudAutoHideMs);
   };
+
+  const openPlayerOverlay = useCallback(
+    (name) => {
+      if (name === 'tracks' && !hasTrackOptions) return;
+      setVisible(true);
+      clearHideTimeout();
+      setOverlay((current) => {
+        if (current === name) return '';
+        return name;
+      });
+      if (name !== 'tracks') setTracksPopoverPos(null);
+    },
+    [hasTrackOptions]
+  );
 
   useEffect(() => {
     if (overlay !== 'tracks') return;
     refreshTracks?.();
   }, [overlay, refreshTracks]);
+
+  useEffect(() => {
+    if (overlay === 'tracks' && !hasTrackOptions) closePlayerOverlay();
+  }, [overlay, hasTrackOptions, closePlayerOverlay]);
+
+  useEffect(() => {
+    closePlayerOverlay();
+  }, [state?.url, state?.id, closePlayerOverlay]);
 
   useEffect(() => {
     if (overlay !== 'tracks') {
@@ -366,12 +400,12 @@ export function PlayerHud({ className = '' }) {
       if (isEscape || isBackspace || isReturnLike || isTvBackCodes) {
         e.preventDefault();
         e.stopPropagation();
-        setOverlay('');
+        closePlayerOverlay();
       }
     };
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [overlay]);
+  }, [overlay, closePlayerOverlay]);
 
   const wakeHud = () => {
     setVisible(true);
@@ -598,7 +632,7 @@ export function PlayerHud({ className = '' }) {
             type="button"
             className="player-hud__iconbtn"
             onClick={() => {
-              setOverlay('');
+              closePlayerOverlay();
               close();
               navigate('/home/epg');
             }}
@@ -629,7 +663,7 @@ export function PlayerHud({ className = '' }) {
           <FocusableButton
             type="button"
             className="player-hud__iconbtn"
-            onClick={() => setOverlay((v) => (v === 'channels' ? '' : 'channels'))}
+            onClick={() => openPlayerOverlay('channels')}
             aria-label={t('player.channels', { defaultValue: 'Canales' })}
           >
             <AppIcon name="menu" size="1em" />
@@ -637,20 +671,22 @@ export function PlayerHud({ className = '' }) {
           <FocusableButton
             type="button"
             className="player-hud__iconbtn"
-            onClick={() => setOverlay((v) => (v === 'info' ? '' : 'info'))}
+            onClick={() => openPlayerOverlay('info')}
             aria-label={t('player.info', { defaultValue: 'Información' })}
           >
             <AppIcon name="info" size="1em" />
           </FocusableButton>
-          <FocusableButton
-            type="button"
-            className="player-hud__iconbtn"
-            onClick={() => setOverlay((v) => (v === 'tracks' ? '' : 'tracks'))}
-            aria-label={t('player.tracks', { defaultValue: 'Audio/Subtítulos' })}
-            id="hud-top-tracks-btn"
-          >
-            <AppIcon name="subtitles" size="1em" />
-          </FocusableButton>
+          {hasTrackOptions ? (
+            <FocusableButton
+              type="button"
+              className="player-hud__iconbtn"
+              onClick={() => openPlayerOverlay('tracks')}
+              aria-label={t('player.tracks', { defaultValue: 'Audio/Subtítulos' })}
+              id="hud-top-tracks-btn"
+            >
+              <AppIcon name="subtitles" size="1em" />
+            </FocusableButton>
+          ) : null}
         </div>
 
         {showPlaybackButtons ? (
@@ -865,7 +901,7 @@ export function PlayerHud({ className = '' }) {
           <FocusableButton
             type="button"
             className="player-hud__pillbtn player-hud__overlay-close"
-            onClick={() => setOverlay('')}
+            onClick={closePlayerOverlay}
           >
             {t('common.close', { defaultValue: 'Cerrar' })}
           </FocusableButton>
@@ -875,7 +911,7 @@ export function PlayerHud({ className = '' }) {
 
       {overlay === 'tracks' && tracksPopoverPos ?
         createPortal(
-          <div className="player-hud__tracks-popover-overlay" onClick={() => setOverlay('')}>
+          <div className="player-hud__tracks-popover-overlay" onClick={closePlayerOverlay}>
             <div
               className="player-hud__tracks-popover"
               style={{ top: `${tracksPopoverPos.top}px`, left: `${tracksPopoverPos.left}px`, width: `${tracksPopoverPos.width}px` }}
@@ -899,8 +935,6 @@ export function PlayerHud({ className = '' }) {
                             type="button"
                             className={`player-hud__trackbtn${isActive ? ' player-hud__trackbtn--active' : ''}`}
                             onClick={() => selectAudioTrack?.(trk?.id)}
-                            focusKey={`hud-tracks-audio-${trk?.id}`}
-                            isFocusable={visible}
                             role="listitem"
                           >
                             <span className="player-hud__trackbtn-label">{trk?.label || trk?.lang || 'Audio'}</span>
@@ -919,8 +953,6 @@ export function PlayerHud({ className = '' }) {
                       type="button"
                       className={`player-hud__trackbtn${tracks?.textEnabled ? '' : ' player-hud__trackbtn--active'}`}
                       onClick={() => setSubtitlesEnabled?.(false)}
-                      focusKey="hud-tracks-subs-off"
-                      isFocusable={visible}
                       role="listitem"
                     >
                       <span className="player-hud__trackbtn-label">{t('player.subtitlesOff', { defaultValue: 'Desactivados' })}</span>
@@ -942,8 +974,6 @@ export function PlayerHud({ className = '' }) {
                               setSubtitlesEnabled?.(true);
                               selectTextTrack?.(trk?.id);
                             }}
-                            focusKey={`hud-tracks-subs-${trk?.id}`}
-                            isFocusable={visible}
                             role="listitem"
                           >
                             <span className="player-hud__trackbtn-label">{trk?.label || trk?.lang || 'Sub'}</span>
@@ -960,7 +990,7 @@ export function PlayerHud({ className = '' }) {
                 <FocusableButton
                   type="button"
                   className="player-hud__pillbtn player-hud__overlay-close"
-                  onClick={() => setOverlay('')}
+                  onClick={closePlayerOverlay}
                 >
                   {t('common.close', { defaultValue: 'Cerrar' })}
                 </FocusableButton>
@@ -977,7 +1007,7 @@ export function PlayerHud({ className = '' }) {
         channels={channelList}
         activeId={state?.id}
         autoCloseOnSelect={currentBrand?.player?.closeChannelSidebarOnSelect === true}
-        onClose={() => setOverlay('')}
+        onClose={closePlayerOverlay}
         onSelectChannel={(ch) => handleZapToChannel(ch)}
       />
 
@@ -989,14 +1019,14 @@ export function PlayerHud({ className = '' }) {
           isLive={true}
           canPlayLive={true}
           showActions={false}
-          onClose={() => setOverlay('')}
+          onClose={closePlayerOverlay}
           onPlayLive={() => {
             // Reproducir canal en vivo: reusar el mismo flujo de zapping.
             handleZapToChannel(state?.item);
           }}
           onWatchCatchup={(catchupId) => {
             if (!catchupId) return;
-            setOverlay('');
+            closePlayerOverlay();
             navigate('/home/catchup', { state: { catchupId, from: 'player-info' }, replace: false });
           }}
         />

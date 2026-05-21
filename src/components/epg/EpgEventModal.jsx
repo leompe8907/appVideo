@@ -53,7 +53,7 @@ export function EpgEventModal({
         onClose?.();
       }
     };
-    // capture=true para ganarle a norigin y handlers globales
+    // capture=true para ejecutarse antes que handlers globales de teclado
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [open, onClose]);

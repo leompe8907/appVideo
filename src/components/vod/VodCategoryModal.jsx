@@ -36,9 +36,7 @@ export function VodCategoryModal({ categoryName, vods = [], onSelectItem, onClos
             <VodCard
               key={v.id ?? i}
               item={v}
-              index={i}
               onSelect={() => onSelectItem?.(v)}
-              focusKeyPrefix="vod-category"
               baseUrl={baseUrl}
             />
           ))}

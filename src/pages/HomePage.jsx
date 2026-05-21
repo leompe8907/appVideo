@@ -106,7 +106,9 @@ export function HomePage() {
           role={isPlayerActive ? 'application' : undefined}
           aria-label={isPlayerActive ? t('player.player', { defaultValue: 'Reproductor' }) : undefined}
         />
-        {isPlayerActive && (playerState?.isLoading || playerState?.isSeeking) && (
+        {isPlayerActive &&
+          !playerState?.isPlaying &&
+          (playerState?.isLoading || playerState?.isSeeking) && (
           <div className="home-global-player-loading">
             <div className="home-global-player-loading-spinner" />
           </div>

@@ -146,15 +146,12 @@ export function VodPage() {
                       <VodCard
                         key={v.id ?? i}
                         item={v}
-                        index={i}
                         onSelect={handleVodSelectFromRow}
-                        focusKeyPrefix={`vod-cat-${cat.id ?? catIndex}`}
                         baseUrl={baseUrl}
                       />
                     ))}
                     {catVods.length > ITEMS_PER_ROW && (
                       <VodSeeMoreCard
-                        focusKeyPrefix={`vod-cat-${cat.id ?? catIndex}`}
                         onSelect={() => openCategoryModal(cat.name, catVods)}
                       />
                     )}

@@ -1,26 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useBrand } from '../../contexts/BrandContext';
 import { usePreload } from '../../store/usePreload';
 import { useInactivityStore } from '../../store/inactivityStore';
 import * as userSession from '../../utils/userSession';
-
-function getEffectiveClientConfig(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-  return raw.answer ?? raw;
-}
-
-function resolveInactivityTimeoutSec(clientConfig, brand) {
-  const testOverride = Number(brand?.player?.inactivityTestTimeoutSec);
-  if (Number.isFinite(testOverride) && testOverride > 0) return testOverride;
-
-  const cfg = getEffectiveClientConfig(clientConfig);
-  const v = cfg?.device?.parameters?.X_INACTIVITY_TIMEOUT_SEC;
-  const n = Number(v);
-  if (Number.isFinite(n) && n > 0) return n;
-  return 0;
-}
+import {
+  resolveInactivityGraceSec,
+  resolveInactivityTimeoutSec,
+} from '../../utils/inactivityConfig';
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -116,17 +104,25 @@ export function InactivityHost() {
   const intervalRef = useRef(null);
   const ssIntervalRef = useRef(null);
 
-  const graceSec = useMemo(() => {
-    const v = Number(currentBrand?.player?.inactivityGraceSec);
-    return Number.isFinite(v) && v >= 10 ? v : 60;
-  }, [currentBrand]);
+  const [inactivitySec, setInactivitySec] = useState(0);
+  const [graceSec, setGraceSec] = useState(60);
 
-  const inactivitySec = useMemo(() => {
-    const cfg = userSession.getClientConfig();
-    return resolveInactivityTimeoutSec(cfg, currentBrand);
+  const refreshInactivityConfig = useCallback(() => {
+    const cfg = userSession.getClientConfig(currentBrand);
+    setInactivitySec(resolveInactivityTimeoutSec(cfg, currentBrand));
+    setGraceSec(resolveInactivityGraceSec(cfg, currentBrand));
   }, [currentBrand]);
 
   const isPlaybackActive = Boolean(player?.state?.url) && player?.state?.isPlaying === true;
+
+  useEffect(() => {
+    refreshInactivityConfig();
+  }, [refreshInactivityConfig]);
+
+  useEffect(() => {
+    if (!isPlaybackActive) return;
+    refreshInactivityConfig();
+  }, [isPlaybackActive, refreshInactivityConfig]);
 
   const screensaverUrls = useMemo(() => {
     const raw = collectScreensaverUrls({ vod, epg, brand: currentBrand });

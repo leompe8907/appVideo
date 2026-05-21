@@ -16,7 +16,6 @@ import { useDevice } from '../../contexts/DeviceContext';
  * @param {string} props.path - Ruta a la que navegar (opcional)
  * @param {Function} props.onEnterPress - Callback personalizado al presionar Enter (opcional)
  * @param {string} props.className - Clases CSS adicionales (opcional)
- * @param {string} props.focusKey - Clave única para identificar el elemento (opcional)
  */
 function FocusableCard({
   icon,

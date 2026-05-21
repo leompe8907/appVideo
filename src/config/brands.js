@@ -258,10 +258,11 @@ export const BRANDS = [
       enginePolicy: 'auto',
       hudAutoHideMs: 6000,
       // Inactividad (detener playback + screensaver):
-      // - inactivityTestTimeoutSec: si es > 0, fuerza el timeout (útil para QA; ej: 120 = 2 minutos).
-      // - inactivityGraceSec: segundos del countdown antes de detener.
+      // - Timeout principal: clientConfig.device.parameters.X_INACTIVITY_TIMEOUT_SEC (getClientConfig).
+      // - inactivityTestTimeoutSec: solo en DEV, override QA si clientConfig no trae valor.
+      // - inactivityGraceSec: fallback si no hay X_INACTIVITY_GRACE_SEC en clientConfig.
       // - screensaverRotateMs: rotación de imágenes del screensaver.
-      inactivityTestTimeoutSec: 120,
+      inactivityTestTimeoutSec: 0,
       inactivityGraceSec: 60,
       screensaverRotateMs: 9000,
       // Controles de reproducción (⏪ ⏯ ⏩) en Live/Services:
@@ -514,10 +515,11 @@ export const BRANDS = [
       // HUD: auto-ocultar controles tras X ms de inactividad (similar a EPG legacy).
       hudAutoHideMs: 6000,
       // Inactividad (detener playback + screensaver):
-      // - inactivityTestTimeoutSec: si es > 0, fuerza el timeout (útil para QA; ej: 120 = 2 minutos).
-      // - inactivityGraceSec: segundos del countdown antes de detener.
+      // - Timeout principal: clientConfig.device.parameters.X_INACTIVITY_TIMEOUT_SEC (getClientConfig).
+      // - inactivityTestTimeoutSec: solo en DEV, override QA si clientConfig no trae valor.
+      // - inactivityGraceSec: fallback si no hay X_INACTIVITY_GRACE_SEC en clientConfig.
       // - screensaverRotateMs: rotación de imágenes del screensaver.
-      inactivityTestTimeoutSec: 120,
+      inactivityTestTimeoutSec: 0,
       inactivityGraceSec: 60,
       screensaverRotateMs: 9000,
       showPlaybackButtonsOnLive: false,
@@ -785,7 +787,10 @@ export const BRANDS = [
       enginePolicy: 'auto',
       hudAutoHideMs: 6000,
       // Inactividad (detener playback + screensaver):
-      inactivityTestTimeoutSec: 120,
+      // - Timeout principal: clientConfig.device.parameters.X_INACTIVITY_TIMEOUT_SEC (getClientConfig).
+      // - inactivityTestTimeoutSec: solo en DEV, override QA si clientConfig no trae valor.
+      // - inactivityGraceSec: fallback si no hay X_INACTIVITY_GRACE_SEC en clientConfig.
+      inactivityTestTimeoutSec: 0,
       inactivityGraceSec: 60,
       screensaverRotateMs: 9000,
       showPlaybackButtonsOnLive: false,
@@ -1019,7 +1024,10 @@ export const BRANDS = [
       enginePolicy: 'auto',
       hudAutoHideMs: 6000,
       // Inactividad (detener playback + screensaver):
-      inactivityTestTimeoutSec: 120,
+      // - Timeout principal: clientConfig.device.parameters.X_INACTIVITY_TIMEOUT_SEC (getClientConfig).
+      // - inactivityTestTimeoutSec: solo en DEV, override QA si clientConfig no trae valor.
+      // - inactivityGraceSec: fallback si no hay X_INACTIVITY_GRACE_SEC en clientConfig.
+      inactivityTestTimeoutSec: 0,
       inactivityGraceSec: 60,
       screensaverRotateMs: 9000,
       showPlaybackButtonsOnLive: false,
@@ -1260,7 +1268,10 @@ export const BRANDS = [
       enginePolicy: 'auto',
       hudAutoHideMs: 6000,
       // Inactividad (detener playback + screensaver):
-      inactivityTestTimeoutSec: 120,
+      // - Timeout principal: clientConfig.device.parameters.X_INACTIVITY_TIMEOUT_SEC (getClientConfig).
+      // - inactivityTestTimeoutSec: solo en DEV, override QA si clientConfig no trae valor.
+      // - inactivityGraceSec: fallback si no hay X_INACTIVITY_GRACE_SEC en clientConfig.
+      inactivityTestTimeoutSec: 0,
       inactivityGraceSec: 60,
       screensaverRotateMs: 9000,
       showPlaybackButtonsOnLive: false,
@@ -1529,7 +1540,10 @@ export const BRANDS = [
       enginePolicy: 'auto',
       hudAutoHideMs: 6000,
       // Inactividad (detener playback + screensaver):
-      inactivityTestTimeoutSec: 120,
+      // - Timeout principal: clientConfig.device.parameters.X_INACTIVITY_TIMEOUT_SEC (getClientConfig).
+      // - inactivityTestTimeoutSec: solo en DEV, override QA si clientConfig no trae valor.
+      // - inactivityGraceSec: fallback si no hay X_INACTIVITY_GRACE_SEC en clientConfig.
+      inactivityTestTimeoutSec: 0,
       inactivityGraceSec: 60,
       screensaverRotateMs: 9000,
       showPlaybackButtonsOnLive: false,

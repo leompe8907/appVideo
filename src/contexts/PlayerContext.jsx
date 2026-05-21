@@ -9,6 +9,22 @@ import { isLicenseInUseError } from '../utils/licenseInUse';
 
 const PlayerContext = createContext(null);
 
+function normalizeTracksSnapshot(raw) {
+  if (!raw) return null;
+  return {
+    audio: Array.isArray(raw.audio) ? raw.audio : [],
+    text: Array.isArray(raw.text) ? raw.text : [],
+    selectedAudioId: raw.selectedAudioId ?? null,
+    selectedTextId: raw.selectedTextId ?? null,
+    textEnabled: raw.textEnabled === true,
+  };
+}
+
+function tracksSnapshotsEqual(a, b) {
+  if (a === b) return true;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 // Hook para usar el contexto del player
 // eslint-disable-next-line react-refresh/only-export-components
 export function usePlayer() {
@@ -27,6 +43,7 @@ export function PlayerProvider({ children }) {
   const engineRef = useRef(null);
   const seekTimeoutRef = useRef(null);
   const recoveryRef = useRef({ inProgress: false, lastKey: '' });
+  const playbackRef = useRef({ type: null, id: null, url: null });
   const debugRef = useRef(false);
 
   // Mantener brandRef sincronizado para evitar stale closures en el primer useEffect
@@ -127,6 +144,11 @@ export function PlayerProvider({ children }) {
       setState((s) => {
         const nextCurrentTime = typeof currentTime === 'number' ? currentTime : s.currentTime;
         const nextDuration = typeof duration === 'number' ? duration : s.duration;
+        // Si el tiempo avanza y ya estamos en play, no mantener spinner por flags colgados.
+        const clearStaleBufferFlags =
+          s.isPlaying && (s.isLoading || s.isSeeking)
+            ? { isLoading: false, isSeeking: false }
+            : null;
 
         if (s.type === 'service') {
           const initialPlayer = s.liveInitialPlayerTime ?? nextCurrentTime ?? 0;
@@ -140,6 +162,7 @@ export function PlayerProvider({ children }) {
             liveInitialPlayerTime: initialPlayer,
             liveInitialServerMs: initialServer,
             liveSecondsLate,
+            ...clearStaleBufferFlags,
           };
         }
 
@@ -147,6 +170,7 @@ export function PlayerProvider({ children }) {
           ...s,
           currentTime: nextCurrentTime,
           duration: nextDuration,
+          ...clearStaleBufferFlags,
         };
       });
     };
@@ -258,7 +282,11 @@ export function PlayerProvider({ children }) {
         armSeekTimeout();
         setState((s) => ({ ...s, isSeeking: true, isLoading: true }));
       } else if (state === 'seeked') {
-        setState((s) => ({ ...s, isSeeking: false }));
+        setState((s) => ({
+          ...s,
+          isSeeking: false,
+          isLoading: s.isPlaying ? false : s.isLoading,
+        }));
       } else if (state === 'playing') {
         clearSeekTimeout();
         setState((s) => ({ ...s, isPlaying: true, isLoading: false, isSeeking: false }));
@@ -275,18 +303,17 @@ export function PlayerProvider({ children }) {
 
     const handleSeekEnd = () => {
       clearSeekTimeout();
-      setState((s) => ({ ...s, isSeeking: false }));
+      setState((s) => ({
+        ...s,
+        isSeeking: false,
+        isLoading: s.isPlaying ? false : s.isLoading,
+      }));
     };
 
     const handleTracksChange = (payload) => {
-      if (!payload) return;
-      setTracks({
-        audio: Array.isArray(payload.audio) ? payload.audio : [],
-        text: Array.isArray(payload.text) ? payload.text : [],
-        selectedAudioId: payload.selectedAudioId ?? null,
-        selectedTextId: payload.selectedTextId ?? null,
-        textEnabled: payload.textEnabled === true,
-      });
+      const next = normalizeTracksSnapshot(payload);
+      if (!next) return;
+      setTracks((prev) => (tracksSnapshotsEqual(prev, next) ? prev : next));
     };
 
     engine.on(PLAYER_ENGINE_EVENTS.TIME_UPDATE, handleTime);
@@ -332,6 +359,20 @@ export function PlayerProvider({ children }) {
     }
   }, [currentPlatform, log]);
 
+  const resetEngineMedia = useCallback(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    try {
+      if (typeof engine.reset === 'function') {
+        engine.reset();
+      } else {
+        engine.stop?.();
+      }
+    } catch {
+      // noop
+    }
+  }, []);
+
   const play = ({ type, id, url, item, autoPlay = true, mediaOption = {}, drmConfig = {} }) => {
     const engine = engineRef.current;
     if (!url) {
@@ -358,13 +399,19 @@ export function PlayerProvider({ children }) {
       engine.init(containerRef.current);
     }
 
-    // Si ya estamos en el mismo contenido, solo darle play
-    if (state.type === type && state.id === id && state.url === url) {
-      setState((s) => ({ ...s, isLoading: true, error: null }));
+    const prev = playbackRef.current;
+    const sameContent =
+      prev.type === type && prev.id === id && prev.url === url && Boolean(url);
+
+    // Si ya estamos en el mismo contenido activo, solo reanudar (no recargar manifiesto)
+    if (sameContent && state.url) {
+      setState((s) => ({ ...s, error: null, isLoading: false }));
       log('action:play (same content) -> engine.play()');
       engine.play();
       return;
     }
+
+    playbackRef.current = { type, id, url };
 
     setState((s) => ({
       ...s,
@@ -397,7 +444,8 @@ export function PlayerProvider({ children }) {
   const stop = () => {
     clearSeekTimeout();
     log('action:stop');
-    engineRef.current?.stop?.();
+    resetEngineMedia();
+    playbackRef.current = { type: null, id: null, url: null };
     setState((s) => ({
       ...s,
       isPlaying: false,
@@ -410,11 +458,9 @@ export function PlayerProvider({ children }) {
   const close = () => {
     clearSeekTimeout();
     log('action:close');
-    try {
-      engineRef.current?.stop?.();
-    } catch {
-      // noop
-    }
+    resetEngineMedia();
+    playbackRef.current = { type: null, id: null, url: null };
+    recoveryRef.current = { inProgress: false, lastKey: '' };
     setState({
       type: null,
       id: null,
@@ -496,6 +542,28 @@ export function PlayerProvider({ children }) {
     engineRef.current?.unmute?.();
   };
 
+  const refreshTracks = useCallback(() => {
+    try {
+      const next = normalizeTracksSnapshot(engineRef.current?.getTracks?.());
+      if (!next) return;
+      setTracks((prev) => (tracksSnapshotsEqual(prev, next) ? prev : next));
+    } catch {
+      // noop
+    }
+  }, []);
+
+  const selectAudioTrack = useCallback((id) => {
+    engineRef.current?.selectAudioTrack?.(id);
+  }, []);
+
+  const selectTextTrack = useCallback((id) => {
+    engineRef.current?.selectTextTrack?.(id);
+  }, []);
+
+  const setSubtitlesEnabled = useCallback((enabled) => {
+    engineRef.current?.setSubtitlesEnabled?.(enabled);
+  }, []);
+
   const value = {
     state,
     tracks,
@@ -511,25 +579,10 @@ export function PlayerProvider({ children }) {
     goLive,
     mute,
     unmute,
-    refreshTracks: () => {
-      try {
-        const next = engineRef.current?.getTracks?.();
-        if (next) {
-          setTracks({
-            audio: Array.isArray(next.audio) ? next.audio : [],
-            text: Array.isArray(next.text) ? next.text : [],
-            selectedAudioId: next.selectedAudioId ?? null,
-            selectedTextId: next.selectedTextId ?? null,
-            textEnabled: next.textEnabled === true,
-          });
-        }
-      } catch {
-        // noop
-      }
-    },
-    selectAudioTrack: (id) => engineRef.current?.selectAudioTrack?.(id),
-    selectTextTrack: (id) => engineRef.current?.selectTextTrack?.(id),
-    setSubtitlesEnabled: (enabled) => engineRef.current?.setSubtitlesEnabled?.(enabled),
+    refreshTracks,
+    selectAudioTrack,
+    selectTextTrack,
+    setSubtitlesEnabled,
     containerRef,
     licenseInUsePrompt,
     confirmLicenseInUse: async (accept) => {

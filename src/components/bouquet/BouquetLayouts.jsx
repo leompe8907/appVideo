@@ -163,9 +163,7 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, l
         {items.map((channel, index) => (
           <ChannelCard
             key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
-            focusKey={`bouquet-${bouquet.bouquetId ?? bouquet.id ?? 'x'}-channel-${channel.id ?? index}`}
             channel={channel}
-            index={index}
             layoutType={layoutType}
             onSelect={() => onChannelSelect?.(channel, bouquet)}
             onFocus={() => onChannelFocus?.(channel, bouquet)}
@@ -499,9 +497,7 @@ export function BouquetGridHorizontal({ bouquet, onChannelSelect, onChannelFocus
             {row.map(({ channel, index }) => (
               <ChannelCard
                 key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
-                focusKey={`bouquet-${bouquet.bouquetId ?? bouquet.id ?? 'x'}-channel-${channel.id ?? index}`}
                 channel={channel}
-                index={index}
                 layoutType={layoutType}
                 onSelect={() => onChannelSelect?.(channel, bouquet)}
                 onFocus={() => onChannelFocus?.(channel, bouquet)}
@@ -543,9 +539,7 @@ export function BouquetGridVertical({ bouquet, onChannelSelect, onChannelFocus, 
         {items.map((channel, index) => (
           <ChannelCard
             key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
-            focusKey={`bouquet-${bouquet.bouquetId ?? bouquet.id ?? 'x'}-channel-${channel.id ?? index}`}
             channel={channel}
-            index={index}
             layoutType={layoutType}
             onSelect={() => onChannelSelect?.(channel, bouquet)}
             onFocus={() => onChannelFocus?.(channel, bouquet)}

@@ -80,7 +80,6 @@ export function VodRecommendedHomeRail() {
           <div className="vod-row-cards">
             {vodRecommended.length > ITEMS_PER_ROW && (
               <VodSeeMoreCard
-                focusKeyPrefix="home-vod-rec"
                 label={t('vod.seeAllMovies')}
                 textInPoster
                 onSelect={() => navigate('/home/vod')}
@@ -90,9 +89,7 @@ export function VodRecommendedHomeRail() {
               <VodCard
                 key={v.id ?? i}
                 item={v}
-                index={i}
                 onSelect={handleVodSelect}
-                focusKeyPrefix="home-vod-rec"
                 baseUrl={baseUrl}
               />
             ))}

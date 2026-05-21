@@ -1,4 +1,6 @@
+import Hls from 'hls.js';
 import * as userSession from '../../../utils/userSession';
+import { pickWindCompatibleLevel } from './windLevelSelect';
 
 function buildHlsjsConfig(getSessionId, playbackUrl = '') {
   const config = {
@@ -7,6 +9,11 @@ function buildHlsjsConfig(getSessionId, playbackUrl = '') {
   if (/middleware\.wind\.do/i.test(playbackUrl)) {
     config.enableWorker = false;
     config.enableSoftwareAES = true;
+    // hls.js ordena niveles por BANDWIDTH asc → 0 = 360p (avc1.4d401e), no 1080p High
+    config.startLevel = 0;
+    config.capLevelToPlayerSize = false;
+    config.liveSyncDurationCount = 3;
+    config.liveMaxLatencyDurationCount = 6;
   }
   return config;
 }
@@ -34,6 +41,33 @@ export function applyStreamrootHlsSessionConfig(player, getSessionId, playbackUr
   } catch {
     // noop
   }
+  if (/middleware\.wind\.do/i.test(playbackUrl)) {
+    attachWindLevelLock(player);
+  }
+}
+
+/** Tras MANIFEST_PARSED, fija 360p (substream=3) para evitar mezcla High Profile en MSE. */
+export function attachWindLevelLock(player) {
+  if (!player) return;
+
+  const bind = () => {
+    const hls = player?.tech?.(true)?.hlsProvider?.hls;
+    if (!hls || hls.__windLevelLockBound) return false;
+    hls.__windLevelLockBound = true;
+
+    const lock = () => pickWindCompatibleLevel(hls);
+    hls.on(Hls.Events.MANIFEST_PARSED, lock);
+    if (hls.levels?.length) lock();
+    return true;
+  };
+
+  if (bind()) return;
+
+  let attempts = 0;
+  const timer = setInterval(() => {
+    attempts += 1;
+    if (bind() || attempts > 100) clearInterval(timer);
+  }, 50);
 }
 
 /** Inyecta sessionId en playlists, claves AES (mekey) y segmentos del middleware. */
