@@ -124,21 +124,45 @@ export function PlayerProvider({ children }) {
   // - Reset de estado de playback mid-playback
   useEffect(() => {
     debugRef.current = isDebugEnabled();
-    
-    // Si ya existe un engine, no recrear (protección contra cambios de signature)
+
     if (engineRef.current) {
       log('engine:skip (already exists)');
       return;
     }
-    
-    const engine = createEngine(deviceInfo);
-    engineRef.current = engine;
-    log('engine:create', { deviceType: deviceInfo?.deviceType, isTV: !!deviceInfo?.isTV, userAgent: deviceInfo?.userAgent });
 
-    if (containerRef.current) {
-      engine.init(containerRef.current);
-      log('engine:init', { hasContainer: true });
-    }
+    let cancelled = false;
+    const brand = brandRef.current;
+
+    (async () => {
+      const engine = await createEngine(deviceInfo, {
+        nativeAdaptersEnabled: brand?.player?.nativeAdaptersEnabled === true,
+        brandPlayerPolicy: brand?.player?.enginePolicy || 'auto',
+      });
+      if (cancelled) {
+        try {
+          engine.destroy?.();
+        } catch {
+          // noop
+        }
+        return;
+      }
+
+      engineRef.current = engine;
+      log('engine:create', {
+        deviceType: deviceInfo?.deviceType,
+        isTV: !!deviceInfo?.isTV,
+        userAgent: deviceInfo?.userAgent,
+      });
+
+      if (containerRef.current) {
+        await engine.init(containerRef.current);
+        log('engine:init', { hasContainer: true });
+      }
+
+      bindEngineListeners(engine);
+    })().catch((err) => {
+      console.error('[PlayerProvider] Error creando engine', err);
+    });
 
     const handleTime = ({ currentTime, duration }) => {
       setState((s) => {
@@ -330,16 +354,21 @@ export function PlayerProvider({ children }) {
       setTracks((prev) => (tracksSnapshotsEqual(prev, next) ? prev : next));
     };
 
-    engine.on(PLAYER_ENGINE_EVENTS.TIME_UPDATE, handleTime);
-    engine.on(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, handleDuration);
-    engine.on(PLAYER_ENGINE_EVENTS.ENDED, handleEnded);
-    engine.on(PLAYER_ENGINE_EVENTS.ERROR, handleError);
-    engine.on(PLAYER_ENGINE_EVENTS.STATE_CHANGE, handleStateChange);
-    engine.on(PLAYER_ENGINE_EVENTS.SEEK_START, handleSeekStart);
-    engine.on(PLAYER_ENGINE_EVENTS.SEEK_END, handleSeekEnd);
-    engine.on(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, handleTracksChange);
+    function bindEngineListeners(engine) {
+      engine.on(PLAYER_ENGINE_EVENTS.TIME_UPDATE, handleTime);
+      engine.on(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, handleDuration);
+      engine.on(PLAYER_ENGINE_EVENTS.ENDED, handleEnded);
+      engine.on(PLAYER_ENGINE_EVENTS.ERROR, handleError);
+      engine.on(PLAYER_ENGINE_EVENTS.STATE_CHANGE, handleStateChange);
+      engine.on(PLAYER_ENGINE_EVENTS.SEEK_START, handleSeekStart);
+      engine.on(PLAYER_ENGINE_EVENTS.SEEK_END, handleSeekEnd);
+      engine.on(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, handleTracksChange);
+    }
 
     return () => {
+      cancelled = true;
+      const engine = engineRef.current;
+      if (!engine) return;
       engine.off(PLAYER_ENGINE_EVENTS.TIME_UPDATE, handleTime);
       engine.off(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, handleDuration);
       engine.off(PLAYER_ENGINE_EVENTS.ENDED, handleEnded);
@@ -398,57 +427,58 @@ export function PlayerProvider({ children }) {
       return;
     }
 
-    try {
-      url = panaccessService.normalizePlaybackUrl(url);
-    } catch (e) {
-      if (import.meta.env?.DEV) {
-        console.warn('[PlayerProvider] normalizePlaybackUrl:', e?.message || e);
+    void (async () => {
+      try {
+        url = panaccessService.normalizePlaybackUrl(url);
+      } catch (e) {
+        if (import.meta.env?.DEV) {
+          console.warn('[PlayerProvider] normalizePlaybackUrl:', e?.message || e);
+        }
       }
-    }
 
-    log('action:play', { type, id, url });
+      log('action:play', { type, id, url });
 
-    // Si el engine nunca se inicializó, o el nodo contenedor cambió (ej. remount), inicializar ahora
-    if (containerRef.current && (!engine.video || engine.container !== containerRef.current)) {
-      engine.init(containerRef.current);
-    }
+      if (containerRef.current && (!engine.video || engine.container !== containerRef.current)) {
+        await engine.init(containerRef.current);
+      }
 
-    const prev = playbackRef.current;
-    const sameContent =
-      prev.type === type && prev.id === id && prev.url === url && Boolean(url);
+      const prev = playbackRef.current;
+      const sameContent =
+        prev.type === type && prev.id === id && prev.url === url && Boolean(url);
 
-    // Si ya estamos en el mismo contenido activo, solo reanudar (no recargar manifiesto)
-    if (sameContent && state.url) {
-      setState((s) => ({ ...s, error: null, isLoading: false }));
-      log('action:play (same content) -> engine.play()');
-      engine.play();
-      return;
-    }
+      if (sameContent && state.url) {
+        setState((s) => ({ ...s, error: null, isLoading: false }));
+        log('action:play (same content) -> engine.play()');
+        engine.play();
+        return;
+      }
 
-    playbackRef.current = { type, id, url };
+      playbackRef.current = { type, id, url };
 
-    setState((s) => ({
-      ...s,
-      type,
-      id,
-      url,
-      item,
-      mediaOption,
-      drmConfig,
-      isPlaying: false,
-      isLoading: true,
-      isSeeking: false,
-      error: null,
-      currentTime: 0,
-      duration: 0,
-      liveInitialPlayerTime: null,
-      liveInitialServerMs: null,
-      liveSecondsLate: 0,
-    }));
+      setState((s) => ({
+        ...s,
+        type,
+        id,
+        url,
+        item,
+        mediaOption,
+        drmConfig,
+        isPlaying: false,
+        isLoading: true,
+        isSeeking: false,
+        error: null,
+        currentTime: 0,
+        duration: 0,
+        liveInitialPlayerTime: null,
+        liveInitialServerMs: null,
+        liveSecondsLate: 0,
+      }));
 
-    // Reset tracks para no mostrar info anterior mientras llega el manifiesto nuevo.
-    setTracks({ audio: [], text: [], selectedAudioId: null, selectedTextId: null, textEnabled: false });
-    engine.load(url, { type, autoPlay, mediaOption, drmConfig });
+      setTracks({ audio: [], text: [], selectedAudioId: null, selectedTextId: null, textEnabled: false });
+      engine.load(url, { type, autoPlay, mediaOption, drmConfig });
+    })().catch((err) => {
+      console.error('[PlayerProvider] Error en play', err);
+    });
   };
 
   const pause = () => {

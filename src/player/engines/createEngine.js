@@ -1,23 +1,28 @@
 import { WebEngine } from './web/WebEngine';
-import { LgEngine } from './lg/LgEngine';
-import { SamsungEngine } from './samsung/SamsungEngine';
 import { ENGINE_PLATFORM, resolveEnginePlatform } from './resolveEnginePlatform';
-import { getActiveBrandConfig } from '../../config/brandConfig';
 
 /**
  * Fábrica de engines de reproducción.
  * PC/web: WebEngine (Video.js 6.6 + plugin hls.js de 10foot).
- * TV: LgEngine / SamsungEngine cuando nativeAdapters está activo.
+ * TV: LgEngine / SamsungEngine (import dinámico; no se empaquetan en web).
+ *
+ * @param {Object} deviceInfo
+ * @param {{ nativeAdaptersEnabled?: boolean, brandPlayerPolicy?: string }} [playerPolicy]
  */
-export function createEngine(deviceInfo) {
-  const brandConfig = getActiveBrandConfig();
+export async function createEngine(deviceInfo, playerPolicy = {}) {
   const platform = resolveEnginePlatform({
     ...deviceInfo,
-    nativeAdaptersEnabled: brandConfig?.player?.nativeAdaptersEnabled === true,
-    brandPlayerPolicy: brandConfig?.player?.enginePolicy || 'auto',
+    nativeAdaptersEnabled: playerPolicy.nativeAdaptersEnabled === true,
+    brandPlayerPolicy: playerPolicy.brandPlayerPolicy || 'auto',
   });
-  if (platform === ENGINE_PLATFORM.LG) return new LgEngine();
-  if (platform === ENGINE_PLATFORM.SAMSUNG) return new SamsungEngine();
+
+  if (platform === ENGINE_PLATFORM.LG) {
+    const { LgEngine } = await import('./lg/LgEngine.js');
+    return new LgEngine();
+  }
+  if (platform === ENGINE_PLATFORM.SAMSUNG) {
+    const { SamsungEngine } = await import('./samsung/SamsungEngine.js');
+    return new SamsungEngine();
+  }
   return new WebEngine();
 }
-

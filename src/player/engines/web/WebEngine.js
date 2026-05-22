@@ -1,5 +1,5 @@
 import { videojs } from '../../vendor/videojsAssign.js';
-import '../../vendor/videojs-hlsjs-plugin.js';
+import { ensureVideojsHlsPlugin } from '../../vendor/ensureVideojsHlsPlugin.js';
 import 'video.js/dist/video-js.css';
 import BaseEngine from '../base/BaseEngine';
 import {
@@ -160,8 +160,10 @@ export class WebEngine extends BaseEngine {
     this._videoElementId = null;
   }
 
-  init(container) {
+  async init(container) {
     if (!container) return;
+
+    await ensureVideojsHlsPlugin();
 
     this._debug = this._isDebugEnabled();
     this._log('init', { hasContainer: !!container });

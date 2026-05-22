@@ -61,7 +61,15 @@ export default defineConfig(({ mode }) => {
               return `page-${page}`;
             }
 
-            // Player engines: chunk separado
+            // Video.js + hls.js antes que el resto del player (orden de init en runtime)
+            if (
+              id.includes('node_modules/video.js')
+              || id.includes('node_modules/hls.js')
+              || id.includes('/src/player/vendor/videojsAssign')
+            ) {
+              return 'player-vendor';
+            }
+
             if (id.includes('/src/player/')) {
               return 'player-engine';
             }

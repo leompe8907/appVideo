@@ -22,8 +22,8 @@ export class BaseTvEngine extends WebEngine {
     this.boundHandlePageShow = null;
   }
 
-  init(container) {
-    super.init(container);
+  async init(container) {
+    await super.init(container);
     this.isNativeActive = this.tryActivateNativeAdapter(container);
     this.bindLifecycleHooks();
   }
