@@ -17,7 +17,7 @@ let _cache = { key: null, config: null };
 
 /**
  * Resuelve el identificador de marca activo (sin enriquecer).
- * Prioridad: URL param > localStorage > Default Brand > "bromteck"
+ * Prioridad: URL param > localStorage > Default Brand > fallback interno
  * @returns {{ brandId: string, from: 'url'|'storage'|'default'|'fallback' }}
  */
 function resolveBrandKey() {
@@ -57,19 +57,20 @@ export function getActiveBrandConfig() {
 
   const config = getBrandConfig(brandId);
   if (!config) {
-    if (isDev) console.warn("[Brand] Usando fallback: bromteck");
-    const fallback = getBrandConfig("bromteck");
+    const fallbackBrand = DEFAULT_BRAND || "wind";
+    if (isDev) console.warn(`[Brand] Usando fallback: ${fallbackBrand}`);
+    const fallback = getBrandConfig(fallbackBrand);
     const enriched = enrichConfigWithAssets(fallback);
     if (enriched) {
-      localStorage.setItem("brand", "bromteck");
-      _cache = { key: "bromteck", config: enriched };
+      localStorage.setItem("brand", fallbackBrand);
+      _cache = { key: fallbackBrand, config: enriched };
     }
     return enriched || null;
   }
 
   if (from === "url") localStorage.setItem("brand", brandId);
   if (from === "default") localStorage.setItem("brand", DEFAULT_BRAND);
-  if (from === "fallback") localStorage.setItem("brand", "bromteck");
+  if (from === "fallback") localStorage.setItem("brand", brandId);
 
   if (isDev) {
     console.log(`[Brand] Cargado desde ${from}: ${brandId}`);

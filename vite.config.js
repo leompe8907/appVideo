@@ -2,6 +2,40 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import legacy from '@vitejs/plugin-legacy'
 import { brandPublicAssetsPlugin } from './vite/brandPublicAssets.js'
+import { BRANDS } from './src/config/brands.js'
+
+function singleBrandConfigPlugin(brand) {
+  const selectedBrand = brand ? BRANDS.find((entry) => entry.brand === brand) : null;
+
+  return {
+    name: 'single-brand-config',
+    enforce: 'pre',
+    transform(_code, id) {
+      if (!brand) return null;
+
+      const normalizedId = id.replaceAll('\\', '/');
+      if (!normalizedId.endsWith('/src/config/brands.js')) return null;
+
+      if (!selectedBrand) {
+        this.warn(`[single-brand-config] No existe configuración para "${brand}".`);
+        return null;
+      }
+
+      return {
+        code: [
+          `export const BRANDS = ${JSON.stringify([selectedBrand], null, 2)};`,
+          '',
+          'export function getBrandConfig(brandName) {',
+          '  const brand = BRANDS.find((entry) => entry.brand === brandName);',
+          '  return brand || null;',
+          '}',
+          '',
+        ].join('\n'),
+        map: null,
+      };
+    },
+  };
+}
 
 export default defineConfig(({ mode }) => {
   const brand = process.env.VITE_BRAND || '';
@@ -9,6 +43,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
+      singleBrandConfigPlugin(brand),
       brandPublicAssetsPlugin(brand),
       react(),
       // Smart TV compatibility:
