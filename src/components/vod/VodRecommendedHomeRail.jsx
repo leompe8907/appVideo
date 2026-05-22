@@ -13,6 +13,7 @@ import VodCard from './VodCard';
 import VodSeeMoreCard from './VodSeeMoreCard';
 import VodDetailModal from './VodDetailModal';
 import VodDetailModalClassic from './VodDetailModalClassic';
+import { HorizontalScrollRail } from '../navigation/HorizontalScrollRail';
 import '../../styles/pages/_vod.scss';
 
 const ITEMS_PER_ROW = 9;
@@ -77,7 +78,7 @@ export function VodRecommendedHomeRail() {
           aria-label={t('vod.recommended')}
         >
           <h2 className="vod-row-title">{t('vod.recommended')}</h2>
-          <div className="vod-row-cards">
+          <HorizontalScrollRail className="vod-row-cards">
             {vodRecommended.length > ITEMS_PER_ROW && (
               <VodSeeMoreCard
                 label={t('vod.seeAllMovies')}
@@ -93,7 +94,7 @@ export function VodRecommendedHomeRail() {
                 baseUrl={baseUrl}
               />
             ))}
-          </div>
+          </HorizontalScrollRail>
         </section>
       )}
 

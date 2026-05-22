@@ -137,3 +137,22 @@ export function scrollElementIntoVisibleScrollAncestors(el, topAncestor, opts = 
     }
   }
 }
+
+const HORIZONTAL_RAIL_SELECTOR = '[data-horizontal-scroll-rail], .horizontal-slide';
+
+/**
+ * Scroll vertical del muro + carril horizontal (última tarjeta visible por completo).
+ * @param {HTMLElement} el
+ * @param {HTMLElement} scrollRoot
+ * @param {{ railMargin?: number }} [opts]
+ */
+export function scrollFocusIntoBouquetMuro(el, scrollRoot, opts = {}) {
+  const railMargin = typeof opts.railMargin === 'number' ? opts.railMargin : 32;
+  const rail = el.closest?.(HORIZONTAL_RAIL_SELECTOR);
+  if (rail instanceof HTMLElement && scrollRoot.contains(rail)) {
+    scrollElementIntoVisibleScrollAncestors(el, rail, { margin: railMargin });
+  }
+  if (scrollRoot instanceof HTMLElement) {
+    scrollElementIntoVisibleScrollAncestors(el, scrollRoot);
+  }
+}
