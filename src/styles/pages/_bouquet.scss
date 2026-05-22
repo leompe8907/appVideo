@@ -148,7 +148,8 @@
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: visible;
+    overflow-y: hidden;
     padding: 0 0.5rem 1rem;
 
     .vod-row-title {
@@ -166,19 +167,54 @@
       max-width: 100%;
       height: 21em;
       min-width: 0;
-      display: flex;
-      flex-wrap: nowrap;
-      align-items: center;
-      gap: 1.5rem;
-      padding: 0 0.25rem;
-      overflow-x: auto;
-      overflow-y: hidden;
-      scroll-behavior: smooth;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
+      box-sizing: border-box;
+      padding-inline: 0.5rem 0;
 
-      &::-webkit-scrollbar {
-        display: none;
+      &.embla-viewport {
+        overflow: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+
+        .embla-container {
+          display: flex;
+          flex-wrap: nowrap;
+          align-items: center;
+          height: 100%;
+          gap: 1.5rem;
+          padding-inline-end: 1.75rem;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+
+          &::-webkit-scrollbar {
+            display: none;
+          }
+        }
+
+        .embla-slide {
+          flex: 0 0 auto;
+          min-width: 0;
+        }
+      }
+
+      &[data-native-horizontal-rail] {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 1.5rem;
+        padding-inline: 0.5rem 1.75rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
       }
 
       .vod-card {
@@ -197,6 +233,102 @@
     gap: 0.75rem;
     overflow: visible;
     padding: 0.75rem 0;
+  }
+
+  .bouquet-row-carousel,
+  .bouquet-grid-horizontal {
+    overflow-x: visible;
+    overflow-y: hidden;
+  }
+
+  /* Embla: ocultar barra de scroll (PC) */
+  .bouquet-embla-no-scrollbar,
+  .embla-rail-wrap,
+  .embla-rail-wrap .embla-viewport,
+  .embla-rail-wrap .embla-container,
+  .bouquet-row-carousel .horizontal-slide.embla-viewport,
+  .bouquet-grid-horizontal .horizontal-slide--grid-row.embla-viewport,
+  .bouquet-vod-recommended .vod-row-cards.embla-viewport {
+    @include scrollbar-hidden;
+  }
+
+  .bouquet-embla-no-scrollbar,
+  .embla-rail-wrap .embla-viewport {
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+
+    &::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+  }
+
+  .embla-rail-wrap .embla-container {
+    overflow: visible;
+  }
+
+  /* PC: carril Embla con barras laterales (altura del bouquet) */
+  .embla-rail-wrap {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    gap: 0;
+    min-height: 0;
+    overflow: hidden;
+
+    .embla-rail-bar {
+      flex-shrink: 0;
+      width: 3rem;
+      min-height: 100%;
+      align-self: stretch;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.15s ease, opacity 0.15s ease;
+
+      .embla-rail-bar-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        font-weight: 300;
+        line-height: 1;
+        user-select: none;
+      }
+
+      &:hover:not(:disabled) {
+        background: rgba(0, 0, 0, 0.65);
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+    }
+
+    .embla-viewport {
+      flex: 1;
+      min-width: 0;
+      @include scrollbar-hidden;
+      overflow: hidden !important;
+      /* Recorte por si el navegador sigue reservando la barra horizontal */
+      margin-bottom: -1.125rem;
+      padding-bottom: 1.125rem;
+    }
+
+    .embla-container {
+      @include scrollbar-hidden;
+      overflow: visible;
+    }
   }
 
   .bouquet-grid-horizontal {
@@ -223,19 +355,53 @@
     .horizontal-slide--grid-row {
       margin: 0;
       width: 100%;
-      display: flex;
-      flex-wrap: nowrap;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0 0.25rem;
-      overflow-x: auto;
-      overflow-y: hidden;
-      scroll-behavior: smooth;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
+      box-sizing: border-box;
+      padding-inline: 0.5rem 0;
 
-      &::-webkit-scrollbar {
-        display: none;
+      &.embla-viewport {
+        overflow: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+
+        .embla-container {
+          display: flex;
+          flex-wrap: nowrap;
+          align-items: center;
+          gap: 0.35rem;
+          padding-inline-end: 1.75rem;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+
+          &::-webkit-scrollbar {
+            display: none;
+          }
+        }
+
+        .embla-slide {
+          flex: 0 0 auto;
+          min-width: 0;
+        }
+      }
+
+      &[data-native-horizontal-rail] {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 0.35rem;
+        padding-inline: 0.5rem 1.75rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
       }
     }
   }
@@ -268,7 +434,6 @@
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
 
     .bouquet-heading {
       flex-shrink: 0;
@@ -281,14 +446,71 @@
 
     /* Carril base + modificadores por layout (ver bouquetLayoutClasses.js) */
     .horizontal-slide {
-      margin-left: 1.25rem;
+      margin-left: 0;
       width: 100%;
-      height: 18rem;
+      box-sizing: border-box;
+      padding-inline: 1.25rem 0;
+
+      &.embla-viewport {
+        overflow: hidden;
+        height: 18rem;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+
+        .embla-container {
+          display: flex;
+          flex-wrap: nowrap;
+          align-items: center;
+          height: 100%;
+          gap: 1.5rem;
+          padding-inline-end: 1.75rem;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+
+          &::-webkit-scrollbar {
+            display: none;
+          }
+        }
+
+        .embla-slide {
+          flex: 0 0 auto;
+          min-width: 0;
+          height: 100%;
+          display: flex;
+          align-items: center;
+        }
+      }
+
+      &[data-native-horizontal-rail]:not(.horizontal-slide--logo-with-number) {
+        height: 18rem;
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 1.5rem;
+        padding-inline: 1.25rem 1.75rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+      }
+    }
+
+    .horizontal-slide--logo-with-number[data-native-horizontal-rail] {
+      height: auto;
       display: flex;
-      flex-wrap: nowrap;
-      align-items: center;
-      gap: 1.5rem;
-      padding: 0 0.25rem;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      padding-top: 0.35rem;
+      padding-inline: 1.25rem 1.75rem;
       overflow-x: auto;
       overflow-y: hidden;
       scroll-behavior: smooth;
@@ -298,13 +520,6 @@
       &::-webkit-scrollbar {
         display: none;
       }
-    }
-
-    .horizontal-slide--logo-with-number {
-      height: auto;
-      align-items: flex-start;
-      padding-top: 0.35rem;
-      flex-wrap: wrap;
     }
 
     /* Ejemplos para orientar cada diseño sin tocar el carril base:
@@ -317,6 +532,7 @@
     flex-shrink: 0;
     width: 14em;
     height: 13em;
+    scroll-margin-inline: 0.75rem 1.5rem;
     border-radius: $border-radius-sm;
     overflow: hidden;
     background: rgba(255, 255, 255, 0.04);
@@ -804,9 +1020,9 @@
 /* TV: scroll sin smooth + foco ligero (sin escala/sombras pesadas ni filtros). */
 .device-tv .bouquet-page {
   .bouquet-inicio-scroll,
-  .bouquet-row-carousel .horizontal-slide,
-  .bouquet-grid-horizontal .horizontal-slide--grid-row,
-  .bouquet-vod-recommended .vod-row-cards {
+  .bouquet-row-carousel .embla-viewport,
+  .bouquet-grid-horizontal .horizontal-slide--grid-row.embla-viewport,
+  .bouquet-vod-recommended .vod-row-cards.embla-viewport {
     scroll-behavior: auto;
   }
 
@@ -826,18 +1042,22 @@
     gap: 0.65rem;
   }
 
-  .bouquet-grid-horizontal .horizontal-slide--grid-row {
-    gap: 1rem;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+  .bouquet-grid-horizontal .horizontal-slide--grid-row.embla-viewport {
     padding-bottom: 0.75rem;
+
+    .embla-container {
+      gap: 1rem;
+      padding-inline-end: 1.75rem;
+    }
   }
 
-  .bouquet-row-carousel .horizontal-slide {
-    gap: 2rem;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+  .bouquet-row-carousel .horizontal-slide.embla-viewport {
     padding-bottom: 0.75rem;
+
+    .embla-container {
+      gap: 2rem;
+      padding-inline-end: 1.75rem;
+    }
   }
 
   .bouquet-grid-vertical-content {
