@@ -12,7 +12,6 @@ import {
   getBouquetGridVerticalClasses,
   getBouquetRowCarouselClasses,
 } from '../../utils/bouquetLayoutClasses';
-import { HorizontalScrollRail } from '../navigation/HorizontalScrollRail';
 
 // --- Helpers EPG para layout event_and_logo ---
 /** Parsea "YYYY-MM-DD HH:mm:ss" a "HH:mm" para mostrar en UI */
@@ -160,7 +159,7 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, l
       data-layout={layoutType ?? ''}
     >
       <h4 className="bouquet-heading">{title}</h4>
-      <HorizontalScrollRail className={trackClass}>
+      <div className={trackClass}>
         {items.map((channel, index) => (
           <ChannelCard
             key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
@@ -170,7 +169,7 @@ export function BouquetRowCarousel({ bouquet, onChannelSelect, onChannelFocus, l
             onFocus={() => onChannelFocus?.(channel, bouquet)}
           />
         ))}
-      </HorizontalScrollRail>
+      </div>
     </div>
   );
 }
@@ -494,7 +493,7 @@ export function BouquetGridHorizontal({ bouquet, onChannelSelect, onChannelFocus
       <h4 className="bouquet-heading">{title}</h4>
       <div className="bouquet-grid-horizontal-rows">
         {rows.map((row, rowIndex) => (
-          <HorizontalScrollRail key={`row-${rowIndex}`} className={trackClass}>
+          <div key={`row-${rowIndex}`} className={trackClass}>
             {row.map(({ channel, index }) => (
               <ChannelCard
                 key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
@@ -504,7 +503,7 @@ export function BouquetGridHorizontal({ bouquet, onChannelSelect, onChannelFocus
                 onFocus={() => onChannelFocus?.(channel, bouquet)}
               />
             ))}
-          </HorizontalScrollRail>
+          </div>
         ))}
       </div>
     </div>

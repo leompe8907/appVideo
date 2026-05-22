@@ -7,7 +7,6 @@ import { shouldDeferHomeShellNavigation } from '../utils/homeShellOverlays';
 import {
   focusElementSafe,
   scrollElementIntoVisibleScrollAncestors,
-  scrollFocusIntoBouquetMuro,
   getVisibleFocusablesInContainer,
 } from '../utils/homeShellNavigation';
 import { buildInicioBouquetChannelRows, findChannelCardCellInRows } from '../utils/inicioBouquetTvGrid';
@@ -18,8 +17,7 @@ const ROUTES = {
 };
 
 /**
- * Navegación en el muro de bouquets: TV (mando), teclado (←→↑↓) y Tab; scroll al foco.
- * Puentes con ads solo en modo TV.
+ * Navegación TV en el muro de bouquets (LRUD, scroll al foco, puentes con ads/VOD solo en Inicio).
  *
  * @param {{ route: 'inicio' | 'serviciosTvRadio'; scrollRootSelector?: string }} opts
  */
@@ -63,7 +61,7 @@ export function useBouquetMuroTvNav(opts) {
       if (first instanceof HTMLElement) {
         if (focusElementSafe(first)) {
           if (scrollRoot instanceof HTMLElement) {
-            scrollFocusIntoBouquetMuro(first, scrollRoot);
+            scrollElementIntoVisibleScrollAncestors(first, scrollRoot);
           }
           wallFocusPlacedRef.current = true;
         }
@@ -86,6 +84,7 @@ export function useBouquetMuroTvNav(opts) {
   }, [isTV, location.pathname, scrollRootSelector, epgWallKey, targetPath]);
 
   useLayoutEffect(() => {
+    if (!isTV) return undefined;
     if (location.pathname !== targetPath) return undefined;
 
     const scrollRoot = document.querySelector(scrollRootSelector);
@@ -103,7 +102,7 @@ export function useBouquetMuroTvNav(opts) {
       if (card && scrollRoot.contains(card)) {
         const wall = scrollRoot.querySelector('.bouquet-wall');
         if (wall?.contains(card)) {
-          scrollFocusIntoBouquetMuro(card, scrollRoot);
+          scrollElementIntoVisibleScrollAncestors(card, scrollRoot);
           return;
         }
       }
@@ -112,7 +111,7 @@ export function useBouquetMuroTvNav(opts) {
         t.closest('.bouquet-vod-recommended .vod-row-cards') &&
         scrollRoot.contains(t)
       ) {
-        scrollFocusIntoBouquetMuro(t, scrollRoot);
+        scrollElementIntoVisibleScrollAncestors(t, scrollRoot);
       }
     };
 
@@ -136,22 +135,18 @@ export function useBouquetMuroTvNav(opts) {
       const main = queryMainContent();
       const stack = queryContentStack();
 
-      if (
-        isTV &&
-        action === TV_ACTION.DOWN &&
-        active.closest('.home-ad-zone[data-ad-zone="top"]')
-      ) {
+      if (action === TV_ACTION.DOWN && active.closest('.home-ad-zone[data-ad-zone="top"]')) {
         const firstCard = scrollRoot.querySelector('.bouquet-wall .channel-card');
         if (firstCard instanceof HTMLElement) {
           e.preventDefault();
           e.stopPropagation();
           focusElementSafe(firstCard);
-          scrollFocusIntoBouquetMuro(firstCard, scrollRoot);
+          scrollElementIntoVisibleScrollAncestors(firstCard, scrollRoot);
         }
         return;
       }
 
-      if (isTV && action === TV_ACTION.UP && active.closest('.home-ad-zone[data-ad-zone="bottom"]')) {
+      if (action === TV_ACTION.UP && active.closest('.home-ad-zone[data-ad-zone="bottom"]')) {
         if (bridgesVod) {
           const vodRow = scrollRoot.querySelector('.bouquet-vod-recommended .vod-row-cards');
           if (vodRow instanceof HTMLElement) {
@@ -161,7 +156,7 @@ export function useBouquetMuroTvNav(opts) {
               e.preventDefault();
               e.stopPropagation();
               focusElementSafe(target);
-              scrollFocusIntoBouquetMuro(target, scrollRoot);
+              scrollElementIntoVisibleScrollAncestors(target, scrollRoot);
             }
           }
         } else {
@@ -175,7 +170,7 @@ export function useBouquetMuroTvNav(opts) {
                 e.preventDefault();
                 e.stopPropagation();
                 focusElementSafe(targetCard);
-                scrollFocusIntoBouquetMuro(targetCard, scrollRoot);
+                scrollElementIntoVisibleScrollAncestors(targetCard, scrollRoot);
               }
             }
           }
@@ -184,7 +179,6 @@ export function useBouquetMuroTvNav(opts) {
       }
 
       if (
-        isTV &&
         bridgesVod &&
         action === TV_ACTION.DOWN &&
         scrollRoot.contains(active)
@@ -201,50 +195,6 @@ export function useBouquetMuroTvNav(opts) {
             }
           }
           return;
-        }
-      }
-
-      if (bridgesVod) {
-        const vodRail = scrollRoot.querySelector('.bouquet-vod-recommended .vod-row-cards');
-        if (vodRail instanceof HTMLElement && vodRail.contains(active)) {
-          const list = getVisibleFocusablesInContainer(vodRail);
-          const vi = list.indexOf(active);
-          if (vi >= 0) {
-            if (action === TV_ACTION.RIGHT && vi + 1 < list.length) {
-              e.preventDefault();
-              e.stopPropagation();
-              const t = list[vi + 1];
-              focusElementSafe(t);
-              scrollFocusIntoBouquetMuro(t, scrollRoot);
-              return;
-            }
-            if (action === TV_ACTION.LEFT && vi > 0) {
-              e.preventDefault();
-              e.stopPropagation();
-              const t = list[vi - 1];
-              focusElementSafe(t);
-              scrollFocusIntoBouquetMuro(t, scrollRoot);
-              return;
-            }
-            if (action === TV_ACTION.UP) {
-              const wall = scrollRoot.querySelector('.bouquet-wall');
-              if (wall instanceof HTMLElement) {
-                const rows = buildInicioBouquetChannelRows(wall);
-                if (rows.length) {
-                  const lastRow = rows[rows.length - 1];
-                  const ti = Math.min(vi, lastRow.length - 1);
-                  const tc = lastRow[ti];
-                  if (tc instanceof HTMLElement) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    focusElementSafe(tc);
-                    scrollFocusIntoBouquetMuro(tc, scrollRoot);
-                    return;
-                  }
-                }
-              }
-            }
-          }
         }
       }
 
@@ -283,7 +233,7 @@ export function useBouquetMuroTvNav(opts) {
         }
       }
 
-      if (isTV && !target && action === TV_ACTION.UP && pos.ri === 0) {
+      if (!target && action === TV_ACTION.UP && pos.ri === 0) {
         let topZone = scrollRoot.querySelector('.home-ad-zone[data-ad-zone="top"]');
         if (!(topZone instanceof HTMLElement)) {
           topZone = main?.querySelector?.('.home-ad-zone[data-ad-zone="top"]') ?? null;
@@ -313,14 +263,13 @@ export function useBouquetMuroTvNav(opts) {
             e.preventDefault();
             e.stopPropagation();
             focusElementSafe(v0);
-            scrollFocusIntoBouquetMuro(v0, scrollRoot);
+            scrollElementIntoVisibleScrollAncestors(v0, scrollRoot);
           }
         }
         return;
       }
 
       if (
-        isTV &&
         !bridgesVod &&
         !target &&
         action === TV_ACTION.DOWN &&
@@ -342,7 +291,7 @@ export function useBouquetMuroTvNav(opts) {
         e.preventDefault();
         e.stopPropagation();
         focusElementSafe(target);
-        scrollFocusIntoBouquetMuro(target, scrollRoot);
+        scrollElementIntoVisibleScrollAncestors(target, scrollRoot);
       }
     };
 

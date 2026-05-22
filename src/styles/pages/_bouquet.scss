@@ -166,13 +166,11 @@
       max-width: 100%;
       height: 21em;
       min-width: 0;
-      box-sizing: border-box;
       display: flex;
       flex-wrap: nowrap;
       align-items: center;
       gap: 1.5rem;
-      padding-inline: 0.5rem 1.75rem;
-      scroll-padding-inline: 0.75rem 1.75rem;
+      padding: 0 0.25rem;
       overflow-x: auto;
       overflow-y: hidden;
       scroll-behavior: smooth;
@@ -201,18 +199,11 @@
     padding: 0.75rem 0;
   }
 
-  /* No recortar el carril horizontal al hacer scroll hasta el último canal */
-  .bouquet-row-carousel,
-  .bouquet-grid-horizontal,
-  .bouquet-vod-recommended {
-    overflow-x: visible;
-    overflow-y: hidden;
-  }
-
   .bouquet-grid-horizontal {
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 
     .bouquet-heading {
       flex-shrink: 0;
@@ -232,13 +223,11 @@
     .horizontal-slide--grid-row {
       margin: 0;
       width: 100%;
-      box-sizing: border-box;
       display: flex;
       flex-wrap: nowrap;
       align-items: center;
       gap: 0.35rem;
-      padding-inline: 0.5rem 1.75rem;
-      scroll-padding-inline: 0.75rem 1.75rem;
+      padding: 0 0.25rem;
       overflow-x: auto;
       overflow-y: hidden;
       scroll-behavior: smooth;
@@ -279,6 +268,7 @@
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 
     .bouquet-heading {
       flex-shrink: 0;
@@ -291,16 +281,14 @@
 
     /* Carril base + modificadores por layout (ver bouquetLayoutClasses.js) */
     .horizontal-slide {
-      margin-left: 0;
+      margin-left: 1.25rem;
       width: 100%;
-      box-sizing: border-box;
       height: 18rem;
       display: flex;
       flex-wrap: nowrap;
       align-items: center;
       gap: 1.5rem;
-      padding-inline: 1.25rem 1.75rem;
-      scroll-padding-inline: 0.75rem 1.75rem;
+      padding: 0 0.25rem;
       overflow-x: auto;
       overflow-y: hidden;
       scroll-behavior: smooth;
@@ -329,7 +317,6 @@
     flex-shrink: 0;
     width: 14em;
     height: 13em;
-    scroll-margin-inline: 0.75rem 1.5rem;
     border-radius: $border-radius-sm;
     overflow: hidden;
     background: rgba(255, 255, 255, 0.04);
@@ -841,13 +828,15 @@
 
   .bouquet-grid-horizontal .horizontal-slide--grid-row {
     gap: 1rem;
-    padding-inline-end: 1.75rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
     padding-bottom: 0.75rem;
   }
 
   .bouquet-row-carousel .horizontal-slide {
     gap: 2rem;
-    padding-inline-end: 1.75rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
     padding-bottom: 0.75rem;
   }
 
