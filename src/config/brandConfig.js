@@ -41,7 +41,7 @@ function resolveBrandKey() {
     return { brandId: DEFAULT_BRAND, from: "default" };
   }
 
-  return { brandId: "bromteck", from: "fallback" };
+  return { brandId: "wind", from: "fallback" };// aca se cambio el brand por defecto
 }
 
 /**

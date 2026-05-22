@@ -1,4 +1,4 @@
-import { createSessionHlsXhrSetup } from './sessionHlsXhr';
+import { createSessionHlsXhrSetup } from './sessionHlsXhrSetup';
 import { isWindMiddlewareHost } from './windHlsManifest';
 
 /**
