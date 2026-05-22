@@ -52,43 +52,6 @@ export default defineConfig(({ mode }) => {
         ecma: 5,
         safari10: true,
       },
-      rollupOptions: {
-        output: {
-          // Evita que las páginas manualChunks absorban dependencias compartidas.
-          // Si un chunk del player importa helpers desde una página lazy, se forma un ciclo
-          // y producción puede fallar con TDZ ("Cannot access before initialization").
-          onlyExplicitManualChunks: true,
-          manualChunks(id) {
-            const normalizedId = id.replaceAll('\\', '/');
-
-            if (
-              id.includes('\0commonjsHelpers.js')
-              || normalizedId.includes('/node_modules/global/')
-            ) {
-              return 'commonjs-shared';
-            }
-
-            // Páginas: cada página en su propio chunk (gracias a React.lazy)
-            if (normalizedId.includes('/src/pages/')) {
-              const page = normalizedId.split('/').pop().replace('.jsx', '').replace('.tsx', '');
-              return `page-${page}`;
-            }
-
-            // Video.js + hls.js antes que el resto del player (orden de init en runtime)
-            if (
-              normalizedId.includes('/node_modules/video.js')
-              || normalizedId.includes('/node_modules/hls.js')
-              || normalizedId.includes('/src/player/vendor/videojsAssign')
-            ) {
-              return 'player-vendor';
-            }
-
-            if (normalizedId.includes('/src/player/')) {
-              return 'player-engine';
-            }
-          },
-        },
-      },
     },
 
     base: '/',
