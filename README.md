@@ -29,6 +29,17 @@ npm run build:gigmax
 npm run build:all
 ```
 
+## Assets en build
+
+Vite por defecto copia **toda** `public/` al `dist`. Este proyecto usa el plugin `vite/brandPublicAssets.js`:
+
+| Comando | Qué entra en `dist` |
+|---------|-------------------|
+| `build:wind` (con `VITE_BRAND`) | Solo `public/wind/` + `public/shared/` |
+| `build` (sin marca) | Toda `public/` (modo universal con `?brand=`) |
+
+Así un despliegue por cliente no expone logos ni claves de otras marcas.
+
 ## 📁 Estructura
 
 ```
@@ -108,6 +119,7 @@ npm run build
 ```bash
 npm run build:telecable
 # Desplegar dist/telecable/ en https://telecable.tudominio.com
+# Solo se empaquetan public/telecable/ y public/shared/ (no otras marcas).
 ```
 
 ### 3. Builds Separados

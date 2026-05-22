@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import legacy from '@vitejs/plugin-legacy'
+import { brandPublicAssetsPlugin } from './vite/brandPublicAssets.js'
 
 export default defineConfig(({ mode }) => {
   const brand = process.env.VITE_BRAND || '';
@@ -8,6 +9,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
+      brandPublicAssetsPlugin(brand),
       react(),
       // Smart TV compatibility:
       // webOS 4 (2019) usa Chrome 61; Tizen 4 (2019) usa Chrome 69.
