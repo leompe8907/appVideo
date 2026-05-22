@@ -13,10 +13,11 @@ import {
   applyStreamrootHlsSessionConfig,
   buildStreamrootHlsPluginOptions,
 } from './sessionHlsXhr';
+
 let videoElementIdSeq = 0;
 
 /**
- * Motor web con Video.js + plugin hls.js (paridad 10foot / nbplayer).
+ * Motor web: Video.js + plugin hls.js (10foot) con teardown explícito del provider HLS.
  */
 export class WebEngine extends BaseEngine {
   constructor() {
@@ -30,6 +31,19 @@ export class WebEngine extends BaseEngine {
     this._handlers = null;
     this._debug = false;
     this._lastTracksSnapshotKey = '';
+    this._boundVisibility = this._onVisibilityChange.bind(this);
+    this._wasPlayingBeforeHide = false;
+    this._suppressPlayerErrors = false;
+    this._suppressErrorsTimer = null;
+  }
+
+  /** CODE:4 al vaciar src tras close/reset; no es fallo de reproducción. */
+  _isBenignPlayerError(err) {
+    if (!err) return false;
+    const code = err.code ?? err?.status;
+    if (code === 4) return true;
+    const msg = String(err.message || '');
+    return /no compatible source was found/i.test(msg);
   }
 
   _isDebugEnabled() {
@@ -54,7 +68,87 @@ export class WebEngine extends BaseEngine {
     console.log('[WebEngine]', ...args);
   }
 
+  _getTechVideo() {
+    if (!this.player) return null;
+    return this.player.el()?.querySelector?.('video') || this.video || null;
+  }
+
+  _disposeHlsProvider() {
+    if (!this.player) return;
+    try {
+      const tech = this.player.tech(true);
+      if (tech?.hlsProvider?.dispose) {
+        tech.hlsProvider.dispose();
+        tech.hlsProvider = null;
+      }
+    } catch {
+      // noop
+    }
+  }
+
+  _onVisibilityChange() {
+    if (!this.player) return;
+    if (document.visibilityState === 'hidden') {
+      this._wasPlayingBeforeHide = !this.player.paused();
+      if (this._wasPlayingBeforeHide) {
+        this.player.pause();
+      }
+      return;
+    }
+    if (document.visibilityState === 'visible' && this._wasPlayingBeforeHide) {
+      this._wasPlayingBeforeHide = false;
+      this.play();
+    }
+  }
+
+  _armSuppressPlayerErrors(ms = 80) {
+    this._suppressPlayerErrors = true;
+    if (this._suppressErrorsTimer) {
+      clearTimeout(this._suppressErrorsTimer);
+    }
+    this._suppressErrorsTimer = setTimeout(() => {
+      this._suppressPlayerErrors = false;
+      this._suppressErrorsTimer = null;
+      try {
+        if (this.player?.error?.()?.code === 4) {
+          this.player.error(null);
+        }
+      } catch {
+        // noop
+      }
+    }, ms);
+  }
+
+  _teardownMedia() {
+    if (!this.player) return;
+    this._armSuppressPlayerErrors();
+    try {
+      this.player.pause();
+    } catch {
+      // noop
+    }
+    this._disposeHlsProvider();
+    const videoEl = this._getTechVideo();
+    if (videoEl) {
+      try {
+        videoEl.removeAttribute('src');
+        videoEl.load();
+      } catch {
+        // noop
+      }
+    }
+    // Evitar player.src(''): Video.js dispara MEDIA_ERR_SRC_NOT_SUPPORTED de forma asíncrona.
+    try {
+      if (typeof this.player.reset === 'function') {
+        this.player.reset();
+      }
+    } catch {
+      // noop
+    }
+  }
+
   _disposePlayer() {
+    this._teardownMedia();
     if (!this.player) return;
     try {
       this.player.dispose();
@@ -76,6 +170,7 @@ export class WebEngine extends BaseEngine {
       this.detachEvents();
     }
 
+    document.removeEventListener('visibilitychange', this._boundVisibility);
     this._disposePlayer();
     this.container = container;
 
@@ -104,15 +199,9 @@ export class WebEngine extends BaseEngine {
     });
     applyStreamrootHlsSessionConfig(this.player);
 
-    if (this._debug) {
-      this._log('videojs+hls', {
-        hasWindowVideojs: typeof window !== 'undefined' && !!window.videojs,
-        hlsHandlerRegistered: typeof window !== 'undefined' && !!window.hlsSourceHandler,
-      });
-    }
-
-    this.video = this.player.el().querySelector('video') || this.player.el();
+    this.video = this._getTechVideo();
     this.attachEvents();
+    document.addEventListener('visibilitychange', this._boundVisibility);
   }
 
   attachEvents() {
@@ -155,6 +244,15 @@ export class WebEngine extends BaseEngine {
       },
       onError: () => {
         const err = player.error();
+        if (this._suppressPlayerErrors || this._isBenignPlayerError(err)) {
+          this._log('player:error (ignored)', err);
+          try {
+            player.error(null);
+          } catch {
+            // noop
+          }
+          return;
+        }
         this._log('player:error', err);
         this.emit(PLAYER_ENGINE_EVENTS.ERROR, err || new Error('Error de reproducción Video.js'));
       },
@@ -196,6 +294,8 @@ export class WebEngine extends BaseEngine {
     this._log('load', { url, type, autoPlay, isHls: isHlsUrl(url) });
     this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADING, type });
 
+    this._teardownMedia();
+
     const player = this.player;
     const useHls = isHlsUrl(url);
 
@@ -226,6 +326,7 @@ export class WebEngine extends BaseEngine {
     const p = this.player.play();
     if (p && typeof p.catch === 'function') {
       p.catch((err) => {
+        if (err?.name === 'AbortError') return;
         this._log('play() error', err);
         this.emit(PLAYER_ENGINE_EVENTS.ERROR, err);
       });
@@ -239,30 +340,14 @@ export class WebEngine extends BaseEngine {
   }
 
   stop() {
-    if (!this.player) return;
-    this.player.pause();
-    try {
-      this.player.currentTime(0);
-    } catch {
-      // noop
-    }
-    this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
+    this.reset();
   }
 
-  /**
-   * Detiene y libera la fuente actual (HLS/Video.js) sin destruir el player.
-   * Usar al cerrar el player o antes de cargar otro canal tras un stop/close.
-   */
   reset() {
     if (!this.player) return;
     this._log('reset()');
     this._lastTracksSnapshotKey = '';
-    try {
-      this.player.pause();
-      this.player.src('');
-    } catch {
-      // noop
-    }
+    this._teardownMedia();
     this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
   }
 
@@ -328,6 +413,11 @@ export class WebEngine extends BaseEngine {
 
   destroy() {
     this._log('destroy()');
+    if (this._suppressErrorsTimer) {
+      clearTimeout(this._suppressErrorsTimer);
+      this._suppressErrorsTimer = null;
+    }
+    document.removeEventListener('visibilitychange', this._boundVisibility);
     this.detachEvents();
     this._disposePlayer();
     if (this.container) {

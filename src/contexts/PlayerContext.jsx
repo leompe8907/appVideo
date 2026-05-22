@@ -219,7 +219,7 @@ export function PlayerProvider({ children }) {
         // Intento 1 (legacy): fallar si está en uso, para saber si hay takeover.
         await panaccessService.setStreamingLicense({ licenseKey, pin, failIfInUse: true });
 
-        // Si la licencia reactivó bien, reintentar playback del mismo contenido.
+        engineRef.current?.reset?.();
         engineRef.current?.load?.(snapshot.url, {
           type: snapshot.type,
           autoPlay: true,
@@ -244,10 +244,25 @@ export function PlayerProvider({ children }) {
       }
     };
 
+    const isBenignEngineError = (err) => {
+      if (!err) return false;
+      const code = err.code ?? err?.status;
+      if (code === 4) return true;
+      const msg = String(err.message || '');
+      return /no compatible source was found/i.test(msg);
+    };
+
     const handleError = (err) => {
       clearSeekTimeout();
+      if (isBenignEngineError(err)) {
+        log('engine:event error (ignored)', err);
+        return;
+      }
       log('engine:event error', err);
       setState((s) => {
+        if (!s.url) {
+          return { ...s, isPlaying: false, isLoading: false, isSeeking: false };
+        }
         const snapshot = {
           type: s.type,
           id: s.id,
@@ -257,7 +272,6 @@ export function PlayerProvider({ children }) {
           drmConfig: s.drmConfig,
         };
 
-        // Recuperación async sin bloquear el setState.
         Promise.resolve().then(() => {
           tryRecoverAfterError(err, snapshot);
         });
@@ -604,6 +618,7 @@ export function PlayerProvider({ children }) {
         // Reintentar playback después del takeover.
         const snap = prompt.snapshot;
         if (snap?.url) {
+          engineRef.current?.reset?.();
           engineRef.current?.load?.(snap.url, {
             type: snap.type,
             autoPlay: true,

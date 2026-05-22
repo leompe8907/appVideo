@@ -407,6 +407,27 @@ export function PlayerHud({ className = '' }) {
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [overlay, closePlayerOverlay]);
 
+  // Back / Escape con player activo: cerrar reproducción (destruye HLS, sin tráfico en home).
+  useEffect(() => {
+    if (!hasContent || overlay) return undefined;
+    const onKeyDown = (e) => {
+      const key = String(e.key || '');
+      const code = String(e.code || '');
+      const keyCode = Number(e.keyCode || e.which || 0);
+      const isEscape = key === 'Escape' || code === 'Escape' || keyCode === 27;
+      const isBackspace = key === 'Backspace' || code === 'Backspace' || keyCode === 8;
+      const isReturnLike = key === 'Return' || key === 'GoBack' || key === 'BrowserBack';
+      const isTvBackCodes = keyCode === 10009 || keyCode === 461;
+      if (isEscape || isBackspace || isReturnLike || isTvBackCodes) {
+        e.preventDefault();
+        e.stopPropagation();
+        close();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [hasContent, overlay, close]);
+
   const wakeHud = () => {
     setVisible(true);
     armAutoHide();

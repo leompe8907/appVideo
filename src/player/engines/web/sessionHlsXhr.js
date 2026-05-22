@@ -1,29 +1,15 @@
 import Hls from 'hls.js';
-import * as userSession from '../../../utils/userSession';
+import { buildHlsPlaybackConfig } from './hlsPlaybackConfig';
+import { isWindMiddlewareHost } from './windHlsManifest';
 import { pickWindCompatibleLevel } from './windLevelSelect';
+import * as userSession from '../../../utils/userSession';
 
-function buildHlsjsConfig(getSessionId, playbackUrl = '') {
-  const config = {
-    xhrSetup: createSessionHlsXhrSetup(getSessionId),
-  };
-  if (/middleware\.wind\.do/i.test(playbackUrl)) {
-    config.enableWorker = false;
-    config.enableSoftwareAES = true;
-    // hls.js ordena niveles por BANDWIDTH asc → 0 = 360p (avc1.4d401e), no 1080p High
-    config.startLevel = 0;
-    config.capLevelToPlayerSize = false;
-    config.liveSyncDurationCount = 3;
-    config.liveMaxLatencyDurationCount = 6;
-  }
-  return config;
-}
-
-/** El plugin 10foot usa `plugins.streamrootHls`, no `hlsjsConfig` en la raíz del player. */
+/** El plugin 10foot usa `plugins.streamrootHls`. */
 export function buildStreamrootHlsPluginOptions(getSessionId) {
   return {
     plugins: {
       streamrootHls: {
-        hlsjsConfig: buildHlsjsConfig(getSessionId),
+        hlsjsConfig: buildHlsPlaybackConfig('', getSessionId),
       },
     },
   };
@@ -31,7 +17,7 @@ export function buildStreamrootHlsPluginOptions(getSessionId) {
 
 export function applyStreamrootHlsSessionConfig(player, getSessionId, playbackUrl = '') {
   if (!player) return;
-  const hlsjsConfig = buildHlsjsConfig(getSessionId, playbackUrl);
+  const hlsjsConfig = buildHlsPlaybackConfig(playbackUrl, getSessionId);
   player.srOptions_ = player.srOptions_ || {};
   player.srOptions_.hlsjsConfig = hlsjsConfig;
   try {
@@ -41,20 +27,19 @@ export function applyStreamrootHlsSessionConfig(player, getSessionId, playbackUr
   } catch {
     // noop
   }
-  if (/middleware\.wind\.do/i.test(playbackUrl)) {
+  if (isWindMiddlewareHost(playbackUrl)) {
     attachWindLevelLock(player);
   }
 }
 
-/** Tras MANIFEST_PARSED, fija 360p (substream=3) para evitar mezcla High Profile en MSE. */
+/** Fija 360p en Wind tras MANIFEST_PARSED (sin polling). */
 export function attachWindLevelLock(player) {
   if (!player) return;
 
   const bind = () => {
     const hls = player?.tech?.(true)?.hlsProvider?.hls;
-    if (!hls || hls.__windLevelLockBound) return false;
+    if (!hls || hls.__windLevelLockBound) return Boolean(hls);
     hls.__windLevelLockBound = true;
-
     const lock = () => pickWindCompatibleLevel(hls);
     hls.on(Hls.Events.MANIFEST_PARSED, lock);
     if (hls.levels?.length) lock();
@@ -62,12 +47,8 @@ export function attachWindLevelLock(player) {
   };
 
   if (bind()) return;
-
-  let attempts = 0;
-  const timer = setInterval(() => {
-    attempts += 1;
-    if (bind() || attempts > 100) clearInterval(timer);
-  }, 50);
+  player.one('loadstart', () => bind());
+  player.one('loadedmetadata', () => bind());
 }
 
 /** Inyecta sessionId en playlists, claves AES (mekey) y segmentos del middleware. */
@@ -93,7 +74,6 @@ function middlewareNeedsSession(url) {
   const lower = url.toLowerCase();
   if (!lower.includes('index.php')) return false;
   if (lower.includes('requestmode=m3u8')) return true;
-  // Claves AES-128 por segmento (Wind: EXT-X-KEY → requestMode=mekey&chunk=…)
   if (lower.includes('requestmode=mekey')) return true;
   if (lower.includes('getstreamm3u8') || lower.includes('getvodm3u8') || lower.includes('getcatchupm3u8')) {
     return true;
