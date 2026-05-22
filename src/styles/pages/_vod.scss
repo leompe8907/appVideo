@@ -3,6 +3,7 @@
 */
 @use '../variables' as *;
 @use '../mixins' as *;
+@use '../components/embla-horizontal-rail' as *;
 
 .vod-page {
   position: relative;
@@ -170,6 +171,8 @@
 
   .vod-row {
     margin-bottom: $spacing-lg;
+    overflow-x: visible;
+    overflow-y: hidden;
 
     .vod-row-title {
       margin: 0 0 $spacing-sm;
@@ -178,20 +181,49 @@
       color: rgba(255, 255, 255, 0.95);
     }
 
-    .vod-row-cards {
-      display: flex;
-      align-items: center;
-      gap: $spacing-md;
-      overflow-x: auto;
-      overflow-y: visible;
-      padding: 1.25rem 0;
-      scroll-snap-type: x mandatory;
-      @include scrollbar-hidden;
+    @include embla-horizontal-rail;
 
-      .vod-card {
-        scroll-snap-align: center;
-        flex-shrink: 0;
-        margin-left: 0.5rem;
+    .vod-row-cards {
+      box-sizing: border-box;
+      padding-inline: 0;
+
+      &.embla-viewport {
+        overflow: hidden;
+        padding: 1.25rem 0;
+
+        .embla-container {
+          display: flex;
+          flex-wrap: nowrap;
+          align-items: center;
+          gap: $spacing-md;
+          padding-inline-end: 1.75rem;
+        }
+
+        .embla-slide {
+          flex: 0 0 auto;
+          min-width: 0;
+
+          .vod-card {
+            flex-shrink: 0;
+            margin-left: 0.5rem;
+          }
+        }
+      }
+
+      &[data-native-horizontal-rail] {
+        display: flex;
+        align-items: center;
+        gap: $spacing-md;
+        overflow-x: auto;
+        overflow-y: visible;
+        padding: 1.25rem 0;
+        padding-inline-end: 1.75rem;
+        @include scrollbar-hidden;
+
+        .vod-card {
+          flex-shrink: 0;
+          margin-left: 0.5rem;
+        }
       }
     }
   }

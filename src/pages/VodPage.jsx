@@ -17,6 +17,7 @@ import VodSeeMoreCard from '../components/vod/VodSeeMoreCard';
 import VodDetailModal from '../components/vod/VodDetailModal';
 import VodDetailModalClassic from '../components/vod/VodDetailModalClassic';
 import VodCategoryModal from '../components/vod/VodCategoryModal';
+import { EmblaHorizontalRail } from '../components/navigation/EmblaHorizontalRail';
 import '../styles/pages/_vod.scss';
 
 const ITEMS_PER_ROW = 9;
@@ -141,7 +142,7 @@ export function VodPage() {
                   aria-label={cat.name}
                 >
                   <h2 className="vod-row-title">{cat.name}</h2>
-                  <div className="vod-row-cards">
+                  <EmblaHorizontalRail className="vod-row-cards">
                     {catVods.slice(0, ITEMS_PER_ROW).map((v, i) => (
                       <VodCard
                         key={v.id ?? i}
@@ -155,7 +156,7 @@ export function VodPage() {
                         onSelect={() => openCategoryModal(cat.name, catVods)}
                       />
                     )}
-                  </div>
+                  </EmblaHorizontalRail>
                 </section>
               );
             })}
