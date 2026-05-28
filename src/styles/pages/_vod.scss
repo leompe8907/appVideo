@@ -1035,9 +1035,10 @@
 .vod-category-modal {
   position: relative;
   width: 100%;
+  height:100%;
   // Base en em (escala con html font-size) con tope por viewport.
   max-width: min(95vw);
-  max-height: min(90vh);
+  max-height: min(95vh);
   display: flex;
   flex-direction: column;
   background: rgba(28, 28, 28, 0.98);
@@ -1099,7 +1100,7 @@
   grid-template-columns: repeat(auto-fill, minmax(clamp(8rem, 12vw, 11.5rem), 1fr));
   // Sin grid-auto-rows: cada fila toma la altura natural de su contenido.
   // Fijar la altura de fila con aspect-ratio variable causaba solapamiento.
-  height: min(34em, 80vh);
+  height: min(80vh);
   gap: clamp(0.6rem, 1.2vw, 1.25rem);
   padding: 1.5rem clamp(1rem, 2.5vw, 3rem) 2rem clamp(1rem, 2.5vw, 3rem);
   overflow-y: auto;
