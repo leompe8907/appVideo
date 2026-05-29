@@ -1,6 +1,6 @@
 /**
- * Recuerda el último foco del `main` antes de pasar al sidebar (TV), para restaurarlo con RIGHT.
- * Se invalida al cambiar de ruta.
+ * Recuerda el último foco del `main` (tarjeta, botón, etc.) para restaurarlo con RIGHT desde el sidebar
+ * o al cerrar el reproductor. Se invalida al cambiar de ruta (`HomeInputDispatcher`).
  */
 
 /** @type {HTMLElement | null} */

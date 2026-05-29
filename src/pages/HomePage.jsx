@@ -12,6 +12,15 @@ import { useTranslation } from 'react-i18next';
 import '../styles/pages/_home-shell.scss';
 import { useOsmsPolling } from '../hooks/useOsmsPolling';
 import { HomeInputDispatcher } from '../components/home/HomeInputDispatcher';
+import {
+  getRestoredMainFocusTargetIfValid,
+  rememberMainShellFocus,
+} from '../utils/homeShellLastContentFocus';
+import {
+  focusElementSafe,
+  getVisibleFocusablesInContainer,
+  scrollElementIntoVisibleScrollAncestors,
+} from '../utils/homeShellNavigation';
 
 export function HomePlaceholderPage({ title, description }) {
   return (
@@ -42,20 +51,59 @@ export function HomePage() {
     }
   })();
 
-  // Evita el aviso "Blocked aria-hidden… descendant retained focus": no marcamos el shell
-  // con aria-hidden mientras el foco sigue en una tarjeta; movemos el foco al player.
+  // Al abrir el player: recordar el foco del shell (p. ej. tarjeta de canal) y moverlo al contenedor de video.
   useLayoutEffect(() => {
     if (!isPlayerActive) return;
     const player = containerRef.current;
     if (!player) return;
     const active = document.activeElement;
+    const shell = document.querySelector('.home-shell-ui');
+    if (active instanceof HTMLElement && shell?.contains(active)) {
+      rememberMainShellFocus(active);
+    }
     if (!active || !player.contains(active)) {
-      const shell = document.querySelector('.home-shell-ui');
-      if (shell?.contains(active)) {
+      if (active instanceof HTMLElement && shell?.contains(active)) {
         player.focus({ preventScroll: true });
       }
     }
   }, [isPlayerActive, containerRef]);
+
+  // Al cerrar el player (botón volver / BACK): restaurar el último foco del contenido principal.
+  useLayoutEffect(() => {
+    if (isPlayerActive) return undefined;
+    let cancelled = false;
+
+    const tryRestore = () => {
+      if (cancelled) return;
+      const main = document.querySelector('main.home-content[data-home-scope="content"]');
+      if (!(main instanceof HTMLElement)) return;
+
+      const restored = getRestoredMainFocusTargetIfValid(main);
+      if (restored && focusElementSafe(restored)) {
+        const bouquetScroll = restored.closest('.bouquet-inicio-scroll');
+        if (bouquetScroll instanceof HTMLElement) {
+          scrollElementIntoVisibleScrollAncestors(restored, bouquetScroll);
+        } else {
+          const stack = main.querySelector('.home-content-stack');
+          if (stack instanceof HTMLElement) {
+            scrollElementIntoVisibleScrollAncestors(restored, stack);
+          }
+        }
+        return;
+      }
+
+      const list = getVisibleFocusablesInContainer(main);
+      if (list[0]) focusElementSafe(list[0]);
+    };
+
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(tryRestore);
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, [isPlayerActive]);
 
   useLayoutEffect(() => {
     if (!debugEnabled) return;
