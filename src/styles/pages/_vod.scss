@@ -982,7 +982,7 @@
   }
 
   .vod-see-more-icon {
-    font-size: 1.75rem;
+    font-size: 9.75rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.9);
   }
@@ -999,10 +999,11 @@
   &.vod-see-more-card--poster-text {
     .vod-see-more-poster {
       padding: 0.5rem 0.6rem;
+      height: 19em;
     }
 
     .vod-see-more-poster-label {
-      font-size: 0.85rem;
+      font-size: 1.5rem;
       font-weight: 600;
       color: rgba(255, 255, 255, 0.95);
       line-height: 1.3;
