@@ -500,6 +500,17 @@
   max-height: none;
 }
 
+/* TV: controles del HUD siempre enfocables cuando el overlay está visible */
+.device-tv .player-hud--visible {
+  pointer-events: auto;
+
+  .player-hud__topbar,
+  .player-hud__seek,
+  .player-hud__bottombar {
+    pointer-events: auto;
+  }
+}
+
 .player-hud__tracks-popover-actions {
   display: flex;
   justify-content: flex-end;

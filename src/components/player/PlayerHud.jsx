@@ -14,6 +14,10 @@ import EpgEventModal from '../epg/EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useParental } from '../../store/useParental';
 import { getChannelStableId } from '../../utils/channelId';
+import {
+  usePlayerHudTvNavigation,
+  PLAYER_FOCUS_IDS,
+} from '../../hooks/usePlayerHudTvNavigation';
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
@@ -107,26 +111,6 @@ function ChannelSidebar({
   onClose,
   onSelectChannel,
 }) {
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKeyDown = (e) => {
-      const key = String(e.key || '');
-      const code = String(e.code || '');
-      const keyCode = Number(e.keyCode || e.which || 0);
-      const isEscape = key === 'Escape' || code === 'Escape' || keyCode === 27;
-      const isBackspace = key === 'Backspace' || code === 'Backspace' || keyCode === 8;
-      const isReturnLike = key === 'Return' || key === 'GoBack' || key === 'BrowserBack';
-      const isTvBackCodes = keyCode === 10009 || keyCode === 461;
-      if (isEscape || isBackspace || isReturnLike || isTvBackCodes) {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose?.();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [open, onClose]);
-
   if (!open) return null;
 
   return createPortal(
@@ -148,6 +132,8 @@ function ChannelSidebar({
                 key={id}
                 type="button"
                 className={`player-channel-sidebar__row${isActive ? ' player-channel-sidebar__row--active' : ''}`}
+                data-tv-nav="player-channel"
+                tabIndex={0}
                 onClick={() => {
                   onSelectChannel?.(ch);
                   if (autoCloseOnSelect) onClose?.();
@@ -204,6 +190,7 @@ export function PlayerHud({ className = '' }) {
   const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement));
   const [tracksPopoverPos, setTracksPopoverPos] = useState(null); // { top, left, width } | null
   const hideTimeoutRef = useRef(null);
+  const hudRootRef = useRef(null);
 
   const debugEnabled = useMemo(() => {
     if (import.meta.env.DEV) return true;
@@ -367,7 +354,7 @@ export function PlayerHud({ className = '' }) {
     }
 
     const compute = () => {
-      const btn = document.getElementById('hud-top-tracks-btn');
+      const btn = document.getElementById(PLAYER_FOCUS_IDS.TRACKS);
       if (!btn) return;
       const r = btn.getBoundingClientRect();
       const margin = 10;
@@ -387,28 +374,9 @@ export function PlayerHud({ className = '' }) {
     };
   }, [overlay]);
 
+  // Back / Escape en TV: usePlayerHudTvNavigation. En desktop conservamos cierre directo.
   useEffect(() => {
-    if (overlay !== 'tracks') return undefined;
-    const onKeyDown = (e) => {
-      const key = String(e.key || '');
-      const code = String(e.code || '');
-      const keyCode = Number(e.keyCode || e.which || 0);
-      const isEscape = key === 'Escape' || code === 'Escape' || keyCode === 27;
-      const isBackspace = key === 'Backspace' || code === 'Backspace' || keyCode === 8;
-      const isReturnLike = key === 'Return' || key === 'GoBack' || key === 'BrowserBack';
-      const isTvBackCodes = keyCode === 10009 || keyCode === 461;
-      if (isEscape || isBackspace || isReturnLike || isTvBackCodes) {
-        e.preventDefault();
-        e.stopPropagation();
-        closePlayerOverlay();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [overlay, closePlayerOverlay]);
-
-  // Back / Escape con player activo: cerrar reproducción (destruye HLS, sin tráfico en home).
-  useEffect(() => {
+    if (isTV) return undefined;
     if (!hasContent || overlay) return undefined;
     const onKeyDown = (e) => {
       const key = String(e.key || '');
@@ -426,7 +394,7 @@ export function PlayerHud({ className = '' }) {
     };
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [hasContent, overlay, close]);
+  }, [isTV, hasContent, overlay, close]);
 
   const wakeHud = () => {
     setVisible(true);
@@ -499,7 +467,27 @@ export function PlayerHud({ className = '' }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debugEnabled]);
 
+  const showPlaybackButtons =
+    hasContent &&
+    (state?.type === 'vod' ||
+      state?.type === 'catchup' ||
+      (state?.type === 'service' && currentBrand?.player?.showPlaybackButtonsOnLive === true));
+
+  usePlayerHudTvNavigation({
+    isTV,
+    hasContent,
+    visible,
+    overlay,
+    hudRootRef,
+    onWakeHud: wakeHud,
+    onClosePlayerOverlay: closePlayerOverlay,
+    onClosePlayer: close,
+    showPlaybackButtons,
+  });
+
   if (!hasContent) return null;
+
+  const hudTvTabIndex = isTV ? (visible ? 0 : -1) : undefined;
 
   const currentChannelId = isLiveService ? getChannelStableId(state.item) : '';
   // El estado de bloqueo es independiente de si el control parental está habilitado.
@@ -560,10 +548,6 @@ export function PlayerHud({ className = '' }) {
 
   const isLiveWithWindow = state?.type === 'service' && !!liveWindow;
   const clockText = formatHHmm(Date.now());
-  const showPlaybackButtons =
-    state?.type === 'vod' ||
-    state?.type === 'catchup' ||
-    (state?.type === 'service' && currentBrand?.player?.showPlaybackButtonsOnLive === true);
   const showSeekbar =
     state?.type === 'vod' ||
     state?.type === 'catchup' ||
@@ -638,12 +622,18 @@ export function PlayerHud({ className = '' }) {
   };
 
   return (
-    <div className={`player-hud ${visible ? 'player-hud--visible' : 'player-hud--hidden'} ${className}`.trim()}>
+    <div
+      ref={hudRootRef}
+      className={`player-hud ${visible ? 'player-hud--visible' : 'player-hud--hidden'} ${className}`.trim()}
+    >
       <div className="player-hud__topbar">
-        <div className="player-hud__topbar-left">
+        <div className="player-hud__topbar-left" data-tv-nav-zone="player-top-left">
           <FocusableButton
             type="button"
             className="player-hud__iconbtn"
+            id={PLAYER_FOCUS_IDS.BACK}
+            data-tv-nav="player-hud"
+            tabIndex={hudTvTabIndex}
             onClick={() => close()}
             aria-label={t('common.back', { defaultValue: 'Volver' })}
           >
@@ -652,6 +642,9 @@ export function PlayerHud({ className = '' }) {
           <FocusableButton
             type="button"
             className="player-hud__iconbtn"
+            id={PLAYER_FOCUS_IDS.EPG}
+            data-tv-nav="player-hud"
+            tabIndex={hudTvTabIndex}
             onClick={() => {
               closePlayerOverlay();
               close();
@@ -666,6 +659,9 @@ export function PlayerHud({ className = '' }) {
             <FocusableButton
               type="button"
               className="player-hud__iconbtn"
+              id={PLAYER_FOCUS_IDS.LOCK}
+              data-tv-nav="player-hud"
+              tabIndex={hudTvTabIndex}
               onClick={toggleCurrentChannelBlock}
               aria-label={
                 currentChannelBlocked
@@ -684,6 +680,9 @@ export function PlayerHud({ className = '' }) {
           <FocusableButton
             type="button"
             className="player-hud__iconbtn"
+            id={PLAYER_FOCUS_IDS.CHANNELS}
+            data-tv-nav="player-hud"
+            tabIndex={hudTvTabIndex}
             onClick={() => openPlayerOverlay('channels')}
             aria-label={t('player.channels', { defaultValue: 'Canales' })}
           >
@@ -692,6 +691,9 @@ export function PlayerHud({ className = '' }) {
           <FocusableButton
             type="button"
             className="player-hud__iconbtn"
+            id={PLAYER_FOCUS_IDS.INFO}
+            data-tv-nav="player-hud"
+            tabIndex={hudTvTabIndex}
             onClick={() => openPlayerOverlay('info')}
             aria-label={t('player.info', { defaultValue: 'Información' })}
           >
@@ -701,9 +703,11 @@ export function PlayerHud({ className = '' }) {
             <FocusableButton
               type="button"
               className="player-hud__iconbtn"
+              id={PLAYER_FOCUS_IDS.TRACKS}
+              data-tv-nav="player-hud"
+              tabIndex={hudTvTabIndex}
               onClick={() => openPlayerOverlay('tracks')}
               aria-label={t('player.tracks', { defaultValue: 'Audio/Subtítulos' })}
-              id="hud-top-tracks-btn"
             >
               <AppIcon name="subtitles" size="1em" />
             </FocusableButton>
@@ -711,10 +715,13 @@ export function PlayerHud({ className = '' }) {
         </div>
 
         {showPlaybackButtons ? (
-          <div className="player-hud__topbar-center">
+          <div className="player-hud__topbar-center" data-tv-nav-zone="player-top-center">
             <FocusableButton
               type="button"
               className="player-hud__iconbtn"
+              id={PLAYER_FOCUS_IDS.REWIND}
+              data-tv-nav="player-hud"
+              tabIndex={hudTvTabIndex}
               onClick={() => (isLiveWithWindow ? skipLiveBy(-10) : backward(10))}
               aria-label={t('player.rewind10', { defaultValue: 'Retroceder 10s' })}
             >
@@ -723,6 +730,9 @@ export function PlayerHud({ className = '' }) {
             <FocusableButton
               type="button"
               className="player-hud__iconbtn player-hud__iconbtn--primary"
+              id={PLAYER_FOCUS_IDS.PLAY}
+              data-tv-nav="player-hud"
+              tabIndex={hudTvTabIndex}
               onClick={handlePlayPause}
               aria-label={state?.isPlaying ? t('player.pause', { defaultValue: 'Pausar' }) : t('player.play', { defaultValue: 'Reproducir' })}
             >
@@ -731,6 +741,9 @@ export function PlayerHud({ className = '' }) {
             <FocusableButton
               type="button"
               className="player-hud__iconbtn"
+              id={PLAYER_FOCUS_IDS.FORWARD}
+              data-tv-nav="player-hud"
+              tabIndex={hudTvTabIndex}
               onClick={() => (isLiveWithWindow ? skipLiveBy(10) : forward(10))}
               aria-label={t('player.forward10', { defaultValue: 'Adelantar 10s' })}
             >
@@ -815,11 +828,14 @@ export function PlayerHud({ className = '' }) {
 
         <div className="player-hud__rightmeta">
           {channelMeta?.nowRange ? <div className="player-hud__event-range">{channelMeta.nowRange}</div> : null}
-          <div className="player-hud__actions">
+          <div className="player-hud__actions" data-tv-nav-zone="player-bottom-actions">
             {isLiveWithWindow ? (
               <FocusableButton
                 type="button"
                 className="player-hud__pillbtn"
+                id={PLAYER_FOCUS_IDS.GO_LIVE}
+                data-tv-nav="player-hud"
+                tabIndex={hudTvTabIndex}
                 onClick={goLive}
               >
                 {t('player.goLive', { defaultValue: 'En vivo' })}
@@ -828,6 +844,9 @@ export function PlayerHud({ className = '' }) {
             <FocusableButton
               type="button"
               className="player-hud__pillbtn player-hud__pillbtn--danger"
+              id={PLAYER_FOCUS_IDS.STOP}
+              data-tv-nav="player-hud"
+              tabIndex={hudTvTabIndex}
               onClick={stop}
             >
               {t('player.stop', { defaultValue: 'Detener' })}
@@ -862,6 +881,8 @@ export function PlayerHud({ className = '' }) {
                             key={`aud-${trk?.id}`}
                             type="button"
                             className={`player-hud__trackbtn${isActive ? ' player-hud__trackbtn--active' : ''}`}
+                            data-tv-nav="player-track"
+                            tabIndex={0}
                             onClick={() => selectAudioTrack?.(trk?.id)}
                             role="listitem"
                           >
@@ -880,6 +901,8 @@ export function PlayerHud({ className = '' }) {
                     <FocusableButton
                       type="button"
                       className={`player-hud__trackbtn${tracks?.textEnabled ? '' : ' player-hud__trackbtn--active'}`}
+                      data-tv-nav="player-track"
+                      tabIndex={0}
                       onClick={() => setSubtitlesEnabled?.(false)}
                       role="listitem"
                     >
@@ -898,6 +921,8 @@ export function PlayerHud({ className = '' }) {
                             key={`sub-${trk?.id}`}
                             type="button"
                             className={`player-hud__trackbtn${isActive ? ' player-hud__trackbtn--active' : ''}`}
+                            data-tv-nav="player-track"
+                            tabIndex={0}
                             onClick={() => {
                               setSubtitlesEnabled?.(true);
                               selectTextTrack?.(trk?.id);
@@ -922,6 +947,9 @@ export function PlayerHud({ className = '' }) {
           <FocusableButton
             type="button"
             className="player-hud__pillbtn player-hud__overlay-close"
+            id={PLAYER_FOCUS_IDS.OVERLAY_CLOSE}
+            data-tv-nav="player-hud"
+            tabIndex={0}
             onClick={closePlayerOverlay}
           >
             {t('common.close', { defaultValue: 'Cerrar' })}
@@ -955,6 +983,8 @@ export function PlayerHud({ className = '' }) {
                             key={`aud-${trk?.id}`}
                             type="button"
                             className={`player-hud__trackbtn${isActive ? ' player-hud__trackbtn--active' : ''}`}
+                            data-tv-nav="player-track"
+                            tabIndex={0}
                             onClick={() => selectAudioTrack?.(trk?.id)}
                             role="listitem"
                           >
@@ -973,6 +1003,8 @@ export function PlayerHud({ className = '' }) {
                     <FocusableButton
                       type="button"
                       className={`player-hud__trackbtn${tracks?.textEnabled ? '' : ' player-hud__trackbtn--active'}`}
+                      data-tv-nav="player-track"
+                      tabIndex={0}
                       onClick={() => setSubtitlesEnabled?.(false)}
                       role="listitem"
                     >
@@ -991,6 +1023,8 @@ export function PlayerHud({ className = '' }) {
                             key={`sub-${trk?.id}`}
                             type="button"
                             className={`player-hud__trackbtn${isActive ? ' player-hud__trackbtn--active' : ''}`}
+                            data-tv-nav="player-track"
+                            tabIndex={0}
                             onClick={() => {
                               setSubtitlesEnabled?.(true);
                               selectTextTrack?.(trk?.id);
@@ -1011,6 +1045,9 @@ export function PlayerHud({ className = '' }) {
                 <FocusableButton
                   type="button"
                   className="player-hud__pillbtn player-hud__overlay-close"
+                  id={PLAYER_FOCUS_IDS.TRACKS_CLOSE}
+                  data-tv-nav="player-hud"
+                  tabIndex={0}
                   onClick={closePlayerOverlay}
                 >
                   {t('common.close', { defaultValue: 'Cerrar' })}
