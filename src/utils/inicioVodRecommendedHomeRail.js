@@ -1,4 +1,4 @@
-import { getVisibleFocusablesInContainer } from './homeShellNavigation';
+import { getVodRowFocusables } from './vodTvGrid';
 
 /**
  * @param {HTMLElement | null | undefined} scrollRoot — `.bouquet-inicio-scroll`
@@ -8,7 +8,7 @@ function getFirstVisibleVodRecommendedFocusable(scrollRoot) {
   if (!(scrollRoot instanceof HTMLElement)) return null;
   const row = scrollRoot.querySelector('.bouquet-vod-recommended .vod-row-cards');
   if (!(row instanceof HTMLElement)) return null;
-  const list = getVisibleFocusablesInContainer(row);
+  const list = getVodRowFocusables(row);
   return list[0] ?? null;
 }
 

@@ -270,6 +270,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
                     <FocusableButton
                       type="button"
                       className="vod-detail-read-more"
+                      data-tv-nav="vod-detail"
                       onClick={() => setDescriptionExpanded((v) => !v)}
                     >
                       {descriptionExpanded ? t('vod.readLess') : t('vod.readMore')}
@@ -283,6 +284,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
                 <FocusableButton
                   type="button"
                   className="vod-detail-play-btn"
+                  data-tv-nav="vod-detail"
                   onClick={handlePlayCurrent}
                   id="vod-detail-play"
                 >
@@ -317,6 +319,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
               <FocusableButton
                 type="button"
                 className="vod-detail-play-btn"
+                data-tv-nav="vod-detail"
                 onClick={handlePlayCurrent}
               >
                 <span className="vod-detail-play-icon" aria-hidden>
@@ -345,6 +348,7 @@ function EpisodeItem({ episode, index, baseUrl, onPlay }) {
       <FocusableButton
         type="button"
         className="vod-episode-btn"
+        data-tv-nav="vod-detail"
         onClick={onPlay}
       >
         <div className="vod-episode-thumb">

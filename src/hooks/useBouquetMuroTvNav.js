@@ -10,6 +10,7 @@ import {
   getVisibleFocusablesInContainer,
 } from '../utils/homeShellNavigation';
 import { buildInicioBouquetChannelRows, findChannelCardCellInRows } from '../utils/inicioBouquetTvGrid';
+import { getVodRowFocusables } from '../utils/vodTvGrid';
 
 const ROUTES = {
   inicio: { pathname: '/home/inicio', bridgesVodAndInnerAds: true },
@@ -196,6 +197,44 @@ export function useBouquetMuroTvNav(opts) {
           }
           return;
         }
+      }
+
+      const vodCard = active.closest('.vod-card');
+      const inicioVodRail = scrollRoot.querySelector('.bouquet-vod-recommended .vod-row-cards');
+      if (
+        bridgesVod &&
+        vodCard &&
+        inicioVodRail instanceof HTMLElement &&
+        inicioVodRail.contains(vodCard) &&
+        scrollRoot.contains(vodCard)
+      ) {
+        const focusables = getVodRowFocusables(inicioVodRail);
+        const idx = focusables.indexOf(active);
+        let vodTarget = null;
+
+        if (action === TV_ACTION.LEFT && idx > 0) {
+          vodTarget = focusables[idx - 1];
+        } else if (action === TV_ACTION.RIGHT && idx >= 0 && idx + 1 < focusables.length) {
+          vodTarget = focusables[idx + 1];
+        } else if (action === TV_ACTION.UP) {
+          const wallEl = scrollRoot.querySelector('.bouquet-wall');
+          if (wallEl instanceof HTMLElement) {
+            const channelRows = buildInicioBouquetChannelRows(wallEl);
+            if (channelRows.length) {
+              const lastRow = channelRows[channelRows.length - 1];
+              const col = idx >= 0 ? idx : 0;
+              vodTarget = lastRow[Math.min(col, lastRow.length - 1)] ?? lastRow[0];
+            }
+          }
+        }
+
+        if (vodTarget instanceof HTMLElement && vodTarget !== active) {
+          e.preventDefault();
+          e.stopPropagation();
+          focusElementSafe(vodTarget);
+          scrollElementIntoVisibleScrollAncestors(vodTarget, scrollRoot);
+        }
+        return;
       }
 
       if (!scrollRoot.contains(active)) return;

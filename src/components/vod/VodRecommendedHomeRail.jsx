@@ -9,6 +9,12 @@ import { useBrand } from '../../contexts/BrandContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { usePreload } from '../../store/usePreload';
 import { useParentalGate } from '../../hooks/useParentalGate';
+import { useVodOverlayTvNav } from '../../hooks/useVodOverlayTvNav';
+import {
+  rememberVodPageFocus,
+  clearVodCategoryFocusMemory,
+  restoreVodFocusAfterDetailClose,
+} from '../../utils/vodShellLastFocus';
 import VodCard from './VodCard';
 import VodSeeMoreCard from './VodSeeMoreCard';
 import VodDetailModal from './VodDetailModal';
@@ -54,8 +60,25 @@ export function VodRecommendedHomeRail() {
 
   const handleVodSelect = (item) => {
     if (!item?.id) return;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) {
+      rememberVodPageFocus(active, '.bouquet-inicio-scroll');
+    }
+    clearVodCategoryFocusMemory();
     setDetailItem(item);
   };
+
+  const closeDetail = () => {
+    setDetailItem(null);
+    restoreVodFocusAfterDetailClose(false);
+  };
+
+  useVodOverlayTvNav({
+    detailOpen: Boolean(detailItem),
+    categoryOpen: false,
+    onCloseDetail: closeDetail,
+    onCloseCategory: () => {},
+  });
 
   const handlePlayFromModal = (params) => {
     if (!params?.url) return;
@@ -102,7 +125,7 @@ export function VodRecommendedHomeRail() {
         <VodDetailModalClassic
           item={detailItem}
           categories={categories}
-          onClose={() => setDetailItem(null)}
+          onClose={closeDetail}
           onPlay={handlePlayFromModal}
         />
       )}
@@ -110,7 +133,7 @@ export function VodRecommendedHomeRail() {
         <VodDetailModal
           item={detailItem}
           categories={categories}
-          onClose={() => setDetailItem(null)}
+          onClose={closeDetail}
           onPlay={handlePlayFromModal}
         />
       )}

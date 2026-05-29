@@ -1149,6 +1149,7 @@
   .vod-content {
     padding-bottom: 2.85rem;
     scroll-padding-block-end: 2rem;
+    scroll-behavior: auto;
   }
 
   .vod-row {
@@ -1157,5 +1158,10 @@
 
   .vod-row:last-child .vod-row-cards {
     padding-bottom: 1.5rem;
+  }
+
+  .vod-card {
+    scroll-margin-inline: 0.75rem 1.25rem;
+    scroll-margin-block: 0.35rem;
   }
 }

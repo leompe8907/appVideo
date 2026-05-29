@@ -177,6 +177,7 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
                 <FocusableButton
                   type="button"
                   className="vod-classic-play"
+                  data-tv-nav="vod-detail"
                   onClick={handlePlayCurrent}
                   id="vod-classic-play"
                   aria-label={t('vod.play')}
@@ -262,7 +263,7 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
                   </ul>
                 )}
                 {!loading && seriesInfo && (!seriesInfo.episodes || seriesInfo.episodes.length === 0) && (
-                  <FocusableButton type="button" className="vod-classic-play-btn-inline" onClick={handlePlayCurrent}>
+                  <FocusableButton type="button" className="vod-classic-play-btn-inline" data-tv-nav="vod-detail" onClick={handlePlayCurrent}>
                     {t('vod.play')}
                   </FocusableButton>
                 )}
@@ -279,7 +280,7 @@ function ClassicEpisodeItem({ episode, index, onPlay }) {
   const name = episode.name ?? episode.title ?? episode.episodeTitle ?? `Episode ${index + 1}`;
   return (
     <li className="vod-classic-episode-item">
-      <FocusableButton type="button" className="vod-classic-episode-btn" onClick={onPlay}>
+      <FocusableButton type="button" className="vod-classic-episode-btn" data-tv-nav="vod-detail" onClick={onPlay}>
         <span className="vod-classic-episode-play" aria-hidden>
           <AppIcon name="play" size={16} />
         </span>

@@ -19,6 +19,7 @@ import {
 } from '../../utils/homeShellLastContentFocus';
 import { isLeftmostChannelCardInInicioWall } from '../../utils/inicioBouquetTvGrid';
 import { isLeftmostVodRecommendedRailFocusable } from '../../utils/inicioVodRecommendedHomeRail';
+import { isLeftmostVodCardInVodPage } from '../../utils/vodTvGrid';
 
 /**
  * Dispatcher shell Home (Fase 1 + cruce TV sidebar↔contenido + BACK en rutas /home/*).
@@ -138,11 +139,21 @@ export function HomeInputDispatcher({ isPlayerActive }) {
           path === '/home/inicio' &&
           bouquetScrollRoot instanceof HTMLElement &&
           isLeftmostVodRecommendedRailFocusable(active, bouquetScrollRoot);
+        const vodContent = path === '/home/vod' ? document.querySelector('.vod-page .vod-content') : null;
+        const fromVodPageRowLeftEdge =
+          vodContent instanceof HTMLElement && isLeftmostVodCardInVodPage(active, vodContent);
 
         const list = getVisibleFocusablesInContainer(mainEl);
         const fromFirstMainFocusable = list.length > 0 && list[0] === active;
 
-        if (!fromBouquetRowLeftEdge && !fromVodRailLeftEdge && !fromFirstMainFocusable) return;
+        if (
+          !fromBouquetRowLeftEdge &&
+          !fromVodRailLeftEdge &&
+          !fromVodPageRowLeftEdge &&
+          !fromFirstMainFocusable
+        ) {
+          return;
+        }
 
         e.preventDefault();
         e.stopPropagation();
