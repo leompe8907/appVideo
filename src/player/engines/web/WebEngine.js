@@ -31,8 +31,6 @@ export class WebEngine extends BaseEngine {
     this._handlers = null;
     this._debug = false;
     this._lastTracksSnapshotKey = '';
-    this._boundVisibility = this._onVisibilityChange.bind(this);
-    this._wasPlayingBeforeHide = false;
     this._suppressPlayerErrors = false;
     this._suppressErrorsTimer = null;
   }
@@ -83,21 +81,6 @@ export class WebEngine extends BaseEngine {
       }
     } catch {
       // noop
-    }
-  }
-
-  _onVisibilityChange() {
-    if (!this.player) return;
-    if (document.visibilityState === 'hidden') {
-      this._wasPlayingBeforeHide = !this.player.paused();
-      if (this._wasPlayingBeforeHide) {
-        this.player.pause();
-      }
-      return;
-    }
-    if (document.visibilityState === 'visible' && this._wasPlayingBeforeHide) {
-      this._wasPlayingBeforeHide = false;
-      this.play();
     }
   }
 
@@ -172,7 +155,6 @@ export class WebEngine extends BaseEngine {
       this.detachEvents();
     }
 
-    document.removeEventListener('visibilitychange', this._boundVisibility);
     this._disposePlayer();
     this.container = container;
 
@@ -203,7 +185,6 @@ export class WebEngine extends BaseEngine {
 
     this.video = this._getTechVideo();
     this.attachEvents();
-    document.addEventListener('visibilitychange', this._boundVisibility);
   }
 
   attachEvents() {
@@ -419,7 +400,6 @@ export class WebEngine extends BaseEngine {
       clearTimeout(this._suppressErrorsTimer);
       this._suppressErrorsTimer = null;
     }
-    document.removeEventListener('visibilitychange', this._boundVisibility);
     this.detachEvents();
     this._disposePlayer();
     if (this.container) {
