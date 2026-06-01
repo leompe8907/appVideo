@@ -5,6 +5,7 @@ import { useBrand } from '../contexts/BrandContext';
 import panaccessService from '../services/panaccessService';
 import { loginAndActivateLicense, reactivateLicense } from '../services/loginFlow';
 import * as userSession from '../utils/userSession';
+import { resolvePostLoginRoute } from '../utils/navigation';
 import '../styles/components/_splash.scss';
 
 export function SplashPage() {
@@ -44,16 +45,13 @@ export function SplashPage() {
                 }
               }
 
-              const profilesEnabled = !!currentBrand?.features?.profiles;
-
-              // Caso 1: reactivación OK -> saltamos smartcard (si no usan profiles).
+              // Caso 1: reactivación OK con contenido -> ir a home/profile.
               if (hasActiveLicense && reactivatedOk) {
-                const target = profilesEnabled ? '/profile' : '/home/inicio';
-                setTimeout(() => navigate(target), splashDuration);
+                setTimeout(() => navigate(resolvePostLoginRoute(currentBrand)), splashDuration);
                 return;
               }
 
-              // Caso 2: la licencia activa está en uso o no existe -> intentamos auto-activar otra libre
+              // Caso 2: la licencia activa está en uso, sin contenido o no existe -> auto-activar otra
               const credentials =
                 userSession.getCredentials() ??
                 userSession.getCredentialsWithFallback(currentBrand?.token);
@@ -71,14 +69,7 @@ export function SplashPage() {
                 storeLicenses: true,
               });
 
-              const activeAfter = userSession.getActiveLicense?.();
-              const hasActiveAfter = !!activeAfter?.licenseKey;
-              const target = hasActiveAfter
-                ? profilesEnabled
-                  ? '/profile'
-                  : '/home/inicio'
-                : '/smartcard';
-              setTimeout(() => navigate(target), splashDuration);
+              setTimeout(() => navigate(resolvePostLoginRoute(currentBrand)), splashDuration);
               return;
             }
           } catch (err) {
@@ -106,16 +97,7 @@ export function SplashPage() {
             storeLicenses: true,
           });
 
-          const activeAfter = userSession.getActiveLicense?.();
-          const hasActiveAfter = !!activeAfter?.licenseKey;
-          const profilesEnabled = !!currentBrand?.features?.profiles;
-          const target = hasActiveAfter
-            ? profilesEnabled
-              ? '/profile'
-              : '/home/inicio'
-            : '/smartcard';
-
-          setTimeout(() => navigate(target), splashDuration);
+          setTimeout(() => navigate(resolvePostLoginRoute(currentBrand)), splashDuration);
         };
 
         const apiBaseUrl = currentBrand?.api?.baseUrl;

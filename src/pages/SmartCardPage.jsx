@@ -19,18 +19,13 @@ import {
 } from '../hooks/useSmartcardTvNavigation';
 import '../styles/pages/_smartcard.scss';
 
-// Normaliza la estructura de una licencia (alineado con 10foot)
-const normalizeLicense = (license) => {
-  if (!license || typeof license !== 'object') {
-    return { key: '', pin: '', active: false, products: '', licenseName: '' };
-  }
-  const key = license.KEY || license.key || license.licenseKey || license.Key || '';
-  const pin = license.pin || license.PIN || license.Pin || '';
-  const active = license.active === true;
-  const products = typeof license.products === 'string' ? license.products : '';
-  const licenseName = license.licenseName != null ? String(license.licenseName) : (license.name != null ? String(license.name) : '');
-  return { key, pin, active, products, licenseName };
-};
+import {
+  getLicenseKey,
+  getLicensePin,
+  getLicenseProducts,
+  filterLicensesForDisplay,
+  findLicenseByKey,
+} from '../utils/licenseProducts';
 
 function getLicensesArray(response) {
   if (!response) return [];
@@ -38,12 +33,19 @@ function getLicensesArray(response) {
   return response.answer ?? response.licenses ?? response.list ?? response.data ?? [];
 }
 
-function filterLicensesWithProducts(licenses) {
-  const withProducts = licenses.filter((l) => {
-    const p = l?.products;
-    return p !== undefined && p !== null && typeof p === 'string' && p.trim() !== '';
-  });
-  return withProducts.length > 0 ? withProducts : licenses;
+function normalizeLicense(license) {
+  const licenseName =
+    license?.licenseName != null
+      ? String(license.licenseName)
+      : license?.name != null
+        ? String(license.name)
+        : '';
+  return {
+    key: getLicenseKey(license),
+    pin: getLicensePin(license),
+    products: getLicenseProducts(license),
+    licenseName,
+  };
 }
 
 export function SmartCardPage() {
@@ -61,6 +63,7 @@ export function SmartCardPage() {
   // Backstop: si ya existe una licencia activa en storage, activarla automáticamente
   // para que el usuario no quede atascado en esta pantalla.
   const autoActivateAttemptedRef = useRef(false);
+  const allValidLicensesRef = useRef([]);
   const containerRef = useRef(null);
   const { isTV } = useDevice();
 
@@ -73,11 +76,9 @@ export function SmartCardPage() {
         setError(null);
         const response = await panaccessService.getStreamingLicenses({ withPins: true });
         const list = getLicensesArray(response);
-        const valid = list
-          .map((l) => ({ raw: l, norm: normalizeLicense(l) }))
-          .filter(({ norm }) => norm.key && String(norm.key).trim().length > 0)
-          .map(({ raw }) => raw);
-        const filtered = filterLicensesWithProducts(valid);
+        const valid = list.filter((license) => getLicenseKey(license));
+        allValidLicensesRef.current = valid;
+        const filtered = filterLicensesForDisplay(valid);
         setLicenses(filtered);
         if (filtered.length > 0) {
           storeLicenses(filtered);
@@ -104,10 +105,7 @@ export function SmartCardPage() {
     const activePin = active?.pin != null ? String(active.pin) : '';
     if (!activeKey) return;
 
-    const matching = licenses.find((l) => {
-      const norm = normalizeLicense(l);
-      return norm.key && String(norm.key).trim() === activeKey;
-    });
+    const matching = findLicenseByKey(allValidLicensesRef.current, activeKey);
 
     if (!matching) return;
     autoActivateAttemptedRef.current = true;

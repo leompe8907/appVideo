@@ -15,6 +15,7 @@ import { FocusableButton } from '../components/navigation/FocusableButton';
 import AppIcon from '../components/AppIcon';
 import panaccessService from '../services/panaccessService';
 import { setLoggedOut } from '../utils/userSession';
+import { filterProfileSmartCards } from '../utils/licenseProducts';
 import Img from '../constants/images';
 import '../styles/pages/_profile.scss';
 
@@ -95,17 +96,7 @@ export function ProfilePage() {
       const licensesList = Array.isArray(licensesResponse)
         ? licensesResponse
         : (licensesResponse?.licenses || licensesResponse?.data || []);
-      const getCardKey = (card) => card?.KEY ?? card?.key ?? card?.licenseKey ?? card?.Key ?? '';
-      const validSmartCards = (Array.isArray(licensesList) ? licensesList : []).filter((card) => {
-        const key = getCardKey(card);
-        if (!key) return false;
-        const products = card?.products;
-        if (products !== undefined && products !== null) {
-          return typeof products === 'string' && products.trim() !== '';
-        }
-        return true;
-      });
-      setSmartCards(validSmartCards);
+      setSmartCards(filterProfileSmartCards(licensesList));
     } catch (err) {
       console.error('[PROFILE] Error al cargar perfiles o licencias:', err);
       setProfiles([]);

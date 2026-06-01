@@ -5,6 +5,13 @@
 
 import panaccessService from './panaccessService';
 import * as userSession from '../utils/userSession';
+import {
+  getLicenseKey,
+  getLicensePin,
+  getLicenseProducts,
+  getLicensesForAutoActivation,
+} from '../utils/licenseProducts';
+
 /**
  * Limpia sesión, storage de marca y caché en memoria antes de un login manual
  * (otro usuario en el mismo dispositivo). No usar en reactivación automática (splash).
@@ -27,16 +34,80 @@ const DEFAULT_OPTIONS = {
   storeLicenses: true,
 };
 
+function getLicensesArray(response) {
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  return response.answer ?? response.licenses ?? response.list ?? response.data ?? [];
+}
+
 /**
- * Normaliza la respuesta de getStreamingLicenses a array de { key, pin }.
+ * Normaliza la respuesta de getStreamingLicenses conservando products para auto-selección.
  */
 function normalizeLicenses(result) {
-  if (!result) return [];
-  const list = Array.isArray(result) ? result : (result.licenses || result.list || []);
-  return list.map((item) => ({
-    key: item.key ?? item.licenseKey ?? item.id ?? '',
-    pin: item.pin ?? item.licensePin ?? '',
-  })).filter((item) => item.key);
+  const list = getLicensesArray(result);
+  return list
+    .map((item) => ({
+      key: getLicenseKey(item),
+      pin: getLicensePin(item),
+      products: getLicenseProducts(item),
+      licenseName:
+        item.licenseName != null
+          ? String(item.licenseName)
+          : item.name != null
+            ? String(item.name)
+            : '',
+    }))
+    .filter((item) => item.key);
+}
+
+function normalizeStreamsResponse(response) {
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  return response.streams ?? response.list ?? response.answer ?? response.data ?? [];
+}
+
+async function verifyActiveLicenseHasStreams(service) {
+  try {
+    const response = await service.getAvailableStreams({ enableRetry: false });
+    const list = normalizeStreamsResponse(response);
+    return Array.isArray(list) && list.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Activa una licencia y confirma que devuelve streams disponibles.
+ * @returns {Promise<{ key: string, pin: string }|null>}
+ */
+async function activateLicenseWithContentCheck(service, license, options = {}) {
+  const key = getLicenseKey(license);
+  const pin = getLicensePin(license);
+  const { failIfInUse = false, requireContent = true } = options;
+
+  if (!key) return null;
+
+  try {
+    await service.setStreamingLicense({ licenseKey: key, pin, failIfInUse });
+    if (requireContent) {
+      const hasContent = await verifyActiveLicenseHasStreams(service);
+      if (!hasContent) {
+        if (import.meta.env.DEV) {
+          console.warn('[loginFlow] Licencia activada sin contenido disponible:', key);
+        }
+        return null;
+      }
+    }
+    if (import.meta.env.DEV) {
+      console.log('[loginFlow] Licencia activada con contenido:', key);
+    }
+    return { key, pin };
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.warn('[loginFlow] Fallo activación licencia', key, e.message);
+    }
+    return null;
+  }
 }
 
 /**
@@ -85,7 +156,9 @@ export async function loginAndActivateLicense(brandConfig, credentials, options 
 
   // Evita "licencia vieja" en storage si la activación falla (ej. license in use).
   // Esto es clave para rutas automáticas (splash/login) que dependen de si hay licencia activa.
-  const shouldAttemptActivation = Boolean(opts.autoActivateLicense || (opts.licenseKey != null && String(opts.licenseKey).trim() !== ''));
+  const shouldAttemptActivation = Boolean(
+    opts.autoActivateLicense || (opts.licenseKey != null && String(opts.licenseKey).trim() !== ''),
+  );
   if (shouldAttemptActivation) {
     userSession.setActiveLicense({ licenseKey: '', pin: '' });
   }
@@ -105,7 +178,10 @@ export async function loginAndActivateLicense(brandConfig, credentials, options 
   }
 
   try {
-    const rawLicenses = await panaccessService.getStreamingLicenses({ enableRetry: false });
+    const rawLicenses = await panaccessService.getStreamingLicenses({
+      withPins: true,
+      enableRetry: false,
+    });
     licenses = normalizeLicenses(rawLicenses);
     if (opts.storeLicenses && licenses.length > 0) {
       userSession.setLicenses(licenses);
@@ -118,59 +194,52 @@ export async function loginAndActivateLicense(brandConfig, credentials, options 
 
   const licenseKey = opts.licenseKey != null ? String(opts.licenseKey).trim() : '';
   const pin = opts.pin != null ? String(opts.pin) : '';
+  let activated = null;
 
   if (licenseKey && licenses.length > 0) {
-    try {
-      await panaccessService.setStreamingLicense({
-        licenseKey,
-        pin,
-        failIfInUse: opts.failIfInUse,
-      });
-      userSession.setActiveLicense({ licenseKey, pin });
-    } catch (e) {
-      if (import.meta.env.DEV) {
-        console.warn('[loginFlow] setStreamingLicense (seleccionada) falló:', e.message);
-      }
-    }
-  } else if (opts.autoActivateLicense && licenses.length > 0) {
-    const activated = await autoActivateLicense(panaccessService, licenses, {
+    activated = await activateLicenseWithContentCheck(
+      panaccessService,
+      { key: licenseKey, pin },
+      { failIfInUse: opts.failIfInUse, requireContent: true },
+    );
+  }
+
+  if (!activated && opts.autoActivateLicense && licenses.length > 0) {
+    const excludeKey = licenseKey || '';
+    const candidates = getLicensesForAutoActivation(licenses).filter(
+      (license) => getLicenseKey(license) !== excludeKey,
+    );
+    activated = await autoActivateLicense(panaccessService, candidates, {
       activationRecursive: opts.activationRecursive,
       maxAutoActivateLicense: opts.maxAutoActivateLicense,
       failIfInUse: opts.failIfInUse,
     });
-    if (activated) {
-      userSession.setActiveLicense({ licenseKey: activated.key, pin: activated.pin });
-    }
+  }
+
+  if (activated) {
+    userSession.setActiveLicense({ licenseKey: activated.key, pin: activated.pin });
   }
 
   return { success: true, clientConfig, licenses };
 }
 
 /**
- * Intenta activar licencias en orden hasta que una funcione.
+ * Intenta activar licencias en orden (priorizando las que tienen products) hasta que una tenga contenido.
  * @returns {Promise<{ key, pin }|null>} La licencia activada o null.
  */
 async function autoActivateLicense(service, licenses, options) {
   const { activationRecursive, maxAutoActivateLicense, failIfInUse } = options;
-  const max = Math.min(licenses.length, maxAutoActivateLicense);
+  const candidates = getLicensesForAutoActivation(licenses);
+  const max = Math.min(candidates.length, maxAutoActivateLicense);
 
   for (let i = 0; i < max; i++) {
-    const item = licenses[i];
-    const key = item?.key ?? item?.licenseKey ?? '';
-    const pin = item?.pin ?? item?.licensePin ?? '';
-    if (!key) continue;
-    try {
-      await service.setStreamingLicense({ licenseKey: key, pin, failIfInUse });
-      if (import.meta.env.DEV) {
-        console.log('[loginFlow] Licencia activada:', key);
-      }
-      return { key, pin };
-    } catch (e) {
-      if (import.meta.env.DEV) {
-        console.warn('[loginFlow] Fallo activación licencia', key, e.message);
-      }
-      if (!activationRecursive) return null;
-    }
+    const item = candidates[i];
+    const activated = await activateLicenseWithContentCheck(service, item, {
+      failIfInUse,
+      requireContent: true,
+    });
+    if (activated) return activated;
+    if (!activationRecursive) return null;
   }
   return null;
 }
@@ -213,7 +282,7 @@ export async function reactivateSession(brandConfig, options = {}) {
 }
 
 /**
- * Reactiva solo la licencia (sesión ya válida).
+ * Reactiva solo la licencia (sesión ya válida) y verifica que haya streams disponibles.
  * @param {Object} brandConfig - currentBrand.
  * @param {boolean} [failIfInUse=false]
  * @returns {Promise<boolean>}
@@ -225,16 +294,13 @@ export async function reactivateLicense(brandConfig, failIfInUse = false) {
   if (!panaccessService.client) {
     await panaccessService.initialize(brandConfig);
   }
-  try {
-    await panaccessService.setStreamingLicense({
-      licenseKey: active.licenseKey,
-      pin: active.pin,
-      failIfInUse,
-    });
-    return true;
-  } catch {
-    return false;
-  }
+
+  const activated = await activateLicenseWithContentCheck(
+    panaccessService,
+    { key: active.licenseKey, pin: active.pin ?? '' },
+    { failIfInUse, requireContent: true },
+  );
+  return activated != null;
 }
 
 /**

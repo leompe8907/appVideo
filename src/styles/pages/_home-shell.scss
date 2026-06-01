@@ -557,6 +557,109 @@ $home-sidebar-duration: 380ms;
   box-sizing: border-box;
 }
 
+/*
+ * TV — sidebar: el foco global (scale + sombras en `a.focused`) rompe el rail estrecho.
+ * Mismo criterio que bouquets: borde de marca, sin transform; targets un poco más altos.
+ */
+[data-focus='on'].device-tv .home-sidebar {
+  --home-sidebar-tv-item-min-height: 2.75rem;
+
+  .home-sidebar-nav {
+    gap: 0.55rem;
+  }
+
+  .home-sidebar-link,
+  .home-sidebar-settings-btn {
+    min-height: var(--home-sidebar-tv-item-min-height);
+    font-size: 1rem;
+    box-sizing: border-box;
+    border: 3px solid transparent;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      border-color 0.12s ease-out,
+      padding $home-sidebar-duration $home-sidebar-ease;
+  }
+
+  .home-sidebar-link.active {
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  .home-sidebar-icon {
+    height: 2.2em;
+    width: 2.2em;
+  }
+
+  .home-sidebar-link.focused,
+  .home-sidebar-settings-btn.focused,
+  .home-sidebar-sublink.focused {
+    transform: none !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    -moz-box-shadow: none !important;
+    outline: none;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.14);
+    border-color: var(--focus-color, var(--primary-color, #667eea)) !important;
+    border-width: 3px !important;
+    z-index: 2;
+    transition: border-color 0.12s ease-out, background-color 0.12s ease !important;
+  }
+
+  .home-sidebar-link.active.focused {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: var(--focus-color, var(--primary-color, #667eea)) !important;
+  }
+
+  .home-sidebar-sublink {
+    min-height: 2.6rem;
+    font-size: 0.98rem;
+    box-sizing: border-box;
+    border: 3px solid transparent;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      border-color 0.12s ease-out;
+  }
+}
+
+@media (min-height: 900px) {
+  [data-focus='on'].device-tv .home-sidebar {
+    --home-sidebar-tv-item-min-height: 3rem;
+
+    .home-sidebar-link,
+    .home-sidebar-settings-btn {
+      font-size: 1.05rem;
+    }
+
+    .home-sidebar-sublink {
+      min-height: 2.85rem;
+      font-size: 1rem;
+    }
+  }
+}
+
+@media (min-height: 1080px) {
+  [data-focus='on'].device-tv .home-sidebar {
+    --home-sidebar-tv-item-min-height: 3.25rem;
+
+    .home-sidebar-nav {
+      gap: 0.65rem;
+    }
+
+    .home-sidebar-link,
+    .home-sidebar-settings-btn {
+      font-size: 1.1rem;
+      padding-block: 0.78rem;
+    }
+
+    .home-sidebar-icon {
+      height: 2.35em;
+      width: 2.35em;
+    }
+  }
+}
+
 .home-placeholder {
   color: #fff;
   padding: 2rem;
