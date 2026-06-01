@@ -354,6 +354,15 @@
   "splash": {
     "alt": "{{appName}} Splash"
   },
+  "homeAds": {
+    "regionTop": "Publicidad superior",
+    "regionBottom": "Publicidad inferior",
+    "previous": "Anuncio anterior",
+    "next": "Anuncio siguiente",
+    "dotsLabel": "Anuncios del carrusel",
+    "goToSlide": "Ir al anuncio {{n}}",
+    "slideOf": "{{current}} de {{total}}"
+  },
   "errors": {
     "unexpected": "Ocurrió un error inesperado",
     "timeout": "La conexión tardó demasiado. Intenta de nuevo.",
