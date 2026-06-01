@@ -44,7 +44,7 @@ async function validateSession(brandConfig) {
     }
 
     const ok = await checkSessionAndReactivateIfNeeded(brandConfig, {
-      reactivateLicenseIfValid: false,
+      failIfInUse: true,
     });
 
     if (!ok) {

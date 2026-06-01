@@ -251,7 +251,9 @@ async function autoActivateLicense(service, licenses, options) {
  * @returns {Promise<boolean>} true si todo ok, false si no hay credenciales o falla.
  */
 export async function reactivateSession(brandConfig, options = {}) {
-  const credentials = userSession.getCredentials();
+  const credentials =
+    userSession.getCredentials() ??
+    userSession.getCredentialsWithFallback(brandConfig?.token);
   if (!credentials) {
     if (import.meta.env.DEV) console.warn('[loginFlow] reactivateSession: no hay credenciales');
     return false;
@@ -262,11 +264,13 @@ export async function reactivateSession(brandConfig, options = {}) {
     autoActivateLicense: true,
     activationRecursive: true,
     failIfInUse: false,
+    storeClientConfig: true,
+    storeLicenses: true,
     ...options,
   };
   if (active?.licenseKey) {
     opts.licenseKey = active.licenseKey;
-    opts.pin = active.pin;
+    opts.pin = active.pin ?? '';
   }
 
   try {
@@ -304,13 +308,13 @@ export async function reactivateLicense(brandConfig, failIfInUse = false) {
 }
 
 /**
- * Comprueba sesión y, si no es válida, intenta reactivar (re-login + licencia).
+ * Comprueba sesión y reactiva licencia o sesión (equivalente a LoginHelper.checkSessionAndReactivateIfNeeded).
  * @param {Object} brandConfig - currentBrand.
- * @param {{ reactivateLicenseIfValid?: boolean }} [options] - Si true, cuando la sesión es válida intenta reactivar licencia.
- * @returns {Promise<boolean>} true si la sesión queda válida (o se reactivó), false si hay que ir a login.
+ * @param {{ failIfInUse?: boolean }} [options] - Si la sesión es válida, pasa a reactivateLicense; si no, re-login + licencia guardada.
+ * @returns {Promise<boolean>} true si la sesión/licencia quedan operativas, false si hay que ir a login.
  */
 export async function checkSessionAndReactivateIfNeeded(brandConfig, options = {}) {
-  const { reactivateLicenseIfValid = false } = options;
+  const { failIfInUse = false, ...reactivateOptions } = options;
   if (!brandConfig) return false;
 
   if (!panaccessService.client) {
@@ -323,14 +327,11 @@ export async function checkSessionAndReactivateIfNeeded(brandConfig, options = {
   try {
     const valid = await panaccessService.loggedIn({ enableRetry: false }).then(Boolean).catch(() => false);
     if (valid) {
-      if (reactivateLicenseIfValid) {
-        await reactivateLicense(brandConfig, false);
-      }
-      return true;
+      return reactivateLicense(brandConfig, failIfInUse);
     }
   } catch {
-    // seguir a reactivar sesión
+    // seguir a reactivar sesión completa
   }
 
-  return reactivateSession(brandConfig);
+  return reactivateSession(brandConfig, reactivateOptions);
 }

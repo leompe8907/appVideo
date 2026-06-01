@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import panaccessService from '../services/panaccessService';
-import { loginAndActivateLicense, reactivateLicense } from '../services/loginFlow';
+import { reactivateLicense, reactivateSession } from '../services/loginFlow';
 import * as userSession from '../utils/userSession';
 import { resolvePostLoginRoute } from '../utils/navigation';
 import '../styles/components/_splash.scss';
@@ -61,9 +61,7 @@ export function SplashPage() {
                 return;
               }
 
-              await loginAndActivateLicense(currentBrand, credentials, {
-                autoActivateLicense: true,
-                activationRecursive: true,
+              await reactivateSession(currentBrand, {
                 failIfInUse: true,
                 storeClientConfig: true,
                 storeLicenses: true,
@@ -88,10 +86,7 @@ export function SplashPage() {
             return;
           }
 
-          await loginAndActivateLicense(currentBrand, credentials, {
-            autoActivateLicense: true,
-            activationRecursive: true,
-            // Si una smartcard está "in use", buscamos otra disponible.
+          await reactivateSession(currentBrand, {
             failIfInUse: true,
             storeClientConfig: true,
             storeLicenses: true,
