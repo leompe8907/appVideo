@@ -5,117 +5,26 @@
 
 import panaccessService from './panaccessService';
 import { loadEPGForChannels } from './epgService';
+import { parseBouquetCustomData, DEFAULT_CARD_DESIGN } from '../utils/bouquetLayoutConfig';
 
 /**
- * Obtiene el tipo de layout a usar para un bouquet a partir de customData.
- * Si no está definido, devuelve el layout estándar de logo.
+ * Metadatos de layout persistidos en cada bouquet (customData v2 o legacy).
+ * @param {*} rawBouquet
+ * @returns {{ bouquetLayouts: Record<string, unknown> | null; layoutType: string }}
  */
-function getBouquetLayoutType(rawBouquet) {
-  if (!rawBouquet) {
-    return 'service_layout_logo_normal';
+function getBouquetLayoutMeta(rawBouquet) {
+  const parsed = parseBouquetCustomData(rawBouquet?.customData);
+  if (parsed.format === 'platform' && parsed.layouts) {
+    const sample = parsed.layouts.tv ?? parsed.layouts.mobile;
+    return {
+      bouquetLayouts: parsed.layouts,
+      layoutType: sample?.cardDesign || DEFAULT_CARD_DESIGN,
+    };
   }
-
-  const customData = rawBouquet.customData;
-  if (!customData) {
-    return 'service_layout_logo_normal';
-  }
-
-  let rawLayout = null;
-
-  // customData puede venir como string (JSON o nombre directo) u objeto
-  if (typeof customData === 'string') {
-    const trimmed = customData.trim();
-    // Intentar parsear JSON si parece un objeto
-    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(trimmed);
-        rawLayout =
-          parsed.serviceLayout ||
-          parsed.service_layout ||
-          parsed.layout ||
-          parsed.design ||
-          parsed.type ||
-          null;
-      } catch {
-        // Si falla el JSON, usamos el string tal cual
-        rawLayout = trimmed;
-      }
-    } else {
-      rawLayout = trimmed;
-    }
-  } else if (typeof customData === 'object') {
-    rawLayout =
-      customData.serviceLayout ||
-      customData.service_layout ||
-      customData.layout ||
-      customData.design ||
-      customData.type ||
-      null;
-  }
-
-  if (!rawLayout) {
-    return 'service_layout_logo_normal';
-  }
-
-  const value = String(rawLayout).toLowerCase().trim();
-
-  // Aceptar tanto nombres completos como abreviados sin prefijo
-  if (value === 'service_layout_logo_normal' || value === 'logo_normal' || value === 'logo') {
-    return 'service_layout_logo_normal';
-  }
-  if (
-    value === 'service_layout_logo_with_number' ||
-    value === 'logo_with_number' ||
-    value === 'logo+lcn'
-  ) {
-    return 'service_layout_logo_with_number';
-  }
-  if (
-    value === 'service_layout_event_normal' ||
-    value === 'event_normal' ||
-    value === 'event'
-  ) {
-    return 'service_layout_event_normal';
-  }
-  if (
-    value === 'service_layout_event_and_logo' ||
-    value === 'event_and_logo' ||
-    value === 'event+logo'
-  ) {
-    return 'service_layout_event_and_logo';
-  }
-  if (
-    value === 'service_layout_event_and_logo_overlay' ||
-    value === 'event_and_logo_overlay'
-  ) {
-    return 'service_layout_event_and_logo_overlay';
-  }
-  if (
-    value === 'service_layout_event_line' ||
-    value === 'event_line' ||
-    value === 'eventline'
-  ) {
-    return 'service_layout_event_line';
-  }
-  if (
-    value === 'service_layout_grid_horizontal' ||
-    value === 'grid_horizontal' ||
-    value === 'grid-h' ||
-    value === 'grid_h'
-  ) {
-    return 'service_layout_grid_horizontal';
-  }
-  if (
-    value === 'service_layout_grid_vertical' ||
-    value === 'grid_vertical' ||
-    value === 'grid-v' ||
-    value === 'grid_v'
-  ) {
-    return 'service_layout_grid_vertical';
-  }
-
-  // Fallback seguro: layout estándar
-  return 'service_layout_logo_normal';
+  return {
+    bouquetLayouts: null,
+    layoutType: parsed.legacyCardDesign,
+  };
 }
 
 /**
@@ -421,8 +330,8 @@ export async function getBouquetsWithChannels(options = {}) {
     .map((b) => {
       const bouquetId = String(b.bouquetId ?? b.id ?? '');
       const items = byBouquetId[bouquetId] || [];
-      const layoutType = getBouquetLayoutType(b);
-      return { ...b, bouquetId, items, layoutType };
+      const { bouquetLayouts, layoutType } = getBouquetLayoutMeta(b);
+      return { ...b, bouquetId, items, bouquetLayouts, layoutType };
     })
     .filter((b) => b.items.length > 0);
 }

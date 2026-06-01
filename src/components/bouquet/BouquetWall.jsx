@@ -7,6 +7,7 @@ import {
 } from '../../services/tvDataService';
 import { usePreload } from '../../store/usePreload';
 import { mergeEpgIntoChannels } from '../../utils/epgMerge';
+import { resolveBouquetLayoutForDevice } from '../../utils/bouquetLayoutConfig';
 import {
   BouquetRowCarousel,
   BouquetGridHorizontal,
@@ -113,42 +114,28 @@ export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio
   return (
     <div className="bouquet-wall">
       {bouquets.map((bouquet) => {
-        const layoutType = bouquet.layoutType;
+        const layout = resolveBouquetLayoutForDevice(bouquet);
         const key = bouquet.bouquetId ?? bouquet.id;
+        const layoutProps = {
+          bouquet,
+          layoutType: layout.cardDesign,
+          logoIndex: layout.logoIndex,
+          gridRows: layout.gridRows,
+          gridColumns: layout.gridColumns,
+          containerType: layout.containerType,
+          onChannelSelect,
+          onChannelFocus,
+        };
 
-        if (layoutType === 'service_layout_grid_horizontal') {
-          return (
-            <BouquetGridHorizontal
-              key={key}
-              bouquet={bouquet}
-              layoutType={layoutType}
-              onChannelSelect={onChannelSelect}
-              onChannelFocus={onChannelFocus}
-            />
-          );
+        if (layout.containerType === 'vertical_grid') {
+          return <BouquetGridVertical key={key} {...layoutProps} />;
         }
 
-        if (layoutType === 'service_layout_grid_vertical') {
-          return (
-            <BouquetGridVertical
-              key={key}
-              bouquet={bouquet}
-              layoutType={layoutType}
-              onChannelSelect={onChannelSelect}
-              onChannelFocus={onChannelFocus}
-            />
-          );
+        if (layout.containerType === 'horizontal_multi_row') {
+          return <BouquetGridHorizontal key={key} {...layoutProps} />;
         }
 
-        return (
-          <BouquetRowCarousel
-            key={key}
-            bouquet={bouquet}
-            layoutType={layoutType}
-            onChannelSelect={onChannelSelect}
-            onChannelFocus={onChannelFocus}
-          />
-        );
+        return <BouquetRowCarousel key={key} {...layoutProps} />;
       })}
     </div>
   );

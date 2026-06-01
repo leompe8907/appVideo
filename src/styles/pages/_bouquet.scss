@@ -7,7 +7,53 @@
 @use '../mixins' as *;
 @use '../components/embla-horizontal-rail' as *;
 
+/** Separación entre tarjetas de canal y entre filas/secciones del muro de bouquets. */
+$bouquet-items-gap: 2rem;
+
+/** Márgenes en lugar de flex `gap` — Chromium antiguo en TV (2019+) no aplica gap en flex. */
+@mixin bouquet-rail-horizontal-items {
+  > .channel-card,
+  > .vod-card {
+    margin-inline-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
+
+    &:last-child {
+      margin-inline-end: 0;
+    }
+  }
+}
+
+@mixin bouquet-rail-wrap-items {
+  > .channel-card {
+    margin-inline-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
+    margin-block-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
+  }
+}
+
+@mixin bouquet-embla-slide-spacing {
+  > .embla-slide {
+    flex: 0 0 auto;
+    min-width: 0;
+    margin-inline-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
+
+    &:last-child {
+      margin-inline-end: 0;
+    }
+  }
+}
+
+@mixin bouquet-stack-spacing {
+  > * {
+    margin-block-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
+
+    &:last-child {
+      margin-block-end: 0;
+    }
+  }
+}
+
 .bouquet-page {
+  --bouquet-items-gap: #{$bouquet-items-gap};
+
   position: relative;
   width: 100%;
   height: 100%;
@@ -185,10 +231,12 @@
           flex-wrap: nowrap;
           align-items: center;
           height: 100%;
-          gap: 1.5rem;
+          gap: 0;
           padding-inline-end: 1.75rem;
           scrollbar-width: none;
           -ms-overflow-style: none;
+
+          @include bouquet-embla-slide-spacing;
 
           &::-webkit-scrollbar {
             display: none;
@@ -196,8 +244,9 @@
         }
 
         .embla-slide {
-          flex: 0 0 auto;
-          min-width: 0;
+          height: 100%;
+          display: flex;
+          align-items: center;
         }
       }
 
@@ -205,13 +254,15 @@
         display: flex;
         flex-wrap: nowrap;
         align-items: center;
-        gap: 1.5rem;
+        gap: 0;
         padding-inline: 0.5rem 1.75rem;
         overflow-x: auto;
         overflow-y: hidden;
         scroll-behavior: smooth;
         scrollbar-width: none;
         -ms-overflow-style: none;
+
+        @include bouquet-rail-horizontal-items;
 
         &::-webkit-scrollbar {
           display: none;
@@ -231,9 +282,11 @@
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0;
     overflow: visible;
     padding: 0.75rem 0;
+
+    @include bouquet-stack-spacing;
   }
 
   .bouquet-row-carousel,
@@ -262,7 +315,9 @@
     .bouquet-grid-horizontal-rows {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0;
+
+      @include bouquet-stack-spacing;
     }
 
     .horizontal-slide--grid-row {
@@ -284,19 +339,17 @@
           display: flex;
           flex-wrap: nowrap;
           align-items: center;
-          gap: 0.35rem;
+          justify-items: center;
+          gap: 0;
           padding-inline-end: 1.75rem;
           scrollbar-width: none;
           -ms-overflow-style: none;
 
+          @include bouquet-embla-slide-spacing;
+
           &::-webkit-scrollbar {
             display: none;
           }
-        }
-
-        .embla-slide {
-          flex: 0 0 auto;
-          min-width: 0;
         }
       }
 
@@ -304,13 +357,16 @@
         display: flex;
         flex-wrap: nowrap;
         align-items: center;
-        gap: 0.35rem;
+        justify-items: center;
+        gap: 0;
         padding-inline: 0.5rem 1.75rem;
         overflow-x: auto;
         overflow-y: hidden;
         scroll-behavior: smooth;
         scrollbar-width: none;
         -ms-overflow-style: none;
+
+        @include bouquet-rail-horizontal-items;
 
         &::-webkit-scrollbar {
           display: none;
@@ -338,8 +394,9 @@
       display: grid;
       grid-auto-rows: minmax(10em, auto);
       grid-template-columns: repeat(6, minmax(0, 1fr));
-      gap: 0.35rem;
+      gap: var(--bouquet-items-gap, #{$bouquet-items-gap});
       padding: 0 0.25rem;
+      justify-items: center;
     }
   }
 
@@ -378,11 +435,14 @@
           display: flex;
           flex-wrap: nowrap;
           align-items: center;
+          justify-items: center;
           height: 100%;
-          gap: 1.5rem;
+          gap: 0;
           padding-inline-end: 1.75rem;
           scrollbar-width: none;
           -ms-overflow-style: none;
+
+          @include bouquet-embla-slide-spacing;
 
           &::-webkit-scrollbar {
             display: none;
@@ -390,11 +450,10 @@
         }
 
         .embla-slide {
-          flex: 0 0 auto;
-          min-width: 0;
           height: 100%;
           display: flex;
           align-items: center;
+          justify-items: center;
         }
       }
 
@@ -403,13 +462,16 @@
         display: flex;
         flex-wrap: nowrap;
         align-items: center;
-        gap: 1.5rem;
+        justify-items: center;
+        gap: 0;
         padding-inline: 1.25rem 1.75rem;
         overflow-x: auto;
         overflow-y: hidden;
         scroll-behavior: smooth;
         scrollbar-width: none;
         -ms-overflow-style: none;
+
+        @include bouquet-rail-horizontal-items;
 
         &::-webkit-scrollbar {
           display: none;
@@ -422,6 +484,9 @@
       display: flex;
       flex-wrap: wrap;
       align-items: flex-start;
+      justify-items: center;
+      justify-content: center;
+      gap: 0;
       padding-top: 0.35rem;
       padding-inline: 1.25rem 1.75rem;
       overflow-x: auto;
@@ -429,6 +494,8 @@
       scroll-behavior: smooth;
       scrollbar-width: none;
       -ms-overflow-style: none;
+
+      @include bouquet-rail-wrap-items;
 
       &::-webkit-scrollbar {
         display: none;
@@ -930,7 +997,7 @@
   }
 }
 
-/* TV: scroll sin smooth + foco ligero (sin escala/sombras pesadas ni filtros). */
+/* TV: scroll nativo (sin Embla) + foco ligero. Espaciado vía márgenes (--bouquet-items-gap), no flex gap. */
 .device-tv .bouquet-page {
   .bouquet-inicio-scroll,
   .bouquet-row-carousel .embla-viewport,
@@ -939,45 +1006,47 @@
     scroll-behavior: auto;
   }
 
-  /* Más aire entre filas de bouquets y tarjetas; espacio inferior para ver la última fila completa al enfocar. */
   .bouquet-inicio-scroll {
     scroll-padding-block-end: 3.5rem;
     padding-bottom: 3.25rem;
   }
 
   .bouquet-wall {
-    gap: 1.25rem;
     padding-top: 1rem;
     padding-bottom: 1rem;
   }
 
-  .bouquet-grid-horizontal-rows {
-    gap: 0.65rem;
-  }
+  .bouquet-grid-vertical-content {
+    gap: 0;
+    justify-items: center;
+    padding-left: 0.45rem;
+    padding-right: 0.45rem;
+    padding-bottom: 0.65rem;
 
-  .bouquet-grid-horizontal .horizontal-slide--grid-row.embla-viewport {
-    padding-bottom: 0.75rem;
-
-    .embla-container {
-      gap: 1rem;
-      padding-inline-end: 1.75rem;
+    .channel-card {
+      margin-right: var(--bouquet-items-gap, #{$bouquet-items-gap});
+      margin-bottom: var(--bouquet-items-gap, #{$bouquet-items-gap});
     }
   }
 
+  .horizontal-slide--logo-with-number[data-native-horizontal-rail] {
+    flex-wrap: wrap;
+    align-content: flex-start;
+    justify-items: center;
+    justify-content: center;
+  }
+
+  .bouquet-grid-horizontal .horizontal-slide--grid-row.embla-viewport,
   .bouquet-row-carousel .horizontal-slide.embla-viewport {
     padding-bottom: 0.75rem;
 
     .embla-container {
-      gap: 2rem;
       padding-inline-end: 1.75rem;
     }
   }
 
-  .bouquet-grid-vertical-content {
-    gap: 0.75rem;
-    padding-left: 0.45rem;
-    padding-right: 0.45rem;
-    padding-bottom: 0.65rem;
+  .bouquet-vod-recommended .vod-row-cards.embla-viewport .embla-container {
+    padding-inline-end: 1.75rem;
   }
 
   .channel-card {
