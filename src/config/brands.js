@@ -25,6 +25,8 @@
  *     @param {string} ui.sidebar.submenuBackgroundColor - Fondo del submenú desplegable.
  *     @param {string} ui.sidebar.submenuTextColor - Color del texto del submenú desplegable.
  *     @param {boolean} ui.sidebar.fixed - true: sidebar sticky/fijo; false: normal (fluye con layout).
+ *     @param {boolean} [ui.sidebar.showClientName=true] - Muestra el nombre del cliente en la cabecera del sidebar.
+ *     @param {string} [ui.sidebar.clientName] - Texto personalizado; por defecto usa appName.
  *   @param {Object} ui.playerLoading - Estilo del overlay de carga de reproducción.
  *     @param {boolean} ui.playerLoading.premium - true: overlay premium (blur + gradientes + glow); false: overlay simple.
  *

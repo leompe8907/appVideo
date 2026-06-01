@@ -17,6 +17,7 @@
   },
   "sidebar": {
     "menu": "Menu",
+    "mainNav": "Main navigation",
     "bouquets": "Home",
     "search": "Search",
     "movies": "Movies",

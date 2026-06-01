@@ -91,10 +91,10 @@ export function HomeInputDispatcher({ isPlayerActive }) {
       if (action === TV_ACTION.RIGHT) {
         if (!sidebar.contains(active)) return;
         if (active.matches('button.home-sidebar-settings-btn')) return;
-        if (active.matches('button.home-sidebar-sublink')) {
+        if (active.matches('.home-sidebar-sublink')) {
           const submenu = active.closest('.home-sidebar-submenu');
           if (submenu) {
-            const subs = Array.from(submenu.querySelectorAll('button.home-sidebar-sublink'));
+            const subs = Array.from(submenu.querySelectorAll('.home-sidebar-sublink'));
             const idx = subs.indexOf(active);
             if (idx >= 0 && idx < subs.length - 1) return;
           }

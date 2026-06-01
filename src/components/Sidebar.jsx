@@ -20,7 +20,7 @@ import { focusElementSafe, scrollElementIntoVisibleScrollAncestors } from '../ut
  * @returns {HTMLElement[]}
  */
 function getOrderedSidebarFocusTargets(root, settingsOpen) {
-  const nav = root.querySelector('nav.home-sidebar-nav');
+  const nav = root.querySelector('.home-sidebar-group--nav');
   if (!(nav instanceof HTMLElement)) return [];
   /** @type {HTMLElement[]} */
   const out = [];
@@ -153,11 +153,13 @@ function SidebarLink({ to, label, icon, onSelect, currentPathname, navigate }) {
   );
 }
 
-function SidebarLinkWithBadge({ to, label, icon, badge, onSelect, currentPathname, navigate }) {
+function SidebarNavSublink({ to, label, badge, onSelect, currentPathname, navigate }) {
   return (
     <NavLink
       to={to}
-      className={({ isActive }) => `home-sidebar-link${isActive ? ' active' : ''}`}
+      className={({ isActive }) =>
+        `home-sidebar-sublink home-sidebar-sublink--nav${isActive ? ' active' : ''}`
+      }
       onClick={(e) => {
         if (currentPathname === to) {
           e.preventDefault();
@@ -166,13 +168,12 @@ function SidebarLinkWithBadge({ to, label, icon, badge, onSelect, currentPathnam
         onSelect?.();
       }}
     >
-      {icon ? <SidebarIcon name={icon} /> : null}
-      <span className="home-sidebar-label">{label}</span>
-      {badge != null && badge !== 0 && (
-        <span className="home-sidebar-badge" aria-label={String(badge)}>
+      <span className="home-sidebar-sublink-label">{label}</span>
+      {badge != null && badge !== 0 ? (
+        <span className="home-sidebar-badge home-sidebar-badge--sub" aria-label={String(badge)}>
           {badge}
         </span>
-      )}
+      ) : null}
     </NavLink>
   );
 }
@@ -196,6 +197,11 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   /** Evita colapsar el rail cuando hay modal en portal (foco fuera del aside). */
   const blockCollapseForOverlayRef = useRef(false);
   const sidebarFixed = currentBrand?.ui?.sidebar?.fixed !== false;
+  const showClientName = currentBrand?.ui?.sidebar?.showClientName !== false;
+  const clientName =
+    (currentBrand?.ui?.sidebar?.clientName && String(currentBrand.ui.sidebar.clientName).trim()) ||
+    appName ||
+    'App';
   blockCollapseForOverlayRef.current = Boolean(aboutModal || confirmAction);
 
   const vodIsEmptyAfterLoad =
@@ -348,7 +354,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       };
 
       const getVisibleSublinks = () =>
-        Array.from(root.querySelectorAll('.home-sidebar-submenu button.home-sidebar-sublink')).filter(
+        Array.from(root.querySelectorAll('.home-sidebar-submenu .home-sidebar-sublink')).filter(
           isRoughlyVisibleEl
         );
 
@@ -372,7 +378,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
           }
           return;
         }
-        if (active.matches('button.home-sidebar-sublink')) {
+        if (active.matches('.home-sidebar-sublink')) {
           const subs = getVisibleSublinks();
           const i = subs.indexOf(active);
           if (i >= 0 && i < subs.length - 1) {
@@ -388,7 +394,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       }
 
       if (action === TV_ACTION.LEFT) {
-        if (active.matches('button.home-sidebar-sublink')) {
+        if (active.matches('.home-sidebar-sublink')) {
           e.preventDefault();
           e.stopPropagation();
           setSettingsOpen(false);
@@ -418,7 +424,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
                 const r = rootRef.current;
                 if (!r) return;
                 const subs = Array.from(
-                  r.querySelectorAll('.home-sidebar-submenu button.home-sidebar-sublink')
+                  r.querySelectorAll('.home-sidebar-submenu .home-sidebar-sublink')
                 ).filter(isRoughlyVisibleEl);
                 const first = subs[0];
                 if (first instanceof HTMLElement) {
@@ -438,7 +444,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
           active.click();
           return;
         }
-        if (active.matches('button.home-sidebar-sublink')) {
+        if (active.matches('.home-sidebar-sublink')) {
           e.preventDefault();
           e.stopPropagation();
           active.click();
@@ -526,145 +532,154 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
         }}
         onCancel={() => setConfirmAction(null)}
       />
-      <div className="home-sidebar-header">{appName || 'App'}</div>
-      <nav className="home-sidebar-nav">
-        <SidebarLink
-          to="/home/inicio"
-          label={t('sidebar.bouquets')}
-          icon="home"
-          onSelect={collapseAfterNav}
-          currentPathname={location.pathname}
-          navigate={navigate}
-        />
-        <SidebarLink
-          to="/home/buscador"
-          label={t('sidebar.search', { defaultValue: 'Buscador' })}
-          icon="search"
-          onSelect={collapseAfterNav}
-          currentPathname={location.pathname}
-          navigate={navigate}
-        />
-        {showVod && (
-          <SidebarLink
-            to="/home/vod"
-            label={t('sidebar.movies')}
-            icon="movies"
-            onSelect={collapseAfterNav}
-            currentPathname={location.pathname}
-            navigate={navigate}
-          />
-        )}
-        <SidebarLink
-          to="/home/epg"
-          label={t('sidebar.channelGuide')}
-          icon="guide"
-          onSelect={collapseAfterNav}
-          currentPathname={location.pathname}
-          navigate={navigate}
-        />
-        {showTvRadioServices && (
-          <SidebarLink
-            to="/home/servicios-tv-radio"
-            label={t('sidebar.tvRadioServices')}
-            icon="channels"
-            onSelect={collapseAfterNav}
-            currentPathname={location.pathname}
-            navigate={navigate}
-          />
-        )}
-        {showCatchup && (
-          <SidebarLink
-            to="/home/catchup"
-            label={t('sidebar.catchup')}
-            icon="catchup"
-            onSelect={collapseAfterNav}
-            currentPathname={location.pathname}
-            navigate={navigate}
-          />
-        )}
-        {currentBrand?.features?.osms && (
-          <SidebarLinkWithBadge
-            to="/home/osms"
-            label={t('sidebar.osms')}
-            icon="osms"
-            onSelect={collapseAfterNav}
-            badge={osmsUnreadCount}
-            currentPathname={location.pathname}
-            navigate={navigate}
-          />
-        )}
+      <div className="home-sidebar-body">
+        {showClientName ? (
+          <div className="home-sidebar-group home-sidebar-group--brand">
+            <div className="home-sidebar-header">{clientName}</div>
+          </div>
+        ) : null}
 
-        <div className="home-sidebar-settings">
-          <button
-            type="button"
-            className={`home-sidebar-link home-sidebar-settings-btn${settingsOpen ? ' active' : ''}`}
-            onClick={() => setSettingsOpen((v) => !v)}
-          >
-            <SidebarIcon name="settings" />
-            <span className="home-sidebar-label">
-              {t('common.settings', { defaultValue: 'Configuración' })}
-            </span>
-          </button>
-          {settingsOpen && (
-            <div
-              className="home-sidebar-submenu home-sidebar-submenu--right"
-              role="group"
-              aria-label={t('common.settings', { defaultValue: 'Configuración' })}
+        <nav className="home-sidebar-group home-sidebar-group--nav" aria-label={t('sidebar.mainNav', { defaultValue: 'Navegación principal' })}>
+          <SidebarLink
+            to="/home/inicio"
+            label={t('sidebar.bouquets')}
+            icon="home"
+            onSelect={collapseAfterNav}
+            currentPathname={location.pathname}
+            navigate={navigate}
+          />
+          <SidebarLink
+            to="/home/buscador"
+            label={t('sidebar.search', { defaultValue: 'Buscador' })}
+            icon="search"
+            onSelect={collapseAfterNav}
+            currentPathname={location.pathname}
+            navigate={navigate}
+          />
+          <SidebarLink
+            to="/home/epg"
+            label={t('sidebar.channelGuide')}
+            icon="guide"
+            onSelect={collapseAfterNav}
+            currentPathname={location.pathname}
+            navigate={navigate}
+          />
+          {showTvRadioServices ? (
+            <SidebarLink
+              to="/home/servicios-tv-radio"
+              label={t('sidebar.tvRadioServices')}
+              icon="channels"
+              onSelect={collapseAfterNav}
+              currentPathname={location.pathname}
+              navigate={navigate}
+            />
+          ) : null}
+        </nav>
+
+        <div className="home-sidebar-group home-sidebar-group--settings">
+          <div className="home-sidebar-settings">
+            <button
+              type="button"
+              className={`home-sidebar-link home-sidebar-settings-btn${settingsOpen ? ' active' : ''}`}
+              onClick={() => setSettingsOpen((v) => !v)}
             >
-              <button
-                type="button"
-                className="home-sidebar-sublink"
-                onClick={() => {
-                  navigate('/home/control-parental');
-                  collapseAfterNav();
-                }}
+              <SidebarIcon name="settings" />
+              <span className="home-sidebar-label">
+                {t('common.settings', { defaultValue: 'Configuración' })}
+              </span>
+            </button>
+            {settingsOpen && (
+              <div
+                className="home-sidebar-submenu home-sidebar-submenu--right"
+                role="group"
+                aria-label={t('common.settings', { defaultValue: 'Configuración' })}
               >
-                {t('parental.title', { defaultValue: 'Control parental' })}
-              </button>
-              <button
-                type="button"
-                className="home-sidebar-sublink"
-                onClick={() => {
-                  setAboutModal(true);
-                  collapseAfterNav();
-                }}
-              >
-                {t('common.about', { defaultValue: 'Acerca de' })}
-              </button>
-              <button
-                type="button"
-                className="home-sidebar-sublink"
-                onClick={() => {
-                  handleRefresh();
-                  collapseAfterNav();
-                }}
-              >
-                {t('common.refresh', { defaultValue: 'Refrescar' })}
-              </button>
-              <button
-                type="button"
-                className="home-sidebar-sublink"
-                onClick={() => {
-                  setConfirmAction('logout');
-                  collapseAfterNav();
-                }}
-              >
-                {t('common.logout', { defaultValue: 'Cerrar sesión' })}
-              </button>
-              <button
-                type="button"
-                className="home-sidebar-sublink home-sidebar-sublink--danger"
-                onClick={() => {
-                  setConfirmAction('exit');
-                  collapseAfterNav();
-                }}
-              >
-                {t('common.exit', { defaultValue: 'Salir' })}
-              </button>
-            </div>
-          )}
+                {showVod ? (
+                  <SidebarNavSublink
+                    to="/home/vod"
+                    label={t('sidebar.movies')}
+                    onSelect={collapseAfterNav}
+                    currentPathname={location.pathname}
+                    navigate={navigate}
+                  />
+                ) : null}
+                {showCatchup ? (
+                  <SidebarNavSublink
+                    to="/home/catchup"
+                    label={t('sidebar.catchup')}
+                    onSelect={collapseAfterNav}
+                    currentPathname={location.pathname}
+                    navigate={navigate}
+                  />
+                ) : null}
+                {currentBrand?.features?.osms ? (
+                  <SidebarNavSublink
+                    to="/home/osms"
+                    label={t('sidebar.osms')}
+                    badge={osmsUnreadCount}
+                    onSelect={collapseAfterNav}
+                    currentPathname={location.pathname}
+                    navigate={navigate}
+                  />
+                ) : null}
+                {(showVod || showCatchup || currentBrand?.features?.osms) ? (
+                  <div className="home-sidebar-submenu-divider" role="separator" aria-hidden="true" />
+                ) : null}
+                <button
+                  type="button"
+                  className="home-sidebar-sublink"
+                  onClick={() => {
+                    navigate('/home/control-parental');
+                    collapseAfterNav();
+                  }}
+                >
+                  {t('parental.title', { defaultValue: 'Control parental' })}
+                </button>
+                <button
+                  type="button"
+                  className="home-sidebar-sublink"
+                  onClick={() => {
+                    setAboutModal(true);
+                    collapseAfterNav();
+                  }}
+                >
+                  {t('common.about', { defaultValue: 'Acerca de' })}
+                </button>
+                <button
+                  type="button"
+                  className="home-sidebar-sublink"
+                  onClick={() => {
+                    handleRefresh();
+                    collapseAfterNav();
+                  }}
+                >
+                  {t('common.refresh', { defaultValue: 'Refrescar' })}
+                </button>
+                <button
+                  type="button"
+                  className="home-sidebar-sublink"
+                  onClick={() => {
+                    setConfirmAction('logout');
+                    collapseAfterNav();
+                  }}
+                >
+                  {t('common.logout', { defaultValue: 'Cerrar sesión' })}
+                </button>
+                <button
+                  type="button"
+                  className="home-sidebar-sublink home-sidebar-sublink--danger"
+                  onClick={() => {
+                    setConfirmAction('exit');
+                    collapseAfterNav();
+                  }}
+                >
+                  {t('common.exit', { defaultValue: 'Salir' })}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </nav>
+      </div>
     </aside>
   );
 }
