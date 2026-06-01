@@ -424,6 +424,7 @@ $home-sidebar-duration: 380ms;
 .home-sidebar-nav,
 .home-sidebar-group--nav {
   display: flex;
+  justify-content: center;
   flex-direction: column;
   gap: 0.45rem;
 }
