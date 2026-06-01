@@ -13,9 +13,13 @@ import { getBrandAsset } from './assetLoader';
 export function getSplashPath(brand, splashAnimado) {
   if (splashAnimado === true) {
     return getBrandAsset(brand, 'splash.gif');
-  } else {
-    return getBrandAsset(brand, 'splash.png');
   }
+  return getBrandAsset(brand, 'splash.png');
+}
+
+/** Imagen estática del cliente (fase inicial del splash; siempre splash.png). */
+export function getSplashPosterPath(brand) {
+  return getBrandAsset(brand, 'splash.png');
 }
 
 /**

@@ -2,7 +2,7 @@ import { getBrandConfig } from "./brands";
 import { DEFAULT_BRAND } from "./defaultBrand";
 import { getBrandAsset } from "../utils/assetLoader";
 import { invalidateHomeBackgroundCache } from "../utils/config";
-import { getSplashPath, getSplashVideoPath } from "../utils/splashLoader";
+import { getSplashPath, getSplashPosterPath, getSplashVideoPath } from "../utils/splashLoader";
 
 const isDev = import.meta.env.DEV;
 
@@ -158,6 +158,7 @@ export function enrichConfigWithAssets(config) {
       background: getBrandAsset(config.brand, "background.png"),
       favicon: getBrandAsset(config.brand, "favicon.ico"),
       splash: splashPath,
+      splashPoster: getSplashPosterPath(config.brand),
       splashVideo: splashVideoPath,
       placeholder: getBrandAsset(config.brand, "placeholder_220x160.png"),
       get: (path) => getBrandAsset(config.brand, path),

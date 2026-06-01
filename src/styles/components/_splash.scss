@@ -37,6 +37,12 @@
   background-position: center center;
   background-repeat: no-repeat;
   background-color: #000;
+  z-index: 1;
+
+  // Encima del video mientras carga en TV (el elemento solo se monta en fase video).
+  &--overlay {
+    z-index: 2;
+  }
 }
 
 .splash-video {
@@ -47,6 +53,7 @@
   height: 100%;
   object-fit: cover;
   background-color: #000;
+  z-index: 1;
 }
 
 .spinner {

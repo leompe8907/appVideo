@@ -1,220 +1,247 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
-import panaccessService from '../services/panaccessService';
-import { reactivateLicense, reactivateSession } from '../services/loginFlow';
-import * as userSession from '../utils/userSession';
-import { resolvePostLoginRoute } from '../utils/navigation';
+import { resolveSplashDestination } from '../services/splashAuthFlow';
 import '../styles/components/_splash.scss';
 
+/** Máximo tiempo en fase vídeo antes de forzar navegación (TV puede no disparar ended). */
+const SPLASH_VIDEO_MAX_MS = 45000;
+/** Si el vídeo no arranca, continuar igual. */
+const SPLASH_VIDEO_START_TIMEOUT_MS = 12000;
+/** Si auth/UDID tarda demasiado, no bloquear en splash. */
+const SPLASH_AUTH_MAX_MS = 60000;
+
+/**
+ * Splash por fases: imagen → auth en background → vídeo opcional → app.
+ * El video solo se monta tras auth (evita reproducción oculta en TV).
+ */
 export function SplashPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { currentBrand, splashDuration, isLoading, getImage, appName } = useBrand();
-  // Nota: se mantiene el mismo splash visual; no usamos un estado adicional.
 
+  const [phase, setPhase] = useState('image');
+  const [posterOverVideo, setPosterOverVideo] = useState(true);
+  const destinationRef = useRef('/login');
+  const imageShownAtRef = useRef(0);
+  const navigatedRef = useRef(false);
+  const videoRef = useRef(null);
+
+  const splashVideoSrc =
+    currentBrand?.assets?.splashVideo && String(currentBrand.assets.splashVideo).trim()
+      ? currentBrand.assets.splashVideo
+      : null;
+  const hasSplashVideo = Boolean(splashVideoSrc);
+
+  const splashPoster =
+    currentBrand?.assets?.splashPoster ||
+    currentBrand?.assets?.splash ||
+    (currentBrand ? getImage('splash.png') : '') ||
+    getImage('splash.gif') ||
+    '';
+
+  const navigateToDestination = useCallback(() => {
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
+    navigate(destinationRef.current || '/login', { replace: true });
+  }, [navigate]);
+
+  // Auth en background mientras se muestra la imagen.
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading) return undefined;
     if (!currentBrand) {
-      setTimeout(() => navigate('/login'), 3000);
-      return;
+      const id = window.setTimeout(() => navigate('/login', { replace: true }), 3000);
+      return () => window.clearTimeout(id);
     }
 
-    const run = async () => {
-      try {
-        if (!panaccessService.client) {
-          await panaccessService.initialize(currentBrand);
+    const videoEnabled = Boolean(
+      currentBrand.assets?.splashVideo && String(currentBrand.assets.splashVideo).trim(),
+    );
+
+    imageShownAtRef.current = Date.now();
+    navigatedRef.current = false;
+    setPhase('image');
+    setPosterOverVideo(true);
+
+    let cancelled = false;
+    let navigateTimerId = null;
+    const authTimeoutId = window.setTimeout(() => {
+      if (cancelled || navigatedRef.current) return;
+      if (import.meta.env.DEV) console.warn('[Splash] Timeout auth, continuando flujo');
+      navigateToDestination();
+    }, SPLASH_AUTH_MAX_MS);
+
+    resolveSplashDestination(currentBrand)
+      .then((path) => {
+        window.clearTimeout(authTimeoutId);
+        if (cancelled) return;
+        destinationRef.current = path;
+
+        if (videoEnabled) {
+          setPhase('video');
+        } else {
+          const minMs = Math.max(0, Number(splashDuration) || 0);
+          const elapsed = Date.now() - imageShownAtRef.current;
+          const wait = Math.max(0, minMs - elapsed);
+          navigateTimerId = window.setTimeout(navigateToDestination, wait);
         }
+      })
+      .catch((err) => {
+        window.clearTimeout(authTimeoutId);
+        if (import.meta.env.DEV) console.error('[Splash] resolveSplashDestination:', err);
+        if (!cancelled) navigateToDestination();
+      });
 
-        if (userSession.getSessionId()) {
-          try {
-            const isValid = await panaccessService.validateSession();
-            if (isValid) {
-              const active = userSession.getActiveLicense?.();
-              const hasActiveLicense = !!active?.licenseKey;
-              let reactivatedOk = false;
+    return () => {
+      cancelled = true;
+      window.clearTimeout(authTimeoutId);
+      if (navigateTimerId != null) window.clearTimeout(navigateTimerId);
+    };
+  }, [currentBrand, isLoading, navigate, navigateToDestination, splashDuration]);
 
-              if (hasActiveLicense) {
-                try {
-                  // Re-activar licencia:
-                  // - si está "in use", que falle para poder intentar otra disponible
-                  reactivatedOk = await reactivateLicense(currentBrand, true);
-                } catch {
-                  reactivatedOk = false;
-                }
-              }
+  // Vídeo: montado solo en fase "video".
+  useEffect(() => {
+    if (phase !== 'video' || !hasSplashVideo) return undefined;
 
-              // Caso 1: reactivación OK con contenido -> ir a home/profile.
-              if (hasActiveLicense && reactivatedOk) {
-                setTimeout(() => navigate(resolvePostLoginRoute(currentBrand)), splashDuration);
-                return;
-              }
+    let cancelled = false;
+    let removeListeners = () => {};
+    let startTimeoutId = null;
+    let maxPhaseTimeoutId = null;
+    let rafId = null;
 
-              // Caso 2: la licencia activa está en uso, sin contenido o no existe -> auto-activar otra
-              const credentials =
-                userSession.getCredentials() ??
-                userSession.getCredentialsWithFallback(currentBrand?.token);
-
-              if (!credentials) {
-                setTimeout(() => navigate('/login'), splashDuration);
-                return;
-              }
-
-              await reactivateSession(currentBrand, {
-                failIfInUse: true,
-                storeClientConfig: true,
-                storeLicenses: true,
-              });
-
-              setTimeout(() => navigate(resolvePostLoginRoute(currentBrand)), splashDuration);
-              return;
-            }
-          } catch (err) {
-            if (import.meta.env.DEV) console.warn('[Splash] Sesión inválida:', err.message);
-          }
-        }
-
-        // Helper equivalente a goToLoginOrHome del proyecto 10foot
-        const goToLoginOrHome = async () => {
-          const credentials =
-            userSession.getCredentials() ??
-            userSession.getCredentialsWithFallback(currentBrand?.token);
-
-          if (!credentials) {
-            setTimeout(() => navigate('/login'), splashDuration);
-            return;
-          }
-
-          await reactivateSession(currentBrand, {
-            failIfInUse: true,
-            storeClientConfig: true,
-            storeLicenses: true,
-          });
-
-          setTimeout(() => navigate(resolvePostLoginRoute(currentBrand)), splashDuration);
-        };
-
-        const apiBaseUrl = currentBrand?.api?.baseUrl;
-        const hasApiBase = typeof apiBaseUrl === 'string' && apiBaseUrl.trim() !== '';
-
-        // Si no hay backend propio configurado, usar el flujo clásico
-        if (!hasApiBase) {
-          await goToLoginOrHome();
-          return;
-        }
-
-        const udid = userSession.getUdidOrCreate();
-
-        // Si no hay UDID almacenado, ir al flujo normal de login/autologin
-        if (!udid) {
-          await goToLoginOrHome();
-          return;
-        }
-
-        // Validación de UDID contra backend propio: GET {baseUrl}/udid/validate/?udid=...
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-        try {
-          const base = apiBaseUrl.replace(/\/$/, '');
-          const url = `${base}/udid/validate/?udid=${encodeURIComponent(udid)}`;
-
-          const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-              'Accept': 'application/json',
-            },
-            signal: controller.signal,
-          });
-
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            // Aproximación a la lógica original: sólo limpiar si no parece error de servidor
-            const serverUnavailable = response.status >= 500;
-            if (!serverUnavailable) {
-              userSession.setLoggedOut();
-            }
-            await goToLoginOrHome();
-            return;
-          }
-
-          const data = await response.json().catch(() => ({}));
-          const status = data && data.status;
-          const validatedUdid = data && data.udid;
-
-          if (import.meta.env.DEV) {
-            console.log('[Splash] UDID validado', { status, validatedUdid });
-          }
-
-          if (status === 'used' && validatedUdid && validatedUdid === udid) {
-            // UDID válido y ya usado → intentar login automático
-            await goToLoginOrHome();
-          } else if (status === 'revoked') {
-            // UDID revocado → limpiar credenciales y seguir flujo normal
-            userSession.setLoggedOut();
-            await goToLoginOrHome();
-          } else if (status === 'pending') {
-            // UDID pendiente → ir directo a login
-            setTimeout(() => navigate('/login'), splashDuration);
-          } else {
-            // Cualquier otro caso inesperado → limpiar y flujo normal
-            userSession.setLoggedOut();
-            await goToLoginOrHome();
-          }
-        } catch (err) {
-          clearTimeout(timeoutId);
-          if (import.meta.env.DEV) {
-            console.error('[Splash] Error validando UDID:', err);
-          }
-
-          // Error de red/timeout: considerar backend caído, no limpiar credenciales
-          await goToLoginOrHome();
-        }
-      } catch (err) {
-        if (import.meta.env.DEV) console.error('[Splash] Auto-login falló:', err);
-        userSession.setLoggedOut();
-        setTimeout(() => navigate('/login'), splashDuration);
-      }
+    const finish = () => {
+      if (!cancelled) navigateToDestination();
     };
 
-    run();
-  }, [navigate, currentBrand, isLoading, splashDuration]);
+    const setupVideo = (video) => {
+      const onPlaying = () => {
+        if (startTimeoutId != null) {
+          window.clearTimeout(startTimeoutId);
+          startTimeoutId = null;
+        }
+        setPosterOverVideo(false);
+      };
+      const onEnded = () => finish();
+      const onError = () => {
+        if (import.meta.env.DEV) console.warn('[Splash] Error en vídeo splash, continuando');
+        finish();
+      };
 
-  // Mostrar loading mientras carga el brand
+      const startPlayback = () => {
+        if (cancelled) return;
+        try {
+          video.currentTime = 0;
+        } catch {
+          // noop
+        }
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(() => onError());
+        }
+      };
+
+      video.addEventListener('playing', onPlaying);
+      video.addEventListener('ended', onEnded);
+      video.addEventListener('error', onError);
+
+      removeListeners = () => {
+        video.removeEventListener('playing', onPlaying);
+        video.removeEventListener('ended', onEnded);
+        video.removeEventListener('error', onError);
+      };
+
+      try {
+        video.load();
+      } catch {
+        // noop
+      }
+
+      if (video.readyState >= 2) {
+        startPlayback();
+      } else {
+        video.addEventListener('loadeddata', startPlayback, { once: true });
+        const prevRemove = removeListeners;
+        removeListeners = () => {
+          prevRemove();
+          video.removeEventListener('loadeddata', startPlayback);
+        };
+      }
+
+      startTimeoutId = window.setTimeout(() => {
+        if (import.meta.env.DEV) {
+          console.warn('[Splash] Timeout arranque vídeo, continuando flujo');
+        }
+        finish();
+      }, SPLASH_VIDEO_START_TIMEOUT_MS);
+    };
+
+    const tryAttach = (attempt = 0) => {
+      if (cancelled) return;
+      const video = videoRef.current;
+      if (video) {
+        setupVideo(video);
+        return;
+      }
+      if (attempt < 30) {
+        rafId = requestAnimationFrame(() => tryAttach(attempt + 1));
+        return;
+      }
+      if (import.meta.env.DEV) {
+        console.warn('[Splash] No se pudo montar ref de vídeo, continuando flujo');
+      }
+      finish();
+    };
+
+    tryAttach();
+    maxPhaseTimeoutId = window.setTimeout(finish, SPLASH_VIDEO_MAX_MS);
+
+    return () => {
+      cancelled = true;
+      if (rafId != null) cancelAnimationFrame(rafId);
+      if (startTimeoutId != null) window.clearTimeout(startTimeoutId);
+      if (maxPhaseTimeoutId != null) window.clearTimeout(maxPhaseTimeoutId);
+      removeListeners();
+    };
+  }, [phase, hasSplashVideo, navigateToDestination]);
+
+  const showPoster = Boolean(splashPoster);
+  const showPosterLayer = showPoster && (phase === 'image' || posterOverVideo);
+  const mountVideo = phase === 'video' && hasSplashVideo;
+
   if (isLoading || !currentBrand) {
     return (
       <div className="splash-page">
         <div className="splash-content">
-          <div className="spinner"></div>
+          <div className="spinner" />
         </div>
       </div>
     );
   }
 
-  const splashVideo = currentBrand.assets?.splashVideo;
-  const splashImage = currentBrand.assets?.splash || getImage('splash.png') || getImage('splash.gif');
-
   return (
     <div className="splash-page">
       <div className="splash-content">
-        {splashVideo ? (
+        {mountVideo && (
           <video
+            ref={videoRef}
             className="splash-video"
-            src={splashVideo}
-            autoPlay
+            src={splashVideoSrc}
             muted
             playsInline
+            preload="auto"
             aria-label={t('splash.alt', { appName })}
           />
-        ) : splashImage ? (
+        )}
+        {showPosterLayer && (
           <div
-            className="splash-image-container"
-            style={{ backgroundImage: 'url(' + splashImage + ')' }}
-            aria-label={t('splash.alt', { appName })}
+            className="splash-image-container splash-image-container--overlay"
+            style={{ backgroundImage: `url(${splashPoster})` }}
+            aria-label={phase === 'image' ? t('splash.alt', { appName }) : undefined}
+            aria-hidden={phase === 'video' && !posterOverVideo}
           />
-        ) : null}
+        )}
+        {!showPoster && !hasSplashVideo && <div className="spinner" />}
       </div>
     </div>
   );
