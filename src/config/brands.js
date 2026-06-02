@@ -336,8 +336,8 @@ export const BRANDS = [
       subheader: {
         enabled: true,
         areas: {
-          left: { enabled: true, showServiceInfo: false, contentAlign: 'left' },
-          center: { enabled: true, showServiceInfo: true, contentAlign: 'center' },
+          left: { enabled: true, showServiceInfo: true, contentAlign: 'left' },
+          center: { enabled: true, showServiceInfo: false, contentAlign: 'center' },
           right: { enabled: true, showServiceInfo: false, contentAlign: 'right' },
         },
       },
