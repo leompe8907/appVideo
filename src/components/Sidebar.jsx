@@ -556,6 +556,16 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             currentPathname={location.pathname}
             navigate={navigate}
           />
+          {showVod ? (
+            <SidebarLink
+              to="/home/vod"
+              label={t('sidebar.movies')}
+              icon="movies"
+              onSelect={collapseAfterNav}
+              currentPathname={location.pathname}
+              navigate={navigate}
+            />
+          ) : null}
           <SidebarLink
             to="/home/epg"
             label={t('sidebar.channelGuide')}
@@ -569,6 +579,16 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
               to="/home/servicios-tv-radio"
               label={t('sidebar.tvRadioServices')}
               icon="channels"
+              onSelect={collapseAfterNav}
+              currentPathname={location.pathname}
+              navigate={navigate}
+            />
+          ) : null}
+          {showCatchup ? (
+            <SidebarLink
+              to="/home/catchup"
+              label={t('sidebar.catchup')}
+              icon="catchup"
               onSelect={collapseAfterNav}
               currentPathname={location.pathname}
               navigate={navigate}
@@ -594,24 +614,6 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
                 role="group"
                 aria-label={t('common.settings', { defaultValue: 'Configuración' })}
               >
-                {showVod ? (
-                  <SidebarNavSublink
-                    to="/home/vod"
-                    label={t('sidebar.movies')}
-                    onSelect={collapseAfterNav}
-                    currentPathname={location.pathname}
-                    navigate={navigate}
-                  />
-                ) : null}
-                {showCatchup ? (
-                  <SidebarNavSublink
-                    to="/home/catchup"
-                    label={t('sidebar.catchup')}
-                    onSelect={collapseAfterNav}
-                    currentPathname={location.pathname}
-                    navigate={navigate}
-                  />
-                ) : null}
                 {currentBrand?.features?.osms ? (
                   <SidebarNavSublink
                     to="/home/osms"
@@ -622,7 +624,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
                     navigate={navigate}
                   />
                 ) : null}
-                {(showVod || showCatchup || currentBrand?.features?.osms) ? (
+                {currentBrand?.features?.osms ? (
                   <div className="home-sidebar-submenu-divider" role="separator" aria-hidden="true" />
                 ) : null}
                 <button
