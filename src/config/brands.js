@@ -182,11 +182,11 @@ export const BRANDS = [
         assetPath: "backgroundalt.webp",
       },
       qrRegister: {
-        enabled: true,
+        enabled: false,
         url: "https://shop.fotelka.tv/?c=customer&p=register",
       },
       udid: {
-        enabled: true,
+        enabled: false,
         baseUrl: "http://127.0.0.1:8001", //"https://bt-auth.cabledelancer.com",
         requestPath: "/udid/request-udid-manual/",
         wsUrl: "ws://127.0.0.1:8001/ws/auth/", //"wss://bt-auth.cabledelancer.com/ws/auth/",
@@ -200,7 +200,7 @@ export const BRANDS = [
       socialLogin: {
         backendBaseUrl: 'http://127.0.0.1:8000',
         google: {
-          enabled: true,
+          enabled: false,
           redirectUrl: '/wind/auth/google/',
           accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
           // Mantener look del botón fallback aunque OAuth esté configurado.
@@ -208,7 +208,7 @@ export const BRANDS = [
           backendBaseUrl: '',
         },
         facebook: {
-          enabled: true,
+          enabled: false,
           redirectUrl: '/wind/auth/facebook/',
           accessToken: '823584907447149',
           backendBaseUrl: '',
