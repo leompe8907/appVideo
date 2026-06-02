@@ -277,6 +277,8 @@ export const BRANDS = [
       showSeekbarOnLive: false,
       // Sidebar de canales (player): cerrar automáticamente al seleccionar (zapping).
       closeChannelSidebarOnSelect: false,
+      // Cambio de canal en vivo con flechas ↑/↓ (mando remoto y teclado).
+      channelChangeWithArrows: false,
     },
 
     // Configuración de UI/Tema
@@ -527,6 +529,7 @@ export const BRANDS = [
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
+      channelChangeWithArrows: true,
     },
 
     // Configuración de UI/Tema
@@ -798,6 +801,7 @@ export const BRANDS = [
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
+      channelChangeWithArrows: true,
     },
 
     // Configuración de UI/Tema
@@ -1035,6 +1039,7 @@ export const BRANDS = [
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
+      channelChangeWithArrows: true,
     },
 
     // Configuración de UI/Tema
@@ -1279,6 +1284,7 @@ export const BRANDS = [
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
+      channelChangeWithArrows: true,
     },
 
     // Configuración de UI/Tema
@@ -1388,7 +1394,7 @@ export const BRANDS = [
     features: {
       profiles: false,
       showRating: true, // Equivalente a showRating en 10foot
-      osms: false, // Equivalente a osmsEnabled en 10foot
+      osms: true, // Equivalente a osmsEnabled en 10foot
     },
 
     vod: {
@@ -1551,6 +1557,7 @@ export const BRANDS = [
       showPlaybackButtonsOnLive: false,
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
+      channelChangeWithArrows: true,
     },
 
     // Configuración de UI/Tema

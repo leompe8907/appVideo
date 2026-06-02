@@ -23,7 +23,6 @@ export const PLAYER_FOCUS_IDS = Object.freeze({
   PLAY: 'player-hud-play',
   FORWARD: 'player-hud-forward',
   GO_LIVE: 'player-hud-golive',
-  STOP: 'player-hud-stop',
   OVERLAY_CLOSE: 'player-hud-overlay-close',
   TRACKS_CLOSE: 'player-hud-tracks-close',
 });
@@ -88,6 +87,8 @@ export function usePlayerHudTvNavigation({
   onClosePlayerOverlay,
   onClosePlayer,
   showPlaybackButtons,
+  channelChangeWithArrows = false,
+  isLiveService = false,
 }) {
   const overlayRef = useRef(overlay);
   overlayRef.current = overlay;
@@ -341,6 +342,12 @@ export function usePlayerHudTvNavigation({
       if (!action) return;
 
       const currentOverlay = overlayRef.current;
+      const arrowZappingActive =
+        channelChangeWithArrows && isLiveService && !currentOverlay;
+
+      if (arrowZappingActive && (action === TV_ACTION.UP || action === TV_ACTION.DOWN)) {
+        return;
+      }
 
       if (currentOverlay === 'info' && document.getElementById('epg-event-close')) {
         return;
@@ -438,6 +445,8 @@ export function usePlayerHudTvNavigation({
     onClosePlayerOverlay,
     onClosePlayer,
     showPlaybackButtons,
+    channelChangeWithArrows,
+    isLiveService,
   ]);
 }
 

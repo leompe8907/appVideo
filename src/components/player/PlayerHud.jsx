@@ -18,6 +18,7 @@ import {
   usePlayerHudTvNavigation,
   PLAYER_FOCUS_IDS,
 } from '../../hooks/usePlayerHudTvNavigation';
+import { usePlayerChannelZapping } from '../../hooks/usePlayerChannelZapping';
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
@@ -175,7 +176,6 @@ export function PlayerHud({ className = '' }) {
     setSubtitlesEnabled,
     pause,
     play,
-    stop,
     close,
     forward,
     backward,
@@ -473,6 +473,68 @@ export function PlayerHud({ className = '' }) {
       state?.type === 'catchup' ||
       (state?.type === 'service' && currentBrand?.player?.showPlaybackButtonsOnLive === true));
 
+  const channelChangeWithArrows = currentBrand?.player?.channelChangeWithArrows === true;
+
+  const resolveChannelLiveUrl = useCallback((channel) => {
+    if (!channel) return null;
+    let url =
+      channel.url ||
+      channel.streamUrl ||
+      channel.hlsUrl ||
+      channel.hls ||
+      null;
+
+    if (!url) {
+      const streamId = channel.id ?? channel.epgStreamId;
+      if (streamId != null && streamId !== '') {
+        try {
+          url = panaccessService.getStreamM3u8Url({ streamId });
+        } catch {
+          // noop
+        }
+      }
+    }
+
+    if (!url) return null;
+    try {
+      url = panaccessService.normalizePlaybackUrl(url);
+    } catch {
+      // noop
+    }
+    return url || null;
+  }, []);
+
+  const handleZapToChannel = useCallback(
+    (channel) => {
+      const url = resolveChannelLiveUrl(channel);
+      if (!url) return;
+      requestPlayChannel({
+        channel,
+        playFn: () =>
+          play({
+            type: 'service',
+            id: channel.id ?? channel.lcn ?? undefined,
+            url,
+            item: channel,
+            autoPlay: true,
+          }),
+      });
+    },
+    [play, requestPlayChannel, resolveChannelLiveUrl]
+  );
+
+  usePlayerChannelZapping({
+    enabled: channelChangeWithArrows,
+    isLiveService,
+    hasContent,
+    overlay,
+    channels: channelList,
+    currentChannelId: state?.id ?? state?.item?.id,
+    currentChannelLcn: state?.item?.lcn,
+    onZapToChannel: handleZapToChannel,
+    onWakeHud: wakeHud,
+  });
+
   usePlayerHudTvNavigation({
     isTV,
     hasContent,
@@ -483,6 +545,8 @@ export function PlayerHud({ className = '' }) {
     onClosePlayerOverlay: closePlayerOverlay,
     onClosePlayer: close,
     showPlaybackButtons,
+    channelChangeWithArrows,
+    isLiveService,
   });
 
   if (!hasContent) return null;
@@ -552,51 +616,6 @@ export function PlayerHud({ className = '' }) {
     state?.type === 'vod' ||
     state?.type === 'catchup' ||
     (state?.type === 'service' && currentBrand?.player?.showSeekbarOnLive === true);
-
-  const resolveChannelLiveUrl = (channel) => {
-    if (!channel) return null;
-    let url =
-      channel.url ||
-      channel.streamUrl ||
-      channel.hlsUrl ||
-      channel.hls ||
-      null;
-
-    if (!url) {
-      const streamId = channel.id ?? channel.epgStreamId;
-      if (streamId != null && streamId !== '') {
-        try {
-          url = panaccessService.getStreamM3u8Url({ streamId });
-        } catch {
-          // noop
-        }
-      }
-    }
-
-    if (!url) return null;
-    try {
-      url = panaccessService.normalizePlaybackUrl(url);
-    } catch {
-      // noop
-    }
-    return url || null;
-  };
-
-  const handleZapToChannel = (channel) => {
-    const url = resolveChannelLiveUrl(channel);
-    if (!url) return;
-    requestPlayChannel({
-      channel,
-      playFn: () =>
-        play({
-          type: 'service',
-          id: channel.id ?? channel.lcn ?? undefined,
-          url,
-          item: channel,
-          autoPlay: true,
-        }),
-    });
-  };
 
   const shouldUseEpgInfoModal = state?.type === 'service' && !!state?.item && !!nowNext?.now;
 
@@ -841,16 +860,6 @@ export function PlayerHud({ className = '' }) {
                 {t('player.goLive', { defaultValue: 'En vivo' })}
               </FocusableButton>
             ) : null}
-            <FocusableButton
-              type="button"
-              className="player-hud__pillbtn player-hud__pillbtn--danger"
-              id={PLAYER_FOCUS_IDS.STOP}
-              data-tv-nav="player-hud"
-              tabIndex={hudTvTabIndex}
-              onClick={stop}
-            >
-              {t('player.stop', { defaultValue: 'Detener' })}
-            </FocusableButton>
           </div>
         </div>
       </div>
