@@ -93,7 +93,7 @@ export function mapRawAd(raw) {
  */
 export function processAdsFromApi(rawList) {
   const list = Array.isArray(rawList) ? rawList : [];
-  const filtered = list.filter((a) => a && String(a.targetKey).toLowerCase() === 'android_tv');
+  const filtered = list.filter((a) => a && String(a.targetKey).toLowerCase() === 'HTML5');
   const processed = filtered.map(mapRawAd).filter(isAdCurrentlyValid);
   const top = processed.filter((a) => a.locationType === AD_LOCATION_TOP);
   const bottom = processed.filter((a) => a.locationType === AD_LOCATION_BOTTOM);
