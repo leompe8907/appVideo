@@ -136,8 +136,8 @@ export const BRANDS = [
   {
     brand: "bromteck",
     appName: "Bromteck",
-    drm: 'https://cv01.panaccess.com/',
-    token: 'gQposTlrMIOYQVdYBNYC',
+    drm: "https://cv10.panaccess.com/",
+    token: "DDXXHySyAfrKgBczmhBk",
     // Metadatos de integración con DRM (equivalentes al proyecto EPG clásico)
     os: 'HTML5',
     appVersion: '1',
