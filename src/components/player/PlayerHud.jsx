@@ -14,6 +14,7 @@ import EpgEventModal from '../epg/EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useParental } from '../../store/useParental';
 import { getChannelStableId } from '../../utils/channelId';
+import { buildZappingChannelList } from '../../utils/channelZappingList';
 import {
   usePlayerHudTvNavigation,
   PLAYER_FOCUS_IDS,
@@ -161,7 +162,11 @@ function ChannelSidebar({
   );
 }
 
-export function PlayerHud({ className = '' }) {
+/**
+ * @param {object} props
+ * @param {boolean} [props.isPlaybackMaximized] Reproductor a pantalla completa (sin mini preview).
+ */
+export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isTV } = useDevice();
@@ -260,11 +265,9 @@ export function PlayerHud({ className = '' }) {
   }, [state?.item, nowNext]);
 
   const channelList = useMemo(() => {
-    const streams = epg?.streams || [];
-    const list = Array.isArray(streams) ? [...streams] : [];
-    list.sort((a, b) => Number(a?.lcn ?? 0) - Number(b?.lcn ?? 0));
-    return list;
+    return buildZappingChannelList(epg?.streams);
   }, [epg?.streams]);
+
 
   const progressModel = useMemo(() => {
     // Paridad legacy: para LIVE, usar la ventana temporal del evento.
@@ -513,7 +516,7 @@ export function PlayerHud({ className = '' }) {
         playFn: () =>
           play({
             type: 'service',
-            id: channel.id ?? channel.lcn ?? undefined,
+            id: channel.id,
             url,
             item: channel,
             autoPlay: true,
@@ -524,13 +527,13 @@ export function PlayerHud({ className = '' }) {
   );
 
   usePlayerChannelZapping({
-    enabled: channelChangeWithArrows,
+    arrowKeysEnabled: channelChangeWithArrows,
+    channelKeysEnabled: true,
     isLiveService,
-    hasContent,
+    isPlaybackMaximized: isPlaybackMaximized && hasContent,
     overlay,
     channels: channelList,
-    currentChannelId: state?.id ?? state?.item?.id,
-    currentChannelLcn: state?.item?.lcn,
+    currentServiceId: state?.type === 'service' ? state?.id ?? state?.item?.id : null,
     onZapToChannel: handleZapToChannel,
     onWakeHud: wakeHud,
   });
@@ -547,6 +550,7 @@ export function PlayerHud({ className = '' }) {
     showPlaybackButtons,
     channelChangeWithArrows,
     isLiveService,
+    isPlaybackMaximized: isPlaybackMaximized && hasContent,
   });
 
   if (!hasContent) return null;

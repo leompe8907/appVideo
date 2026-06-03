@@ -9,6 +9,10 @@ export const TV_ACTION = Object.freeze({
   RIGHT: 'right',
   ENTER: 'enter',
   BACK: 'back',
+  /** CH+ / Channel Up (10foot: PUP → channelUp) */
+  CHANNEL_UP: 'channel_up',
+  /** CH− / Channel Down (10foot: PDOWN → channelDown) */
+  CHANNEL_DOWN: 'channel_down',
 });
 
 function toInt(v) {
@@ -42,6 +46,10 @@ export function getTvActionFromKeyEvent(e) {
   if (key === 'Backspace' || code === 'Backspace' || keyCode === 8) return TV_ACTION.BACK;
   if (isReturnLike) return TV_ACTION.BACK;
   if (keyCode === 10009 || keyCode === 461) return TV_ACTION.BACK;
+
+  // CH+ / CH− (Tizen 427/428; también nombres estándar en otros TV)
+  if (key === 'ChannelUp' || code === 'ChannelUp' || keyCode === 427) return TV_ACTION.CHANNEL_UP;
+  if (key === 'ChannelDown' || code === 'ChannelDown' || keyCode === 428) return TV_ACTION.CHANNEL_DOWN;
 
   return null;
 }

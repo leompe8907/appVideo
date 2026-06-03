@@ -161,7 +161,7 @@ export function HomePage() {
             <div className="home-global-player-loading-spinner" />
           </div>
         )}
-        {isPlayerActive && <PlayerHud />}
+        {isPlayerActive && <PlayerHud isPlaybackMaximized />}
       </div>
 
       <div

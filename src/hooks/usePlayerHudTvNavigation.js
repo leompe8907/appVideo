@@ -89,6 +89,7 @@ export function usePlayerHudTvNavigation({
   showPlaybackButtons,
   channelChangeWithArrows = false,
   isLiveService = false,
+  isPlaybackMaximized = false,
 }) {
   const overlayRef = useRef(overlay);
   overlayRef.current = overlay;
@@ -343,9 +344,21 @@ export function usePlayerHudTvNavigation({
 
       const currentOverlay = overlayRef.current;
       const arrowZappingActive =
-        channelChangeWithArrows && isLiveService && !currentOverlay;
+        channelChangeWithArrows &&
+        isLiveService &&
+        isPlaybackMaximized &&
+        !currentOverlay;
 
       if (arrowZappingActive && (action === TV_ACTION.UP || action === TV_ACTION.DOWN)) {
+        return;
+      }
+
+      const channelKeyZappingActive =
+        isLiveService && isPlaybackMaximized && !currentOverlay;
+      if (
+        channelKeyZappingActive &&
+        (action === TV_ACTION.CHANNEL_UP || action === TV_ACTION.CHANNEL_DOWN)
+      ) {
         return;
       }
 
@@ -406,6 +419,15 @@ export function usePlayerHudTvNavigation({
       if (!(root instanceof HTMLElement)) return;
 
       if (!visible) {
+        const skipWakeForZap =
+          (arrowZappingActive || channelKeyZappingActive) &&
+          (action === TV_ACTION.UP ||
+            action === TV_ACTION.DOWN ||
+            action === TV_ACTION.CHANNEL_UP ||
+            action === TV_ACTION.CHANNEL_DOWN);
+        if (skipWakeForZap) {
+          return;
+        }
         if (
           action === TV_ACTION.UP ||
           action === TV_ACTION.DOWN ||
@@ -447,6 +469,7 @@ export function usePlayerHudTvNavigation({
     showPlaybackButtons,
     channelChangeWithArrows,
     isLiveService,
+    isPlaybackMaximized,
   ]);
 }
 
