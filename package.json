@@ -17,6 +17,8 @@
     "build:intv": "cross-env VITE_BRAND=intv VITE_DEFAULT_BRAND=intv vite build",
     "build:gigmax": "cross-env VITE_BRAND=gigmax VITE_DEFAULT_BRAND=gigmax vite build",
     "build:wind": "cross-env VITE_BRAND=wind VITE_DEFAULT_BRAND=wind vite build",
+    "build:cableatlantico": "cross-env VITE_BRAND=cableatlantico VITE_DEFAULT_BRAND=cableatlantico vite build",
+    "build:delancertv": "cross-env VITE_BRAND=cableatlantico VITE_DEFAULT_BRAND=cableatlantico vite build",
     "preview": "vite preview",
     "preview:telecable": "cross-env VITE_BRAND=telecable VITE_DEFAULT_BRAND=telecable vite preview --outDir dist/telecable",
     "preview:telecable:full": "pnpm run build:telecable && pnpm run preview:telecable",
@@ -28,6 +30,10 @@
     "preview:gigmax:full": "pnpm run build:gigmax && pnpm run preview:gigmax",
     "preview:wind": "cross-env VITE_BRAND=wind VITE_DEFAULT_BRAND=wind vite preview --outDir dist/wind",
     "preview:wind:full": "pnpm run build:wind && pnpm run preview:wind",
+    "preview:cableatlantico": "cross-env VITE_BRAND=cableatlantico VITE_DEFAULT_BRAND=cableatlantico vite preview --outDir dist/cableatlantico",
+    "preview:cableatlantico:full": "pnpm run build:cableatlantico && pnpm run preview:cableatlantico",
+    "preview:delancertv": "cross-env VITE_BRAND=cableatlantico VITE_DEFAULT_BRAND=cableatlantico vite preview --outDir dist/cableatlantico",
+    "preview:delancertv:full": "pnpm run build:delancertv && pnpm run preview:delancertv",
     "lint": "eslint ."
   },
   "dependencies": {

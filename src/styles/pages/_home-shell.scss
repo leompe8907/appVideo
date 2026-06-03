@@ -381,9 +381,6 @@ $home-sidebar-duration: 380ms;
   padding-inline: 0.5rem;
 }
 
-.home-sidebar--collapsed .home-sidebar-submenu--right {
-  left: calc(100% + 12px);
-}
 
 .home-sidebar-header {
   color: #fff;
@@ -525,9 +522,10 @@ $home-sidebar-duration: 380ms;
 }
 
 .home-sidebar-submenu--right {
-  position: absolute;
-  left: calc(100% + 10px);
-  top: 0;
+  position: fixed;
+  top: var(--home-sidebar-submenu-top, 0);
+  left: var(--home-sidebar-submenu-left, 0);
+  transform: translateY(-100%);
   margin-top: 0;
   padding-left: 0;
   border-left: none;
@@ -537,6 +535,9 @@ $home-sidebar-duration: 380ms;
   border: 1px solid rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(6px);
   min-width: 220px;
+  max-height: calc(var(--home-sidebar-submenu-top, 100vh) - 1rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   z-index: 50;
 }
 

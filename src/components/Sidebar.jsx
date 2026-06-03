@@ -188,9 +188,11 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   const navigate = useNavigate();
   const location = useLocation();
   const rootRef = useRef(null);
+  const settingsBtnRef = useRef(null);
   const { appName, currentBrand } = useBrand();
   const { vod, catchup, epg } = usePreload();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSubmenuStyle, setSettingsSubmenuStyle] = useState(null);
   const [aboutModal, setAboutModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null); // 'logout' | 'exit' | null
   const blurTimerRef = useRef(null);
@@ -203,6 +205,33 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     appName ||
     'App';
   blockCollapseForOverlayRef.current = Boolean(aboutModal || confirmAction);
+
+  useLayoutEffect(() => {
+    if (!settingsOpen) {
+      setSettingsSubmenuStyle(null);
+      return undefined;
+    }
+
+    const updateSubmenuPosition = () => {
+      const btn = settingsBtnRef.current;
+      if (!(btn instanceof HTMLElement)) return;
+      const rect = btn.getBoundingClientRect();
+      const gap = expanded ? 10 : 12;
+      setSettingsSubmenuStyle({
+        // Ancla el borde inferior del submenú al borde inferior del botón (crece hacia arriba).
+        '--home-sidebar-submenu-top': `${rect.bottom}px`,
+        '--home-sidebar-submenu-left': `${rect.right + gap}px`,
+      });
+    };
+
+    updateSubmenuPosition();
+    window.addEventListener('resize', updateSubmenuPosition);
+    window.addEventListener('scroll', updateSubmenuPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateSubmenuPosition);
+      window.removeEventListener('scroll', updateSubmenuPosition, true);
+    };
+  }, [settingsOpen, expanded]);
 
   const vodIsEmptyAfterLoad =
     vod.status === 'ready' &&
@@ -599,6 +628,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
         <div className="home-sidebar-group home-sidebar-group--settings">
           <div className="home-sidebar-settings">
             <button
+              ref={settingsBtnRef}
               type="button"
               className={`home-sidebar-link home-sidebar-settings-btn${settingsOpen ? ' active' : ''}`}
               onClick={() => setSettingsOpen((v) => !v)}
@@ -613,6 +643,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
                 className="home-sidebar-submenu home-sidebar-submenu--right"
                 role="group"
                 aria-label={t('common.settings', { defaultValue: 'Configuración' })}
+                style={settingsSubmenuStyle ?? undefined}
               >
                 {currentBrand?.features?.osms ? (
                   <SidebarNavSublink
