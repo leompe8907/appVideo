@@ -236,19 +236,17 @@ export const BRANDS = [
       epgCloseModalOnPlayLive: 'auto',
     },
 
-    // Catchup: pantalla independiente con 3 diseños (Legacy / Timeline / Netflix).
-    // Nota: la UI se decide con `catchup.ui.activeLayout`; si `showAllLayouts` está en true
-    // se renderizan los 3 para que el cliente pueda revisarlos.
+    // Catchup: Legacy (grid) o Rails (carriles por canal). `catchup.ui.activeLayout`: 'rails' | 'legacy'
+    // showAllLayouts: true muestra ambos para revisión.
     catchup: {
       enabled: true,
       ui: {
-        activeLayout: 'legacy', // 'legacy' | 'timeline' | 'netflix'
-        showAllLayouts: false, // para revisar los 3 diseños
+        activeLayout: 'rails',
+        showAllLayouts: false,
       },
       layouts: {
         legacy: { enabled: true },
-        timeline: { enabled: true },
-        netflix: { enabled: true },
+        rails: { enabled: true },
       },
     },
 
@@ -498,17 +496,16 @@ export const BRANDS = [
       epgCloseModalOnPlayLive: 'auto',
     },
 
-    // Catchup: pantalla independiente con 3 diseños (Legacy / Timeline / Netflix).
+    // Catchup: Legacy (grid) o Rails (carriles por canal).
     catchup: {
       enabled: true,
       ui: {
-        activeLayout: 'legacy',
+        activeLayout: 'rails',
         showAllLayouts: false,
       },
       layouts: {
         legacy: { enabled: true },
-        timeline: { enabled: true },
-        netflix: { enabled: true },
+        rails: { enabled: true },
       },
     },
 
@@ -772,17 +769,16 @@ export const BRANDS = [
       epgCloseModalOnPlayLive: 'auto',
     },
 
-    // Catchup: pantalla independiente con 3 diseños (Legacy / Timeline / Netflix).
+    // Catchup: Legacy (grid) o Rails (carriles por canal).
     catchup: {
       enabled: true,
       ui: {
-        activeLayout: 'legacy',
+        activeLayout: 'rails',
         showAllLayouts: false,
       },
       layouts: {
         legacy: { enabled: true },
-        timeline: { enabled: true },
-        netflix: { enabled: true },
+        rails: { enabled: true },
       },
     },
 
@@ -994,7 +990,7 @@ export const BRANDS = [
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
-      daysOffset: 2, // Días de offset para la API de guía de programación
+      daysOffset: 3, // Días de offset para la API de guía de programación
       rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#3333FF",
@@ -1010,17 +1006,16 @@ export const BRANDS = [
       epgCloseModalOnPlayLive: 'auto', // Control del cierre de modal al reproducir en vivo: true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
     },
 
-    // Catchup: pantalla independiente con 3 diseños (Legacy / Timeline / Netflix).
+    // Catchup: Legacy (grid) o Rails (carriles por canal).
     catchup: {
       enabled: true,
       ui: {
-        activeLayout: 'legacy',
+        activeLayout: 'rails',
         showAllLayouts: false,
       },
       layouts: {
         legacy: { enabled: true },
-        timeline: { enabled: true },
-        netflix: { enabled: true },
+        rails: { enabled: true },
       },
     },
 
@@ -1255,17 +1250,16 @@ export const BRANDS = [
       epgCloseModalOnPlayLive: 'auto',
     },
 
-    // Catchup: pantalla independiente con 3 diseños (Legacy / Timeline / Netflix).
+    // Catchup: Legacy (grid) o Rails (carriles por canal).
     catchup: {
       enabled: true,
       ui: {
-        activeLayout: 'legacy',
+        activeLayout: 'rails',
         showAllLayouts: false,
       },
       layouts: {
         legacy: { enabled: true },
-        timeline: { enabled: true },
-        netflix: { enabled: true },
+        rails: { enabled: true },
       },
     },
 
@@ -1528,17 +1522,16 @@ export const BRANDS = [
       epgCloseModalOnPlayLive: 'auto',
     },
 
-    // Catchup: pantalla independiente con 3 diseños (Legacy / Timeline / Netflix).
+    // Catchup: Legacy (grid) o Rails (carriles por canal).
     catchup: {
       enabled: true,
       ui: {
-        activeLayout: 'legacy',
+        activeLayout: 'rails',
         showAllLayouts: false,
       },
       layouts: {
         legacy: { enabled: true },
-        timeline: { enabled: true },
-        netflix: { enabled: true },
+        rails: { enabled: true },
       },
     },
 

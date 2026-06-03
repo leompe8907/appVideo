@@ -226,7 +226,11 @@
     "recorded": "Gravados",
     "recommended": "Recomendados",
     "noRecordings": "Sem gravações",
-    "noRecommendations": "Sem recomendações"
+    "noRecommendations": "Sem recomendações",
+    "seeMore": "Ver mais",
+    "unknownChannel": "Canal",
+    "play": "Reproduzir",
+    "notAvailableYet": "Este programa ainda não está disponível em catchup"
   },
   "vod": {
     "title": "VOD",

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
@@ -6,69 +6,31 @@ import { usePreload } from '../store/usePreload';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useParentalGate } from '../hooks/useParentalGate';
 import panaccessService from '../services/panaccessService';
+import EpgEventModal from '../components/epg/EpgEventModal';
+import { ChannelsRailsCatchupLayout } from '../components/catchup/ChannelsRailsCatchupLayout';
+import {
+  catchupGroupToChannel,
+  fmtHHmm,
+  getCatchupId,
+  getEventImage,
+  getEventStartMs,
+  getEventTitle,
+} from '../utils/catchupEvent';
 import '../styles/pages/_catchup.scss';
 
-function fmtHHmm(ms) {
-  if (ms == null) return '';
-  const d = ms instanceof Date ? ms : new Date(ms);
-  if (Number.isNaN(d.getTime())) return '';
-  const h = d.getHours();
-  const m = d.getMinutes();
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
-
-function fmtDateLabel(dateLike) {
-  if (!dateLike) return '';
-  const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
-  if (Number.isNaN(d.getTime())) return '';
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function getEventTitle(event) {
-  return event?.languages?.[0]?.title || event?.title || event?.name || '';
-}
-
-function getEventImage(event) {
-  return (
-    event?.imageUrl ||
-    event?.imageUrl2 ||
-    event?.catchupImageUrl ||
-    event?.posterUrl ||
-    event?.image ||
-    event?.poster ||
-    null
-  );
-}
-
-function getEventStartMs(event) {
-  const v = event?.startDate ?? event?.start;
-  if (v == null) return null;
-  if (typeof v?.valueOf === 'function') {
-    const ms = v.valueOf();
-    return Number.isFinite(ms) ? ms : null;
-  }
-  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
-  const ms = new Date(v).getTime();
-  return Number.isFinite(ms) ? ms : null;
-}
-
 function CatchupEventButton({
-  disabled,
   onEnter,
   title,
   timeText,
   imageUrl,
+  unavailable,
 }) {
   return (
     <button
-      className={`catchup-event-card ${disabled ? 'disabled' : ''}`}
+      className={`catchup-event-card ${unavailable ? 'unavailable' : ''}`}
       type="button"
-      disabled={disabled}
       tabIndex={0}
-      onClick={() => {
-        if (disabled) return;
-        onEnter?.();
-      }}
+      onClick={() => onEnter?.()}
     >
       {imageUrl ? <img className="catchup-event-card-img" src={imageUrl} alt="" /> : <div className="catchup-event-card-img--placeholder" />}
       <div className="catchup-event-card-body">
@@ -79,7 +41,7 @@ function CatchupEventButton({
   );
 }
 
-function LegacyCatchupLayout({ groups, onPlayCatchup, t }) {
+function LegacyCatchupLayout({ groups, onSelectEvent, t }) {
   const flat = groups?.flatMap((g) => (g?.events || []).map((ev) => ({ group: g, event: ev }))) || [];
   return (
     <div className="catchup-layout catchup-layout--legacy">
@@ -88,15 +50,15 @@ function LegacyCatchupLayout({ groups, onPlayCatchup, t }) {
           <h2 className="catchup-group-title">{group.name || group.catchupGroupId || `Grupo ${group.lcn ?? ''}`}</h2>
           <div className="catchup-events-grid">
             {(group.events || []).map((event) => {
-              const catchupId = event?.catchupId ?? event?.id ?? event?.eventId ?? null;
+              const catchupId = getCatchupId(event);
               const startMs = getEventStartMs(event);
               const timeText = startMs ? fmtHHmm(startMs) : '';
               const imageUrl = getEventImage(event);
               return (
                 <CatchupEventButton
                   key={catchupId ?? timeText}
-                  disabled={!catchupId}
-                  onEnter={() => onPlayCatchup(catchupId, event)}
+                  unavailable={!catchupId}
+                  onEnter={() => onSelectEvent?.(event, group)}
                   title={getEventTitle(event)}
                   timeText={timeText}
                   imageUrl={imageUrl}
@@ -107,100 +69,6 @@ function LegacyCatchupLayout({ groups, onPlayCatchup, t }) {
         </section>
       ))}
       {flat.length === 0 ? <div className="catchup-empty">{t('catchup.empty', { defaultValue: 'Sin catchup disponible' })}</div> : null}
-    </div>
-  );
-}
-
-function TimelineCatchupLayout({ events, onPlayCatchup, t }) {
-  const groupedByDate = useMemo(() => {
-    const map = new Map();
-    (events || []).forEach((ev) => {
-      const startMs = getEventStartMs(ev);
-      const label = fmtDateLabel(startMs);
-      if (!label) return;
-      if (!map.has(label)) map.set(label, []);
-      map.get(label).push(ev);
-    });
-    const sortedLabels = Array.from(map.keys()).sort();
-    return sortedLabels.map((label) => ({ label, items: map.get(label) || [] }));
-  }, [events]);
-
-  return (
-    <div className="catchup-layout catchup-layout--timeline">
-      {groupedByDate.map((block) => (
-        <section key={block.label} className="catchup-timeline-block">
-          <h2 className="catchup-timeline-date">{block.label}</h2>
-          <div className="catchup-events-column">
-            {block.items.map((event) => {
-              const catchupId = event?.catchupId ?? event?.id ?? event?.eventId ?? null;
-              const startMs = getEventStartMs(event);
-              const timeText = startMs ? fmtHHmm(startMs) : '';
-              return (
-                <CatchupEventButton
-                  key={catchupId ?? `${block.label}-${timeText}`}
-                  disabled={!catchupId}
-                  onEnter={() => onPlayCatchup(catchupId, event)}
-                  title={getEventTitle(event)}
-                  timeText={timeText}
-                  imageUrl={getEventImage(event)}
-                />
-              );
-            })}
-          </div>
-        </section>
-      ))}
-      {(events || []).length === 0 ? <div className="catchup-empty">{t('catchup.empty', { defaultValue: 'Sin catchup disponible' })}</div> : null}
-    </div>
-  );
-}
-
-function NetflixCatchupLayout({ recorded, recommended, onPlayCatchup, t }) {
-  const recommendedItems = recommended || [];
-  return (
-    <div className="catchup-layout catchup-layout--netflix">
-      <section className="catchup-rail">
-        <h2 className="catchup-rail-title">{t('catchup.recorded', { defaultValue: 'Grabados' })}</h2>
-        <div className="catchup-rail-grid">
-          {(recorded || []).slice(0, 30).map((task) => {
-            const catchupId = task?.catchupId ?? task?.catchup_id ?? null;
-            const event = task?.event;
-            const timeText = task?.startDate ? fmtHHmm(task.startDate) : '';
-            return (
-              <CatchupEventButton
-                key={catchupId ?? task?.recordingTaskId ?? timeText}
-                disabled={!catchupId}
-                onEnter={() => onPlayCatchup(catchupId, event)}
-                title={getEventTitle(event) || task?.catchupName || '—'}
-                timeText={timeText}
-                imageUrl={task?.image || getEventImage(event)}
-              />
-            );
-          })}
-          {(recorded || []).length === 0 ? <div className="catchup-empty">{t('catchup.noRecordings', { defaultValue: 'No hay grabaciones' })}</div> : null}
-        </div>
-      </section>
-
-      <section className="catchup-rail">
-        <h2 className="catchup-rail-title">{t('catchup.recommended', { defaultValue: 'Recomendados' })}</h2>
-        <div className="catchup-rail-grid">
-          {recommendedItems.slice(0, 30).map((event) => {
-            const catchupId = event?.catchupId ?? event?.id ?? event?.eventId ?? null;
-            const startMs = getEventStartMs(event);
-            const timeText = startMs ? fmtHHmm(startMs) : '';
-            return (
-              <CatchupEventButton
-                key={catchupId ?? timeText}
-                disabled={!catchupId}
-                onEnter={() => onPlayCatchup(catchupId, event)}
-                title={getEventTitle(event)}
-                timeText={timeText}
-                imageUrl={getEventImage(event)}
-              />
-            );
-          })}
-          {recommendedItems.length === 0 ? <div className="catchup-empty">{t('catchup.noRecommendations', { defaultValue: 'Sin recomendaciones' })}</div> : null}
-        </div>
-      </section>
     </div>
   );
 }
@@ -216,9 +84,10 @@ export function CatchupPage() {
   const catchupCfg = currentBrand?.catchup || {};
   const uiCfg = catchupCfg.ui || {};
   const enabled = catchupCfg.enabled !== false;
-  const activeLayout = uiCfg.activeLayout || 'legacy';
+  const activeLayout = uiCfg.activeLayout || 'rails';
   const showAllLayouts = !!uiCfg.showAllLayouts;
 
+  const [detailSelection, setDetailSelection] = useState(null);
   const autoPlayDoneRef = useRef(false);
 
   useEffect(() => {
@@ -230,22 +99,6 @@ export function CatchupPage() {
   }, [currentBrand, enabled, catchup.status, loadCatchup]);
 
   const groups = useMemo(() => catchup.groups || [], [catchup.groups]);
-  const recorded = useMemo(() => catchup.recorded || [], [catchup.recorded]);
-
-  const allEvents = useMemo(() => {
-    return groups.flatMap((g) => g?.events || []);
-  }, [groups]);
-
-  const recommended = useMemo(() => {
-    // Recomendados simple: eventos más recientes (por startDate).
-    const list = [...allEvents].filter(Boolean);
-    list.sort((a, b) => {
-      const aa = getEventStartMs(a) ?? 0;
-      const bb = getEventStartMs(b) ?? 0;
-      return bb - aa;
-    });
-    return list;
-  }, [allEvents]);
 
   const resolveCatchupUrl = (catchupId) => {
     if (!catchupId) return null;
@@ -257,7 +110,7 @@ export function CatchupPage() {
     }
   };
 
-  const onPlayCatchup = (catchupId, event) => {
+  const playCatchup = (catchupId, event) => {
     const url = resolveCatchupUrl(catchupId);
     if (!url) return;
     requestPlayMedia({
@@ -267,6 +120,18 @@ export function CatchupPage() {
       message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
       playFn: () => play({ type: 'catchup', id: catchupId, url, item: event || { catchupId }, autoPlay: true }),
     });
+  };
+
+  const onSelectEvent = (event, group) => {
+    setDetailSelection({
+      event,
+      channel: catchupGroupToChannel(group),
+    });
+  };
+
+  const onWatchFromDetail = (catchupId, event) => {
+    setDetailSelection(null);
+    playCatchup(catchupId, event);
   };
 
   useEffect(() => {
@@ -290,9 +155,21 @@ export function CatchupPage() {
   }, [location.state, enabled, play, requestPlayMedia, t]);
 
   const layoutsToShow = useMemo(() => {
-    if (showAllLayouts) return ['legacy', 'timeline', 'netflix'];
+    if (showAllLayouts) return ['rails', 'legacy'];
     return [activeLayout];
   }, [activeLayout, showAllLayouts]);
+
+  const renderLayout = (layoutKey) => {
+    if (catchupCfg.layouts?.[layoutKey]?.enabled === false) return null;
+
+    if (layoutKey === 'rails') {
+      return <ChannelsRailsCatchupLayout key="rails" groups={groups} onSelectEvent={onSelectEvent} t={t} />;
+    }
+    if (layoutKey === 'legacy') {
+      return <LegacyCatchupLayout key="legacy" groups={groups} onSelectEvent={onSelectEvent} t={t} />;
+    }
+    return null;
+  };
 
   return (
     <div className="catchup-page">
@@ -315,23 +192,25 @@ export function CatchupPage() {
 
         {catchup.status !== 'error' && (
           <div className="catchup-layouts">
-            {layoutsToShow.map((layoutKey) => {
-              if (catchupCfg.layouts?.[layoutKey]?.enabled === false) return null;
-
-              if (layoutKey === 'legacy') {
-                return <LegacyCatchupLayout key="legacy" groups={groups} onPlayCatchup={onPlayCatchup} t={t} />;
-              }
-              if (layoutKey === 'timeline') {
-                return <TimelineCatchupLayout key="timeline" events={allEvents} onPlayCatchup={onPlayCatchup} t={t} />;
-              }
-              return <NetflixCatchupLayout key="netflix" recorded={recorded} recommended={recommended} onPlayCatchup={onPlayCatchup} t={t} />;
-            })}
+            {layoutsToShow.map((layoutKey) => renderLayout(layoutKey))}
           </div>
         )}
       </div>
+
+      <EpgEventModal
+        open={Boolean(detailSelection)}
+        channel={detailSelection?.channel ?? null}
+        event={detailSelection?.event ?? null}
+        isLive={false}
+        nowMs={Date.now()}
+        canPlayLive={false}
+        showActions
+        detailContext="catchup"
+        onClose={() => setDetailSelection(null)}
+        onWatchCatchup={onWatchFromDetail}
+      />
     </div>
   );
 }
 
 export default CatchupPage;
-

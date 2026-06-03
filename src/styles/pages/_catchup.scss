@@ -1,5 +1,6 @@
 @use '../variables' as *;
 @use '../mixins' as *;
+@use '../components/embla-horizontal-rail' as *;
 
 .catchup-page {
   position: relative;
@@ -154,8 +155,7 @@
 }
 
 .catchup-group-title,
-.catchup-rail-title,
-.catchup-timeline-date {
+.catchup-rail-title {
   color: #fff;
   margin: 18px 0 12px;
   font-size: 18px;
@@ -163,18 +163,6 @@
 }
 
 .catchup-events-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 12px;
-}
-
-.catchup-events-column {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.catchup-rail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 12px;
@@ -197,8 +185,13 @@
   background: rgba(255, 255, 255, 0.10);
 }
 
-.catchup-event-card.disabled {
+.catchup-event-card.disabled,
+.catchup-event-card.unavailable {
   opacity: 0.45;
+}
+
+.catchup-event-card.unavailable {
+  cursor: pointer;
 }
 
 .catchup-event-card-img {
@@ -239,5 +232,238 @@
 .catchup-empty {
   color: rgba(255, 255, 255, 0.7);
   padding: 14px 0;
+}
+
+// Layout rails — carriles por canal
+.catchup-layout--rails {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.catchup-rail-section {
+  margin-bottom: 4px;
+  overflow-x: visible;
+  overflow-y: hidden;
+
+  @include embla-horizontal-rail;
+
+  .catchup-rail-title {
+    margin: 12px 0 8px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .catchup-rail-cards {
+    box-sizing: border-box;
+    padding-inline: 0;
+
+    &.embla-viewport {
+      overflow: hidden;
+      padding: 1.25rem 0;
+
+      .embla-container {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        gap: $spacing-md;
+        padding-inline-end: 1.75rem;
+      }
+
+      .embla-slide {
+        flex: 0 0 auto;
+        min-width: 0;
+
+        .catchup-card {
+          flex-shrink: 0;
+          margin-left: 0.5rem;
+        }
+      }
+    }
+
+    &[data-native-horizontal-rail] {
+      display: flex;
+      align-items: flex-start;
+      gap: $spacing-md;
+      overflow-x: auto;
+      overflow-y: visible;
+      padding: 1.25rem 0;
+      padding-inline-end: 1.75rem;
+      @include scrollbar-hidden;
+
+      .catchup-card {
+        flex-shrink: 0;
+        margin-left: 0.5rem;
+      }
+    }
+  }
+}
+
+.catchup-card {
+  width: 11.5em;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  outline: none;
+  transition: transform $transition-normal;
+  transform-origin: center center;
+  flex-shrink: 0;
+
+  .catchup-card-poster {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: $border-radius-md;
+    overflow: hidden;
+    background: rgba(40, 40, 40, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  }
+
+  .catchup-card-poster-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  }
+
+  .catchup-card-title {
+    margin-top: 0.35rem;
+    font-size: 0.85rem;
+    color: #fff;
+    line-height: 1.3;
+    @include text-truncate;
+    max-width: 100%;
+  }
+
+  .catchup-card-time {
+    margin-top: 0.2rem;
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.72);
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &:hover,
+  &.focused {
+    transform: scale(1.05);
+
+    .catchup-card-poster {
+      border-color: rgba(255, 255, 255, 0.6);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  &.focused .catchup-card-poster {
+    border-color: #e50914;
+    box-shadow: 0 0 0 2px #e50914;
+  }
+
+  &.disabled,
+  &.unavailable {
+    opacity: 0.45;
+  }
+
+  &.unavailable {
+    cursor: pointer;
+  }
+}
+
+.catchup-see-more-card {
+  .catchup-see-more-poster {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .catchup-see-more-icon {
+    font-size: 2.5rem;
+    font-weight: 300;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  &.focused .catchup-see-more-poster {
+    border-color: #e50914;
+    box-shadow: 0 0 0 2px #e50914;
+  }
+}
+
+.catchup-group-overlay {
+  position: fixed;
+  left: var(--home-sidebar-width, 0);
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.catchup-group-backdrop {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+.catchup-group-modal {
+  position: relative;
+  width: min(96vw, 1200px);
+  max-height: 88vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: rgba(18, 20, 28, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 18px 20px 22px;
+}
+
+.catchup-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.catchup-group-modal .catchup-group-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.catchup-group-close {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  color: #fff;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.catchup-group-grid {
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.5em, 1fr));
+  gap: $spacing-md;
+  padding: 4px 2px 8px;
+  @include scrollbar-hidden;
 }
 

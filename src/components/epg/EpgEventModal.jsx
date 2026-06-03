@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
+import { getEventDescription, getEventTitle } from '../../utils/catchupEvent';
 import '../epg/epg-common.scss';
 import AppIcon from '../AppIcon';
 
@@ -19,6 +20,7 @@ function fmtHHmm(ms) {
  * Opcion A: catchup todavía no migrado, así que:
  * - Siempre permitimos "Reproducir canal (en vivo)"
  * - Si el evento no es live, mostramos el botón "Watch" como deshabilitado (por ahora).
+ * - detailContext='catchup': pantalla Catchup; solo detalle + reproducir catchup (sin en vivo / recordar).
  */
 export function EpgEventModal({
   open,
@@ -28,6 +30,7 @@ export function EpgEventModal({
   nowMs,
   canPlayLive = true,
   showActions = true,
+  detailContext = 'epg',
   onClose,
   onPlayLive,
   onWatchCatchup,
@@ -58,9 +61,8 @@ export function EpgEventModal({
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [open, onClose]);
 
-  const eventTitle = event?.languages?.[0]?.title || event?.title || '';
-  const eventDescription =
-    event?.languages?.[0]?.extendedDescription || event?.languages?.[0]?.description || event?.description || '';
+  const eventTitle = getEventTitle(event);
+  const eventDescription = getEventDescription(event);
 
   const channelImg =
     channel?.img || channel?.imageUrl || channel?.logoUrl || channel?.logo || channel?.icon || null;
@@ -98,36 +100,45 @@ export function EpgEventModal({
   const catchupId = event?.catchupId ?? event?.catchup_id ?? event?.catchupEventId ?? null;
   const canWatch = catchupId != null && Number(catchupId) > -1;
 
+  const isCatchupContext = detailContext === 'catchup';
+
   const isPast = useMemo(() => {
-    if (nowMs == null || endMs == null) return false;
+    if (nowMs == null || endMs == null) return isCatchupContext;
     return Number(nowMs) > Number(endMs);
-  }, [nowMs, endMs]);
+  }, [nowMs, endMs, isCatchupContext]);
 
   const isFuture = useMemo(() => {
     if (nowMs == null || startMs == null) return false;
     return Number(nowMs) < Number(startMs);
   }, [nowMs, startMs]);
 
+  const showCatchupAction = isCatchupContext ? canWatch : isPast && canWatch;
+  const showPlayLiveAction = !isCatchupContext && showActions;
+  const showRemindAction = !isCatchupContext && isFuture && showActions;
+
   useEffect(() => {
     if (isTV && open) {
       const t = setTimeout(() => {
-        // Sin navegación espacial: enfocar un botón si existe.
         const id =
           !showActions
             ? 'epg-event-close'
-            : canPlayLive
-              ? 'epg-event-play-live'
-              : isFuture
-                ? 'epg-event-remind'
-                : (isPast && canWatch)
-                  ? 'epg-event-watch-catchup'
-                  : 'epg-event-close';
+            : isCatchupContext
+              ? showCatchupAction
+                ? 'epg-event-watch-catchup'
+                : 'epg-event-close'
+              : canPlayLive
+                ? 'epg-event-play-live'
+                : isFuture
+                  ? 'epg-event-remind'
+                  : showCatchupAction
+                    ? 'epg-event-watch-catchup'
+                    : 'epg-event-close';
         const el = document.getElementById(id);
         if (el) el.focus();
       }, 400);
       return () => clearTimeout(t);
     }
-  }, [isTV, open, canPlayLive, showActions, isFuture, isPast, canWatch]);
+  }, [isTV, open, canPlayLive, showActions, isFuture, showCatchupAction, isCatchupContext]);
 
   const durationMinutes = useMemo(() => {
     if (startMs == null || endMs == null) return null;
@@ -220,7 +231,11 @@ export function EpgEventModal({
           <h2 className="epg-event-modal-title">{eventTitle || t('epg.eventNoTitle', { defaultValue: 'Sin título' })}</h2>
 
           <div className="epg-event-modal-live-badge">
-            {isLive ? t('epg.live', { defaultValue: 'En vivo' }) : t('epg.notLive', { defaultValue: 'No en vivo' })}
+            {isCatchupContext
+              ? t('catchup.title', { defaultValue: 'Catchup' })
+              : isLive
+                ? t('epg.live', { defaultValue: 'En vivo' })
+                : t('epg.notLive', { defaultValue: 'No en vivo' })}
           </div>
 
           {eventDescription ? (
@@ -234,28 +249,36 @@ export function EpgEventModal({
 
         {showActions ? (
           <div className="epg-event-modal-footer">
-            <FocusableButton
-              className="epg-event-modal-primary"
-              onClick={() => onPlayLive?.()}
-              type="button"
-              disabled={!canPlayLive}
-              id="epg-event-play-live"
-            >
-              {t('epg.playLiveChannel', { defaultValue: 'Reproducir canal (en vivo)' })}
-            </FocusableButton>
-
-            {isPast && canWatch ? (
+            {showPlayLiveAction ? (
               <FocusableButton
-                className="epg-event-modal-secondary"
+                className="epg-event-modal-primary"
+                onClick={() => onPlayLive?.()}
+                type="button"
+                disabled={!canPlayLive}
+                id="epg-event-play-live"
+              >
+                {t('epg.playLiveChannel', { defaultValue: 'Reproducir canal (en vivo)' })}
+              </FocusableButton>
+            ) : null}
+
+            {showCatchupAction ? (
+              <FocusableButton
+                className={`epg-event-modal-secondary ${isCatchupContext ? 'epg-event-modal-primary' : ''}`}
                 type="button"
                 onClick={() => onWatchCatchup?.(catchupId, event)}
                 id="epg-event-watch-catchup"
               >
-                {t('epg.watchCatchup', { defaultValue: 'Watch (Catchup)' })}
+                {isCatchupContext
+                  ? t('catchup.play', { defaultValue: 'Reproducir' })
+                  : t('epg.watchCatchup', { defaultValue: 'Ver (Catchup)' })}
               </FocusableButton>
+            ) : isCatchupContext ? (
+              <p className="epg-event-modal-unavailable">
+                {t('catchup.notAvailableYet', { defaultValue: 'Este programa aún no está disponible en catchup' })}
+              </p>
             ) : null}
 
-            {isFuture ? (
+            {showRemindAction ? (
               <FocusableButton
                 className="epg-event-modal-secondary"
                 type="button"
