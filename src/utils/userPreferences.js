@@ -145,9 +145,14 @@ export function getChannelData(brandId) {
   }
 }
 
+function channelEntryMatches(entryChannel, channelId) {
+  if (entryChannel === channelId) return true;
+  return String(entryChannel) === String(channelId);
+}
+
 export function setChannelData(brandId, channelId, propKey, value) {
   const channelData = getChannelData(brandId);
-  const idx = channelData.findIndex((d) => d.channel === channelId);
+  const idx = channelData.findIndex((d) => channelEntryMatches(d.channel, channelId));
   if (idx >= 0) {
     channelData[idx][propKey] = value;
   } else {
@@ -158,9 +163,13 @@ export function setChannelData(brandId, channelId, propKey, value) {
 
 export function getAudioAndSubtitle(brandId, channelId) {
   const channelData = getChannelData(brandId);
-  const entry = channelData.find((d) => d.channel === channelId);
+  const entry = channelData.find((d) => channelEntryMatches(d.channel, channelId));
   if (!entry) return [null, null];
-  return [entry[PROP_AUDIO] ?? null, entry[PROP_SUBTITLES] ?? null];
+
+  // Paridad 10foot: solo devolver si el valor es truthy
+  const audio = entry[PROP_AUDIO] ? entry[PROP_AUDIO] : null;
+  const subtitles = entry[PROP_SUBTITLES] ? entry[PROP_SUBTITLES] : null;
+  return [audio, subtitles];
 }
 
 // --- Idioma de reproductor por marca ---

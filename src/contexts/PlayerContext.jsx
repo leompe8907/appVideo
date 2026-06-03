@@ -6,6 +6,13 @@ import { DEFAULT_SEEK_STEP_SECONDS, PLAYER_ENGINE_EVENTS } from '../player/engin
 import panaccessService from '../services/panaccessService';
 import * as userSession from '../utils/userSession';
 import { isLicenseInUseError } from '../utils/licenseInUse';
+import { resolveBrandId } from '../utils/brandStorage';
+import {
+  applySavedTrackPreferences,
+  getSavedTrackPreferences,
+  persistAudioPreference,
+  persistSubtitlePreference,
+} from '../utils/playerTrackPreferences';
 
 const PlayerContext = createContext(null);
 
@@ -43,8 +50,24 @@ export function PlayerProvider({ children }) {
   const engineRef = useRef(null);
   const seekTimeoutRef = useRef(null);
   const recoveryRef = useRef({ inProgress: false, lastKey: '' });
-  const playbackRef = useRef({ type: null, id: null, url: null });
+  const playbackRef = useRef({ type: null, id: null, url: null, item: null });
+  const userTrackChoiceRef = useRef(false);
+  const tracksRestoredRef = useRef(false);
   const debugRef = useRef(false);
+
+  const getPlaybackSnapshot = useCallback(
+    () => ({
+      type: playbackRef.current?.type ?? null,
+      id: playbackRef.current?.id ?? null,
+      item: playbackRef.current?.item ?? null,
+    }),
+    [],
+  );
+
+  const resetTrackMemoryForPlayback = useCallback(() => {
+    userTrackChoiceRef.current = false;
+    tracksRestoredRef.current = false;
+  }, []);
 
   // Mantener brandRef sincronizado para evitar stale closures en el primer useEffect
   useEffect(() => {
@@ -348,10 +371,38 @@ export function PlayerProvider({ children }) {
       }));
     };
 
+    const tryRestoreSavedTracks = (snap) => {
+      if (userTrackChoiceRef.current || tracksRestoredRef.current) return;
+
+      const playback = {
+        type: playbackRef.current?.type ?? null,
+        id: playbackRef.current?.id ?? null,
+        item: playbackRef.current?.item ?? null,
+      };
+      if (playback.type !== 'service') {
+        tracksRestoredRef.current = true;
+        return;
+      }
+
+      const brandId = resolveBrandId(brandRef.current?.brand ?? brandRef.current?.id);
+      const { subtitles: subtitleLabel } = getSavedTrackPreferences(brandId, playback);
+      const hasAudioTracks = snap.audio?.length > 0;
+      const hasTextTracks = snap.text?.length > 0;
+      if (!hasAudioTracks && !subtitleLabel) return;
+      if (subtitleLabel && !hasTextTracks && !hasAudioTracks) return;
+
+      const engine = engineRef.current;
+      if (!engine) return;
+
+      applySavedTrackPreferences(engine, brandId, playback, snap);
+      tracksRestoredRef.current = true;
+    };
+
     const handleTracksChange = (payload) => {
       const next = normalizeTracksSnapshot(payload);
       if (!next) return;
       setTracks((prev) => (tracksSnapshotsEqual(prev, next) ? prev : next));
+      tryRestoreSavedTracks(next);
     };
 
     function bindEngineListeners(engine) {
@@ -453,7 +504,8 @@ export function PlayerProvider({ children }) {
         return;
       }
 
-      playbackRef.current = { type, id, url };
+      playbackRef.current = { type, id, url, item: item ?? null };
+      resetTrackMemoryForPlayback();
 
       setState((s) => ({
         ...s,
@@ -489,7 +541,8 @@ export function PlayerProvider({ children }) {
     clearSeekTimeout();
     log('action:stop');
     resetEngineMedia();
-    playbackRef.current = { type: null, id: null, url: null };
+    playbackRef.current = { type: null, id: null, url: null, item: null };
+    resetTrackMemoryForPlayback();
     setState((s) => ({
       ...s,
       isPlaying: false,
@@ -503,7 +556,8 @@ export function PlayerProvider({ children }) {
     clearSeekTimeout();
     log('action:close');
     resetEngineMedia();
-    playbackRef.current = { type: null, id: null, url: null };
+    playbackRef.current = { type: null, id: null, url: null, item: null };
+    resetTrackMemoryForPlayback();
     recoveryRef.current = { inProgress: false, lastKey: '' };
     setState({
       type: null,
@@ -596,17 +650,44 @@ export function PlayerProvider({ children }) {
     }
   }, []);
 
-  const selectAudioTrack = useCallback((id) => {
-    engineRef.current?.selectAudioTrack?.(id);
-  }, []);
+  const selectAudioTrack = useCallback(
+    (id) => {
+      userTrackChoiceRef.current = true;
+      const engine = engineRef.current;
+      engine?.selectAudioTrack?.(id);
+      const brandId = resolveBrandId(brandRef.current?.brand ?? brandRef.current?.id);
+      const snap = engine?.getTracks?.();
+      const track = snap?.audio?.find((t) => String(t.id) === String(id));
+      persistAudioPreference(brandId, getPlaybackSnapshot(), track);
+    },
+    [getPlaybackSnapshot],
+  );
 
-  const selectTextTrack = useCallback((id) => {
-    engineRef.current?.selectTextTrack?.(id);
-  }, []);
+  const selectTextTrack = useCallback(
+    (id) => {
+      userTrackChoiceRef.current = true;
+      const engine = engineRef.current;
+      engine?.setSubtitlesEnabled?.(true);
+      engine?.selectTextTrack?.(id);
+      const brandId = resolveBrandId(brandRef.current?.brand ?? brandRef.current?.id);
+      const snap = engine?.getTracks?.();
+      const track = snap?.text?.find((t) => String(t.id) === String(id));
+      persistSubtitlePreference(brandId, getPlaybackSnapshot(), { enabled: true, track });
+    },
+    [getPlaybackSnapshot],
+  );
 
-  const setSubtitlesEnabled = useCallback((enabled) => {
-    engineRef.current?.setSubtitlesEnabled?.(enabled);
-  }, []);
+  const setSubtitlesEnabled = useCallback(
+    (enabled) => {
+      userTrackChoiceRef.current = true;
+      engineRef.current?.setSubtitlesEnabled?.(enabled);
+      if (enabled === false) {
+        const brandId = resolveBrandId(brandRef.current?.brand ?? brandRef.current?.id);
+        persistSubtitlePreference(brandId, getPlaybackSnapshot(), { enabled: false });
+      }
+    },
+    [getPlaybackSnapshot],
+  );
 
   const value = {
     state,
