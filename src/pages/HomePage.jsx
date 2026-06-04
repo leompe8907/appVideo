@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { HomeShellContent } from '../components/ads/HomeShellContent';
@@ -13,14 +13,10 @@ import '../styles/pages/_home-shell.scss';
 import { useOsmsPolling } from '../hooks/useOsmsPolling';
 import { HomeInputDispatcher } from '../components/home/HomeInputDispatcher';
 import {
-  getRestoredMainFocusTargetIfValid,
   rememberMainShellFocus,
+  scheduleRestoreMainShellFocus,
 } from '../utils/homeShellLastContentFocus';
-import {
-  focusElementSafe,
-  getVisibleFocusablesInContainer,
-  scrollElementIntoVisibleScrollAncestors,
-} from '../utils/homeShellNavigation';
+import { shouldDeferHomeShellNavigation } from '../utils/homeShellOverlays';
 
 export function HomePlaceholderPage({ title, description }) {
   return (
@@ -36,7 +32,25 @@ export function HomePage() {
   const { pathname } = useLocation();
   const { containerRef, state: playerState, licenseInUsePrompt, confirmLicenseInUse, close } = usePlayer();
   const isPlayerActive = Boolean(playerState?.url);
+  const wasPlayerActiveRef = useRef(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+
+  // TV / teclado: recordar cada foco dentro del contenido principal mientras no hay player.
+  useEffect(() => {
+    if (isPlayerActive) return undefined;
+
+    const onFocusIn = (e) => {
+      if (shouldDeferHomeShellNavigation()) return;
+      const t = e.target;
+      const main = document.querySelector('main.home-content[data-home-scope="content"]');
+      if (!(t instanceof HTMLElement) || !(main instanceof HTMLElement)) return;
+      if (!main.contains(t)) return;
+      rememberMainShellFocus(t);
+    };
+
+    document.addEventListener('focusin', onFocusIn, true);
+    return () => document.removeEventListener('focusin', onFocusIn, true);
+  }, [isPlayerActive]);
 
   // OSMS: refresco periódico y al volver a foreground (solo si la feature está habilitada por brand)
   useOsmsPolling({ intervalMs: 2 * 60 * 1000, days: 30 });
@@ -70,39 +84,10 @@ export function HomePage() {
 
   // Al cerrar el player (botón volver / BACK): restaurar el último foco del contenido principal.
   useLayoutEffect(() => {
-    if (isPlayerActive) return undefined;
-    let cancelled = false;
-
-    const tryRestore = () => {
-      if (cancelled) return;
-      const main = document.querySelector('main.home-content[data-home-scope="content"]');
-      if (!(main instanceof HTMLElement)) return;
-
-      const restored = getRestoredMainFocusTargetIfValid(main);
-      if (restored && focusElementSafe(restored)) {
-        const bouquetScroll = restored.closest('.bouquet-inicio-scroll');
-        if (bouquetScroll instanceof HTMLElement) {
-          scrollElementIntoVisibleScrollAncestors(restored, bouquetScroll);
-        } else {
-          const stack = main.querySelector('.home-content-stack');
-          if (stack instanceof HTMLElement) {
-            scrollElementIntoVisibleScrollAncestors(restored, stack);
-          }
-        }
-        return;
-      }
-
-      const list = getVisibleFocusablesInContainer(main);
-      if (list[0]) focusElementSafe(list[0]);
-    };
-
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(tryRestore);
-    });
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(id);
-    };
+    const wasActive = wasPlayerActiveRef.current;
+    wasPlayerActiveRef.current = isPlayerActive;
+    if (isPlayerActive || !wasActive) return undefined;
+    return scheduleRestoreMainShellFocus();
   }, [isPlayerActive]);
 
   useLayoutEffect(() => {

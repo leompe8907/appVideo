@@ -6,6 +6,24 @@ import { normalizeBrParentalRating } from '../utils/parentalRatingBR';
 import { getCurrentEpgEvent } from '../utils/epgCurrentEvent';
 import i18n from '../locales/i18n';
 import { getActiveBrandConfig } from '../config/brandConfig';
+import { rememberMainShellFocus } from '../utils/homeShellLastContentFocus';
+
+function rememberShellFocusFromActiveElement() {
+  try {
+    const active = document.activeElement;
+    const main = document.querySelector('main.home-content[data-home-scope="content"]');
+    if (active instanceof HTMLElement && main instanceof HTMLElement && main.contains(active)) {
+      rememberMainShellFocus(active);
+    }
+  } catch {
+    // noop
+  }
+}
+
+function captureGateFocusSnapshot() {
+  rememberShellFocusFromActiveElement();
+  return document.activeElement;
+}
 
 const initial = {
   open: false,
@@ -60,7 +78,7 @@ export const useParentalGateStore = create((set, get) => ({
       gateKind: 'setupPin',
       purpose: 'action',
       unlockScope: 'global',
-      lastFocusedEl: document.activeElement,
+      lastFocusedEl: captureGateFocusSnapshot(),
     });
     return true;
   },
@@ -115,7 +133,7 @@ export const useParentalGateStore = create((set, get) => ({
         gateKind: 'channel',
         purpose: 'action',
         unlockScope: unlockScope === 'global' ? 'global' : 'channel',
-        lastFocusedEl: document.activeElement,
+        lastFocusedEl: captureGateFocusSnapshot(),
       });
       return true;
     }
@@ -143,7 +161,7 @@ export const useParentalGateStore = create((set, get) => ({
         gateKind: 'channel',
         purpose: 'playback',
         unlockScope: unlockScope === 'global' ? 'global' : 'channel',
-        lastFocusedEl: document.activeElement,
+        lastFocusedEl: captureGateFocusSnapshot(),
       });
       return true;
     }
@@ -178,7 +196,7 @@ export const useParentalGateStore = create((set, get) => ({
           unlockScope: 'global',
           pcUnlockMode: mode,
           pcUnlockTtlMs: mode === 'ttl' ? (Number.isFinite(ttlMs) ? ttlMs : 40 * 60 * 1000) : null,
-          lastFocusedEl: document.activeElement,
+          lastFocusedEl: captureGateFocusSnapshot(),
         });
         return true;
       }
@@ -212,7 +230,7 @@ export const useParentalGateStore = create((set, get) => ({
           gateKind: 'rating',
           purpose: 'playback',
           unlockScope: 'global',
-          lastFocusedEl: document.activeElement,
+          lastFocusedEl: captureGateFocusSnapshot(),
         });
         return true;
       }
@@ -263,7 +281,7 @@ export const useParentalGateStore = create((set, get) => ({
         gateKind: 'rating',
         purpose: 'playback',
         unlockScope: 'global',
-        lastFocusedEl: document.activeElement,
+        lastFocusedEl: captureGateFocusSnapshot(),
       });
       return true;
     }
