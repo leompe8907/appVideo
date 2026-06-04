@@ -675,7 +675,8 @@ class PanaccessService {
   }
 
   /**
-   * Devuelve la URL M3u8 para reproducir un catchup.
+   * Devuelve la URL M3u8 para reproducir un catchup (paridad 10foot `cv.getTopLevelCatchupM3u8Url`).
+   * El query `catchupId` debe ser el `event.id` del API, no el `eventId` de rejilla EPG.
    * @param {Object} options - options.catchupId (requerido).
    * @returns {string} URL del stream.
    */

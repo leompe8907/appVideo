@@ -473,11 +473,12 @@ export const usePreloadStore = create(function (set, get) {
                   ? startMs + durationSeconds * 1000
                   : null;
               var endMs = endMsFromDuration != null ? endMsFromDuration : toMs(endRaw);
+              // Paridad 10foot: getCatchupM3u8 usa event.id (no eventId de rejilla).
               var resolvedCatchupId =
-                ev.catchupId != null ? ev.catchupId
+                ev.id != null ? ev.id
+                : ev.catchupId != null ? ev.catchupId
                 : ev.catchup_id != null ? ev.catchup_id
                 : ev.catchupEventId != null ? ev.catchupEventId
-                : ev.id != null ? ev.id
                 : ev.eventId != null ? ev.eventId
                 : null;
 

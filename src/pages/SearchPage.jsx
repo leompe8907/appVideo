@@ -238,19 +238,27 @@ export function SearchPage() {
     }
 
     if (item.type === 'catchup') {
-      const catchupId = item.catchupId ?? item.id;
-      if (!catchupId) return;
+      const raw = item.raw || item;
+      const streamId = raw?.id ?? raw?.catchupId ?? item.id;
+      if (streamId == null) return;
       try {
-        const url = panaccessService.getCatchupM3u8Url({ catchupId });
-        const normalized = panaccessService.normalizePlaybackUrl(url);
-        if (normalized) {
+        const url = panaccessService.normalizePlaybackUrl(
+          panaccessService.getCatchupM3u8Url({ catchupId: streamId }),
+        );
+        if (url) {
           requestPlayMedia({
-            item: item.raw || { catchupId },
+            item: raw || { catchupId: streamId, id: streamId },
             ratingRaw: item?.raw?.parentalRating ?? item?.parentalRating ?? null,
             title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
             message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
             playFn: () =>
-              play({ type: 'catchup', id: catchupId, url: normalized, item: item.raw || { catchupId }, autoPlay: true }),
+              play({
+                type: 'catchup',
+                id: streamId,
+                url,
+                item: raw || { catchupId: streamId, id: streamId },
+                autoPlay: true,
+              }),
           });
         }
       } catch {
@@ -342,26 +350,41 @@ export function SearchPage() {
     });
   }, [selectedEpgItem, play, requestPlayChannel]);
 
-  const handleEpgWatchCatchup = useCallback((catchupId) => {
-    if (!catchupId) return;
-    setSelectedEpgItem(null);
-    try {
-      const url = panaccessService.getCatchupM3u8Url({ catchupId });
-      const normalized = panaccessService.normalizePlaybackUrl(url);
-      if (normalized) {
-        requestPlayMedia({
-          item: { catchupId },
-          ratingRaw: selectedEpgItem?.raw?.event?.parentalRating ?? null,
-          title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
-          message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
-          playFn: () =>
-            play({ type: 'catchup', id: catchupId, url: normalized, item: { catchupId }, autoPlay: true }),
-        });
+  const handleEpgWatchCatchup = useCallback(
+    (catchupLookupId) => {
+      if (catchupLookupId == null) return;
+      const ev = selectedEpgItem?.raw?.event ?? selectedEpgItem?.event;
+      const streamId = ev?.id ?? ev?.catchupId ?? catchupLookupId;
+      if (streamId == null) return;
+      setSelectedEpgItem(null);
+      try {
+        const url = panaccessService.normalizePlaybackUrl(
+          panaccessService.getCatchupM3u8Url({ catchupId: streamId }),
+        );
+        if (url) {
+          requestPlayMedia({
+            item: ev || { catchupId: streamId, id: streamId },
+            ratingRaw: selectedEpgItem?.raw?.event?.parentalRating ?? null,
+            title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+            message: t('parental.restrictedMessage', {
+              defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.',
+            }),
+            playFn: () =>
+              play({
+                type: 'catchup',
+                id: streamId,
+                url,
+                item: ev || { catchupId: streamId, id: streamId },
+                autoPlay: true,
+              }),
+          });
+        }
+      } catch {
+        // noop
       }
-    } catch {
-      // noop
-    }
-  }, [selectedEpgItem, play, requestPlayMedia, t]);
+    },
+    [selectedEpgItem, play, requestPlayMedia, t],
+  );
 
   const vodLayout = currentBrand?.vod?.layout === 'classic' ? 'classic' : 'hero';
   const vodCategories = vod.categories || [];

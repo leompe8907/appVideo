@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { getEventDescription, getEventTitle } from '../../utils/catchupEvent';
+import { getCatchupStreamId, getEventDescription, getEventTitle } from '../../utils/catchupEvent';
 import '../epg/epg-common.scss';
 import AppIcon from '../AppIcon';
 
@@ -97,8 +97,8 @@ export function EpgEventModal({
 
   // El evento EPG puede incluir identificador de catchup (backend/config).
   // Si existe, habilitamos "Watch / Catchup".
-  const catchupId = event?.catchupId ?? event?.catchup_id ?? event?.catchupEventId ?? null;
-  const canWatch = catchupId != null && Number(catchupId) > -1;
+  const catchupStreamId = getCatchupStreamId(event);
+  const canWatch = catchupStreamId != null;
 
   const isCatchupContext = detailContext === 'catchup';
 
@@ -265,7 +265,7 @@ export function EpgEventModal({
               <FocusableButton
                 className={`epg-event-modal-secondary ${isCatchupContext ? 'epg-event-modal-primary' : ''}`}
                 type="button"
-                onClick={() => onWatchCatchup?.(catchupId, event)}
+                onClick={() => onWatchCatchup?.(catchupStreamId, event)}
                 id="epg-event-watch-catchup"
               >
                 {isCatchupContext

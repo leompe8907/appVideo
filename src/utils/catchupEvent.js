@@ -85,12 +85,107 @@ export function fmtCatchupSchedule(ms, locale) {
   return dateText || timeText;
 }
 
-export function getCatchupId(event) {
-  return event?.catchupId ?? event?.id ?? event?.eventId ?? null;
+function idsMatch(a, b) {
+  if (a == null || b == null || a === '' || b === '') return false;
+  return String(a) === String(b);
 }
 
-export function getCatchupGroupKey(group) {
-  return group?.catchupGroupId ?? group?.epgStreamId ?? group?.lcn ?? group?.name ?? 'group';
+/**
+ * ID para `getCatchupM3u8` — paridad 10foot (`AppData.getTopLevelCatchupM3u8Url(event.id)`).
+ * Prioridad: `id` del API, luego campos catchup explícitos; `eventId` solo como último recurso.
+ */
+export function getCatchupStreamId(event) {
+  if (!event) return null;
+  const raw =
+    event.id ??
+    event.catchupId ??
+    event.catchup_id ??
+    event.catchupEventId ??
+    event.eventId ??
+    null;
+  if (raw == null || raw === '') return null;
+  const n = Number(raw);
+  if (Number.isFinite(n) && n <= 0) return null;
+  return raw;
+}
+
+/** Alias histórico: siempre el id de streaming (no el eventId de rejilla). */
+export function getCatchupId(event) {
+  return getCatchupStreamId(event);
+}
+
+/**
+ * Busca evento en grupos cargados (paridad getCatchupByEventId + getCatchupEvent).
+ * @param {Array} groups
+ * @param {string|number} lookupId — id de tile, event.id, eventId o catchupId EPG
+ * @param {string|number} [epgStreamId] — opcional, acota al grupo del tile
+ */
+export function findCatchupEventInGroups(groups, lookupId, epgStreamId) {
+  if (lookupId == null || lookupId === '') return null;
+  const list = Array.isArray(groups) ? groups : [];
+
+  for (const group of list) {
+    if (epgStreamId != null && epgStreamId !== '') {
+      const gid = group?.epgStreamId ?? group?.epg_stream_id;
+      if (!idsMatch(gid, epgStreamId)) continue;
+    }
+    const events = group?.events || [];
+    for (const event of events) {
+      if (
+        idsMatch(event?.id, lookupId) ||
+        idsMatch(event?.eventId, lookupId) ||
+        idsMatch(event?.catchupId, lookupId) ||
+        idsMatch(event?.catchup_id, lookupId) ||
+        idsMatch(event?.catchupEventId, lookupId)
+      ) {
+        return event;
+      }
+    }
+  }
+
+  for (const group of list) {
+    const events = group?.events || [];
+    for (const event of events) {
+      if (
+        idsMatch(event?.id, lookupId) ||
+        idsMatch(event?.eventId, lookupId) ||
+        idsMatch(event?.catchupId, lookupId) ||
+        idsMatch(event?.catchup_id, lookupId) ||
+        idsMatch(event?.catchupEventId, lookupId)
+      ) {
+        return event;
+      }
+    }
+  }
+
+  return null;
+}
+
+/** Clave estable para listas React. */
+export function getCatchupRailItemKey(event, groupKey, index) {
+  const streamId = getCatchupStreamId(event);
+  const epgEventId = event?.eventId ?? event?.event_id;
+  const startMs = getEventStartMs(event);
+  const startPart = startMs != null ? String(startMs) : `idx-${index}`;
+  const idPart =
+    streamId != null
+      ? `s-${streamId}`
+      : epgEventId != null
+        ? `e-${epgEventId}`
+        : 'no-id';
+  return `${groupKey}:${startPart}:${idPart}:${index}`;
+}
+
+export function getCatchupGroupKey(group, index) {
+  const base =
+    group?.catchupGroupId ??
+    group?.catchup_group_id ??
+    group?.epgStreamId ??
+    group?.epg_stream_id ??
+    group?.lcn ??
+    group?.name ??
+    'group';
+  return index == null ? String(base) : `${base}__${index}`;
 }
 
 export function getCatchupGroupTitle(group, fallback = '') {

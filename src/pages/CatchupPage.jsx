@@ -10,8 +10,12 @@ import EpgEventModal from '../components/epg/EpgEventModal';
 import { ChannelsRailsCatchupLayout } from '../components/catchup/ChannelsRailsCatchupLayout';
 import {
   catchupGroupToChannel,
+  findCatchupEventInGroups,
   fmtHHmm,
+  getCatchupGroupKey,
+  getCatchupRailItemKey,
   getCatchupId,
+  getCatchupStreamId,
   getEventImage,
   getEventStartMs,
   getEventTitle,
@@ -45,18 +49,19 @@ function LegacyCatchupLayout({ groups, onSelectEvent, t }) {
   const flat = groups?.flatMap((g) => (g?.events || []).map((ev) => ({ group: g, event: ev }))) || [];
   return (
     <div className="catchup-layout catchup-layout--legacy">
-      {groups?.map((group) => (
-        <section key={group.catchupGroupId ?? group.id ?? group.epgStreamId} className="catchup-group">
+      {groups?.map((group, groupIndex) => (
+        <section key={getCatchupGroupKey(group, groupIndex)} className="catchup-group">
           <h2 className="catchup-group-title">{group.name || group.catchupGroupId || `Grupo ${group.lcn ?? ''}`}</h2>
           <div className="catchup-events-grid">
-            {(group.events || []).map((event) => {
+            {(group.events || []).map((event, eventIndex) => {
               const catchupId = getCatchupId(event);
               const startMs = getEventStartMs(event);
               const timeText = startMs ? fmtHHmm(startMs) : '';
               const imageUrl = getEventImage(event);
+              const groupKey = getCatchupGroupKey(group, groupIndex);
               return (
                 <CatchupEventButton
-                  key={catchupId ?? timeText}
+                  key={getCatchupRailItemKey(event, groupKey, eventIndex)}
                   unavailable={!catchupId}
                   onEnter={() => onSelectEvent?.(event, group)}
                   title={getEventTitle(event)}
@@ -100,25 +105,42 @@ export function CatchupPage() {
 
   const groups = useMemo(() => catchup.groups || [], [catchup.groups]);
 
-  const resolveCatchupUrl = (catchupId) => {
-    if (!catchupId) return null;
+  const resolveCatchupUrl = (streamCatchupId) => {
+    if (streamCatchupId == null || streamCatchupId === '') return null;
+    const id = streamCatchupId;
     try {
-      const url = panaccessService.getCatchupM3u8Url({ catchupId });
-      return url || null;
-    } catch {
+      const raw = panaccessService.getCatchupM3u8Url({ catchupId: id });
+      return panaccessService.normalizePlaybackUrl(raw) || null;
+    } catch (err) {
+      if (import.meta.env?.DEV) {
+        console.warn('[CatchupPage] resolveCatchupUrl failed', id, err);
+      }
       return null;
     }
   };
 
-  const playCatchup = (catchupId, event) => {
-    const url = resolveCatchupUrl(catchupId);
-    if (!url) return;
+  const playCatchup = (_catchupIdArg, event) => {
+    const streamId = getCatchupStreamId(event);
+    const url = resolveCatchupUrl(streamId);
+    if (!url || streamId == null) {
+      if (import.meta.env?.DEV) {
+        console.warn('[CatchupPage] No se pudo reproducir catchup', { streamId, event });
+      }
+      return;
+    }
     requestPlayMedia({
-      item: event || { catchupId },
+      item: event || { catchupId: streamId, id: streamId },
       ratingRaw: event?.parentalRating,
       title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
       message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
-      playFn: () => play({ type: 'catchup', id: catchupId, url, item: event || { catchupId }, autoPlay: true }),
+      playFn: () =>
+        play({
+          type: 'catchup',
+          id: streamId,
+          url,
+          item: event || { catchupId: streamId, id: streamId },
+          autoPlay: true,
+        }),
     });
   };
 
@@ -136,23 +158,33 @@ export function CatchupPage() {
 
   useEffect(() => {
     const state = location.state || {};
-    const catchupId = state.catchupId ?? state.catchup_id ?? null;
-    if (!catchupId) return;
+    const lookupId = state.catchupId ?? state.catchup_id ?? null;
+    if (!lookupId) return;
     if (!enabled) return;
     if (autoPlayDoneRef.current) return;
+    if (groups.length === 0) return;
 
-    const url = resolveCatchupUrl(catchupId);
-    if (!url) return;
+    const event = findCatchupEventInGroups(groups, lookupId, state.epgStreamId);
+    const streamId = getCatchupStreamId(event) ?? getCatchupStreamId({ id: lookupId });
+    const url = resolveCatchupUrl(streamId);
+    if (!url || streamId == null) return;
 
     autoPlayDoneRef.current = true;
     requestPlayMedia({
-      item: { catchupId },
-      ratingRaw: null,
+      item: event || { catchupId: streamId, id: streamId },
+      ratingRaw: event?.parentalRating ?? null,
       title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
       message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
-      playFn: () => play({ type: 'catchup', id: catchupId, url, item: { catchupId }, autoPlay: true }),
+      playFn: () =>
+        play({
+          type: 'catchup',
+          id: streamId,
+          url,
+          item: event || { catchupId: streamId, id: streamId },
+          autoPlay: true,
+        }),
     });
-  }, [location.state, enabled, play, requestPlayMedia, t]);
+  }, [location.state, enabled, groups, play, requestPlayMedia, t]);
 
   const layoutsToShow = useMemo(() => {
     if (showAllLayouts) return ['rails', 'legacy'];

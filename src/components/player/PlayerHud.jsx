@@ -1095,10 +1095,15 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
             // Reproducir canal en vivo: reusar el mismo flujo de zapping.
             handleZapToChannel(state?.item);
           }}
-          onWatchCatchup={(catchupId) => {
-            if (!catchupId) return;
+          onWatchCatchup={(catchupStreamId) => {
+            if (catchupStreamId == null) return;
             closePlayerOverlay();
-            navigate('/home/catchup', { state: { catchupId, from: 'player-info' }, replace: false });
+            const ch = state?.item;
+            const epgStreamId = ch?.epgStreamId ?? ch?.epg_stream_id ?? null;
+            navigate('/home/catchup', {
+              state: { catchupId: catchupStreamId, epgStreamId, from: 'player-info' },
+              replace: false,
+            });
           }}
         />
       ) : null}

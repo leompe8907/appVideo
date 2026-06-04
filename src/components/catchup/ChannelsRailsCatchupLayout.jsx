@@ -3,7 +3,7 @@ import { EmblaHorizontalRail } from '../navigation/EmblaHorizontalRail';
 import CatchupCard from './CatchupCard';
 import CatchupSeeMoreCard from './CatchupSeeMoreCard';
 import CatchupGroupModal from './CatchupGroupModal';
-import { getCatchupGroupKey, getCatchupGroupTitle } from '../../utils/catchupEvent';
+import { getCatchupGroupKey, getCatchupGroupTitle, getCatchupRailItemKey } from '../../utils/catchupEvent';
 
 const ITEMS_PER_RAIL = 9;
 
@@ -15,11 +15,11 @@ export function ChannelsRailsCatchupLayout({ groups, onSelectEvent, t }) {
   return (
     <>
       <div className="catchup-layout catchup-layout--rails">
-        {nonEmptyGroups.map((group) => {
+        {nonEmptyGroups.map((group, groupIndex) => {
           const events = group.events || [];
           const preview = events.slice(0, ITEMS_PER_RAIL);
           const hasMore = events.length > ITEMS_PER_RAIL;
-          const groupKey = getCatchupGroupKey(group);
+          const groupKey = getCatchupGroupKey(group, groupIndex);
           const groupTitle = getCatchupGroupTitle(group, t('catchup.unknownChannel', { defaultValue: 'Canal' }));
 
           return (
@@ -32,13 +32,16 @@ export function ChannelsRailsCatchupLayout({ groups, onSelectEvent, t }) {
               <EmblaHorizontalRail className="catchup-rail-cards">
                 {preview.map((event, index) => (
                   <CatchupCard
-                    key={event?.catchupId ?? event?.id ?? `${groupKey}-${index}`}
+                    key={getCatchupRailItemKey(event, groupKey, index)}
                     event={event}
                     onSelect={() => onSelectEvent?.(event, group)}
                   />
                 ))}
                 {hasMore ? (
-                  <CatchupSeeMoreCard onSelect={() => setModalGroup({ group, groupTitle })} />
+                  <CatchupSeeMoreCard
+                    key={`${groupKey}-see-more`}
+                    onSelect={() => setModalGroup({ group, groupTitle })}
+                  />
                 ) : null}
               </EmblaHorizontalRail>
             </section>

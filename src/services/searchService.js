@@ -277,7 +277,7 @@ function normalizeResult(item, type, ctx = {}) {
     }
   } else if (type === 'catchup') {
     normalized.logo = item?.imageUrl || item?.imageUrl2 || item?.catchupImageUrl || item?.img || item?.posterUrl || '';
-    normalized.catchupId = item?.catchupId ?? item?.id ?? null;
+    normalized.catchupId = item?.id ?? item?.catchupId ?? null;
   } else if (type === 'epg') {
     // item esperado: { channel, event, title }
     const startMs = getMs(item?.event?.startDate ?? item?.event?.start);

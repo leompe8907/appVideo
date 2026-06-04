@@ -375,9 +375,18 @@ export function EpgCards({ onSelect }) {
             setDetail(null);
             handlePlayLive(detail.channel);
           }}
-          onWatchCatchup={(catchupId) => {
-            if (catchupId == null || Number(catchupId) < 0) return;
-            navigate('/home/catchup', { state: { catchupId, from: 'epg' }, replace: false });
+          onWatchCatchup={(catchupStreamId, event) => {
+            if (catchupStreamId == null) return;
+            const epgStreamId =
+              detail?.channel?.epgStreamId ??
+              detail?.channel?.epg_stream_id ??
+              event?.epgStreamId ??
+              event?.epg_stream_id ??
+              null;
+            navigate('/home/catchup', {
+              state: { catchupId: catchupStreamId, epgStreamId, from: 'epg' },
+              replace: false,
+            });
           }}
           onRemind={({ channel, event, startMs }) => {
             const eventId = event?.event_id ?? event?.eventId ?? event?.id ?? null;

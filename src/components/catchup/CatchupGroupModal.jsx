@@ -3,6 +3,7 @@ import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';
 import CatchupCard from './CatchupCard';
+import { getCatchupGroupKey, getCatchupRailItemKey } from '../../utils/catchupEvent';
 
 export function CatchupGroupModal({ groupTitle, group, events = [], onSelectEvent, onClose }) {
   const { t } = useTranslation();
@@ -34,7 +35,7 @@ export function CatchupGroupModal({ groupTitle, group, events = [], onSelectEven
         <div className="catchup-group-grid">
           {events.map((event, index) => (
             <CatchupCard
-              key={event?.catchupId ?? event?.id ?? index}
+              key={getCatchupRailItemKey(event, getCatchupGroupKey(group), index)}
               event={event}
               onSelect={() => {
                 onSelectEvent?.(event, group);
