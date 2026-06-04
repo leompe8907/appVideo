@@ -6,6 +6,7 @@ import { FocusableButton } from '../navigation/FocusableButton';
 import { getCatchupStreamId, getEventDescription, getEventTitle } from '../../utils/catchupEvent';
 import '../epg/epg-common.scss';
 import AppIcon from '../AppIcon';
+import { BrandFallbackImage } from '../common/BrandFallbackImage';
 
 function fmtHHmm(ms) {
   if (!ms || Number.isNaN(ms)) return '';
@@ -160,16 +161,11 @@ export function EpgEventModal({
         <div className="epg-event-modal-header">
           <div className="epg-event-modal-header-left">
             <div className="epg-event-modal-channel">
-              {channelImg ? (
-                <img
-                  src={channelImg}
-                  alt={channel?.name || ''}
-                  className="epg-event-modal-channel-logo"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              ) : null}
+              <BrandFallbackImage
+                src={channelImg}
+                alt={channel?.name || ''}
+                className="epg-event-modal-channel-logo"
+              />
               <div className="epg-event-modal-channel-text">
                 <div className="epg-event-modal-name">{channel?.name ?? ''}</div>
                 <div className="epg-event-modal-meta-row">
@@ -195,22 +191,12 @@ export function EpgEventModal({
           </div>
 
           <div className="epg-event-modal-header-right">
-            {eventImg ? (
-              <img
-                key={eventImg}
-                src={eventImg}
-                alt={eventTitle || ''}
-                className="epg-event-modal-event-img"
-                onLoad={(e) => {
-                  // Si el evento anterior falló y dejó opacidad baja, al cargar bien volvemos a mostrar al 100%.
-                  e.currentTarget.style.opacity = '1';
-                }}
-                onError={(e) => {
-                  // No ocultar para que podamos ver si el problema es de URL.
-                  e.currentTarget.style.opacity = '0.25';
-                }}
-              />
-            ) : null}
+            <BrandFallbackImage
+              key={eventImg || 'event-placeholder'}
+              src={eventImg}
+              alt={eventTitle || ''}
+              className="epg-event-modal-event-img"
+            />
 
             <FocusableButton
               className="epg-event-modal-close"

@@ -9,6 +9,8 @@ import { useParentalGate } from '../hooks/useParentalGate';
 import EpgEventModal from '../components/epg/EpgEventModal';
 import VodDetailModal from '../components/vod/VodDetailModal';
 import VodDetailModalClassic from '../components/vod/VodDetailModalClassic';
+import { useBrandPlaceholderUrl } from '../hooks/useBrandPlaceholderUrl';
+import { catchupGroupToChannel, catchupEventToChannel } from '../utils/catchupEvent';
 import '../styles/pages/_search.scss';
 
 function SearchTab({ id, label, active, hidden, onSelect }) {
@@ -26,11 +28,12 @@ function SearchTab({ id, label, active, hidden, onSelect }) {
 
 function ResultItem({ item, onSelect }) {
   const { t } = useTranslation();
+  const placeholderUrl = useBrandPlaceholderUrl();
 
   const [imgSrc, setImgSrc] = useState(item.logo || '');
   useEffect(() => {
     setImgSrc(item.logo || '');
-  }, [item.logo, item.vodPosterFallback]);
+  }, [item.logo, item.vodPosterFallback, item.type]);
 
   const timeText = (() => {
     if (item.type !== 'epg') return '';
@@ -54,24 +57,25 @@ function ResultItem({ item, onSelect }) {
       className={`search-result${isEpg ? ' search-result--epg' : ''}`}
       onClick={() => onSelect?.(item)}
     >
-      {imgSrc ? (
+      {(imgSrc || placeholderUrl) ? (
         <img
           className={`search-result__img${isEpg ? ' search-result__img--epg' : ''}`}
-          src={imgSrc}
+          src={imgSrc || placeholderUrl}
           alt={item.name}
           onError={() => {
-            // Fallback: si la imagen del evento falla, mostrar la del canal
             if (item.type === 'epg' && item.channelLogo && imgSrc !== item.channelLogo) {
               setImgSrc(item.channelLogo);
               return;
             }
-            // Series VOD: background → posterInfo si la URL principal falla
             if (item.type === 'vod' && item.vodPosterFallback && imgSrc !== item.vodPosterFallback) {
               setImgSrc(item.vodPosterFallback);
               return;
             }
-            // Último recurso: placeholder
-            if (imgSrc) setImgSrc('');
+            if (placeholderUrl && imgSrc !== placeholderUrl) {
+              setImgSrc(placeholderUrl);
+              return;
+            }
+            setImgSrc('');
           }}
         />
       ) : (
@@ -143,6 +147,7 @@ export function SearchPage() {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedEpgItem, setSelectedEpgItem] = useState(null);
   const [selectedVodItem, setSelectedVodItem] = useState(null);
+  const [selectedCatchupDetail, setSelectedCatchupDetail] = useState(null);
   const inputRef = useRef(null);
   const tRef = useRef(t);
   useEffect(() => { tRef.current = t; });
@@ -229,6 +234,27 @@ export function SearchPage() {
     return 0;
   }, [effectiveTab, grouped]);
 
+  const findCatchupGroupForEvent = useCallback((event, groups) => {
+    if (!event) return null;
+    const list = Array.isArray(groups) ? groups : [];
+    const gid = event.catchupGroupId ?? event.catchup_group_id;
+    if (gid != null && gid !== '') {
+      const match = list.find(
+        (g) =>
+          String(g?.catchupGroupId ?? g?.catchup_group_id ?? '') === String(gid) ||
+          String(g?.epgStreamId ?? g?.epg_stream_id ?? '') === String(gid),
+      );
+      if (match) return match;
+    }
+    const epgId = event.epgStreamId ?? event.epg_stream_id;
+    if (epgId != null && epgId !== '') {
+      return (
+        list.find((g) => String(g?.epgStreamId ?? g?.epg_stream_id ?? '') === String(epgId)) ?? null
+      );
+    }
+    return null;
+  }, []);
+
   const handleSelect = (item) => {
     if (!item) return;
 
@@ -238,32 +264,12 @@ export function SearchPage() {
     }
 
     if (item.type === 'catchup') {
-      const raw = item.raw || item;
-      const streamId = raw?.id ?? raw?.catchupId ?? item.id;
-      if (streamId == null) return;
-      try {
-        const url = panaccessService.normalizePlaybackUrl(
-          panaccessService.getCatchupM3u8Url({ catchupId: streamId }),
-        );
-        if (url) {
-          requestPlayMedia({
-            item: raw || { catchupId: streamId, id: streamId },
-            ratingRaw: item?.raw?.parentalRating ?? item?.parentalRating ?? null,
-            title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
-            message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
-            playFn: () =>
-              play({
-                type: 'catchup',
-                id: streamId,
-                url,
-                item: raw || { catchupId: streamId, id: streamId },
-                autoPlay: true,
-              }),
-          });
-        }
-      } catch {
-        // noop
-      }
+      const event = item.raw || item;
+      const group = findCatchupGroupForEvent(event, catchup.groups);
+      setSelectedCatchupDetail({
+        event,
+        channel: catchupGroupToChannel(group) || catchupEventToChannel(event),
+      });
       return;
     }
 
@@ -310,6 +316,45 @@ export function SearchPage() {
   const handleEpgModalClose = useCallback(() => {
     setSelectedEpgItem(null);
   }, []);
+
+  const handleCatchupModalClose = useCallback(() => {
+    setSelectedCatchupDetail(null);
+  }, []);
+
+  const handleCatchupWatch = useCallback(
+    (_catchupLookupId, event) => {
+      const ev = event ?? selectedCatchupDetail?.event;
+      const streamId = ev?.id ?? ev?.catchupId ?? _catchupLookupId;
+      if (streamId == null) return;
+      setSelectedCatchupDetail(null);
+      try {
+        const url = panaccessService.normalizePlaybackUrl(
+          panaccessService.getCatchupM3u8Url({ catchupId: streamId }),
+        );
+        if (url) {
+          requestPlayMedia({
+            item: ev || { catchupId: streamId, id: streamId },
+            ratingRaw: ev?.parentalRating ?? null,
+            title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+            message: t('parental.restrictedMessage', {
+              defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.',
+            }),
+            playFn: () =>
+              play({
+                type: 'catchup',
+                id: streamId,
+                url,
+                item: ev || { catchupId: streamId, id: streamId },
+                autoPlay: true,
+              }),
+          });
+        }
+      } catch {
+        // noop
+      }
+    },
+    [selectedCatchupDetail, play, requestPlayMedia, t],
+  );
 
   const handleEpgPlayLive = useCallback(() => {
     if (!selectedEpgItem) return;
@@ -517,6 +562,19 @@ export function SearchPage() {
         onClose={handleEpgModalClose}
         onPlayLive={handleEpgPlayLive}
         onWatchCatchup={handleEpgWatchCatchup}
+      />
+
+      <EpgEventModal
+        open={!!selectedCatchupDetail}
+        channel={selectedCatchupDetail?.channel ?? null}
+        event={selectedCatchupDetail?.event ?? null}
+        isLive={false}
+        nowMs={Date.now()}
+        canPlayLive={false}
+        showActions
+        detailContext="catchup"
+        onClose={handleCatchupModalClose}
+        onWatchCatchup={handleCatchupWatch}
       />
 
       {selectedVodItem && vodLayout === 'classic' && (

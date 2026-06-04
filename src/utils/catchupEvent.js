@@ -194,6 +194,29 @@ export function getCatchupGroupTitle(group, fallback = '') {
   return `${lcn}${name}`.trim();
 }
 
+/** Canal sintético para EpgEventModal cuando solo hay el evento (p. ej. player catchup). */
+export function catchupEventToChannel(event) {
+  if (!event) return null;
+  return {
+    name:
+      event.channelName ||
+      event.catchupGroupName ||
+      event.groupName ||
+      event.name ||
+      '',
+    lcn: event.lcn ?? event.channelLcn ?? null,
+    img:
+      event.channelImg ||
+      event.groupImg ||
+      event.channelLogo ||
+      event.logoUrl ||
+      event.img ||
+      null,
+    parentalRating: event.parentalRating,
+    epgStreamId: event.epgStreamId ?? event.epg_stream_id ?? null,
+  };
+}
+
 /** Objeto canal compatible con EpgEventModal a partir del grupo catchup. */
 export function catchupGroupToChannel(group) {
   if (!group) return null;

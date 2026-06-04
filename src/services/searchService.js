@@ -54,7 +54,14 @@ function getAllCatchupEvents(groups) {
     const events = g?.events;
     if (!Array.isArray(events)) continue;
     for (const ev of events) {
-      if (ev && (ev.name || ev.title)) out.push(ev);
+      if (!ev || (!ev.name && !ev.title)) continue;
+      out.push({
+        ...ev,
+        catchupGroupName: g.name ?? g.catchupGroupId ?? '',
+        channelName: g.name ?? ev.channelName ?? '',
+        channelImg: g.img || g.imageUrl || g.logoUrl || g.logo || g.icon || null,
+        channelLcn: g.lcn ?? ev.lcn ?? null,
+      });
     }
   }
   return out;

@@ -8,6 +8,7 @@ import { useParentalGate } from '../hooks/useParentalGate';
 import panaccessService from '../services/panaccessService';
 import EpgEventModal from '../components/epg/EpgEventModal';
 import { ChannelsRailsCatchupLayout } from '../components/catchup/ChannelsRailsCatchupLayout';
+import { BrandFallbackImage } from '../components/common/BrandFallbackImage';
 import {
   catchupGroupToChannel,
   findCatchupEventInGroups,
@@ -36,7 +37,12 @@ function CatchupEventButton({
       tabIndex={0}
       onClick={() => onEnter?.()}
     >
-      {imageUrl ? <img className="catchup-event-card-img" src={imageUrl} alt="" /> : <div className="catchup-event-card-img--placeholder" />}
+      <BrandFallbackImage
+        src={imageUrl}
+        alt=""
+        className="catchup-event-card-img"
+        placeholderClassName="catchup-event-card-img--placeholder"
+      />
       <div className="catchup-event-card-body">
         <div className="catchup-event-card-title">{title || '—'}</div>
         {timeText ? <div className="catchup-event-card-time">{timeText}</div> : null}

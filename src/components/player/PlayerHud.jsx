@@ -20,6 +20,10 @@ import {
   PLAYER_FOCUS_IDS,
 } from '../../hooks/usePlayerHudTvNavigation';
 import { usePlayerChannelZapping } from '../../hooks/usePlayerChannelZapping';
+import { resolvePlayerHudLayout } from '../../utils/resolvePlayerHudLayout';
+import { PlayerHudTopBar, PlayerHudBottomActions } from './PlayerHudToolbar';
+import VodDetailModal from '../vod/VodDetailModal';
+import { catchupEventToChannel } from '../../utils/catchupEvent';
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
@@ -553,8 +557,6 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     isPlaybackMaximized: isPlaybackMaximized && hasContent,
   });
 
-  if (!hasContent) return null;
-
   const hudTvTabIndex = isTV ? (visible ? 0 : -1) : undefined;
 
   const currentChannelId = isLiveService ? getChannelStableId(state.item) : '';
@@ -622,6 +624,10 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     (state?.type === 'service' && currentBrand?.player?.showSeekbarOnLive === true);
 
   const shouldUseEpgInfoModal = state?.type === 'service' && !!state?.item && !!nowNext?.now;
+  const shouldUseCatchupInfoModal = state?.type === 'catchup' && !!state?.item;
+  const shouldUseVodInfoModal = state?.type === 'vod' && !!state?.item;
+  const shouldUseDedicatedInfoModal =
+    shouldUseEpgInfoModal || shouldUseCatchupInfoModal || shouldUseVodInfoModal;
 
   const toggleFullscreen = async () => {
     try {
@@ -644,164 +650,65 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     }
   };
 
+  const hudLayout = useMemo(
+    () =>
+      resolvePlayerHudLayout(currentBrand?.player?.hudLayout, {
+        playbackType: state?.type,
+        isTV,
+      }),
+    [currentBrand?.player?.hudLayout, state?.type, isTV],
+  );
+
+  const hudButtonCtx = useMemo(
+    () => ({
+      t,
+      navigate,
+      close,
+      closePlayerOverlay,
+      openPlayerOverlay,
+      isLiveService,
+      isTV,
+      isFullscreen,
+      toggleFullscreen,
+      currentChannelBlocked,
+      toggleCurrentChannelBlock,
+      hasTrackOptions,
+      state,
+      handlePlayPause,
+      isLiveWithWindow,
+      skipLiveBy,
+      backward,
+      forward,
+      goLive,
+      hudTvTabIndex,
+      clockText,
+    }),
+    [
+      t,
+      navigate,
+      close,
+      closePlayerOverlay,
+      openPlayerOverlay,
+      isLiveService,
+      isTV,
+      isFullscreen,
+      currentChannelBlocked,
+      hasTrackOptions,
+      state,
+      isLiveWithWindow,
+      hudTvTabIndex,
+      clockText,
+    ],
+  );
+
+  if (!hasContent) return null;
+
   return (
     <div
       ref={hudRootRef}
       className={`player-hud ${visible ? 'player-hud--visible' : 'player-hud--hidden'} ${className}`.trim()}
     >
-      <div className="player-hud__topbar">
-        <div className="player-hud__topbar-left" data-tv-nav-zone="player-top-left">
-          <FocusableButton
-            type="button"
-            className="player-hud__iconbtn"
-            id={PLAYER_FOCUS_IDS.BACK}
-            data-tv-nav="player-hud"
-            tabIndex={hudTvTabIndex}
-            onClick={() => close()}
-            aria-label={t('common.back', { defaultValue: 'Volver' })}
-          >
-            <AppIcon name="back" size="1em" />
-          </FocusableButton>
-          <FocusableButton
-            type="button"
-            className="player-hud__iconbtn"
-            id={PLAYER_FOCUS_IDS.EPG}
-            data-tv-nav="player-hud"
-            tabIndex={hudTvTabIndex}
-            onClick={() => {
-              closePlayerOverlay();
-              close();
-              navigate('/home/epg');
-            }}
-            aria-label={t('epg.title', { defaultValue: 'EPG' })}
-            title={t('epg.title', { defaultValue: 'EPG' })}
-          >
-            <AppIcon name="list" size="1em" />
-          </FocusableButton>
-          {isLiveService && (
-            <FocusableButton
-              type="button"
-              className="player-hud__iconbtn"
-              id={PLAYER_FOCUS_IDS.LOCK}
-              data-tv-nav="player-hud"
-              tabIndex={hudTvTabIndex}
-              onClick={toggleCurrentChannelBlock}
-              aria-label={
-                currentChannelBlocked
-                  ? t('parental.unblock', { defaultValue: 'Desbloquear canal' })
-                  : t('parental.block', { defaultValue: 'Bloquear canal' })
-              }
-              title={
-                currentChannelBlocked
-                  ? t('parental.unblock', { defaultValue: 'Desbloquear canal' })
-                  : t('parental.block', { defaultValue: 'Bloquear canal' })
-              }
-            >
-              <AppIcon name={currentChannelBlocked ? 'lockOpen' : 'lock'} size="1em" />
-            </FocusableButton>
-          )}
-          <FocusableButton
-            type="button"
-            className="player-hud__iconbtn"
-            id={PLAYER_FOCUS_IDS.CHANNELS}
-            data-tv-nav="player-hud"
-            tabIndex={hudTvTabIndex}
-            onClick={() => openPlayerOverlay('channels')}
-            aria-label={t('player.channels', { defaultValue: 'Canales' })}
-          >
-            <AppIcon name="menu" size="1em" />
-          </FocusableButton>
-          <FocusableButton
-            type="button"
-            className="player-hud__iconbtn"
-            id={PLAYER_FOCUS_IDS.INFO}
-            data-tv-nav="player-hud"
-            tabIndex={hudTvTabIndex}
-            onClick={() => openPlayerOverlay('info')}
-            aria-label={t('player.info', { defaultValue: 'Información' })}
-          >
-            <AppIcon name="info" size="1em" />
-          </FocusableButton>
-          {hasTrackOptions ? (
-            <FocusableButton
-              type="button"
-              className="player-hud__iconbtn"
-              id={PLAYER_FOCUS_IDS.TRACKS}
-              data-tv-nav="player-hud"
-              tabIndex={hudTvTabIndex}
-              onClick={() => openPlayerOverlay('tracks')}
-              aria-label={t('player.tracks', { defaultValue: 'Audio/Subtítulos' })}
-            >
-              <AppIcon name="subtitles" size="1em" />
-            </FocusableButton>
-          ) : null}
-        </div>
-
-        {showPlaybackButtons ? (
-          <div className="player-hud__topbar-center" data-tv-nav-zone="player-top-center">
-            <FocusableButton
-              type="button"
-              className="player-hud__iconbtn"
-              id={PLAYER_FOCUS_IDS.REWIND}
-              data-tv-nav="player-hud"
-              tabIndex={hudTvTabIndex}
-              onClick={() => (isLiveWithWindow ? skipLiveBy(-10) : backward(10))}
-              aria-label={t('player.rewind10', { defaultValue: 'Retroceder 10s' })}
-            >
-              <AppIcon name="rewind" size="1em" />
-            </FocusableButton>
-            <FocusableButton
-              type="button"
-              className="player-hud__iconbtn player-hud__iconbtn--primary"
-              id={PLAYER_FOCUS_IDS.PLAY}
-              data-tv-nav="player-hud"
-              tabIndex={hudTvTabIndex}
-              onClick={handlePlayPause}
-              aria-label={state?.isPlaying ? t('player.pause', { defaultValue: 'Pausar' }) : t('player.play', { defaultValue: 'Reproducir' })}
-            >
-              <AppIcon name={state?.isPlaying ? 'pause' : 'play'} size="1em" />
-            </FocusableButton>
-            <FocusableButton
-              type="button"
-              className="player-hud__iconbtn"
-              id={PLAYER_FOCUS_IDS.FORWARD}
-              data-tv-nav="player-hud"
-              tabIndex={hudTvTabIndex}
-              onClick={() => (isLiveWithWindow ? skipLiveBy(10) : forward(10))}
-              aria-label={t('player.forward10', { defaultValue: 'Adelantar 10s' })}
-            >
-              <AppIcon name="forward" size="1em" />
-            </FocusableButton>
-          </div>
-        ) : (
-          <div className="player-hud__topbar-center" />
-        )}
-
-        <div className="player-hud__topbar-right">
-          {!isTV ? (
-            <FocusableButton
-              type="button"
-              className="player-hud__iconbtn"
-              onClick={toggleFullscreen}
-              aria-label={
-                isFullscreen
-                  ? t('player.exitFullscreen', { defaultValue: 'Salir de pantalla completa' })
-                  : t('player.fullscreen', { defaultValue: 'Pantalla completa' })
-              }
-              title={
-                isFullscreen
-                  ? t('player.exitFullscreen', { defaultValue: 'Salir de pantalla completa' })
-                  : t('player.fullscreen', { defaultValue: 'Pantalla completa' })
-              }
-            >
-              <AppIcon name={isFullscreen ? 'fullscreenExit' : 'fullscreen'} size="1em" />
-            </FocusableButton>
-          ) : null}
-          <div className="player-hud__clock" aria-label={t('common.time', { defaultValue: 'Hora' })}>
-            {clockText}
-          </div>
-        </div>
-      </div>
+      <PlayerHudTopBar layout={hudLayout} ctx={hudButtonCtx} showPlaybackButtons={showPlaybackButtons} />
 
       {showSeekbar ? (
         <div className="player-hud__seek">
@@ -851,25 +758,12 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
 
         <div className="player-hud__rightmeta">
           {channelMeta?.nowRange ? <div className="player-hud__event-range">{channelMeta.nowRange}</div> : null}
-          <div className="player-hud__actions" data-tv-nav-zone="player-bottom-actions">
-            {isLiveWithWindow ? (
-              <FocusableButton
-                type="button"
-                className="player-hud__pillbtn"
-                id={PLAYER_FOCUS_IDS.GO_LIVE}
-                data-tv-nav="player-hud"
-                tabIndex={hudTvTabIndex}
-                onClick={goLive}
-              >
-                {t('player.goLive', { defaultValue: 'En vivo' })}
-              </FocusableButton>
-            ) : null}
-          </div>
+          <PlayerHudBottomActions bottomKeys={hudLayout.bottom} ctx={hudButtonCtx} />
         </div>
       </div>
 
       {overlay ? (
-        overlay === 'tracks' ? null : overlay === 'info' && shouldUseEpgInfoModal ? null : (
+        overlay === 'tracks' ? null : overlay === 'info' && shouldUseDedicatedInfoModal ? null : (
         <div className="player-hud__overlay">
           <div className="player-hud__overlay-title">
             {overlay === 'channels'
@@ -1092,7 +986,6 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
           showActions={false}
           onClose={closePlayerOverlay}
           onPlayLive={() => {
-            // Reproducir canal en vivo: reusar el mismo flujo de zapping.
             handleZapToChannel(state?.item);
           }}
           onWatchCatchup={(catchupStreamId) => {
@@ -1107,6 +1000,29 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
           }}
         />
       ) : null}
+
+      {overlay === 'info' && shouldUseCatchupInfoModal ? (
+        <EpgEventModal
+          open
+          channel={catchupEventToChannel(state.item)}
+          event={state.item}
+          isLive={false}
+          nowMs={Date.now()}
+          canPlayLive={false}
+          showActions={false}
+          detailContext="catchup"
+          onClose={closePlayerOverlay}
+        />
+      ) : null}
+
+      {overlay === 'info' && shouldUseVodInfoModal
+        ? createPortal(
+            <div className="player-vod-info-portal">
+              <VodDetailModal item={state.item} infoOnly onClose={closePlayerOverlay} />
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

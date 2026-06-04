@@ -516,6 +516,12 @@
   justify-content: flex-end;
 }
 
+// VOD info desde el player (portal, encima del HUD y del video)
+.player-vod-info-portal .vod-detail-overlay {
+  left: 0;
+  z-index: 10000;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Sidebar de canales (modal izquierdo)
 // ─────────────────────────────────────────────────────────────────────────────

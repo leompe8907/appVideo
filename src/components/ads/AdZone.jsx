@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { getDisplayTimeMs, isVideoUrl } from '../../utils/adsData';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
+import { BrandFallbackImage } from '../common/BrandFallbackImage';
 
 function AdMedia({ ad, className = '' }) {
   if (!ad?.file) return null;
@@ -29,11 +30,10 @@ function AdMedia({ ad, className = '' }) {
     );
   }
   return (
-    <img
-      className={`home-ad-media home-ad-media--img ${className}`.trim()}
+    <BrandFallbackImage
       src={ad.file}
       alt={ad.name || ''}
-      draggable={false}
+      className={`home-ad-media home-ad-media--img ${className}`.trim()}
     />
   );
 }

@@ -137,7 +137,10 @@ export function usePlayerHudTvNavigation({
         focusById(PLAYER_FOCUS_IDS.TRACKS_CLOSE);
         return;
       }
-      if (overlay === 'info' && document.getElementById('epg-event-close')) {
+      if (
+        overlay === 'info' &&
+        (document.getElementById('epg-event-close') || document.getElementById('player-vod-info-close'))
+      ) {
         return;
       }
       focusById(PLAYER_FOCUS_IDS.OVERLAY_CLOSE);
@@ -362,7 +365,10 @@ export function usePlayerHudTvNavigation({
         return;
       }
 
-      if (currentOverlay === 'info' && document.getElementById('epg-event-close')) {
+      if (
+        currentOverlay === 'info' &&
+        (document.getElementById('epg-event-close') || document.getElementById('player-vod-info-close'))
+      ) {
         return;
       }
 

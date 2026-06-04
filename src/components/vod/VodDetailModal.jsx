@@ -15,7 +15,7 @@ import AppIcon from '../AppIcon';
 
 const DESCRIPTION_MAX_LENGTH = 180;
 
-export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
+export function VodDetailModal({ item, categories = [], onClose, onPlay, infoOnly = false }) {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
   const { isTV } = useDevice();
@@ -27,14 +27,35 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
   const [extraMeta, setExtraMeta] = useState(null);
 
   useEffect(() => {
-    if (isTV && !loading) {
-      const t = setTimeout(() => {
-        const btn = document.getElementById('vod-detail-play');
-        if (btn) btn.focus();
-      }, 400);
-      return () => clearTimeout(t);
-    }
-  }, [isTV, loading]);
+    if (!item) return undefined;
+    const onKeyDown = (e) => {
+      const key = String(e.key || '');
+      const code = String(e.code || '');
+      const keyCode = Number(e.keyCode || e.which || 0);
+      const isEscape = key === 'Escape' || code === 'Escape' || keyCode === 27;
+      const isBackspace = key === 'Backspace' || code === 'Backspace' || keyCode === 8;
+      const isReturnLike = key === 'Return' || key === 'GoBack' || key === 'BrowserBack';
+      const isTvBackCodes = keyCode === 10009 || keyCode === 461;
+      if (isEscape || isBackspace || isReturnLike || isTvBackCodes) {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [item, onClose]);
+
+  useEffect(() => {
+    if (!isTV || loading) return undefined;
+    const t = setTimeout(() => {
+      const btn = document.getElementById(
+        infoOnly ? 'player-vod-info-close' : 'vod-detail-play',
+      );
+      if (btn) btn.focus();
+    }, 400);
+    return () => clearTimeout(t);
+  }, [isTV, loading, infoOnly]);
 
   const vodDetailConfig = currentBrand?.vod?.vodDetail || {};
   const contentPosition = vodDetailConfig.contentPosition === 'top' || vodDetailConfig.contentPosition === 'middle'
@@ -195,17 +216,19 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
           <div className="vod-detail-hero-gradient" />
         </div>
 
-        {/* Close button (PC only) */}
-        {!isTV && (
-          <button
+        {/* Cerrar: PC siempre; TV en modo infoOnly (desde player) */}
+        {(!isTV || infoOnly) ? (
+          <FocusableButton
             type="button"
             className="vod-detail-close"
+            id={infoOnly ? 'player-vod-info-close' : undefined}
+            data-tv-nav={infoOnly ? 'vod-detail' : undefined}
             onClick={onClose}
-            aria-label={t('common.close')}
+            aria-label={t('common.close', { defaultValue: 'Cerrar' })}
           >
             <AppIcon name="close" size={18} className="vod-detail-close-icon" />
-          </button>
-        )}
+          </FocusableButton>
+        ) : null}
 
         {/* Content layer */}
         <div className={`vod-detail-content vod-detail-content--${contentPosition}`}>
@@ -280,25 +303,27 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
               )}
               {error && <p className="vod-detail-error">{error}</p>}
               {loading && <p className="vod-detail-loading">{t('vod.loading')}</p>}
-              <div className="vod-detail-actions">
-                <FocusableButton
-                  type="button"
-                  className="vod-detail-play-btn"
-                  data-tv-nav="vod-detail"
-                  onClick={handlePlayCurrent}
-                  id="vod-detail-play"
-                >
-                  <span className="vod-detail-play-icon" aria-hidden>
-                    <AppIcon name="play" size={18} />
-                  </span>
-                  {t('vod.play')}
-                </FocusableButton>
-              </div>
+              {!infoOnly ? (
+                <div className="vod-detail-actions">
+                  <FocusableButton
+                    type="button"
+                    className="vod-detail-play-btn"
+                    data-tv-nav="vod-detail"
+                    onClick={handlePlayCurrent}
+                    id="vod-detail-play"
+                  >
+                    <span className="vod-detail-play-icon" aria-hidden>
+                      <AppIcon name="play" size={18} />
+                    </span>
+                    {t('vod.play')}
+                  </FocusableButton>
+                </div>
+              ) : null}
             </div>
           </div>
 
           {/* Episodes (series) */}
-          {isSeries && !loading && seriesInfo?.episodes?.length > 0 && (
+          {!infoOnly && isSeries && !loading && seriesInfo?.episodes?.length > 0 && (
             <div className="vod-detail-episodes">
               <h3 className="vod-detail-episodes-title">{t('vod.episodes')}</h3>
               <ul className="vod-detail-episodes-list">
@@ -314,7 +339,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay }) {
               </ul>
             </div>
           )}
-          {isSeries && !loading && seriesInfo && (!seriesInfo.episodes || seriesInfo.episodes.length === 0) && (
+          {!infoOnly && isSeries && !loading && seriesInfo && (!seriesInfo.episodes || seriesInfo.episodes.length === 0) && (
             <div className="vod-detail-actions vod-detail-actions-fallback">
               <FocusableButton
                 type="button"
