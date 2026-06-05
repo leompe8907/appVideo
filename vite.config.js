@@ -64,17 +64,27 @@ export default defineConfig(({ mode }) => {
       singleBrandConfigPlugin(brand, env),
       brandPublicAssetsPlugin(brand),
       react(),
-      // Smart TV compatibility:
-      // webOS 4 (2019) usa Chrome 61; Tizen 4 (2019) usa Chrome 69.
-      // NINGUNO soporta optional chaining (?.) ni nullish coalescing (??).
-      // FIX #3: targets cubre ambas plataformas. modernTargets fuerza la
-      // transpilación del chunk "moderno" también (no solo el legacy).
+      // Smart TV compatibility (Etapa 1):
+      // LG webOS 4.5 (2019) → Chromium 53 | Samsung Tizen 5 (2019) → Chromium 63
+      // Ninguno soporta ?. ni ?? nativos; legacy transpila ambos chunks.
       legacy({
-        targets: ['chrome 61'],              // webOS 4 — el más restrictivo
-        modernTargets: ['chrome 69'],        // Tizen 2019 — fuerza transpilación del chunk moderno
+        targets: ['chrome 53'],
+        modernTargets: ['chrome 53'],
         additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
         renderLegacyChunks: true,
+        // Producción TV: un solo bundle legacy (sin chunk moderno con ?. de dependencias)
+        renderModernChunks: isDev,
       }),
+      {
+        name: 'inject-tv-platform-env',
+        transformIndexHtml(html) {
+          const tvPlatform = env.VITE_TV_PLATFORM || '';
+          return html.replace(
+            '<!-- TV_PLATFORM_ENV -->',
+            `<script>window.__VITE_TV_PLATFORM__=${JSON.stringify(tvPlatform)};</script>`,
+          );
+        },
+      },
     ],
 
     css: {
@@ -89,12 +99,9 @@ export default defineConfig(({ mode }) => {
 
     build: {
       outDir: brand ? `dist/${brand}` : 'dist',
-      // FIX #3: bajar de es2017 a es2015 para que Terser transpile optional chaining (?.)
-      // y nullish coalescing (??) — ninguno de los dos está soportado en Chrome 61/69.
-      // es2015 cubre: arrow functions, const/let, template literals, destructuring,
-      // spread, clases, Promises, Symbol — todo soportado en Chrome 61+.
+      // es2015 + Terser ecma:5 → sin ?. / ?? en salida (Chrome 53+)
       target: 'es2015',
-      cssTarget: 'chrome61', // webOS 4 usa Chrome 61 internamente
+      cssTarget: 'chrome53',
       minify: 'terser',
       terserOptions: {
         compress: {

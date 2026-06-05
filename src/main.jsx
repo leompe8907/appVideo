@@ -79,13 +79,28 @@ const routerBasename = (() => {
   return trimmed || undefined;
 })();
 
-const compatIssues = runCompatCheck();
-const rootEl = document.getElementById('root');
-if (!rootEl) {
-  console.error('[main] No se encontró #root en el DOM');
-} else if (compatIssues.length > 0) {
-  showCompatError(compatIssues);
-} else {
+async function mountApp() {
+  try {
+    if (typeof window !== 'undefined' && window.__tvPlatformReady) {
+      await window.__tvPlatformReady;
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.warn('[main] tv-platform-bootstrap:', e?.message || e);
+    }
+  }
+
+  const compatIssues = runCompatCheck();
+  const rootEl = document.getElementById('root');
+  if (!rootEl) {
+    console.error('[main] No se encontró #root en el DOM');
+    return;
+  }
+  if (compatIssues.length > 0) {
+    showCompatError(compatIssues);
+    return;
+  }
+
   createRoot(rootEl).render(
     <ErrorBoundary>
       <BrowserRouter basename={routerBasename}>
@@ -100,3 +115,5 @@ if (!rootEl) {
     </ErrorBoundary>
   );
 }
+
+mountApp();

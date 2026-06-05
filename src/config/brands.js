@@ -131,13 +131,15 @@
  *   @param {boolean} EPG.epgCardsLaterGlobal
  *   @param {boolean|'auto'} EPG.epgCloseModalOnPlayLive
  */
+import { resolveBrandToken } from './resolveBrandToken.js';
+
 export const BRANDS = [
   // Bromteck
   {
     brand: "bromteck",
     appName: "Bromteck",
     drm: "https://cv10.panaccess.com/",
-    //token: "DDXXHySyAfrKgBczmhBk",
+    token: '',
     // Metadatos de integración con DRM (equivalentes al proyecto EPG clásico)
     os: 'HTML5',
     appVersion: '1',
@@ -399,7 +401,7 @@ export const BRANDS = [
     brand: "intv",
     appName: "inTV Play",
     drm: "https://pmdw-1.in.tv.br/",
-    //token: "CEVQmnhOsXvpRQZbGADl",
+    token: '',
     os: 'HTML5',
     appVersion: '1',
     branding: 'Panaccess',
@@ -672,7 +674,7 @@ export const BRANDS = [
     brand: "gigmax",
     appName: "Gigmax",
     drm: "https://cv10.panaccess.com/",
-    token: "DDXXHySyAfrKgBczmhBk",
+    token: '',
     os: 'HTML5',
     appVersion: '1',
     branding: 'Panaccess',
@@ -915,7 +917,7 @@ export const BRANDS = [
     brand: "cableatlantico",
     appName: "delancertv",
     drm: 'https://mw.cabledelancer.com/', //"https://cv01.panaccess.com/"
-    token: "ZteKaVByMTRHfqeHXtWK", //"gQposTlrMIOYQVdYBNYC",
+    token: '',
     os: 'HTML5',
     appVersion: '1',
     branding: 'Cabledelancer',
@@ -1153,7 +1155,7 @@ export const BRANDS = [
     brand: "wind",
     appName: "windplay",
     drm: "https://middleware.wind.do/",//drm: "https://cv01.panaccess.com/",
-    token: "CfeTUXTyhseXRvqosAve", //token: "gQposTlrMIOYQVdYBNYC",//SM  ,LG CfeTUXTyhseXRvqosAve, otro FdETWuaTIamNPqVcVEei, 
+    token: '',
     os: 'HTML5',
     appVersion: '1',    
     branding: 'Panaccess',
@@ -1425,7 +1427,7 @@ export const BRANDS = [
     brand: "multiplustv",
     appName: "MultiplusTV",
     drm: "https://cv10.panaccess.com/",
-    token: "CUZwaXeVxOvrCiMmVHov",
+    token: '',
     os: 'HTML5',
     appVersion: '1',    
     branding: 'Panaccess',
@@ -1699,7 +1701,17 @@ export const BRANDS = [
  * @returns {Object|null} Objeto de configuración de la marca o null si no existe.
  */
 export function getBrandConfig(brandName) {
-  const brand = BRANDS.find(b => b.brand === brandName);
-  return brand || null;
+  const brand = BRANDS.find((b) => b.brand === brandName);
+  if (!brand) return null;
+
+  const token = resolveBrandToken(brand.brand) || brand.token || '';
+  if (!token && import.meta.env?.PROD) {
+    console.warn(
+      `[brands] Token no configurado para "${brand.brand}". ` +
+        `Define VITE_BRAND_TOKEN_${String(brand.brand).toUpperCase()} en .env.local`,
+    );
+  }
+
+  return token === brand.token ? brand : { ...brand, token };
 }
 

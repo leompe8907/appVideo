@@ -99,7 +99,22 @@ Antes del plan de acción, se documentan hallazgos que los informes originales d
 ## Etapa 1 — Compatibilidad TV y arranque en dispositivos 2019
 
 **Duración estimada:** 1–2 semanas  
-**Objetivo:** Garantizar que la app arranca y transpila correctamente en Tizen 4+ y webOS 4+.
+**Objetivo:** Garantizar que la app arranca y transpila correctamente en Tizen 4+ y webOS 4+.  
+**Estado:** ✅ Implementado (2026-06-05) — validar en hardware real Samsung/LG.
+
+### Archivos creados o modificados en Etapa 1
+
+| Archivo | Cambio |
+|---------|--------|
+| `vite.config.js` | Targets `chrome 53` / `chrome 63`, `cssTarget: chrome53`, plugin HTML TV |
+| `scripts/check-es-compat.js` | Verificación post-build de `?.` y `??` en chunks |
+| `package.json` | Scripts `check:es-compat` y `build:verify-tv` |
+| `public/tv-platform-bootstrap.js` | Carga condicional webapis.js / webOSTV.js |
+| `index.html` | Bootstrap TV antes del bundle |
+| `src/main.jsx` | Espera `__tvPlatformReady` antes de montar React |
+| `src/utils/tvPlatformApis.js` | Detección por APIs nativas (`tizen`, `webapis`, `webOS`) |
+| `src/player/engines/resolveEnginePlatform.js` | APIs > UA, logging, `resolveEnginePlatformDetailed` |
+| `src/player/engines/createEngine.js` | Usa resolución detallada del engine |
 
 ### 1.1 Target de transpilación Chromium (1.1 / H-28)
 

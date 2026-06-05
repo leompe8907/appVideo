@@ -7,6 +7,9 @@
   "engines": {
     "node": ">=20"
   },
+  "browserslist": [
+    "chrome >= 53"
+  ],
   "scripts": {
     "dev": "vite",
     "dev:brand": "vite",
@@ -36,6 +39,8 @@
     "preview:delancertv:full": "pnpm run build:delancertv && pnpm run preview:delancertv",
     "lint": "eslint .",
     "check:secrets": "node scripts/check-brand-secrets.js",
+    "check:es-compat": "node scripts/check-es-compat.js",
+    "build:verify-tv": "pnpm run build && node scripts/check-es-compat.js",
     "prebuild": "node scripts/check-brand-secrets.js",
     "prebuild:all": "node scripts/check-brand-secrets.js",
     "prebuild:telecable": "node scripts/check-brand-secrets.js",
