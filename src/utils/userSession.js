@@ -31,17 +31,43 @@ function brandId(override) {
 }
 
 export function getSecretKey() {
-  return import.meta.env.VITE_SECRET_KEY || 'default-secret-key-change-me';
+  return import.meta.env.VITE_SECRET_KEY;
 }
 
+function encryptStorageValue(value) {
+  const key = getSecretKey();
+  return CryptoJS.AES.encrypt(String(value), key).toString();
+}
+
+function decryptStorageValue(encrypted) {
+  if (!encrypted) return '';
+  const key = getSecretKey();
+  try {
+    const plain = CryptoJS.AES.decrypt(encrypted, key).toString(CryptoJS.enc.Utf8);
+    return plain || '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Lee sessionId cifrado. Compatible con valores legacy en texto plano (migración automática).
+ */
 export function getSessionId(brand) {
-  return getBrandItem(brandId(brand), STORAGE_KEYS.sessionId) || '';
+  const raw = getBrandItem(brandId(brand), STORAGE_KEYS.sessionId) || '';
+  if (!raw) return '';
+
+  const decrypted = decryptStorageValue(raw);
+  if (decrypted) return decrypted;
+
+  // Legacy: sessionId guardado sin cifrar antes de Etapa 0
+  return raw;
 }
 
 export function setSessionId(sessionId, brand) {
   const id = brandId(brand);
   if (sessionId != null && sessionId !== '') {
-    setBrandItem(id, STORAGE_KEYS.sessionId, String(sessionId));
+    setBrandItem(id, STORAGE_KEYS.sessionId, encryptStorageValue(sessionId));
   } else {
     removeBrandItem(id, STORAGE_KEYS.sessionId);
   }

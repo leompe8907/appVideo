@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Herramientas de despliegue (no commitear binarios)
+azcopy.exe
+azcopy
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

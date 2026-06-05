@@ -34,7 +34,17 @@
     "preview:cableatlantico:full": "pnpm run build:cableatlantico && pnpm run preview:cableatlantico",
     "preview:delancertv": "cross-env VITE_BRAND=cableatlantico VITE_DEFAULT_BRAND=cableatlantico vite preview --outDir dist/cableatlantico",
     "preview:delancertv:full": "pnpm run build:delancertv && pnpm run preview:delancertv",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "check:secrets": "node scripts/check-brand-secrets.js",
+    "prebuild": "node scripts/check-brand-secrets.js",
+    "prebuild:all": "node scripts/check-brand-secrets.js",
+    "prebuild:telecable": "node scripts/check-brand-secrets.js",
+    "prebuild:bromteck": "node scripts/check-brand-secrets.js",
+    "prebuild:intv": "node scripts/check-brand-secrets.js",
+    "prebuild:gigmax": "node scripts/check-brand-secrets.js",
+    "prebuild:wind": "node scripts/check-brand-secrets.js",
+    "prebuild:cableatlantico": "node scripts/check-brand-secrets.js",
+    "prebuild:delancertv": "node scripts/check-brand-secrets.js"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",

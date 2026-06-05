@@ -1,10 +1,11 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import legacy from '@vitejs/plugin-legacy'
 import { brandPublicAssetsPlugin } from './vite/brandPublicAssets.js'
 import { BRANDS } from './src/config/brands.js'
+import { resolveBrandTokenFromProcessEnv } from './src/config/resolveBrandToken.js'
 
-function singleBrandConfigPlugin(brand) {
+function singleBrandConfigPlugin(brand, env) {
   const selectedBrand = brand ? BRANDS.find((entry) => entry.brand === brand) : null;
 
   return {
@@ -21,9 +22,25 @@ function singleBrandConfigPlugin(brand) {
         return null;
       }
 
+      const token =
+        resolveBrandTokenFromProcessEnv(selectedBrand.brand) ||
+        env[`VITE_BRAND_TOKEN_${String(selectedBrand.brand).toUpperCase()}`] ||
+        env.VITE_BRAND_TOKEN ||
+        selectedBrand.token ||
+        '';
+
+      if (!token) {
+        this.warn(
+          `[single-brand-config] Token vacío para "${selectedBrand.brand}". ` +
+            `Define VITE_BRAND_TOKEN_${String(selectedBrand.brand).toUpperCase()} en .env.local`,
+        );
+      }
+
+      const brandWithToken = { ...selectedBrand, token };
+
       return {
         code: [
-          `export const BRANDS = ${JSON.stringify([selectedBrand], null, 2)};`,
+          `export const BRANDS = ${JSON.stringify([brandWithToken], null, 2)};`,
           '',
           'export function getBrandConfig(brandName) {',
           '  const brand = BRANDS.find((entry) => entry.brand === brandName);',
@@ -40,10 +57,11 @@ function singleBrandConfigPlugin(brand) {
 export default defineConfig(({ mode }) => {
   const brand = process.env.VITE_BRAND || '';
   const isDev = mode === 'development';
+  const env = loadEnv(mode, process.cwd(), '');
 
   return {
     plugins: [
-      singleBrandConfigPlugin(brand),
+      singleBrandConfigPlugin(brand, env),
       brandPublicAssetsPlugin(brand),
       react(),
       // Smart TV compatibility:

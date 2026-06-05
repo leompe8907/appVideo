@@ -1,6 +1,8 @@
 import { execSync } from 'child_process';
 import { BRANDS } from '../src/config/brands.js';
 
+execSync('node scripts/check-brand-secrets.js', { stdio: 'inherit' });
+
 console.log('🚀 Iniciando build para todos los clientes...\n');
 
 const brands = BRANDS.map(b => b.brand);

@@ -1,13 +1,10 @@
 /**
  * Punto de entrada - Providers + Render
  * Compatibilidad: Samsung Tizen 4/5 (~2019), LG webOS 4/5 (~2019)
- *
- * ReactDOM.render (API clásica): algunos WebViews de TV se comportan mejor que createRoot.
  */
 
 import './locales/i18n';
-import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { BrandProvider } from './contexts/BrandContext';
 import { DeviceProvider } from './contexts/DeviceContext';
@@ -89,7 +86,7 @@ if (!rootEl) {
 } else if (compatIssues.length > 0) {
   showCompatError(compatIssues);
 } else {
-  ReactDOM.render(
+  createRoot(rootEl).render(
     <ErrorBoundary>
       <BrowserRouter basename={routerBasename}>
         <DeviceProvider>
@@ -100,7 +97,6 @@ if (!rootEl) {
           </BrandProvider>
         </DeviceProvider>
       </BrowserRouter>
-    </ErrorBoundary>,
-    rootEl
+    </ErrorBoundary>
   );
 }

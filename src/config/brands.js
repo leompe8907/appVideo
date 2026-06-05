@@ -1,5 +1,3 @@
-import { clonePlayerHudLayout } from '../utils/resolvePlayerHudLayout.js';
-
 /**
  * Configuración de marcas (brands) de la aplicación.
  *
@@ -139,7 +137,7 @@ export const BRANDS = [
     brand: "bromteck",
     appName: "Bromteck",
     drm: "https://cv10.panaccess.com/",
-    token: "DDXXHySyAfrKgBczmhBk",
+    //token: "DDXXHySyAfrKgBczmhBk",
     // Metadatos de integración con DRM (equivalentes al proyecto EPG clásico)
     os: 'HTML5',
     appVersion: '1',
@@ -279,8 +277,6 @@ export const BRANDS = [
       closeChannelSidebarOnSelect: false,
       // Cambio de canal en vivo con flechas ↑/↓ (mando remoto y teclado).
       channelChangeWithArrows: false,
-      // HUD: {} = layout por defecto (ver playerHudLayout.js)
-      hudLayout: {},
     },
 
     // Configuración de UI/Tema
@@ -403,7 +399,7 @@ export const BRANDS = [
     brand: "intv",
     appName: "inTV Play",
     drm: "https://pmdw-1.in.tv.br/",
-    token: "CEVQmnhOsXvpRQZbGADl",
+    //token: "CEVQmnhOsXvpRQZbGADl",
     os: 'HTML5',
     appVersion: '1',
     branding: 'Panaccess',
@@ -531,7 +527,6 @@ export const BRANDS = [
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
       channelChangeWithArrows: true,
-      hudLayout: {},
     },
 
     // Configuración de UI/Tema
@@ -803,7 +798,6 @@ export const BRANDS = [
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
       channelChangeWithArrows: true,
-      hudLayout: {},
     },
 
     // Configuración de UI/Tema
@@ -1041,7 +1035,6 @@ export const BRANDS = [
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
       channelChangeWithArrows: true,
-      hudLayout: {},
     },
 
     // Configuración de UI/Tema
@@ -1286,7 +1279,6 @@ export const BRANDS = [
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
       channelChangeWithArrows: true,
-      hudLayout: {},
     },
 
     // Configuración de UI/Tema
@@ -1559,73 +1551,6 @@ export const BRANDS = [
       showSeekbarOnLive: false,
       closeChannelSidebarOnSelect: false,
       channelChangeWithArrows: true,
-      // HUD: base + overrides por tipo y por plataforma (tv | pc) + tipo
-      hudLayout: {
-        top: {
-          left: ['back', 'channels'],
-          center: ['rewind', 'play', 'forward'],
-          right: ['epg', 'info', 'tracks', 'lock', 'clock', 'fullscreen'],
-        },
-        bottom: ['goLive'],
-        overrides: {
-          service: {
-            top: {
-              left: ['back', 'channels', 'epg', 'lock', 'info'],
-              right: ['tracks', 'clock'],
-            },
-            bottom: ['goLive'],
-          },
-          vod: {
-            top: {
-              left: ['back', 'info', 'tracks'],
-              center: ['rewind', 'play', 'forward'],
-              right: ['clock'],
-            },
-            bottom: [],
-          },
-          catchup: {
-            top: {
-              left: ['back', 'epg', 'info', 'tracks'],
-              center: ['rewind', 'play', 'forward'],
-              right: ['clock'],
-            },
-            bottom: [],
-          },
-          'tv:service': {
-            top: {
-              left: ['back', 'channels', 'epg', 'lock'],
-              right: ['info', 'tracks', 'clock'],
-            },
-          },
-          'pc:service': {
-            top: {
-              right: ['tracks', 'clock', 'fullscreen'],
-            },
-          },
-          'tv:vod': {
-            top: {
-              left: ['back', 'info'],
-              right: ['tracks', 'clock'],
-            },
-          },
-          'pc:vod': {
-            top: {
-              right: ['tracks', 'fullscreen', 'clock'],
-            },
-          },
-          'tv:catchup': {
-            top: {
-              left: ['back', 'epg', 'info'],
-              right: ['tracks', 'clock'],
-            },
-          },
-          'pc:catchup': {
-            top: {
-              right: ['tracks', 'fullscreen', 'clock'],
-            },
-          },
-        },
-      },
     },
 
     // Configuración de UI/Tema
@@ -1767,13 +1692,6 @@ export const BRANDS = [
     },
   },
 ];
-
-// HUD: copia independiente por marca (hudLayout: {} usa layout por defecto).
-for (const entry of BRANDS) {
-  if (entry.player) {
-    entry.player.hudLayout = clonePlayerHudLayout(entry.player.hudLayout);
-  }
-}
 
 /**
  * Obtiene la configuración de una marca por su identificador.
