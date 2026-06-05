@@ -15,6 +15,7 @@ for (const brand of brands) {
     execSync(`cross-env VITE_BRAND=${brand} VITE_DEFAULT_BRAND=${brand} vite build`, {
       stdio: 'inherit',
     });
+    execSync(`node scripts/check-es-compat.js dist/${brand}`, { stdio: 'inherit' });
     success++;
     console.log(`✅ ${brand} completado\n`);
   } catch (error) {

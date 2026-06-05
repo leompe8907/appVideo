@@ -69,6 +69,14 @@ function App() {
   const { currentBrand } = useBrand();
 
   useEffect(() => {
+    try {
+      sessionStorage.removeItem('app_reloaded_from_error');
+    } catch {
+      // noop
+    }
+  }, []);
+
+  useEffect(() => {
     setOnSessionInvalid(() => {
       navigate('/', { replace: true });
     });

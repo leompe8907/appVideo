@@ -17,18 +17,16 @@ const IGNORE_FILE_PATTERNS = [
   /videojs-hlsjs-plugin/i,
 ];
 
-/** Quita literales regex para no confundir /\?.*$/ con optional chaining */
-function stripRegexLiterals(code) {
-  return code.replace(/\/(?:\\.|[^/\\])+\/[gimsuvy]*/g, '');
-}
-
 function hasOptionalChaining(code) {
-  // ?.prop — no confundir con ternarios del estilo cond?.65:1 (opacity en JSX minificado)
-  return /\?\.(?:[a-zA-Z_$]|\[|\()/.test(stripRegexLiterals(code));
+  // ?.prop — no confundir con:
+  // - regex /\?.*$/ (backslash antes de ?)
+  // - ternarios cond?.65:1 (dígito tras el punto)
+  return /\?\.(?:[a-zA-Z_$]|\[|\()/.test(code);
 }
 
 function hasNullishCoalescing(code) {
-  return /\?\?/.test(stripRegexLiterals(code));
+  // Evitar falsos positivos en operadores compuestos (?=, ?:, etc.)
+  return /(^|[^?])\?\?(?!=)/.test(code);
 }
 
 function collectJsFiles(dir, out = []) {

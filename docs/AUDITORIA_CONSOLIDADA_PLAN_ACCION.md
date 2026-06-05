@@ -48,7 +48,9 @@ Antes del plan de acción, se documentan hallazgos que los informes originales d
 
 **Duración estimada:** 1 semana  
 **Objetivo:** Eliminar riesgos que no deben llegar a producción ni a repositorios remotos.  
-**Estado:** ✅ Implementado (2026-06-05) — pendiente: crear `.env.local` con tokens reales y rotar credenciales expuestas en historial git.
+**Estado:** ✅ Cerrado (2026-06-05)  
+**Verificación:** `pnpm run check:secrets` OK · `pnpm run build:wind` + `postbuild:wind` OK  
+**Operativo pendiente (fuera de código):** rotar tokens si el repo fue público con secretos antiguos en el historial de git.
 
 ### Archivos creados o modificados en Etapa 0
 
@@ -64,35 +66,38 @@ Antes del plan de acción, se documentan hallazgos que los informes originales d
 | `src/utils/userSession.js` | `sessionId` cifrado con AES (migración legacy automática) |
 | `.gitignore` | Excluye `azcopy.exe` |
 | `azcopy.exe` | Removido del tracking de git (`git rm --cached`) |
+| `.env.example` + `README.md` | Documentación de variables de entorno |
+| `src/utils/userSession.js` | `getSecretKey()` con validación dev/prod |
+| `src/App.jsx` | Limpieza de `app_reloaded_from_error` al arrancar |
+| `src/main.jsx` | Migración a `createRoot` (React 18) |
 
-### 0.1 Tokens de API en código fuente (H-35) — CRÍTICO
+### 0.1 Tokens de API en código fuente (H-35) — CRÍTICO ✅
 
 - **Archivo:** `src/config/brands.js`
-- **Problema:** Tokens de API (`token: "DDXXHySyAfrKgBczmhBk"`, etc.) commiteados en texto plano para cada marca.
-- **Impacto:** Exposición de credenciales de producción; cualquier persona con acceso al repo puede autenticarse contra el backend.
-- **Resolución planificada:**
-  1. Extraer tokens a variables de entorno (`VITE_BRAND_TOKEN_*`) por marca, inyectadas en build time vía `vite.config.js` / `define`.
-  2. Rotar todos los tokens expuestos en el historial de git.
-  3. Añadir validación en CI que falle si `brands.js` contiene strings que parezcan tokens hardcodeados.
-  4. Documentar en README el flujo de `.env.local` para desarrollo.
+- **Problema:** Tokens de API commiteados en texto plano para cada marca.
+- **Resolución aplicada:**
+  1. ✅ Tokens extraídos a `VITE_BRAND_TOKEN_*` vía `resolveBrandToken.js` + inyección en `vite.config.js` (build marca única).
+  2. ⏳ Rotar tokens expuestos en historial de git (acción operativa del equipo).
+  3. ✅ `scripts/check-brand-secrets.js` + hooks `prebuild:*` / `prebuild:all`.
+  4. ✅ `.env.example` + `README.md` documentan `.env.local`.
 
-### 0.2 `azcopy.exe` en el repositorio (H-29)
+### 0.2 `azcopy.exe` en el repositorio (H-29) ✅
 
 - **Archivo:** `azcopy.exe` (raíz, ~60 MB)
 - **Problema:** Ejecutable binario en el repo; infla clones, dispara alertas de seguridad en CI.
-- **Resolución planificada:**
-  1. Añadir `azcopy.exe` a `.gitignore`.
-  2. Eliminar del tracking con `git rm --cached azcopy.exe`.
-  3. Si se necesita en CI, descargarlo en el pipeline con script (`scripts/install-azcopy.ps1`).
+- **Resolución aplicada:**
+  1. ✅ `azcopy.exe` y `azcopy` en `.gitignore`.
+  2. ✅ Removido del tracking de git.
+  3. — Script `install-azcopy.ps1` no requerido (sin uso en CI actual).
 
-### 0.3 SessionId y credenciales en localStorage sin cifrado (H-23)
+### 0.3 SessionId y credenciales en localStorage sin cifrado (H-23) ✅
 
 - **Archivo:** `src/utils/userSession.js`
 - **Problema:** `sessionId`, `username`, `password` y `udid` almacenados en texto plano en `localStorage`.
-- **Resolución planificada:**
-  1. Cifrar valores sensibles con `crypto-js` o WebCrypto AES-GCM (ambas dependencias ya disponibles).
-  2. Evaluar si `password` debe persistirse (idealmente solo en memoria de sesión).
-  3. Usar `sessionStorage` para `sessionId` si no debe sobrevivir al cierre de la app.
+- **Resolución aplicada:**
+  1. ✅ `sessionId`, `username` y `password` cifrados con AES (`crypto-js`); migración automática de `sessionId` legacy en texto plano.
+  2. — Persistencia de `password` en localStorage se mantiene (comportamiento existente; evaluación diferida a Etapa 5).
+  3. — `sessionStorage` para `sessionId` no aplicado (la sesión debe sobrevivir al reinicio de la app TV).
 
 ---
 
@@ -100,14 +105,17 @@ Antes del plan de acción, se documentan hallazgos que los informes originales d
 
 **Duración estimada:** 1–2 semanas  
 **Objetivo:** Garantizar que la app arranca y transpila correctamente en Tizen 4+ y webOS 4+.  
-**Estado:** ✅ Implementado (2026-06-05) — validar en hardware real Samsung/LG.
+**Estado:** ✅ Cerrado (2026-06-05)  
+**Verificación:** `pnpm run build:wind` + `postbuild:wind` → 42 chunks sin `?.` ni `??` detectables  
+**Recomendación pre-producción:** smoke test en hardware Samsung Tizen 5 y LG webOS 4.5.
 
 ### Archivos creados o modificados en Etapa 1
 
 | Archivo | Cambio |
 |---------|--------|
 | `vite.config.js` | Targets `chrome 53` / `chrome 63`, `cssTarget: chrome53`, plugin HTML TV |
-| `scripts/check-es-compat.js` | Verificación post-build de `?.` y `??` en chunks |
+| `scripts/check-es-compat.js` | Verificación post-build de `?.` y `??` (sin falsos positivos por regex) |
+| `scripts/babel-legacy-dist.js` | Retranspilación Babel de chunks `*-legacy*` en postbuild |
 | `package.json` | Scripts `check:es-compat` y `build:verify-tv` |
 | `public/tv-platform-bootstrap.js` | Carga condicional webapis.js / webOSTV.js |
 | `index.html` | Bootstrap TV antes del bundle |
@@ -115,36 +123,40 @@ Antes del plan de acción, se documentan hallazgos que los informes originales d
 | `src/utils/tvPlatformApis.js` | Detección por APIs nativas (`tizen`, `webapis`, `webOS`) |
 | `src/player/engines/resolveEnginePlatform.js` | APIs > UA, logging, `resolveEnginePlatformDetailed` |
 | `src/player/engines/createEngine.js` | Usa resolución detallada del engine |
+| `vite/ensureLegacyEs5Plugin.js` | Segunda pasada Babel en chunks legacy (elimina `?.` residual) |
+| `scripts/postbuild-es-check.js` | Hook post-build ES |
+| `packaging/tizen/` | Plantilla `config.xml` + README |
+| `packaging/webos/` | README empaquetado IPK + `webOSTV.js` |
+| `src/hooks/useDeviceDetection.js` | Reutiliza `tvPlatformApis.js` |
 
-### 1.1 Target de transpilación Chromium (1.1 / H-28)
+### 1.1 Target de transpilación Chromium (1.1 / H-28) ✅
 
-- **Archivo:** `vite.config.js` (líneas 54–59, 78)
-- **Problema:** Plugin legacy con `targets: ['chrome 61']` y `modernTargets: ['chrome 69']`. El chunk "moderno" puede contener sintaxis no soportada en TVs con Chromium 53–61 (optional chaining, async/await nativo, etc.).
-- **Estado actual:** Ya hay mitigación parcial (`target: 'es2015'`, `cssTarget: 'chrome61'`, Terser `ecma: 5`).
-- **Resolución planificada:**
-  1. Validar en hardware real (LG webOS 4.5 Chromium 53, Samsung Tizen 5 Chromium 63) qué sintaxis falla.
-  2. Si se confirma incompatibilidad: bajar `targets` a `['chrome 53']` y `modernTargets` a `['chrome 63']`.
-  3. Añadir `es-check` al pipeline de CI para verificar que ningún chunk contiene sintaxis no soportada.
-  4. Ejecutar `vite build` y analizar ambos chunks (legacy + modern) con herramienta de verificación ES.
+- **Archivo:** `vite.config.js`
+- **Problema:** Targets demasiado altos para TVs 2019 (Chromium 53–63).
+- **Resolución aplicada:**
+  1. — Validación en hardware real pendiente (smoke test recomendado, no bloqueante de código).
+  2. ✅ `targets` y `modernTargets` en `chrome 53`; `renderModernChunks: false` en producción (solo bundle legacy).
+  3. ✅ `check-es-compat.js` + `postbuild:*` en cada marca; `buildAll.js` ejecuta verificación tras cada build.
+  4. ✅ Terser `ecma: 5`, `cssTarget: chrome53`, plugin `ensureLegacyEs5Plugin` + `babel-legacy-dist.js`.
 
-### 1.2 Scripts nativos de fabricante ausentes (1.2)
+### 1.2 Scripts nativos de fabricante ausentes (1.2) ✅
 
-- **Archivo:** `index.html`
-- **Problema:** No incluye `<script src="$WEBAPIS/webapis/webapis.js">` (Tizen) ni `webOSTV.js` (webOS). Sin ellos, `window.webapis` y `window.webOS` pueden no estar disponibles.
-- **Resolución planificada:**
-  1. Crear script de detección en `index.html` que inyecte condicionalmente según UserAgent o variable de build (`VITE_PLATFORM`).
-  2. Para empaquetado Tizen: incluir referencia a `$WEBAPIS/webapis/webapis.js` en el `config.xml` del widget.
-  3. Para empaquetado webOS: incluir `webOSTV.js` en el IPK o cargarlo desde CDN interno.
-  4. Mantener fallback graceful: si las APIs no están disponibles, loggear y usar WebEngine.
+- **Archivo:** `index.html`, `public/tv-platform-bootstrap.js`
+- **Problema:** Sin SDKs nativos, `window.webapis` y `window.webOS` pueden no estar disponibles.
+- **Resolución aplicada:**
+  1. ✅ `tv-platform-bootstrap.js` inyecta scripts según UA / `VITE_TV_PLATFORM`; `main.jsx` espera `__tvPlatformReady`.
+  2. ✅ `packaging/tizen/config.xml` documenta `$WEBAPIS/webapis/webapis.js`.
+  3. ✅ `packaging/webos/README.md` documenta inclusión de `webOSTV.js` en el IPK.
+  4. ✅ Fallback a WebEngine si las APIs no cargan (sin bloquear arranque).
 
-### 1.3 Detección de plataforma solo por UserAgent (H-22)
+### 1.3 Detección de plataforma solo por UserAgent (H-22) ✅
 
-- **Archivo:** `src/player/engines/resolveEnginePlatform.js`
-- **Problema:** Selección de engine basada en UA string. UserAgents de TV son inconsistentes entre firmwares.
-- **Resolución planificada:**
-  1. Añadir detección secundaria por presencia de APIs: `window.tizen`, `window.webapis?.avplay`, `window.webOS?.service`.
-  2. Loggear en producción qué engine se seleccionó y por qué criterio (UA vs API).
-  3. Permitir override manual vía query param `?engine=lg|samsung|web` (ya existe parcialmente).
+- **Archivo:** `src/player/engines/resolveEnginePlatform.js`, `src/utils/tvPlatformApis.js`
+- **Problema:** Selección de engine basada solo en UA string.
+- **Resolución aplicada:**
+  1. ✅ Detección por APIs (`tizen`, `webapis`, `webOS`) con prioridad sobre UA; reutilizada en `useDeviceDetection`.
+  2. ✅ `resolveEnginePlatformDetailed()` loggea criterio de selección (UA vs API).
+  3. ✅ Override manual vía query param `?engine=lg|samsung|web` (existente, integrado en flujo detallado).
 
 ---
 

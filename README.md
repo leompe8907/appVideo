@@ -4,13 +4,28 @@ Aplicación base para múltiples clientes OTT compatible con TVs LG y Samsung 20
 
 ## 🚀 Uso Rápido
 
+### Variables de entorno
+
+Vite **solo** carga `.env.local` (no `.env.example`).
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable | Obligatoria | Descripción |
+|----------|-------------|-------------|
+| `VITE_SECRET_KEY` | Sí (prod) | Cifrado de credenciales y `sessionId` en localStorage |
+| `VITE_BRAND_TOKEN_<MARCA>` | Sí | Token API Panaccess por marca (ej. `VITE_BRAND_TOKEN_WIND`) |
+| `VITE_TV_PLATFORM` | No | Fuerza bootstrap TV: `tizen`, `webos`, `lg`, `samsung` |
+
+Los tokens **no** van en `src/config/brands.js`. El CI falla si detecta tokens hardcodeados (`pnpm run check:secrets`).
+
 ### Desarrollo
 ```bash
-# Desarrollo normal (sin marca específica)
-npm run dev
+pnpm run dev
 
-# Ver en: http://localhost:3000
-# Cambiar cliente con: http://localhost:3000?brand=bromteck
+# http://localhost:3000
+# Cambiar cliente: http://localhost:3000?brand=bromteck
 ```
 
 ### Builds
@@ -26,8 +41,17 @@ npm run build:intv
 npm run build:gigmax
 
 # Build de todos los clientes a la vez
-npm run build:all
+pnpm run build:all
+
+# Verificar compatibilidad ES5 TV (Chrome 53) tras build
+pnpm run check:es-compat dist/wind
 ```
+
+## Smart TV (Tizen / webOS)
+
+- Bootstrap nativo: `public/tv-platform-bootstrap.js` (webapis / webOSTV.js).
+- Empaquetado: ver `packaging/tizen/` y `packaging/webos/`.
+- Build producción genera solo chunks **legacy** compatibles con TV 2019.
 
 ## Assets en build
 

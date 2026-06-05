@@ -4,6 +4,7 @@ import legacy from '@vitejs/plugin-legacy'
 import { brandPublicAssetsPlugin } from './vite/brandPublicAssets.js'
 import { BRANDS } from './src/config/brands.js'
 import { resolveBrandTokenFromProcessEnv } from './src/config/resolveBrandToken.js'
+import { ensureLegacyEs5Plugin } from './vite/ensureLegacyEs5Plugin.js'
 
 function singleBrandConfigPlugin(brand, env) {
   const selectedBrand = brand ? BRANDS.find((entry) => entry.brand === brand) : null;
@@ -85,6 +86,7 @@ export default defineConfig(({ mode }) => {
           );
         },
       },
+      ensureLegacyEs5Plugin(),
     ],
 
     css: {

@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react';
+import {
+  hasLgTvRuntime,
+  hasSamsungTvRuntime,
+} from '../utils/tvPlatformApis';
 
 /**
  * Hook para detectar el tipo de dispositivo (TV vs PC)
@@ -33,14 +37,7 @@ export function useDeviceDetection() {
       // Señal 0 (muy fuerte): Runtime nativo expuesto (emuladores/hardware)
       // En muchos emuladores el User-Agent puede verse como Chrome/desktop,
       // pero estas APIs suelen estar presentes cuando realmente corre en webOS/Tizen.
-      const hasTizenRuntime = typeof window !== 'undefined' && !!window.tizen;
-      const hasSamsungWebApis = typeof window !== 'undefined' && !!window.webapis;
-      const hasWebOsRuntime =
-        typeof window !== 'undefined' &&
-        (!!window.webOS ||
-          !!window.PalmSystem ||
-          (typeof window.webOS?.service?.request === 'function'));
-      const hasTvRuntime = hasTizenRuntime || hasSamsungWebApis || hasWebOsRuntime;
+      const hasTvRuntime = hasSamsungTvRuntime() || hasLgTvRuntime();
 
       // Señal 1: User-Agent (TVs conocidas)
       const isTVUserAgent = 

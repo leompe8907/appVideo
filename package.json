@@ -40,8 +40,10 @@
     "lint": "eslint .",
     "check:secrets": "node scripts/check-brand-secrets.js",
     "check:es-compat": "node scripts/check-es-compat.js",
-    "build:verify-tv": "pnpm run build && node scripts/check-es-compat.js",
+    "build:verify-tv": "pnpm run build && node scripts/postbuild-es-check.js",
+    "update:browserslist": "update-browserslist-db",
     "prebuild": "node scripts/check-brand-secrets.js",
+    "postbuild": "node scripts/postbuild-es-check.js",
     "prebuild:all": "node scripts/check-brand-secrets.js",
     "prebuild:telecable": "node scripts/check-brand-secrets.js",
     "prebuild:bromteck": "node scripts/check-brand-secrets.js",
@@ -49,7 +51,14 @@
     "prebuild:gigmax": "node scripts/check-brand-secrets.js",
     "prebuild:wind": "node scripts/check-brand-secrets.js",
     "prebuild:cableatlantico": "node scripts/check-brand-secrets.js",
-    "prebuild:delancertv": "node scripts/check-brand-secrets.js"
+    "prebuild:delancertv": "node scripts/check-brand-secrets.js",
+    "postbuild:telecable": "node scripts/postbuild-es-check.js telecable",
+    "postbuild:bromteck": "node scripts/postbuild-es-check.js bromteck",
+    "postbuild:intv": "node scripts/postbuild-es-check.js intv",
+    "postbuild:gigmax": "node scripts/postbuild-es-check.js gigmax",
+    "postbuild:wind": "node scripts/postbuild-es-check.js wind",
+    "postbuild:cableatlantico": "node scripts/postbuild-es-check.js cableatlantico",
+    "postbuild:delancertv": "node scripts/postbuild-es-check.js cableatlantico"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
@@ -78,6 +87,10 @@
     }
   },
   "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/plugin-transform-nullish-coalescing-operator": "^7.29.7",
+    "@babel/plugin-transform-optional-chaining": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
     "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
@@ -90,6 +103,7 @@
     "globals": "^16.5.0",
     "regenerator-runtime": "^0.14.1",
     "terser": "^5.46.1",
+    "update-browserslist-db": "^1.2.3",
     "vite": "^7.2.4"
   }
 }

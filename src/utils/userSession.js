@@ -31,7 +31,16 @@ function brandId(override) {
 }
 
 export function getSecretKey() {
-  return import.meta.env.VITE_SECRET_KEY;
+  const key = import.meta.env.VITE_SECRET_KEY;
+  if (key != null && String(key).trim() !== '') {
+    return String(key).trim();
+  }
+  if (import.meta.env.DEV) {
+    console.warn('[userSession] VITE_SECRET_KEY no definida; usando clave temporal de desarrollo.');
+    return 'dev-only-insecure-key';
+  }
+  console.error('[userSession] VITE_SECRET_KEY es obligatoria en producción.');
+  return '';
 }
 
 function encryptStorageValue(value) {
