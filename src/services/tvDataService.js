@@ -347,13 +347,14 @@ export async function getBouquetsWithChannels(options = {}) {
 export async function loadEPGForStreams(streams, brandConfig, options = {}) {
   if (!Array.isArray(streams) || streams.length === 0 || !brandConfig) return streams;
   const epg = brandConfig.EPG ?? {};
-  const maxChannels = options.maxChannels ?? epg.rowsOnInit ?? 7;
+  const maxChannels = options.maxChannels ?? streams.length;
   await loadEPGForChannels(streams, {
     epgApiKey: brandConfig.epgApiKey ?? '',
     epgApiToken: brandConfig.epgApiToken ?? '',
     epgDaysOffset: epg.daysOffset ?? 2,
     epgHoursLimit: epg.hoursLimit ?? 12,
     maxChannels,
+    requestTimeoutMs: options.requestTimeoutMs ?? epg.requestTimeoutMs,
     onProgress: options.onProgress ?? (() => {}),
   });
   return streams;

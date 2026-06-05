@@ -10,6 +10,8 @@ import { parseEpgDateToMs } from '../utils/epgTime';
 
 const DEFAULT_EPG_HOURS_LIMIT = 12;
 const DEFAULT_EPG_DAYS_OFFSET = 2;
+/** Si una consulta EPG no responde en este tiempo, se salta al siguiente canal. */
+export const DEFAULT_EPG_REQUEST_TIMEOUT_MS = 90000;
 
 /**
  * Construye la URL de descarga de EPG para un canal (epgStreamId).
@@ -119,19 +121,49 @@ function toMomentLike(start) {
  * Descarga la EPG desde la URL (fetch). Soporta CORS; si el servidor solo devuelve JSONP,
  * parseEPGResponse intenta extraer el JSON del wrapper.
  * @param {string} url
+ * @param {{ timeoutMs?: number, signal?: AbortSignal }} [options]
  * @returns {Promise<Array>} Lista de eventos EPG.
  */
-export async function fetchEPG(url) {
+export async function fetchEPG(url, options = {}) {
   if (!url || typeof url !== 'string') return [];
-  try {
-    const res = await fetch(url, { method: 'GET', mode: 'cors' });
+
+  const timeoutMs = Number(options.timeoutMs) || 0;
+  const externalSignal = options.signal;
+  const controller = new AbortController();
+  let timeoutId = null;
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
+  }
+
+  const fetchPromise = (async () => {
+    const res = await fetch(url, { method: 'GET', mode: 'cors', signal: controller.signal });
     const text = await res.text();
     return parseEPGResponse(text);
+  })();
+
+  try {
+    if (timeoutMs > 0) {
+      const timed = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          controller.abort();
+          reject(new Error(`EPG request timeout (${timeoutMs}ms)`));
+        }, timeoutMs);
+      });
+      return await Promise.race([fetchPromise, timed]);
+    }
+    return await fetchPromise;
   } catch (e) {
     if (import.meta.env?.DEV) {
       console.warn('[epgService] fetchEPG error:', e?.message ?? e);
     }
     return [];
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
 
@@ -166,7 +198,7 @@ function filterAndEnrichEvents(data, epgHoursLimit) {
  * Carga EPG para una lista de canales (streams) de forma secuencial, como getEPGByBouquet.
  * Mutación: asigna channel.epgItems a cada canal.
  * @param {Array} channels - Lista de canales (cada uno con id, epgStreamId, ...).
- * @param {Object} options - epgApiKey, epgApiToken, epgDaysOffset, epgHoursLimit, maxChannels, onProgress(channelIndex, total).
+ * @param {Object} options - epgApiKey, epgApiToken, epgDaysOffset, epgHoursLimit, maxChannels, requestTimeoutMs, onProgress(channelIndex, total).
  * @returns {Promise<Array>} La misma lista de canales con epgItems asignados.
  */
 export async function loadEPGForChannels(channels, options = {}) {
@@ -176,6 +208,7 @@ export async function loadEPGForChannels(channels, options = {}) {
   const epgDaysOffset = options.epgDaysOffset ?? DEFAULT_EPG_DAYS_OFFSET;
   const epgHoursLimit = options.epgHoursLimit ?? DEFAULT_EPG_HOURS_LIMIT;
   const maxChannels = options.maxChannels ?? list.length;
+  const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_EPG_REQUEST_TIMEOUT_MS;
   const onProgress = options.onProgress ?? (() => {});
 
   const epgCdnUrl = options.epgCdnUrl ?? getEpgCdnUrl();
@@ -219,7 +252,10 @@ export async function loadEPGForChannels(channels, options = {}) {
       continue;
     }
 
-    const data = await fetchEPG(url);
+    const data = await fetchEPG(url, { timeoutMs: requestTimeoutMs });
+    if (!data.length && import.meta.env?.DEV) {
+      console.warn('[epgService] EPG vacía o timeout para epgStreamId:', epgStreamId);
+    }
     // Optimización TV: normalización en Worker si está disponible.
     const nowMs = Date.now();
     const fromWorker = await normalizeEpgInWorker(data, { epgHoursLimit, nowMs }).catch(() => null);

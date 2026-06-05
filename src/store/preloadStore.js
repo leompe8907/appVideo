@@ -13,7 +13,8 @@ const IS_DEV =
   import.meta.env != null &&
   import.meta.env.DEV === true;
 
-const LOADING_TIMEOUT_MS = 300000;
+/** Solo VOD preload: cortafuegos global si la carga entera se cuelga. */
+const VOD_LOADING_TIMEOUT_MS = 300000;
 
 const epgInitialState = {
   status: 'idle', // 'idle' | 'loading' | 'finishing' | 'ready' | 'error'
@@ -54,18 +55,10 @@ const catchupInitialState = {
 
 // FIX #2: Flags de control fuera del closure de create() para evitar que el
 // code-splitting de producción las resetee al re-evaluar el módulo.
-let loadingTimeout = null;
 let vodTimeout = null;
 let vodLoading = false;
 let adsLoading = false;
 let catchupLoading = false;
-
-const clearLoadingTimeout = () => {
-  if (loadingTimeout) {
-    clearTimeout(loadingTimeout);
-    loadingTimeout = null;
-  }
-};
 
 const clearVodTimeout = () => {
   if (vodTimeout) {
@@ -113,31 +106,6 @@ export const usePreloadStore = create(function (set, get) {
         };
       });
 
-      clearLoadingTimeout();
-      loadingTimeout = setTimeout(function () {
-        // FIX #1: usar IS_DEV (constante de módulo) en vez de import.meta.env?.DEV
-        if (IS_DEV) {
-          console.warn('[PreloadStore] Timeout en carga de EPG, marcando como listo');
-        }
-        clearLoadingTimeout();
-        set(function (s) {
-          if (s.epg.status !== 'loading') return s;
-          return {
-            epg: {
-              status: 'ready',
-              streams: s.epg.streams,
-              bouquetsWithChannels: s.epg.bouquetsWithChannels,
-              progress: { current: s.epg.progress.current, total: s.epg.progress.total, percent: 100 },
-              error: null,
-              lastLoadedAt: Date.now(),
-            },
-            vod: s.vod,
-            ads: s.ads,
-            catchup: s.catchup,
-          };
-        });
-      }, LOADING_TIMEOUT_MS);
-
       try {
         var bouquets = await getBouquetsWithChannels({ enableRetry: false });
         var allStreamsRaw = bouquets.reduce(function (acc, b) {
@@ -147,7 +115,6 @@ export const usePreloadStore = create(function (set, get) {
         var total = allStreams.length;
 
         if (total === 0) {
-          clearLoadingTimeout();
           set(function (s) {
             return {
               epg: {
@@ -194,7 +161,6 @@ export const usePreloadStore = create(function (set, get) {
           },
         });
 
-        clearLoadingTimeout();
         set(function (s) {
           var nextStatus = s.epg.status !== 'loading' ? s.epg.status : 'finishing';
           return {
@@ -223,7 +189,6 @@ export const usePreloadStore = create(function (set, get) {
           });
         }, 500);
       } catch (err) {
-        clearLoadingTimeout();
         var epgErrMsg = (err && err.message) || (err && err.errorInfo && err.errorInfo.userMessage) || 'Error al cargar EPG';
         // FIX #1: IS_DEV en vez de import.meta.env?.DEV
         if (IS_DEV) console.warn('[PreloadStore] loadEPG error:', err);
@@ -280,7 +245,7 @@ export const usePreloadStore = create(function (set, get) {
             catchup: s.catchup,
           };
         });
-      }, LOADING_TIMEOUT_MS);
+      }, VOD_LOADING_TIMEOUT_MS);
 
       var runLoad = function (extra) {
         return loadVODData(brandConfig, Object.assign({}, loadOptions, extra || {}, {
@@ -619,7 +584,6 @@ export const usePreloadStore = create(function (set, get) {
     },
 
     resetPreload: function () {
-      clearLoadingTimeout();
       clearVodTimeout();
       vodLoading = false;
       adsLoading = false;
