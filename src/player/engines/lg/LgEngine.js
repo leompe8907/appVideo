@@ -1,13 +1,9 @@
 import BaseTvEngine from '../tv/BaseTvEngine';
 
+const DRM_UNLOAD_TIMEOUT_MS = 5000;
+
 /**
- * Engine base para LG.
- *
- * Nota:
- * - En esta fase se mantiene como fallback WebEngine para no romper
- *   el flujo actual en navegador.
- * - En una fase posterior se reemplaza la lógica de `load/play/seek/...`
- *   por la API nativa LG (webOS/NetCast).
+ * Engine LG webOS con Luna DRM + fallback WebEngine.
  */
 export class LgEngine extends BaseTvEngine {
   constructor() {
@@ -15,8 +11,9 @@ export class LgEngine extends BaseTvEngine {
     this.nativeAdapter = null;
     this.nativeVideo = null;
     this.timeTicker = null;
-    this._drmClient = null; // { type: 'playready'|'widevine', clientId }
+    this._drmClient = null;
     this._pendingPlay = false;
+    this._drmTransitionPromise = Promise.resolve();
   }
 
   tryActivateNativeAdapter() {
@@ -36,8 +33,6 @@ export class LgEngine extends BaseTvEngine {
         !!window.webOS.service &&
         typeof window.webOS.service.request === 'function';
 
-      // Si estamos en webOS con Luna service disponible, activamos adapter nativo basado en <video>
-      // + com.webos.service.drm (paridad conceptual con legacy).
       if (hasWebOSService) {
         this.nativeAdapter = { type: 'webos-luna' };
         return true;
@@ -49,10 +44,28 @@ export class LgEngine extends BaseTvEngine {
     }
   }
 
+  _enqueueNativeTask(task) {
+    const run = this._drmTransitionPromise.then(task, task);
+    this._drmTransitionPromise = run.catch(() => {});
+    return run;
+  }
+
+  _releaseVideoPipeline() {
+    const v = this.video;
+    if (!v) return;
+    try {
+      v.pause();
+      v.removeAttribute('src');
+      v.innerHTML = '';
+      v.load();
+    } catch {
+      // noop
+    }
+  }
+
   nativeLoad(url, options = {}) {
     const adapterType = this.nativeAdapter?.type;
 
-    // Adapter inyectado (si existe) tiene prioridad
     if (adapterType === 'injected') {
       const api = this.nativeAdapter?.api;
       if (!api || typeof api.load !== 'function') return false;
@@ -69,21 +82,16 @@ export class LgEngine extends BaseTvEngine {
     if (adapterType !== 'webos-luna') return false;
     if (!this.video || !url) return false;
 
-    try {
-      const drmConfig = options?.drmConfig || { type: 'none' };
-      this._webosLoadSource(url, drmConfig).catch((err) => this.emitNativeError(err));
-      return true;
-    } catch (error) {
-      this.emitNativeError(error);
-      return false;
-    }
+    const drmConfig = options?.drmConfig || { type: 'none' };
+    this._enqueueNativeTask(() => this._webosLoadSource(url, drmConfig)).catch((err) =>
+      this.emitNativeError(err),
+    );
+    return true;
   }
 
   applyLgDrmConfig(api, drmConfig = {}) {
     if (!api || !drmConfig || drmConfig.type === 'none') return;
     try {
-      // Contrato para adapter inyectado LG (si existe):
-      // - api.setDrmConfig({ type, licenseUrl, headers, customData, certificateUrl })
       if (typeof api.setDrmConfig === 'function') {
         api.setDrmConfig({
           type: drmConfig?.type,
@@ -103,13 +111,18 @@ export class LgEngine extends BaseTvEngine {
     if (adapterType === 'injected') {
       const api = this.nativeAdapter?.api;
       if (!api || typeof api.play !== 'function') return false;
-      api.play();
-      return true;
+      try {
+        api.play();
+        return true;
+      } catch (error) {
+        this.emitNativeError(error);
+        throw error;
+      }
     }
 
     if (adapterType !== 'webos-luna') return false;
     if (!this.video) return false;
-    if (!this.video.src) {
+    if (!this.video.src && !this.video.querySelector('source')) {
       this._pendingPlay = true;
       return true;
     }
@@ -122,8 +135,13 @@ export class LgEngine extends BaseTvEngine {
     if (adapterType === 'injected') {
       const api = this.nativeAdapter?.api;
       if (!api || typeof api.pause !== 'function') return false;
-      api.pause();
-      return true;
+      try {
+        api.pause();
+        return true;
+      } catch (error) {
+        this.emitNativeError(error);
+        throw error;
+      }
     }
 
     if (adapterType !== 'webos-luna') return false;
@@ -137,8 +155,13 @@ export class LgEngine extends BaseTvEngine {
     if (adapterType === 'injected') {
       const api = this.nativeAdapter?.api;
       if (!api || typeof api.seek !== 'function') return false;
-      api.seek(seconds);
-      return true;
+      try {
+        api.seek(seconds);
+        return true;
+      } catch (error) {
+        this.emitNativeError(error);
+        throw error;
+      }
     }
 
     if (adapterType !== 'webos-luna') return false;
@@ -157,7 +180,6 @@ export class LgEngine extends BaseTvEngine {
       return true;
     }
 
-    // En webOS video-tag basado en DOM: reutilizamos setDimensions del WebEngine.
     if (adapterType !== 'webos-luna') return false;
     super.setDimensions(rect);
     return true;
@@ -196,6 +218,7 @@ export class LgEngine extends BaseTvEngine {
       clearInterval(this.timeTicker);
       this.timeTicker = null;
     }
+
     const adapterType = this.nativeAdapter?.type;
     if (adapterType === 'injected') {
       const api = this.nativeAdapter?.api;
@@ -209,11 +232,15 @@ export class LgEngine extends BaseTvEngine {
     }
 
     if (adapterType === 'webos-luna') {
-      this._webosUnloadDrmClient().catch(() => {});
+      this._releaseVideoPipeline();
+      this._enqueueNativeTask(() => this._webosUnloadDrmClientWithTimeout()).catch(() => {
+        this._drmClient = null;
+      });
     }
 
     this.nativeVideo = null;
     this.nativeAdapter = null;
+    this._pendingPlay = false;
   }
 
   nativeOnAppHide() {}
@@ -232,14 +259,12 @@ export class LgEngine extends BaseTvEngine {
       await this._webosSendDrmMessage(drmType, drmConfig);
     }
 
-    // Re-crear sources (paridad con legacy webOS player)
     v.innerHTML = '';
     const source = document.createElement('source');
     source.setAttribute('src', url);
 
     const mediaOption = this._webosBuildMediaOption(drmType);
     const mime = this._webosGuessMimeType(url);
-    // Nota: webOS legacy usa "type=<mime>;mediaOption=<escaped-json>".
     source.setAttribute('type', `${mime};mediaOption=${mediaOption}`);
 
     v.appendChild(source);
@@ -291,23 +316,39 @@ export class LgEngine extends BaseTvEngine {
     });
   }
 
+  async _webosUnloadDrmClientWithTimeout() {
+    const clientId = this._drmClient?.clientId;
+    if (!clientId) return;
+
+    let timeoutId;
+    try {
+      await Promise.race([
+        this._webosRequest('unload', { clientId: String(clientId) }),
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error(`[LgEngine] DRM unload timeout (${DRM_UNLOAD_TIMEOUT_MS}ms)`)),
+            DRM_UNLOAD_TIMEOUT_MS,
+          );
+        }),
+      ]);
+    } catch (error) {
+      console.warn('[LgEngine] DRM unload failed:', error?.message || error);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+      this._drmClient = null;
+    }
+  }
+
   async _webosEnsureDrmClient(drmType) {
     const normalized = drmType === 'widevine' ? 'widevine' : 'playready';
     if (this._drmClient?.type === normalized && this._drmClient?.clientId) return;
-    await this._webosUnloadDrmClient().catch(() => {});
+    await this._webosUnloadDrmClientWithTimeout();
     const appId =
       (typeof window.webOS?.fetchAppId === 'function' ? window.webOS.fetchAppId() : '') || '';
     const result = await this._webosRequest('load', { drmType: normalized, appId });
     const clientId = result?.clientId || result?.answer?.clientId || null;
     if (!clientId) throw new Error('[LgEngine] webOS DRM load did not return clientId');
     this._drmClient = { type: normalized, clientId: String(clientId) };
-  }
-
-  async _webosUnloadDrmClient() {
-    const clientId = this._drmClient?.clientId;
-    if (!clientId) return;
-    await this._webosRequest('unload', { clientId: String(clientId) });
-    this._drmClient = null;
   }
 
   async _webosSendDrmMessage(drmType, drmConfig = {}) {
@@ -341,7 +382,6 @@ export class LgEngine extends BaseTvEngine {
       return;
     }
 
-    // Widevine (legacy): mensaje XML de credenciales.
     const msgType = 'application/widevine+xml';
     const drmSystemId = 'urn:dvb:casystemid:19156';
     const licenseServer = drmConfig?.licenseUrl || '';
@@ -364,4 +404,3 @@ export class LgEngine extends BaseTvEngine {
 }
 
 export default LgEngine;
-

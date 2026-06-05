@@ -4,6 +4,7 @@ import legacy from '@vitejs/plugin-legacy'
 import { brandPublicAssetsPlugin } from './vite/brandPublicAssets.js'
 import { BRANDS } from './src/config/brands.js'
 import { resolveBrandTokenFromProcessEnv } from './src/config/resolveBrandToken.js'
+import { applyBrandRuntimePolicyFromEnv } from './src/config/applyBrandRuntimePolicy.js'
 import { ensureLegacyEs5Plugin } from './vite/ensureLegacyEs5Plugin.js'
 
 function singleBrandConfigPlugin(brand, env) {
@@ -37,7 +38,7 @@ function singleBrandConfigPlugin(brand, env) {
         );
       }
 
-      const brandWithToken = { ...selectedBrand, token };
+      const brandWithToken = applyBrandRuntimePolicyFromEnv(selectedBrand, env);
 
       return {
         code: [

@@ -17,6 +17,7 @@ cp .env.example .env.local
 | `VITE_SECRET_KEY` | Sí (prod) | Cifrado de credenciales y `sessionId` en localStorage |
 | `VITE_BRAND_TOKEN_<MARCA>` | Sí | Token API Panaccess por marca (ej. `VITE_BRAND_TOKEN_WIND`) |
 | `VITE_TV_PLATFORM` | No | Fuerza bootstrap TV: `tizen`, `webos`, `lg`, `samsung` |
+| `VITE_TV_DEPLOY` | No | `true` activa engines nativos Samsung/LG en build TV (Etapa 2) |
 
 Los tokens **no** van en `src/config/brands.js`. El CI falla si detecta tokens hardcodeados (`pnpm run check:secrets`).
 

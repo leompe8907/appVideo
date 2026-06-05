@@ -29,7 +29,18 @@ function normalizeTracksSnapshot(raw) {
 
 function tracksSnapshotsEqual(a, b) {
   if (a === b) return true;
-  return JSON.stringify(a) === JSON.stringify(b);
+  if (!a || !b) return false;
+  if (a.selectedAudioId !== b.selectedAudioId) return false;
+  if (a.selectedTextId !== b.selectedTextId) return false;
+  if (a.textEnabled !== b.textEnabled) return false;
+  if (a.audio.length !== b.audio.length || a.text.length !== b.text.length) return false;
+  for (let i = 0; i < a.audio.length; i++) {
+    if (String(a.audio[i]?.id) !== String(b.audio[i]?.id)) return false;
+  }
+  for (let i = 0; i < a.text.length; i++) {
+    if (String(a.text[i]?.id) !== String(b.text[i]?.id)) return false;
+  }
+  return true;
 }
 
 // Hook para usar el contexto del player
@@ -54,6 +65,7 @@ export function PlayerProvider({ children }) {
   const userTrackChoiceRef = useRef(false);
   const tracksRestoredRef = useRef(false);
   const debugRef = useRef(false);
+  const engineHandlersRef = useRef({});
 
   const getPlaybackSnapshot = useCallback(
     () => ({
@@ -139,22 +151,237 @@ export function PlayerProvider({ children }) {
     }, 20000);
   }, [clearSeekTimeout]);
 
-  // Crear engine UNA SOLA VEZ al montar el provider.
-  // El engine se mantiene vivo durante toda la sesión para evitar:
-  // - Pantalla negra durante navegación entre páginas
-  // - Pérdida del elemento <video> montado
-  // - Re-registro de event listeners (overhead de CPU)
-  // - Reset de estado de playback mid-playback
+  useEffect(() => {
+    const tryRecoverAfterError = async (err, snapshot) => {
+      const brand = brandRef.current;
+      if (!brand || !snapshot?.url) return false;
+
+      const active = userSession.getActiveLicense?.();
+      const licenseKey = active?.licenseKey ? String(active.licenseKey).trim() : '';
+      const pin = active?.pin != null ? String(active.pin) : '';
+      if (!licenseKey) return false;
+
+      const recoveryKey = `${snapshot.type || ''}::${snapshot.id || ''}::${snapshot.url || ''}`;
+      if (recoveryRef.current.inProgress || recoveryRef.current.lastKey === recoveryKey) return false;
+
+      recoveryRef.current.inProgress = true;
+      recoveryRef.current.lastKey = recoveryKey;
+
+      try {
+        if (!panaccessService.client) {
+          await panaccessService.initialize(brand);
+        }
+        await panaccessService.setStreamingLicense({ licenseKey, pin, failIfInUse: true });
+        engineRef.current?.reset?.();
+        engineRef.current?.load?.(snapshot.url, {
+          type: snapshot.type,
+          autoPlay: true,
+          mediaOption: snapshot.mediaOption || {},
+          drmConfig: snapshot.drmConfig || {},
+        });
+        return true;
+      } catch (e) {
+        if (isLicenseInUseError(e)) {
+          setLicenseInUsePrompt({ licenseKey, pin, snapshot });
+          return true;
+        }
+        return false;
+      } finally {
+        recoveryRef.current.inProgress = false;
+      }
+    };
+
+    const isBenignEngineError = (err) => {
+      if (!err) return false;
+      const code = err.code ?? err?.status;
+      if (code === 4) return true;
+      return /no compatible source was found/i.test(String(err.message || ''));
+    };
+
+    const tryRestoreSavedTracks = (snap) => {
+      if (userTrackChoiceRef.current || tracksRestoredRef.current) return;
+
+      const playback = {
+        type: playbackRef.current?.type ?? null,
+        id: playbackRef.current?.id ?? null,
+        item: playbackRef.current?.item ?? null,
+      };
+      if (playback.type !== 'service') {
+        tracksRestoredRef.current = true;
+        return;
+      }
+
+      const brandId = resolveBrandId(brandRef.current?.brand ?? brandRef.current?.id);
+      const { subtitles: subtitleLabel } = getSavedTrackPreferences(brandId, playback);
+      const hasAudioTracks = snap.audio?.length > 0;
+      const hasTextTracks = snap.text?.length > 0;
+      if (!hasAudioTracks && !subtitleLabel) return;
+      if (subtitleLabel && !hasTextTracks && !hasAudioTracks) return;
+
+      const engine = engineRef.current;
+      if (!engine) return;
+
+      applySavedTrackPreferences(engine, brandId, playback, snap);
+      tracksRestoredRef.current = true;
+    };
+
+    engineHandlersRef.current = {
+      handleTime: ({ currentTime, duration }) => {
+        setState((s) => {
+          const nextCurrentTime = typeof currentTime === 'number' ? currentTime : s.currentTime;
+          const nextDuration = typeof duration === 'number' ? duration : s.duration;
+          const clearStaleBufferFlags =
+            s.isPlaying && (s.isLoading || s.isSeeking)
+              ? { isLoading: false, isSeeking: false }
+              : null;
+
+          if (s.type === 'service') {
+            const initialPlayer = s.liveInitialPlayerTime ?? nextCurrentTime ?? 0;
+            const initialServer = s.liveInitialServerMs ?? Date.now();
+            const estimatedLivePoint = initialPlayer + (Date.now() - initialServer) / 1000;
+            const liveSecondsLate = Math.max(0, estimatedLivePoint - (nextCurrentTime ?? 0));
+            return {
+              ...s,
+              currentTime: nextCurrentTime,
+              duration: nextDuration,
+              liveInitialPlayerTime: initialPlayer,
+              liveInitialServerMs: initialServer,
+              liveSecondsLate,
+              ...clearStaleBufferFlags,
+            };
+          }
+
+          return {
+            ...s,
+            currentTime: nextCurrentTime,
+            duration: nextDuration,
+            ...clearStaleBufferFlags,
+          };
+        });
+      },
+      handleDuration: ({ duration }) => {
+        setState((s) => ({
+          ...s,
+          duration: typeof duration === 'number' ? duration : s.duration,
+        }));
+      },
+      handleEnded: () => {
+        clearSeekTimeout();
+        log('engine:event ended');
+        setState((s) => ({
+          ...s,
+          isPlaying: false,
+          isLoading: false,
+          isSeeking: false,
+        }));
+      },
+      handleError: (err) => {
+        clearSeekTimeout();
+        if (isBenignEngineError(err)) {
+          log('engine:event error (ignored)', err);
+          return;
+        }
+        log('engine:event error', err);
+        setState((s) => {
+          if (!s.url) {
+            return { ...s, isPlaying: false, isLoading: false, isSeeking: false };
+          }
+          const snapshot = {
+            type: s.type,
+            id: s.id,
+            url: s.url,
+            item: s.item,
+            mediaOption: s.mediaOption,
+            drmConfig: s.drmConfig,
+          };
+          Promise.resolve().then(() => tryRecoverAfterError(err, snapshot));
+          return {
+            ...s,
+            isPlaying: false,
+            isLoading: false,
+            isSeeking: false,
+            error: err,
+          };
+        });
+      },
+      handleStateChange: ({ state: engineState }) => {
+        log('engine:event statechange', engineState);
+        if (engineState === 'loading') {
+          setState((s) => ({ ...s, isLoading: true }));
+        } else if (engineState === 'loaded') {
+          setState((s) => ({ ...s, isLoading: false, error: null }));
+        } else if (engineState === 'seeking') {
+          armSeekTimeout();
+          setState((s) => ({ ...s, isSeeking: true, isLoading: true }));
+        } else if (engineState === 'seeked') {
+          setState((s) => ({
+            ...s,
+            isSeeking: false,
+            isLoading: s.isPlaying ? false : s.isLoading,
+          }));
+        } else if (engineState === 'playing') {
+          clearSeekTimeout();
+          setState((s) => ({ ...s, isPlaying: true, isLoading: false, isSeeking: false, error: null }));
+        } else if (engineState === 'paused' || engineState === 'ended') {
+          clearSeekTimeout();
+          setState((s) => ({ ...s, isPlaying: false, isLoading: false, isSeeking: false }));
+        }
+      },
+      handleSeekStart: () => {
+        armSeekTimeout();
+        setState((s) => ({ ...s, isSeeking: true, isLoading: true }));
+      },
+      handleSeekEnd: () => {
+        clearSeekTimeout();
+        setState((s) => ({
+          ...s,
+          isSeeking: false,
+          isLoading: s.isPlaying ? false : s.isLoading,
+        }));
+      },
+      handleTracksChange: (payload) => {
+        const next = normalizeTracksSnapshot(payload);
+        if (!next) return;
+        setTracks((prev) => (tracksSnapshotsEqual(prev, next) ? prev : next));
+        tryRestoreSavedTracks(next);
+      },
+    };
+  });
+
   useEffect(() => {
     debugRef.current = isDebugEnabled();
 
     if (engineRef.current) {
       log('engine:skip (already exists)');
-      return;
+      return undefined;
     }
 
     let cancelled = false;
     const brand = brandRef.current;
+
+    const dispatch = (key, payload) => engineHandlersRef.current[key]?.(payload);
+
+    const boundHandlers = {
+      handleTime: (p) => dispatch('handleTime', p),
+      handleDuration: (p) => dispatch('handleDuration', p),
+      handleEnded: () => dispatch('handleEnded'),
+      handleError: (p) => dispatch('handleError', p),
+      handleStateChange: (p) => dispatch('handleStateChange', p),
+      handleSeekStart: () => dispatch('handleSeekStart'),
+      handleSeekEnd: () => dispatch('handleSeekEnd'),
+      handleTracksChange: (p) => dispatch('handleTracksChange', p),
+    };
+
+    function bindEngineListeners(engine) {
+      engine.on(PLAYER_ENGINE_EVENTS.TIME_UPDATE, boundHandlers.handleTime);
+      engine.on(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, boundHandlers.handleDuration);
+      engine.on(PLAYER_ENGINE_EVENTS.ENDED, boundHandlers.handleEnded);
+      engine.on(PLAYER_ENGINE_EVENTS.ERROR, boundHandlers.handleError);
+      engine.on(PLAYER_ENGINE_EVENTS.STATE_CHANGE, boundHandlers.handleStateChange);
+      engine.on(PLAYER_ENGINE_EVENTS.SEEK_START, boundHandlers.handleSeekStart);
+      engine.on(PLAYER_ENGINE_EVENTS.SEEK_END, boundHandlers.handleSeekEnd);
+      engine.on(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, boundHandlers.handleTracksChange);
+    }
 
     (async () => {
       const engine = await createEngine(deviceInfo, {
@@ -185,256 +412,34 @@ export function PlayerProvider({ children }) {
       bindEngineListeners(engine);
     })().catch((err) => {
       console.error('[PlayerProvider] Error creando engine', err);
-    });
-
-    const handleTime = ({ currentTime, duration }) => {
-      setState((s) => {
-        const nextCurrentTime = typeof currentTime === 'number' ? currentTime : s.currentTime;
-        const nextDuration = typeof duration === 'number' ? duration : s.duration;
-        // Si el tiempo avanza y ya estamos en play, no mantener spinner por flags colgados.
-        const clearStaleBufferFlags =
-          s.isPlaying && (s.isLoading || s.isSeeking)
-            ? { isLoading: false, isSeeking: false }
-            : null;
-
-        if (s.type === 'service') {
-          const initialPlayer = s.liveInitialPlayerTime ?? nextCurrentTime ?? 0;
-          const initialServer = s.liveInitialServerMs ?? Date.now();
-          const estimatedLivePoint = initialPlayer + (Date.now() - initialServer) / 1000;
-          const liveSecondsLate = Math.max(0, estimatedLivePoint - (nextCurrentTime ?? 0));
-          return {
-            ...s,
-            currentTime: nextCurrentTime,
-            duration: nextDuration,
-            liveInitialPlayerTime: initialPlayer,
-            liveInitialServerMs: initialServer,
-            liveSecondsLate,
-            ...clearStaleBufferFlags,
-          };
-        }
-
-        return {
-          ...s,
-          currentTime: nextCurrentTime,
-          duration: nextDuration,
-          ...clearStaleBufferFlags,
-        };
-      });
-    };
-
-    const handleDuration = ({ duration }) => {
       setState((s) => ({
         ...s,
-        duration: typeof duration === 'number' ? duration : s.duration,
-      }));
-    };
-
-    const handleEnded = () => {
-      clearSeekTimeout();
-      log('engine:event ended');
-      setState((s) => ({
-        ...s,
-        isPlaying: false,
+        error: err,
         isLoading: false,
-        isSeeking: false,
+        isPlaying: false,
       }));
-    };
-
-    const tryRecoverAfterError = async (err, snapshot) => {
-      const brand = brandRef.current;
-      if (!brand) return false;
-      if (!snapshot?.url) return false;
-
-      const active = userSession.getActiveLicense?.();
-      const licenseKey = active?.licenseKey ? String(active.licenseKey).trim() : '';
-      const pin = active?.pin != null ? String(active.pin) : '';
-      if (!licenseKey) return false;
-
-      // Evitar loops de recuperación sobre el mismo contenido.
-      const recoveryKey = `${snapshot.type || ''}::${snapshot.id || ''}::${snapshot.url || ''}`;
-      if (recoveryRef.current.inProgress) return false;
-      if (recoveryRef.current.lastKey === recoveryKey) return false;
-
-      recoveryRef.current.inProgress = true;
-      recoveryRef.current.lastKey = recoveryKey;
-
-      try {
-        if (!panaccessService.client) {
-          await panaccessService.initialize(brand);
-        }
-
-        // Intento 1 (legacy): fallar si está en uso, para saber si hay takeover.
-        await panaccessService.setStreamingLicense({ licenseKey, pin, failIfInUse: true });
-
-        engineRef.current?.reset?.();
-        engineRef.current?.load?.(snapshot.url, {
-          type: snapshot.type,
-          autoPlay: true,
-          mediaOption: snapshot.mediaOption || {},
-          drmConfig: snapshot.drmConfig || {},
-        });
-
-        return true;
-      } catch (e) {
-        if (isLicenseInUseError(e)) {
-          // Mostrar confirm “continuar aquí” (takeover).
-          setLicenseInUsePrompt({
-            licenseKey,
-            pin,
-            snapshot,
-          });
-          return true;
-        }
-        return false;
-      } finally {
-        recoveryRef.current.inProgress = false;
-      }
-    };
-
-    const isBenignEngineError = (err) => {
-      if (!err) return false;
-      const code = err.code ?? err?.status;
-      if (code === 4) return true;
-      const msg = String(err.message || '');
-      return /no compatible source was found/i.test(msg);
-    };
-
-    const handleError = (err) => {
-      clearSeekTimeout();
-      if (isBenignEngineError(err)) {
-        log('engine:event error (ignored)', err);
-        return;
-      }
-      log('engine:event error', err);
-      setState((s) => {
-        if (!s.url) {
-          return { ...s, isPlaying: false, isLoading: false, isSeeking: false };
-        }
-        const snapshot = {
-          type: s.type,
-          id: s.id,
-          url: s.url,
-          item: s.item,
-          mediaOption: s.mediaOption,
-          drmConfig: s.drmConfig,
-        };
-
-        Promise.resolve().then(() => {
-          tryRecoverAfterError(err, snapshot);
-        });
-
-        return {
-          ...s,
-          isPlaying: false,
-          isLoading: false,
-          isSeeking: false,
-          error: err,
-        };
-      });
-    };
-
-    const handleStateChange = ({ state }) => {
-      log('engine:event statechange', state);
-      if (state === 'loading') {
-        setState((s) => ({ ...s, isLoading: true }));
-      } else if (state === 'loaded') {
-        setState((s) => ({ ...s, isLoading: false }));
-      } else if (state === 'seeking') {
-        armSeekTimeout();
-        setState((s) => ({ ...s, isSeeking: true, isLoading: true }));
-      } else if (state === 'seeked') {
-        setState((s) => ({
-          ...s,
-          isSeeking: false,
-          isLoading: s.isPlaying ? false : s.isLoading,
-        }));
-      } else if (state === 'playing') {
-        clearSeekTimeout();
-        setState((s) => ({ ...s, isPlaying: true, isLoading: false, isSeeking: false }));
-      } else if (state === 'paused' || state === 'ended') {
-        clearSeekTimeout();
-        setState((s) => ({ ...s, isPlaying: false, isLoading: false, isSeeking: false }));
-      }
-    };
-
-    const handleSeekStart = () => {
-      armSeekTimeout();
-      setState((s) => ({ ...s, isSeeking: true, isLoading: true }));
-    };
-
-    const handleSeekEnd = () => {
-      clearSeekTimeout();
-      setState((s) => ({
-        ...s,
-        isSeeking: false,
-        isLoading: s.isPlaying ? false : s.isLoading,
-      }));
-    };
-
-    const tryRestoreSavedTracks = (snap) => {
-      if (userTrackChoiceRef.current || tracksRestoredRef.current) return;
-
-      const playback = {
-        type: playbackRef.current?.type ?? null,
-        id: playbackRef.current?.id ?? null,
-        item: playbackRef.current?.item ?? null,
-      };
-      if (playback.type !== 'service') {
-        tracksRestoredRef.current = true;
-        return;
-      }
-
-      const brandId = resolveBrandId(brandRef.current?.brand ?? brandRef.current?.id);
-      const { subtitles: subtitleLabel } = getSavedTrackPreferences(brandId, playback);
-      const hasAudioTracks = snap.audio?.length > 0;
-      const hasTextTracks = snap.text?.length > 0;
-      if (!hasAudioTracks && !subtitleLabel) return;
-      if (subtitleLabel && !hasTextTracks && !hasAudioTracks) return;
-
-      const engine = engineRef.current;
-      if (!engine) return;
-
-      applySavedTrackPreferences(engine, brandId, playback, snap);
-      tracksRestoredRef.current = true;
-    };
-
-    const handleTracksChange = (payload) => {
-      const next = normalizeTracksSnapshot(payload);
-      if (!next) return;
-      setTracks((prev) => (tracksSnapshotsEqual(prev, next) ? prev : next));
-      tryRestoreSavedTracks(next);
-    };
-
-    function bindEngineListeners(engine) {
-      engine.on(PLAYER_ENGINE_EVENTS.TIME_UPDATE, handleTime);
-      engine.on(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, handleDuration);
-      engine.on(PLAYER_ENGINE_EVENTS.ENDED, handleEnded);
-      engine.on(PLAYER_ENGINE_EVENTS.ERROR, handleError);
-      engine.on(PLAYER_ENGINE_EVENTS.STATE_CHANGE, handleStateChange);
-      engine.on(PLAYER_ENGINE_EVENTS.SEEK_START, handleSeekStart);
-      engine.on(PLAYER_ENGINE_EVENTS.SEEK_END, handleSeekEnd);
-      engine.on(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, handleTracksChange);
-    }
+    });
 
     return () => {
       cancelled = true;
       const engine = engineRef.current;
       if (!engine) return;
-      engine.off(PLAYER_ENGINE_EVENTS.TIME_UPDATE, handleTime);
-      engine.off(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, handleDuration);
-      engine.off(PLAYER_ENGINE_EVENTS.ENDED, handleEnded);
-      engine.off(PLAYER_ENGINE_EVENTS.ERROR, handleError);
-      engine.off(PLAYER_ENGINE_EVENTS.STATE_CHANGE, handleStateChange);
-      engine.off(PLAYER_ENGINE_EVENTS.SEEK_START, handleSeekStart);
-      engine.off(PLAYER_ENGINE_EVENTS.SEEK_END, handleSeekEnd);
-      engine.off(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, handleTracksChange);
+      engine.off(PLAYER_ENGINE_EVENTS.TIME_UPDATE, boundHandlers.handleTime);
+      engine.off(PLAYER_ENGINE_EVENTS.DURATION_CHANGE, boundHandlers.handleDuration);
+      engine.off(PLAYER_ENGINE_EVENTS.ENDED, boundHandlers.handleEnded);
+      engine.off(PLAYER_ENGINE_EVENTS.ERROR, boundHandlers.handleError);
+      engine.off(PLAYER_ENGINE_EVENTS.STATE_CHANGE, boundHandlers.handleStateChange);
+      engine.off(PLAYER_ENGINE_EVENTS.SEEK_START, boundHandlers.handleSeekStart);
+      engine.off(PLAYER_ENGINE_EVENTS.SEEK_END, boundHandlers.handleSeekEnd);
+      engine.off(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, boundHandlers.handleTracksChange);
       clearSeekTimeout();
       log('engine:destroy (cleanup on unmount)');
       engine.destroy();
       engineRef.current = null;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Array vacío: engine se crea UNA SOLA VEZ al montar
+    // deviceInfo del primer render; recrear el engine aquí rompe listeners TV/PC.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Si la plataforma cambia (TV ↔ PC) sin recargar, recargar la app: recrear el engine
   // aquí dejaría listeners del PlayerContext sin enganchar (handlers viven en el mount inicial).
@@ -497,7 +502,7 @@ export function PlayerProvider({ children }) {
       const sameContent =
         prev.type === type && prev.id === id && prev.url === url && Boolean(url);
 
-      if (sameContent && state.url) {
+      if (sameContent && playbackRef.current.url) {
         setState((s) => ({ ...s, error: null, isLoading: false }));
         log('action:play (same content) -> engine.play()');
         engine.play();
@@ -530,6 +535,13 @@ export function PlayerProvider({ children }) {
       engine.load(url, { type, autoPlay, mediaOption, drmConfig });
     })().catch((err) => {
       console.error('[PlayerProvider] Error en play', err);
+      setState((s) => ({
+        ...s,
+        error: err,
+        isLoading: false,
+        isPlaying: false,
+        isSeeking: false,
+      }));
     });
   };
 

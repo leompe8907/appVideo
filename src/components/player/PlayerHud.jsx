@@ -710,6 +710,26 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     >
       <PlayerHudTopBar layout={hudLayout} ctx={hudButtonCtx} showPlaybackButtons={showPlaybackButtons} />
 
+      {state?.error ? (
+        <div className="player-hud__error" role="alert">
+          <p className="player-hud__error-title">
+            {t('player.playbackError', { defaultValue: 'Error de reproducción' })}
+          </p>
+          <p className="player-hud__error-detail">
+            {String(state.error?.message || state.error)}
+          </p>
+          <FocusableButton
+            type="button"
+            className="player-hud__pillbtn player-hud__error-close"
+            data-tv-nav="player-hud"
+            tabIndex={0}
+            onClick={() => close()}
+          >
+            {t('common.close', { defaultValue: 'Cerrar' })}
+          </FocusableButton>
+        </div>
+      ) : null}
+
       {showSeekbar ? (
         <div className="player-hud__seek">
           <div className="player-hud__seek-times">

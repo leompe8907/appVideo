@@ -1,6 +1,8 @@
 import { WebEngine } from '../web/WebEngine';
 import { PLAYER_ENGINE_EVENTS, PLAYER_ENGINE_STATES } from '../contracts';
 
+const NATIVE_INIT_TIMEOUT_MS = 10000;
+
 /**
  * Base para adapters TV.
  *
@@ -24,8 +26,35 @@ export class BaseTvEngine extends WebEngine {
 
   async init(container) {
     await super.init(container);
-    this.isNativeActive = this.tryActivateNativeAdapter(container);
+    this.isNativeActive = await this.activateNativeAdapterWithTimeout();
+    if (this.isNativeActive) {
+      console.info(`[${this.platformName}] Native adapter active`);
+    } else {
+      console.info(`[${this.platformName}] Native unavailable — WebEngine fallback`);
+    }
     this.bindLifecycleHooks();
+  }
+
+  async activateNativeAdapterWithTimeout() {
+    let timeoutId;
+    try {
+      const activated = await Promise.race([
+        Promise.resolve().then(() => this.tryActivateNativeAdapter()),
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error(`[${this.platformName}] Native adapter init timeout (${NATIVE_INIT_TIMEOUT_MS}ms)`)),
+            NATIVE_INIT_TIMEOUT_MS,
+          );
+        }),
+      ]);
+      return activated === true;
+    } catch (error) {
+      console.warn(`[${this.platformName}] Native init failed:`, error?.message || error);
+      this.emit(PLAYER_ENGINE_EVENTS.ERROR, error);
+      return false;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
   }
 
   load(url, options = {}) {
@@ -45,11 +74,14 @@ export class BaseTvEngine extends WebEngine {
       if (handled === false) {
         throw new Error(`[${this.platformName}] nativeLoad not handled`);
       }
-      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, {
-        state: PLAYER_ENGINE_STATES.LOADED,
-        type: options?.type,
-      });
-      if (options?.autoPlay) this.play();
+      const deferPlayback = this.shouldDeferNativePlayback?.() === true;
+      if (!deferPlayback) {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, {
+          state: PLAYER_ENGINE_STATES.LOADED,
+          type: options?.type,
+        });
+        if (options?.autoPlay) this.play();
+      }
     } catch (error) {
       this.emit(PLAYER_ENGINE_EVENTS.ERROR, error);
       super.load(url, options);
@@ -66,7 +98,9 @@ export class BaseTvEngine extends WebEngine {
       if (handled === false) {
         throw new Error(`[${this.platformName}] nativePlay not handled`);
       }
-      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
+      if (this.shouldSkipNativePlayingEvent?.() !== true) {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
+      }
     } catch (error) {
       this.emit(PLAYER_ENGINE_EVENTS.ERROR, error);
       super.play();

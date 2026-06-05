@@ -131,7 +131,7 @@
  *   @param {boolean} EPG.epgCardsLaterGlobal
  *   @param {boolean|'auto'} EPG.epgCloseModalOnPlayLive
  */
-import { resolveBrandToken } from './resolveBrandToken.js';
+import { applyBrandRuntimePolicy } from './applyBrandRuntimePolicy.js';
 
 export const BRANDS = [
   // Bromteck
@@ -1704,14 +1704,14 @@ export function getBrandConfig(brandName) {
   const brand = BRANDS.find((b) => b.brand === brandName);
   if (!brand) return null;
 
-  const token = resolveBrandToken(brand.brand) || brand.token || '';
-  if (!token && import.meta.env?.PROD) {
+  const resolved = applyBrandRuntimePolicy(brand);
+  if (!resolved.token && import.meta.env?.PROD) {
     console.warn(
       `[brands] Token no configurado para "${brand.brand}". ` +
         `Define VITE_BRAND_TOKEN_${String(brand.brand).toUpperCase()} en .env.local`,
     );
   }
 
-  return token === brand.token ? brand : { ...brand, token };
+  return resolved;
 }
 

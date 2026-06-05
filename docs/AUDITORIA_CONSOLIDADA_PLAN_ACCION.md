@@ -163,98 +163,67 @@ Antes del plan de acción, se documentan hallazgos que los informes originales d
 ## Etapa 2 — Reproductor nativo y reproducción en TV
 
 **Duración estimada:** 2–3 semanas  
-**Objetivo:** Activar y robustecer los engines nativos Samsung/LG para hardware decoding y DRM.
+**Objetivo:** Activar y robustecer los engines nativos Samsung/LG para hardware decoding y DRM.  
+**Estado:** ✅ Cerrado en código (2026-06-05) — validación en hardware Samsung/LG pendiente.
 
-### 2.1 Adaptadores nativos desactivados (2.1)
+### Archivos creados o modificados en Etapa 2
 
-- **Archivo:** `src/config/brands.js`
-- **Problema:** `player.nativeAdaptersEnabled: false` en las 6 marcas. Siempre se usa WebEngine + HLS.js incluso en TV.
-- **Impacto:** Demux en JS satura CPU en Full HD; DRM Widevine/PlayReady falla sin CDM nativo.
-- **Resolución planificada:**
-  1. Crear perfil de build `VITE_TV_DEPLOY=true` que active `nativeAdaptersEnabled: true`.
-  2. Mantener `false` para builds web/navegador como modo seguro.
-  3. Probar en hardware real Samsung y LG antes de activar en producción.
-  4. Implementar fallback automático a WebEngine si el engine nativo falla en init.
+| Archivo | Cambio |
+|---------|--------|
+| `src/config/applyBrandRuntimePolicy.js` | `VITE_TV_DEPLOY=true` activa `nativeAdaptersEnabled` |
+| `src/config/brands.js` | `getBrandConfig()` aplica política runtime TV |
+| `vite.config.js` | Build marca única respeta `VITE_TV_DEPLOY` |
+| `src/player/engines/tv/BaseTvEngine.js` | Timeout 10 s init nativo + fallback WebEngine |
+| `src/player/engines/samsung/SamsungEngine.js` | try-catch AVPlay, guard de estado, `setListener({})` en destroy |
+| `src/player/engines/lg/LgEngine.js` | Cola DRM serializada, timeout unload 5 s, libera pipeline video |
+| `src/contexts/PlayerContext.jsx` | Errores visibles, handler refs, comparación tracks sin JSON |
+| `src/components/player/PlayerHud.jsx` | Overlay de error de reproducción |
+| `src/styles/pages/_player-hud.scss` | Estilos overlay error |
+| `.env.example` | Documenta `VITE_TV_DEPLOY` |
 
-### 2.2 Sin try-catch en AVPlay Samsung (2.2)
+### 2.1 Adaptadores nativos desactivados (2.1) ✅
 
-- **Archivo:** `src/player/engines/samsung/SamsungEngine.js` (líneas 156–179)
-- **Problema:** `nativePlay()`, `nativePause()`, `nativeSeek()` llaman a AVPlay sin control de excepciones. AVPlay tiene máquina de estados estricta.
-- **Resolución planificada:**
-  1. Envolver cada llamada nativa en `try-catch`.
-  2. Mapear errores a `emitNativeError()` con código de estado AVPlay.
-  3. Añadir guard de estado: no llamar `play()` si no está en estado `READY` o `PLAYING`.
+- **Resolución aplicada:**
+  1. ✅ `VITE_TV_DEPLOY=true` activa `nativeAdaptersEnabled` vía `applyBrandRuntimePolicy`.
+  2. ✅ `false` por defecto en `brands.js` (modo seguro web/navegador).
+  3. — Smoke test en hardware real recomendado antes de producción TV.
+  4. ✅ Fallback WebEngine en `BaseTvEngine` si init nativo falla o hace timeout.
 
-### 2.3 Fuga de listener AVPlay en destrucción (2.3)
+### 2.2 Sin try-catch en AVPlay Samsung (2.2) ✅
 
-- **Archivo:** `src/player/engines/samsung/SamsungEngine.js` (líneas 210–229)
-- **Problema:** `nativeDestroy()` limpia `this.avplayListener = null` pero no llama `api.setListener(null)`.
-- **Impacto:** Zapping rápido deja callbacks huérfanos que disparan en instancias destruidas.
-- **Resolución planificada:**
-  1. Antes de `stop()`/`close()`, llamar `api.setListener({})` o `api.setListener(null)` si `hasSetListener`.
-  2. Añadir test manual de zapping (10+ cambios de canal en <5 segundos).
+- **Resolución aplicada:** try-catch en `play`/`pause`/`seek`; guard `getState()`; errores vía `emitNativeError`.
 
-### 2.4 Pipeline de video LG no liberado (2.4)
+### 2.3 Fuga de listener AVPlay en destrucción (2.3) ✅
 
-- **Archivo:** `src/player/engines/lg/LgEngine.js` (líneas 194–217)
-- **Problema:** `nativeDestroy()` no hace `video.src = ""` + `video.load()`. TVs 2019 tienen un solo pipeline de decodificación HW.
-- **Resolución planificada:**
-  1. En `nativeDestroy()`: `video.pause()`, `video.removeAttribute('src')`, `video.load()`.
-  2. Esperar evento `emptied` antes de anular referencias.
-  3. Probar secuencia: reproducir canal A → zapping a canal B → VOD → volver a live.
+- **Resolución aplicada:** `clearAvplayListener()` con `setListener({})` antes de `stop()`/`close()`.
 
-### 2.5 Carrera DRM Luna en webOS (2.5)
+### 2.4 Pipeline de video LG no liberado (2.4) ✅
 
-- **Archivo:** `src/player/engines/lg/LgEngine.js` (línea 212)
-- **Problema:** `_webosUnloadDrmClient().catch(() => {})` es fire-and-forget. Nuevo canal puede cargar DRM antes de que termine el unload anterior.
-- **Resolución planificada:**
-  1. Convertir el ciclo destroy→load en cola serializada con `async/await`.
-  2. Mantener `_drmTransitionPromise` como mutex: cada `nativeLoad` espera a que el unload previo termine.
-  3. Timeout de 5 s en unload; si falla, forzar reset del cliente DRM.
+- **Resolución aplicada:** `_releaseVideoPipeline()` en `nativeDestroy` (`pause`, quitar `src`, `innerHTML`, `load`).
 
-### 2.6 Sin timeout en inicialización de SDK nativo (H-20)
+### 2.5 Carrera DRM Luna en webOS (2.5) ✅
 
-- **Archivos:** `SamsungEngine.js`, `LgEngine.js`
-- **Problema:** Si el SDK no responde, la app queda en carga indefinida.
-- **Resolución planificada:**
-  1. Envolver `tryActivateNativeAdapter()` en `Promise.race` con timeout de 10 segundos.
-  2. Si timeout: loggear, emitir error, fallback a WebEngine.
-  3. Mostrar mensaje de error al usuario (no solo `console.error`).
+- **Resolución aplicada:** `_drmTransitionPromise` serializa load/unload; timeout 5 s en unload.
 
-### 2.7 Errores de reproducción silenciados (H-18)
+### 2.6 Sin timeout en inicialización de SDK nativo (H-20) ✅
 
-- **Archivo:** `src/contexts/PlayerContext.jsx` (líneas 481–533)
-- **Problema:** Errores de `engine.init()` y `play()` solo van a `console.error`. El usuario no ve indicación de fallo.
-- **Resolución planificada:**
-  1. En el `.catch()` de la IIFE de `play()`, actualizar `setState({ error: err, isLoading: false })`.
-  2. Mostrar overlay de error en `PlayerHud` cuando `state.error` no sea null.
+- **Resolución aplicada:** `activateNativeAdapterWithTimeout()` 10 s en `BaseTvEngine.init`.
 
-### 2.8 Stale closures en handlers del engine (H-19)
+### 2.7 Errores de reproducción silenciados (H-18) ✅
 
-- **Archivo:** `src/contexts/PlayerContext.jsx` (línea 437)
-- **Problema:** `useEffect([])` con handlers que acceden a `state` via closures del mount inicial. `eslint-disable` confirma que se ignoran dependencias.
-- **Resolución planificada:**
-  1. Crear refs para cada handler: `handleTimeRef`, `handleErrorRef`, etc.
-  2. Actualizar `.current` en cada render.
-  3. Los listeners del engine leen siempre de `.current`.
-  4. Eliminar el `eslint-disable`.
+- **Resolución aplicada:** `setState({ error })` en fallos de `play()`/`init()`; overlay en `PlayerHud`.
 
-### 2.9 `video.js 6.6.3` EOL (H-21)
+### 2.8 Stale closures en handlers del engine (H-19) ✅
 
-- **Archivo:** `package.json`, `src/player/engines/web/WebEngine.js`
-- **Problema:** Versión de 2018, sin parches de seguridad, ~180 KB gzipped. Se usa activamente.
-- **Resolución planificada:**
-  1. Evaluar si `WebEngine` puede operar solo con `hls.js` + `<video>` nativo (sin video.js).
-  2. Si se mantiene: actualizar a video.js 8.x con plugin hls.js compatible.
-  3. Medir impacto en bundle antes y después.
+- **Resolución aplicada:** `engineHandlersRef` actualizado cada render; listeners delegan a refs.
 
-### 2.10 `JSON.stringify` para comparar tracks (H-05)
+### 2.9 `video.js 6.6.3` EOL (H-21) — diferido
 
-- **Archivo:** `src/contexts/PlayerContext.jsx` (línea 32)
-- **Problema:** `tracksSnapshotsEqual` serializa arrays completos en cada evento `TRACKS_CHANGE`.
-- **Resolución planificada:**
-  1. Comparación estructural: longitud + IDs de tracks + `selectedAudioId` + `selectedTextId`.
-  2. Sin serialización JSON.
+- **Estado:** Evaluación/migración a hls.js puro o video.js 8.x → **Etapa 5** (impacto bundle alto).
+
+### 2.10 `JSON.stringify` para comparar tracks (H-05) ✅
+
+- **Resolución aplicada:** comparación estructural por IDs y selección activa.
 
 ---
 

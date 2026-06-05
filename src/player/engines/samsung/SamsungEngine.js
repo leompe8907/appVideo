@@ -1,11 +1,11 @@
 import BaseTvEngine from '../tv/BaseTvEngine';
+import { PLAYER_ENGINE_EVENTS, PLAYER_ENGINE_STATES } from '../contracts';
+
+/** AVPlay solo permite play() en READY o PAUSED (reanudar). */
+const AVPLAY_PLAY_STATES = new Set(['READY', 'PAUSED']);
 
 /**
- * Engine base para Samsung.
- *
- * Nota:
- * - Actualmente actúa como fallback WebEngine para preservar compatibilidad.
- * - En fase posterior se conectará con APIs nativas Tizen/SEF según modelo.
+ * Engine Samsung Tizen (AVPlay) con fallback WebEngine.
  */
 export class SamsungEngine extends BaseTvEngine {
   constructor() {
@@ -13,6 +13,17 @@ export class SamsungEngine extends BaseTvEngine {
     this.nativeAdapter = null;
     this.avplayListener = null;
     this.capabilities = null;
+    this._isPreparing = false;
+    this._pendingAutoPlay = false;
+    this._nativePlayDeferred = false;
+  }
+
+  shouldSkipNativePlayingEvent() {
+    return this._nativePlayDeferred === true;
+  }
+
+  shouldDeferNativePlayback() {
+    return !!this.capabilities?.hasPrepareAsync;
   }
 
   tryActivateNativeAdapter() {
@@ -44,11 +55,117 @@ export class SamsungEngine extends BaseTvEngine {
     }
   }
 
+  getAvplayState(api) {
+    const target = api || this.nativeAdapter?.api;
+    if (!target || typeof target.getState !== 'function') return null;
+    try {
+      return target.getState();
+    } catch {
+      return null;
+    }
+  }
+
+  canAvPlay(api) {
+    const state = this.getAvplayState(api);
+    if (state == null) return true;
+    const normalized = String(state).toUpperCase();
+    if (normalized === 'PLAYING') return true;
+    return AVPLAY_PLAY_STATES.has(normalized);
+  }
+
+  clearAvplayListener(api) {
+    if (!api || !this.capabilities?.hasSetListener) return;
+    try {
+      api.setListener({});
+    } catch {
+      try {
+        api.setListener(null);
+      } catch {
+        // noop
+      }
+    }
+    this.avplayListener = null;
+  }
+
+  safeStopAndClose(api, caps = this.capabilities) {
+    if (!api) return;
+    const state = String(this.getAvplayState(api) || '').toUpperCase();
+    if (!state || state === 'NONE') return;
+
+    if (caps?.hasStop && (state === 'PLAYING' || state === 'PAUSED' || state === 'READY')) {
+      try {
+        api.stop();
+      } catch {
+        // noop
+      }
+    }
+    if (caps?.hasClose && state !== 'NONE') {
+      try {
+        api.close();
+      } catch {
+        // noop
+      }
+    }
+  }
+
+  applyDefaultDisplayRect(api, caps = this.capabilities) {
+    if (!api || !caps?.hasSetDisplayRect) return;
+    try {
+      const width = Number(window?.innerWidth) || 1920;
+      const height = Number(window?.innerHeight) || 1080;
+      api.setDisplayRect(0, 0, width, height);
+    } catch (error) {
+      this.emitNativeError(error);
+    }
+  }
+
+  onPrepareReady(options = {}) {
+    this._isPreparing = false;
+    this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, {
+      state: PLAYER_ENGINE_STATES.LOADED,
+      type: options?.type,
+    });
+    if (this._pendingAutoPlay) {
+      this._pendingAutoPlay = false;
+      this.startNativePlayback();
+    }
+  }
+
+  startNativePlayback() {
+    const api = this.nativeAdapter?.api;
+    if (!api || !this.capabilities?.hasPlay) return;
+
+    const state = String(this.getAvplayState(api) || '').toUpperCase();
+    if (state === 'PLAYING') {
+      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
+      return;
+    }
+
+    if (!this.canAvPlay(api)) {
+      this._pendingAutoPlay = true;
+      this._nativePlayDeferred = true;
+      return;
+    }
+
+    this._nativePlayDeferred = false;
+
+    try {
+      api.play();
+      this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
+    } catch (error) {
+      this.emitNativeError(error);
+      throw error;
+    }
+  }
+
   nativeLoad(url, options = {}) {
     const api = this.nativeAdapter?.api;
     if (!api || typeof api.open !== 'function') return false;
     const caps = this.capabilities || this.detectCapabilities(api);
     this.capabilities = caps;
+
+    this._isPreparing = false;
+    this._pendingAutoPlay = options?.autoPlay === true;
 
     try {
       if (caps.hasSetListener) {
@@ -68,35 +185,36 @@ export class SamsungEngine extends BaseTvEngine {
         api.setListener(this.avplayListener);
       }
 
+      this.safeStopAndClose(api, caps);
+
       this.applySamsungMediaOptions(api, options?.mediaOption, caps);
       this.applySamsungDrmConfig(api, options?.drmConfig, caps);
 
-      if (caps.hasStop) {
-        try {
-          api.stop();
-        } catch {
-          // noop
-        }
-      }
-      if (caps.hasClose) {
-        try {
-          api.close();
-        } catch {
-          // noop
-        }
-      }
-
       api.open(url);
+      this.applyDefaultDisplayRect(api, caps);
+
       if (caps.hasPrepareAsync) {
+        this._isPreparing = true;
         api.prepareAsync(
-          () => this.emitNativeState('loaded', { type: options?.type }),
-          (err) => this.emitNativeError(err)
+          () => this.onPrepareReady(options),
+          (err) => {
+            this._isPreparing = false;
+            this._pendingAutoPlay = false;
+            this.emitNativeError(err);
+          },
         );
       } else if (caps.hasPrepare) {
         api.prepare();
+        this.onPrepareReady(options);
+      } else if (this._pendingAutoPlay) {
+        this._pendingAutoPlay = false;
+        this.startNativePlayback();
       }
+
       return true;
     } catch (error) {
+      this._isPreparing = false;
+      this._pendingAutoPlay = false;
       this.emitNativeError(error);
       return false;
     }
@@ -124,7 +242,6 @@ export class SamsungEngine extends BaseTvEngine {
       const headers = drmConfig?.headers || {};
       const customData = drmConfig?.customData || '';
 
-      // APIs antiguas/variantes de Samsung:
       if (caps?.hasSetDrm) {
         if (type === 'PLAYREADY') {
           api.setDrm('PLAYREADY', 'SetProperties', JSON.stringify({ LicenseServer: licenseUrl, HttpHeader: headers }));
@@ -133,7 +250,6 @@ export class SamsungEngine extends BaseTvEngine {
         }
       }
 
-      // APIs más nuevas AVPlay:
       if (caps?.hasSetDrmProperty) {
         const drmType = type === 'PLAYREADY' ? 'PLAYREADY' : 'WIDEVINE_CDM';
         const payload = {
@@ -144,7 +260,6 @@ export class SamsungEngine extends BaseTvEngine {
         api.setDrmProperty(drmType, JSON.stringify(payload));
       }
 
-      // Fallback opcional por streaming property:
       if (licenseUrl && caps?.hasSetStreamingProperty) {
         api.setStreamingProperty('LICENSE_SERVER', String(licenseUrl));
       }
@@ -156,26 +271,69 @@ export class SamsungEngine extends BaseTvEngine {
   nativePlay() {
     const api = this.nativeAdapter?.api;
     if (!api || !this.capabilities?.hasPlay) return false;
-    api.play();
-    return true;
+
+    if (this._isPreparing) {
+      this._pendingAutoPlay = true;
+      this._nativePlayDeferred = true;
+      return true;
+    }
+
+    const state = String(this.getAvplayState(api) || '').toUpperCase();
+    if (state === 'IDLE') {
+      this._pendingAutoPlay = true;
+      this._nativePlayDeferred = true;
+      return true;
+    }
+
+    this._nativePlayDeferred = false;
+
+    if (state === 'PLAYING') return true;
+
+    if (!this.canAvPlay(api)) {
+      const err = new Error(`[Samsung] AVPlay play() rejected — state: ${state || 'unknown'}`);
+      this.emitNativeError(err);
+      throw err;
+    }
+
+    try {
+      api.play();
+      return true;
+    } catch (error) {
+      this.emitNativeError(error);
+      throw error;
+    }
   }
 
   nativePause() {
     const api = this.nativeAdapter?.api;
     if (!api || !this.capabilities?.hasPause) return false;
-    api.pause();
-    return true;
+    try {
+      api.pause();
+      return true;
+    } catch (error) {
+      this.emitNativeError(error);
+      throw error;
+    }
   }
 
   nativeSeek(seconds) {
     const api = this.nativeAdapter?.api;
     if (!api) return false;
     const ms = Math.max(0, Math.floor(Number(seconds || 0) * 1000));
-    if (this.capabilities?.hasSeekTo) {
+    if (!this.capabilities?.hasSeekTo) return false;
+
+    const state = String(this.getAvplayState(api) || '').toUpperCase();
+    if (state !== 'PLAYING' && state !== 'PAUSED' && state !== 'READY') {
+      return false;
+    }
+
+    try {
       api.seekTo(ms);
       return true;
+    } catch (error) {
+      this.emitNativeError(error);
+      throw error;
     }
-    return false;
   }
 
   nativeSetDimensions(rect) {
@@ -185,45 +343,39 @@ export class SamsungEngine extends BaseTvEngine {
     const top = Number.isFinite(rect?.top) ? rect.top : 0;
     const width = Number.isFinite(rect?.width) ? rect.width : window.innerWidth;
     const height = Number.isFinite(rect?.height) ? rect.height : window.innerHeight;
-    if (this.capabilities?.hasSetDisplayRect) {
+    if (!this.capabilities?.hasSetDisplayRect) return false;
+    try {
       api.setDisplayRect(left, top, width, height);
       return true;
+    } catch (error) {
+      this.emitNativeError(error);
+      throw error;
     }
-    return false;
   }
 
   nativeShow() {
     const api = this.nativeAdapter?.api;
-    if (!api) return false;
-    if (this.capabilities?.hasSetDisplayMethod) {
+    if (!api || !this.capabilities?.hasSetDisplayMethod) return false;
+    try {
       api.setDisplayMethod('PLAYER_DISPLAY_MODE_FULL_SCREEN');
       return true;
+    } catch (error) {
+      this.emitNativeError(error);
+      throw error;
     }
-    return false;
   }
 
   nativeHide() {
-    // No todas las APIs Samsung exponen hide directo.
     return false;
   }
 
   nativeDestroy() {
     const api = this.nativeAdapter?.api;
-    if (api && this.capabilities?.hasStop) {
-      try {
-        api.stop();
-      } catch {
-        // noop
-      }
-    }
-    if (api && this.capabilities?.hasClose) {
-      try {
-        api.close();
-      } catch {
-        // noop
-      }
-    }
-    this.avplayListener = null;
+    this._isPreparing = false;
+    this._pendingAutoPlay = false;
+    this._nativePlayDeferred = false;
+    this.clearAvplayListener(api);
+    this.safeStopAndClose(api, this.capabilities);
     this.capabilities = null;
     this.nativeAdapter = null;
   }
@@ -243,6 +395,7 @@ export class SamsungEngine extends BaseTvEngine {
       hasSetDrmProperty: typeof api?.setDrmProperty === 'function',
       hasStop: typeof api?.stop === 'function',
       hasClose: typeof api?.close === 'function',
+      hasGetState: typeof api?.getState === 'function',
     };
   }
 
@@ -252,4 +405,3 @@ export class SamsungEngine extends BaseTvEngine {
 }
 
 export default SamsungEngine;
-
