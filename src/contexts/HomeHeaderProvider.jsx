@@ -1,24 +1,38 @@
-import { useMemo, useState } from 'react';
-import { HomeHeaderContext } from './homeHeaderContext';
+import { useCallback, useMemo, useState } from 'react';
+import { HomeHeaderDispatchContext, HomeHeaderStateContext } from './homeHeaderContext';
+import { getChannelStableId } from '../utils/channelId';
 
 export function HomeHeaderProvider({ children }) {
-  const [focusedChannel, setFocusedChannel] = useState(null);
+  const [focusedChannel, setFocusedChannelState] = useState(null);
 
-  const value = useMemo(
+  const setFocusedChannel = useCallback((channel) => {
+    setFocusedChannelState((prev) => {
+      const prevId = prev ? getChannelStableId(prev) : '';
+      const nextId = channel ? getChannelStableId(channel) : '';
+      if (prevId && nextId && prevId === nextId) return prev;
+      return channel ?? null;
+    });
+  }, []);
+
+  const clearFocusedChannel = useCallback(() => {
+    setFocusedChannelState(null);
+  }, []);
+
+  const dispatch = useMemo(
     () => ({
-      focusedChannel,
       setFocusedChannel,
-      clearFocusedChannel: () => setFocusedChannel(null),
+      clearFocusedChannel,
     }),
-    [focusedChannel]
+    [setFocusedChannel, clearFocusedChannel]
   );
 
   return (
-    <HomeHeaderContext.Provider value={value}>
-      {children}
-    </HomeHeaderContext.Provider>
+    <HomeHeaderDispatchContext.Provider value={dispatch}>
+      <HomeHeaderStateContext.Provider value={focusedChannel}>
+        {children}
+      </HomeHeaderStateContext.Provider>
+    </HomeHeaderDispatchContext.Provider>
   );
 }
 
 export default HomeHeaderProvider;
-

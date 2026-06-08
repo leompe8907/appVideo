@@ -9,7 +9,8 @@ import BouquetWall from '../components/bouquet/BouquetWall';
 import { usePreload } from '../store/usePreload';
 import { hasTvRadioServiceBouquets } from '../services/tvDataService';
 import panaccessService from '../services/panaccessService';
-import { useHomeHeader } from '../contexts/homeHeaderContext';
+import { useCallback } from 'react';
+import { useHomeHeaderDispatch } from '../contexts/homeHeaderContext';
 import { useBouquetMuroTvNav } from '../hooks/useBouquetMuroTvNav';
 import '../styles/pages/_bouquet.scss';
 
@@ -17,7 +18,11 @@ export function TvRadioServicesPage() {
   const { play } = usePlayer();
   const { requestPlayChannel } = useParentalGate();
   const { epg } = usePreload();
-  const { setFocusedChannel } = useHomeHeader();
+  const { setFocusedChannel } = useHomeHeaderDispatch();
+  const handleChannelFocus = useCallback(
+    (channel) => setFocusedChannel(channel),
+    [setFocusedChannel]
+  );
 
   useBouquetMuroTvNav({ route: 'serviciosTvRadio' });
 
@@ -89,7 +94,7 @@ export function TvRadioServicesPage() {
             <BouquetWall
               variant="servicios"
               onChannelSelect={handleChannelSelect}
-              onChannelFocus={(channel) => setFocusedChannel(channel)}
+              onChannelFocus={handleChannelFocus}
             />
           </div>
         </div>

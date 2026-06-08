@@ -6,6 +6,8 @@ import { useBrand } from './contexts/BrandContext';
 import { isAuthenticated } from './utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
 import { PreloadGate } from './components/preload/PreloadGate';
+import HomePage from './pages/HomePage';
+import BouquetPage from './pages/BouquetPage';
 import {
   startSessionValidator,
   stopSessionValidator,
@@ -17,12 +19,10 @@ const SplashPage = lazy(() => import('./pages/SplashPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
-const BouquetPage = lazy(() => import('./pages/BouquetPage'));
 const TvRadioServicesPage = lazy(() => import('./pages/TvRadioServicesPage'));
 const VodPage = lazy(() => import('./pages/VodPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
 const PreloadDataPage = lazy(() => import('./pages/PreloadDataPage'));
-const HomePage = lazy(() => import('./pages/HomePage'));
 const EpgCardsPage = lazy(() => import('./pages/EpgCardsPage'));
 const CatchupPage = lazy(() => import('./pages/CatchupPage'));
 const ParentalSettingsPage = lazy(() => import('./pages/ParentalSettingsPage'));
@@ -109,8 +109,8 @@ function App() {
               <Route path="/inicio" element={<Navigate to="/home/inicio" replace />}/>
               <Route path="/vod" element={<Navigate to="/home/vod" replace />}/>
               <Route path="/epg" element={<Navigate to="/home/epg" replace />}/>
-              <Route path="/home" element={<ProtectedRoute><Suspense fallback={<Loading />}><HomePage /></Suspense></ProtectedRoute>}>
-                <Route path="inicio" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><BouquetPage /></Suspense></PreloadGate>}/>
+              <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>}>
+                <Route path="inicio" element={<PreloadGate required="epg"><BouquetPage /></PreloadGate>}/>
                 <Route path="buscador" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><SearchPage /></Suspense></PreloadGate>}/>
                 <Route path="servicios-tv-radio"element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><TvRadioServicesPage /></Suspense></PreloadGate>}/>
                 <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>}/>

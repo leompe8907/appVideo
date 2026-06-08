@@ -11,7 +11,8 @@ import { useParentalGate } from '../hooks/useParentalGate';
 import BouquetWall from '../components/bouquet/BouquetWall';
 import VodRecommendedHomeRail from '../components/vod/VodRecommendedHomeRail';
 import panaccessService from '../services/panaccessService';
-import { useHomeHeader } from '../contexts/homeHeaderContext';
+import { useCallback } from 'react';
+import { useHomeHeaderDispatch } from '../contexts/homeHeaderContext';
 import { usePreload } from '../store/usePreload';
 import { AdZone } from '../components/ads/AdZone';
 import { createAdActivateHandler } from '../utils/adActivate';
@@ -22,7 +23,11 @@ export function BouquetPage() {
   // El background común lo maneja Home (.home-content)
   const { play } = usePlayer();
   const { requestPlayChannel } = useParentalGate();
-  const { setFocusedChannel } = useHomeHeader();
+  const { setFocusedChannel } = useHomeHeaderDispatch();
+  const handleChannelFocus = useCallback(
+    (channel) => setFocusedChannel(channel),
+    [setFocusedChannel]
+  );
   const navigate = useNavigate();
   const { currentBrand } = useBrand();
   const { epg, ads } = usePreload();
@@ -109,7 +114,7 @@ export function BouquetPage() {
             <BouquetWall
               variant="inicio"
               onChannelSelect={handleChannelSelect}
-              onChannelFocus={(channel) => setFocusedChannel(channel)}
+              onChannelFocus={handleChannelFocus}
             />
             <VodRecommendedHomeRail />
           </div>

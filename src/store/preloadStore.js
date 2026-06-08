@@ -96,7 +96,7 @@ export const usePreloadStore = create(function (set, get) {
             status: 'loading',
             error: null,
             streams: s.epg.streams,
-            bouquetsWithChannels: [],
+            bouquetsWithChannels: s.epg.bouquetsWithChannels,
             progress: { current: 0, total: 0, percent: 0 },
             lastLoadedAt: s.epg.lastLoadedAt,
           },
@@ -106,40 +106,49 @@ export const usePreloadStore = create(function (set, get) {
         };
       });
 
+      var bouquets = [];
+      var allStreams = [];
+
       try {
-        var bouquets = await getBouquetsWithChannels({ enableRetry: false });
+        bouquets = await getBouquetsWithChannels({ enableRetry: false });
         var allStreamsRaw = bouquets.reduce(function (acc, b) {
           return acc.concat(b.items || []);
         }, []);
-        var allStreams = dedupeStreams(allStreamsRaw);
+        allStreams = dedupeStreams(allStreamsRaw);
         var total = allStreams.length;
+
+        set(function (s) {
+          return {
+            epg: {
+              status: 'loading',
+              error: null,
+              streams: allStreams.slice(),
+              bouquetsWithChannels: bouquets,
+              progress: { current: 0, total: total, percent: total > 0 ? 10 : 100 },
+              lastLoadedAt: s.epg.lastLoadedAt,
+            },
+            vod: s.vod,
+            ads: s.ads,
+            catchup: s.catchup,
+          };
+        });
 
         if (total === 0) {
           set(function (s) {
             return {
               epg: {
-                status: 'finishing',
+                status: 'ready',
                 streams: [],
                 bouquetsWithChannels: bouquets,
                 progress: { current: 0, total: 0, percent: 100 },
                 error: null,
-                lastLoadedAt: s.epg.lastLoadedAt,
+                lastLoadedAt: Date.now(),
               },
               vod: s.vod,
               ads: s.ads,
               catchup: s.catchup,
             };
           });
-          setTimeout(function () {
-            set(function (s) {
-              return {
-                epg: { status: 'ready', streams: s.epg.streams, bouquetsWithChannels: s.epg.bouquetsWithChannels, progress: s.epg.progress, error: null, lastLoadedAt: Date.now() },
-                vod: s.vod,
-                ads: s.ads,
-                catchup: s.catchup,
-              };
-            });
-          }, 500);
           return;
         }
 
@@ -148,11 +157,18 @@ export const usePreloadStore = create(function (set, get) {
           onProgress: function (current, totalProcessed) {
             var percent =
               totalProcessed > 0
-                ? Math.min(90, Math.max(10, Math.round((current / totalProcessed) * 100)))
+                ? Math.min(99, Math.max(10, Math.round((current / totalProcessed) * 100)))
                 : 10;
             set(function (s) {
               return {
-                epg: { status: s.epg.status, streams: s.epg.streams, bouquetsWithChannels: s.epg.bouquetsWithChannels, progress: { current: current, total: totalProcessed, percent: percent }, error: s.epg.error, lastLoadedAt: s.epg.lastLoadedAt },
+                epg: {
+                  status: 'loading',
+                  error: null,
+                  streams: allStreams.slice(),
+                  bouquetsWithChannels: bouquets,
+                  progress: { current: current, total: totalProcessed, percent: percent },
+                  lastLoadedAt: s.epg.lastLoadedAt,
+                },
                 vod: s.vod,
                 ads: s.ads,
                 catchup: s.catchup,
@@ -162,39 +178,34 @@ export const usePreloadStore = create(function (set, get) {
         });
 
         set(function (s) {
-          var nextStatus = s.epg.status !== 'loading' ? s.epg.status : 'finishing';
           return {
             epg: {
-              status: nextStatus,
-              streams: allStreams,
+              status: 'ready',
+              streams: allStreams.slice(),
               bouquetsWithChannels: bouquets,
               progress: { current: total, total: total, percent: 100 },
               error: null,
-              lastLoadedAt: s.epg.lastLoadedAt,
+              lastLoadedAt: Date.now(),
             },
             vod: s.vod,
             ads: s.ads,
             catchup: s.catchup,
           };
         });
-        setTimeout(function () {
-          set(function (s) {
-            if (s.epg.status !== 'finishing') return s;
-            return {
-              epg: { status: 'ready', streams: s.epg.streams, bouquetsWithChannels: s.epg.bouquetsWithChannels, progress: s.epg.progress, error: null, lastLoadedAt: Date.now() },
-              vod: s.vod,
-              ads: s.ads,
-              catchup: s.catchup,
-            };
-          });
-        }, 500);
       } catch (err) {
         var epgErrMsg = (err && err.message) || (err && err.errorInfo && err.errorInfo.userMessage) || 'Error al cargar EPG';
-        // FIX #1: IS_DEV en vez de import.meta.env?.DEV
+        var hasBouquets = bouquets.length > 0;
         if (IS_DEV) console.warn('[PreloadStore] loadEPG error:', err);
         set(function (s) {
           return {
-            epg: { status: 'error', streams: s.epg.streams, bouquetsWithChannels: [], progress: s.epg.progress, error: epgErrMsg, lastLoadedAt: s.epg.lastLoadedAt },
+            epg: {
+              status: hasBouquets ? 'ready' : 'error',
+              streams: allStreams.length > 0 ? allStreams.slice() : s.epg.streams,
+              bouquetsWithChannels: bouquets,
+              progress: s.epg.progress,
+              error: hasBouquets ? epgErrMsg : epgErrMsg,
+              lastLoadedAt: hasBouquets ? Date.now() : s.epg.lastLoadedAt,
+            },
             vod: s.vod,
             ads: s.ads,
             catchup: s.catchup,

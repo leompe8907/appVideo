@@ -31,12 +31,16 @@ export function PreloadDataPage() {
     if (!currentBrand) return;
 
     loadEPG(currentBrand, { force: true });
-    loadVOD(currentBrand, { t, force: true });
     if (currentBrand?.catchup?.enabled !== false) {
       loadCatchup(currentBrand, { force: true });
     }
     loadAds({ force: true });
-  }, [currentBrand, location.search, loadEPG, loadVOD, loadCatchup, loadAds, t]);
+  }, [currentBrand, location.search, loadEPG, loadCatchup, loadAds]);
+
+  useEffect(() => {
+    if (!currentBrand) return;
+    loadVOD(currentBrand, { t, force: true });
+  }, [currentBrand, location.search, loadVOD, t]);
 
   // Cuando EPG y VOD estén listos (o en error), redirigir a Home/Bouquets
   useEffect(() => {

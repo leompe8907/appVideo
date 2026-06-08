@@ -3,12 +3,11 @@
  * Se activa después de seleccionar un perfil o una tarjeta (licencia).
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { usePreload } from '../../store/usePreload';
-import { mergeEpgIntoChannels } from '../../utils/epgMerge';
-import { getMainBouquets, getChannelsForBouquet, filterMainBouquets } from '../../services/tvDataService';
+import { filterMainBouquets } from '../../services/tvDataService';
 
 /**
  * Normaliza un color devuelto por el backend (ej. "ffffff  ") a formato CSS (#ffffff).
@@ -32,48 +31,15 @@ export function Bouquet() {
   const { isTV } = useDevice();
   const { epg } = usePreload();
 
-  /** Bouquets principales con canales y EPG fusionados desde PreloadContext (sin nuevas llamadas a getBouquets/getAvailableStreams). */
-  const bouquetsFromPreload = useMemo(() => {
-    if (epg.status !== 'ready') return null;
-    return filterMainBouquets(epg.bouquetsWithChannels || []).map((b) => ({
-      ...b,
-      items: mergeEpgIntoChannels(b.items || [], epg.streams),
-    }));
-  }, [epg.status, epg.bouquetsWithChannels, epg.streams]);
-
-  const [fallbackBouquets, setFallbackBouquets] = useState([]);
-  const [fallbackLoading, setFallbackLoading] = useState(false);
-  const [fallbackError, setFallbackError] = useState(null);
+  /** Bouquets principales con canales y EPG fusionados desde PreloadContext (sin nuevas llamadas a red). */
+  const bouquets = useMemo(() => {
+    if (epg.status !== 'ready') return [];
+    return filterMainBouquets(epg.bouquetsWithChannels || []);
+  }, [epg.status, epg.bouquetsWithChannels]);
 
   const [selectedBouquet, setSelectedBouquet] = useState(null);
   const [channels, setChannels] = useState([]);
-  const [isLoadingChannels, setIsLoadingChannels] = useState(false);
   const [channelsError, setChannelsError] = useState(null);
-
-  const fetchBouquetsFallback = useCallback(async () => {
-    try {
-      setFallbackLoading(true);
-      setFallbackError(null);
-      const mainBouquets = await getMainBouquets({ enableRetry: false });
-      setFallbackBouquets(mainBouquets);
-    } catch (err) {
-      console.error('[Bouquet] Error al obtener bouquets:', err);
-      setFallbackBouquets([]);
-      setFallbackError(err?.errorInfo?.userMessage || err?.message || t('bouquet.errorLoad'));
-    } finally {
-      setFallbackLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    if (epg.status === 'error') {
-      fetchBouquetsFallback();
-    }
-  }, [epg.status, fetchBouquetsFallback]);
-
-  const bouquets = bouquetsFromPreload !== null ? bouquetsFromPreload : fallbackBouquets;
-  const isLoading = bouquetsFromPreload !== null ? false : fallbackLoading;
-  const error = bouquetsFromPreload !== null ? null : fallbackError;
 
   useEffect(() => {
     if (isTV && bouquets.length > 0) {
@@ -85,56 +51,27 @@ export function Bouquet() {
     }
   }, [isTV, bouquets.length]);
 
-  const handleSelectBouquet = async (bouquet) => {
+  const handleSelectBouquet = (bouquet) => {
     setSelectedBouquet(bouquet);
     setChannelsError(null);
     setChannels([]);
 
-    const fromPreload =
-      bouquetsFromPreload !== null &&
-      Array.isArray(bouquet.items) &&
-      bouquet.items.length > 0;
-
-    if (fromPreload) {
-      const merged = mergeEpgIntoChannels(bouquet.items, epg.streams);
-      setChannels(merged);
-      setIsLoadingChannels(false);
-      if (import.meta.env.DEV) {
-        const bouquetId = String(bouquet.bouquetId ?? bouquet.id ?? '');
-        console.log('[Bouquet] Streams desde preload para bouquet', bouquetId, merged.length);
-      }
+    if (!Array.isArray(bouquet.items) || bouquet.items.length === 0) {
+      setChannelsError(t('bouquet.errorStreams'));
       return;
     }
 
-    setIsLoadingChannels(true);
-    try {
-      const filtered = await getChannelsForBouquet(bouquet, { enableRetry: false });
-      if (import.meta.env.DEV) {
-        const bouquetId = String(bouquet.bouquetId ?? bouquet.id ?? '');
-        console.log('[Bouquet] Streams para bouquet', bouquetId, filtered);
-      }
-      setChannels(filtered);
-    } catch (err) {
-      console.error('[Bouquet] Error al obtener streams:', err);
-      setChannelsError(err?.errorInfo?.userMessage || err?.message || t('bouquet.errorStreams'));
-    } finally {
-      setIsLoadingChannels(false);
+    setChannels(bouquet.items);
+    if (import.meta.env.DEV) {
+      const bouquetId = String(bouquet.bouquetId ?? bouquet.id ?? '');
+      console.log('[Bouquet] Streams desde preload para bouquet', bouquetId, bouquet.items.length);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="bouquet-loading">
-        <div className="loading-spinner" />
-        <p className="bouquet-loading-text">{t('bouquet.loading')}</p>
-      </div>
-    );
-  }
-
-  if (error) {
+  if (epg.status === 'error') {
     return (
       <div className="bouquet-error">
-        <p className="bouquet-error-text">{error}</p>
+        <p className="bouquet-error-text">{epg.error || t('bouquet.errorLoad')}</p>
       </div>
     );
   }
@@ -161,13 +98,10 @@ export function Bouquet() {
       </div>
       {selectedBouquet && (
         <div className="bouquet-streams-info">
-          {isLoadingChannels && (
-            <p className="bouquet-loading-text">{t('bouquet.loadingStreams')}</p>
-          )}
           {channelsError && (
             <p className="bouquet-error-text">{channelsError}</p>
           )}
-          {!isLoadingChannels && !channelsError && (
+          {!channelsError && (
             <p className="bouquet-streams-count">
               {t('bouquet.streamsCount', { count: channels.length })}
             </p>

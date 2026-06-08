@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
+import { useDevice } from '../../contexts/DeviceContext';
 import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
 import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
 import { useParental } from '../../store/useParental';
@@ -14,6 +15,7 @@ import {
 } from '../../utils/bouquetLayoutClasses';
 import { buildChannelLogoUrl, getChannelLayoutVariant } from '../../utils/bouquetLayoutConfig';
 import { EmblaHorizontalRail } from '../navigation/EmblaHorizontalRail';
+import { useChunkedList } from '../../hooks/useChunkedList';
 
 // --- Helpers EPG para layout event_and_logo ---
 /** Parsea "YYYY-MM-DD HH:mm:ss" a "HH:mm" para mostrar en UI */
@@ -75,8 +77,9 @@ export function BouquetRowCarousel({
     bouquet?.Title ??
     t('bouquet.unknown');
 
-  const items = Array.isArray(bouquet?.items) ? bouquet.items : [];
-  if (items.length === 0) return null;
+  const rawItems = Array.isArray(bouquet?.items) ? bouquet.items : [];
+  const items = useChunkedList(rawItems);
+  if (rawItems.length === 0) return null;
 
   const { carousel: carouselClass, track: trackClass } = getBouquetRowCarouselClasses(layoutType);
 
@@ -113,6 +116,7 @@ export function BouquetRowCarousel({
  * - logo_with_number: logo centrado en tarjeta + LCN abajo a la derecha + nombre debajo
  */
 function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }) {
+  const { isTV } = useDevice();
   const parental = useParental();
   const [focused, setFocused] = useState(false);
 
@@ -153,6 +157,7 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
   }, [epgItems]);
   useEffect(() => {
     if (variant !== 'event_and_logo' && variant !== 'event_and_logo_overlay') return;
+    if (isTV && !focused) return undefined;
     const tick = () => {
       const event = getCurrentEpgEvent(epgItemsRef.current);
       setTimeshipPercent(getEpgEventProgressPercent(event));
@@ -160,7 +165,7 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [variant]);
+  }, [variant, isTV, focused]);
 
   // Placeholder cuando ni evento ni logo cargan (imagen de canal dañada o ausente)
   const { currentBrand, getImage } = useBrand();
@@ -411,8 +416,9 @@ export function BouquetGridHorizontal({
     bouquet?.Title ??
     t('bouquet.unknown');
 
-  const items = Array.isArray(bouquet?.items) ? bouquet.items : [];
-  if (items.length === 0) return null;
+  const rawItems = Array.isArray(bouquet?.items) ? bouquet.items : [];
+  const items = useChunkedList(rawItems);
+  if (rawItems.length === 0) return null;
 
   const rowCount = Math.max(1, Math.min(Number(gridRows) || 3, 6));
   const rows = Array.from({ length: rowCount }, () => []);
@@ -473,8 +479,9 @@ export function BouquetGridVertical({
     bouquet?.Title ??
     t('bouquet.unknown');
 
-  const items = Array.isArray(bouquet?.items) ? bouquet.items : [];
-  if (items.length === 0) return null;
+  const rawItems = Array.isArray(bouquet?.items) ? bouquet.items : [];
+  const items = useChunkedList(rawItems);
+  if (rawItems.length === 0) return null;
 
   const { root: gridClass, track: trackClass } = getBouquetGridVerticalClasses(layoutType);
   const trackStyle =

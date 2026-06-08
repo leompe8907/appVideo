@@ -13,6 +13,23 @@ const DEFAULT_EPG_DAYS_OFFSET = 2;
 /** Si una consulta EPG no responde en este tiempo, se salta al siguiente canal. */
 export const DEFAULT_EPG_REQUEST_TIMEOUT_MS = 90000;
 
+function isTvDevice() {
+  try {
+    return (
+      localStorage.getItem('device') === 'tv' ||
+      /smart-tv|smarttv|tizen|webos|lg|samsung/i.test(navigator.userAgent || '')
+    );
+  } catch {
+    return false;
+  }
+}
+
+function yieldToMain(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms == null ? 0 : ms);
+  });
+}
+
 /**
  * Construye la URL de descarga de EPG para un canal (epgStreamId).
  * Equivalente a AppData.getEPGURL en el proyecto EPG.
@@ -261,6 +278,9 @@ export async function loadEPGForChannels(channels, options = {}) {
     const fromWorker = await normalizeEpgInWorker(data, { epgHoursLimit, nowMs }).catch(() => null);
     channel.epgItems = fromWorker || filterAndEnrichEvents(data, epgHoursLimit);
     onProgress(index + 1, toProcess);
+    if (isTvDevice()) {
+      await yieldToMain(8);
+    }
   }
 
   for (let i = toProcess; i < list.length; i++) {

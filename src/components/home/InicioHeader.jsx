@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
 import { useDeviceTime } from '../../hooks/useDeviceTime';
-import { useHomeHeader } from '../../contexts/homeHeaderContext';
+import { useHomeHeaderState } from '../../contexts/homeHeaderContext';
 import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
 import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
 
@@ -54,7 +54,7 @@ function getNextEpgEvent(epgItems, currentEvent) {
 export function InicioHeader({ sectionKey = null }) {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
-  const { focusedChannel } = useHomeHeader();
+  const focusedChannel = useHomeHeaderState();
 
   const areas = currentBrand?.header?.areas || {};
   const left = areas.left || {};

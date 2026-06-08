@@ -1,3 +1,13 @@
+/** @type {WeakMap<HTMLElement, { rows: HTMLElement[][], signature: string }>} */
+const wallRowsCache = new WeakMap();
+
+function getWallLayoutSignature(wall) {
+  const cardCount = wall.querySelectorAll('.channel-card').length;
+  const scrollRoot = wall.closest('.bouquet-inicio-scroll');
+  const scrollTop = scrollRoot instanceof HTMLElement ? scrollRoot.scrollTop : 0;
+  return `${cardCount}|${scrollTop}|${wall.offsetHeight}|${wall.offsetWidth}`;
+}
+
 /**
  * Agrupa tarjetas de canal en filas visuales (misma altura en pantalla).
  * Cubre grid vertical, carruseles con flex-wrap (logo+LCN), etc.
@@ -65,6 +75,13 @@ export function groupChannelCardsIntoVisualRows(cards) {
  */
 export function buildInicioBouquetChannelRows(wall) {
   if (!wall) return [];
+
+  const signature = getWallLayoutSignature(wall);
+  const cached = wallRowsCache.get(wall);
+  if (cached && cached.signature === signature) {
+    return cached.rows;
+  }
+
   const rows = [];
   try {
     wall.querySelectorAll('.bouquet-row-carousel .horizontal-slide').forEach((slide) => {
@@ -82,6 +99,8 @@ export function buildInicioBouquetChannelRows(wall) {
   } catch {
     /* noop */
   }
+
+  wallRowsCache.set(wall, { rows, signature });
   return rows;
 }
 
