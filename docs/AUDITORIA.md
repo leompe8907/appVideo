@@ -101,6 +101,8 @@ El proyecto está construido sobre React 18 y Vite, utilizando Zustand para el m
 
 ### Grupo 4: Arquitectura de Navegación Espacial (Teclado & TV)
 
+> **Revisión 2026-06-09:** Se añadieron hallazgos H-45–H-54 en `AUDITORIA_TECNICA.md` (scroll smooth, focus ring, re-renders, pantallas sin cobertura, grid lógico). Plan de ejecución completo: `PLAN_NAVEGACION_TV.md`.
+
 #### 4.1 Navegación Espacial Fragmentada e Imperativa
 * **Ubicación:** Carpeta [hooks/](file:///C:/Users/veyqp/Desktop/appVideo/src/hooks) (múltiples archivos `use*TvNav.js`) y componentes como [Sidebar.jsx](file:///C:/Users/veyqp/Desktop/appVideo/src/components/Sidebar.jsx).
 * **Descripción:** Cada página y componente gestiona de manera independiente sus eventos de teclado (`keydown`), calculando imperativamente las relaciones de proximidad física del foco basándose en clases CSS duras (`.vod-card`, `.channel-card`).

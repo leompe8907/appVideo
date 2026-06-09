@@ -118,7 +118,7 @@ export function BouquetRowCarousel({
 function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }) {
   const { isTV } = useDevice();
   const parental = useParental();
-  const [focused, setFocused] = useState(false);
+  const focusedRef = useRef(false);
 
   const bgColor = normalizeColor(channel.backgroundColor ?? channel.bgColor);
   const variant = getChannelLayoutVariant(layoutType);
@@ -157,15 +157,15 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
   }, [epgItems]);
   useEffect(() => {
     if (variant !== 'event_and_logo' && variant !== 'event_and_logo_overlay') return;
-    if (isTV && !focused) return undefined;
     const tick = () => {
+      if (isTV && !focusedRef.current) return;
       const event = getCurrentEpgEvent(epgItemsRef.current);
       setTimeshipPercent(getEpgEventProgressPercent(event));
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [variant, isTV, focused]);
+  }, [variant, isTV]);
 
   // Placeholder cuando ni evento ni logo cargan (imagen de canal dañada o ausente)
   const { currentBrand, getImage } = useBrand();
@@ -240,16 +240,17 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
       className={[
         'channel-card',
         `channel-card--${variant}`,
-        focused ? 'focused' : '',
         isBlocked ? 'channel-card--blocked' : '',
       ].filter(Boolean).join(' ')}
       style={style}
       onMouseEnter={() => onFocus?.()}
       onFocus={() => {
-        setFocused(true);
+        focusedRef.current = true;
         onFocus?.();
       }}
-      onBlur={() => setFocused(false)}
+      onBlur={() => {
+        focusedRef.current = false;
+      }}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       tabIndex={0}

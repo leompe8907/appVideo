@@ -34,6 +34,7 @@ export function useBouquetMuroTvNav(opts) {
       ? `ready:${(epg.bouquetsWithChannels || []).length}`
       : `other:${epg.status}`;
   const wallFocusPlacedRef = useRef(false);
+  const wallRowsCacheRef = useRef({ wall: null, key: '', rows: [] });
   const targetPath = cfg.pathname;
   const bridgesVod = Boolean(cfg.bridgesVodAndInnerAds);
 
@@ -42,6 +43,10 @@ export function useBouquetMuroTvNav(opts) {
       wallFocusPlacedRef.current = false;
     }
   }, [location.pathname, targetPath]);
+
+  useEffect(() => {
+    wallRowsCacheRef.current = { wall: null, key: '', rows: [] };
+  }, [epgWallKey]);
 
   /** TV: al entrar en la ruta, foco en la primera tarjeta del muro. */
   useLayoutEffect(() => {
@@ -94,6 +99,17 @@ export function useBouquetMuroTvNav(opts) {
     const queryMainContent = () =>
       document.querySelector('main.home-content[data-home-scope="content"]');
     const queryContentStack = () => queryMainContent()?.querySelector?.('.home-content-stack') ?? null;
+
+    const getCachedWallRows = (wallEl) => {
+      if (!(wallEl instanceof HTMLElement)) return [];
+      const cached = wallRowsCacheRef.current;
+      if (cached.wall === wallEl && cached.key === epgWallKey) {
+        return cached.rows;
+      }
+      const rows = buildInicioBouquetChannelRows(wallEl);
+      wallRowsCacheRef.current = { wall: wallEl, key: epgWallKey, rows };
+      return rows;
+    };
 
     const onFocusIn = (e) => {
       if (shouldDeferHomeShellNavigation()) return;
@@ -163,7 +179,7 @@ export function useBouquetMuroTvNav(opts) {
         } else {
           const wallEl = scrollRoot.querySelector('.bouquet-wall');
           if (wallEl instanceof HTMLElement) {
-            const rows2 = buildInicioBouquetChannelRows(wallEl);
+            const rows2 = getCachedWallRows(wallEl);
             if (rows2.length) {
               const lastRow = rows2[rows2.length - 1];
               const targetCard = lastRow[0];
@@ -219,7 +235,7 @@ export function useBouquetMuroTvNav(opts) {
         } else if (action === TV_ACTION.UP) {
           const wallEl = scrollRoot.querySelector('.bouquet-wall');
           if (wallEl instanceof HTMLElement) {
-            const channelRows = buildInicioBouquetChannelRows(wallEl);
+            const channelRows = getCachedWallRows(wallEl);
             if (channelRows.length) {
               const lastRow = channelRows[channelRows.length - 1];
               const col = idx >= 0 ? idx : 0;
@@ -245,7 +261,7 @@ export function useBouquetMuroTvNav(opts) {
       const wall = scrollRoot.querySelector('.bouquet-wall');
       if (!wall || !wall.contains(card)) return;
 
-      const rows = buildInicioBouquetChannelRows(wall);
+      const rows = getCachedWallRows(wall);
       const pos = findChannelCardCellInRows(card, rows);
       if (!pos) return;
 
@@ -340,7 +356,7 @@ export function useBouquetMuroTvNav(opts) {
       window.removeEventListener('keydown', onKeyDown, { capture: true });
       scrollRoot.removeEventListener('focusin', onFocusIn, true);
     };
-  }, [isTV, location.pathname, scrollRootSelector, targetPath, bridgesVod]);
+  }, [isTV, location.pathname, scrollRootSelector, targetPath, bridgesVod, epgWallKey]);
 }
 
 export default useBouquetMuroTvNav;

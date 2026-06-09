@@ -37,6 +37,27 @@ function getOrderedSidebarFocusTargets(root, settingsOpen) {
   return out;
 }
 
+/** Visibilidad sin `getComputedStyle` (evita layout thrash en cada keydown). */
+function isSidebarFocusTargetVisible(el) {
+  if (!(el instanceof HTMLElement) || el.hasAttribute('disabled')) return false;
+  try {
+    const r = el.getBoundingClientRect();
+    return r.width >= 2 && r.height >= 2;
+  } catch {
+    return false;
+  }
+}
+
+function buildVisibleSidebarNavTargets(root, settingsOpen) {
+  return getOrderedSidebarFocusTargets(root, settingsOpen).filter(isSidebarFocusTargetVisible);
+}
+
+function buildVisibleSidebarSublinks(root) {
+  return Array.from(root.querySelectorAll('.home-sidebar-submenu .home-sidebar-sublink')).filter(
+    isSidebarFocusTargetVisible
+  );
+}
+
 function SidebarIcon({ name }) {
   const common = {
     className: 'home-sidebar-icon',
@@ -196,6 +217,9 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   const [aboutModal, setAboutModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null); // 'logout' | 'exit' | null
   const blurTimerRef = useRef(null);
+  const visibleNavTargetsRef = useRef([]);
+  const visibleSublinksRef = useRef([]);
+  const rebuildSidebarFocusCacheRef = useRef(() => {});
   /** Evita colapsar el rail cuando hay modal en portal (foco fuera del aside). */
   const blockCollapseForOverlayRef = useRef(false);
   const sidebarFixed = currentBrand?.ui?.sidebar?.fixed !== false;
@@ -357,6 +381,20 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, isTV]);
 
+  // TV: cache de ítems enfocables (recalcula al cambiar ruta o submenú, no en cada keydown).
+  useLayoutEffect(() => {
+    if (!isTV) return undefined;
+    const rebuild = () => {
+      const root = rootRef.current;
+      if (!root) return;
+      visibleNavTargetsRef.current = buildVisibleSidebarNavTargets(root, settingsOpen);
+      visibleSublinksRef.current = buildVisibleSidebarSublinks(root);
+    };
+    rebuildSidebarFocusCacheRef.current = rebuild;
+    rebuild();
+    return undefined;
+  }, [isTV, settingsOpen, location.pathname]);
+
   // TV: UP/DOWN entre ítems; ENTER en enlaces / ajustes / submenú; scroll del rail al mover foco.
   useLayoutEffect(() => {
     if (!isTV) return undefined;
@@ -370,29 +408,15 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       const active = document.activeElement;
       if (!active || !(active instanceof HTMLElement) || !root.contains(active)) return;
 
-      const isRoughlyVisibleEl = (el) => {
-        try {
-          if (!(el instanceof HTMLElement) || el.hasAttribute('disabled')) return false;
-          const style = window.getComputedStyle(el);
-          if (style.visibility === 'hidden' || style.display === 'none') return false;
-          const r = el.getBoundingClientRect();
-          return r.width >= 2 && r.height >= 2;
-        } catch {
-          return false;
-        }
-      };
-
-      const getVisibleSublinks = () =>
-        Array.from(root.querySelectorAll('.home-sidebar-submenu .home-sidebar-sublink')).filter(
-          isRoughlyVisibleEl
-        );
+      const rebuildCache = () => rebuildSidebarFocusCacheRef.current?.();
 
       if (action === TV_ACTION.RIGHT) {
         if (active.matches('button.home-sidebar-settings-btn')) {
           e.preventDefault();
           e.stopPropagation();
           const focusFirstSub = () => {
-            const subs = getVisibleSublinks();
+            rebuildCache();
+            const subs = visibleSublinksRef.current;
             const first = subs[0];
             if (first instanceof HTMLElement) {
               focusElementSafe(first);
@@ -408,7 +432,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
           return;
         }
         if (active.matches('.home-sidebar-sublink')) {
-          const subs = getVisibleSublinks();
+          const subs = visibleSublinksRef.current;
           const i = subs.indexOf(active);
           if (i >= 0 && i < subs.length - 1) {
             e.preventDefault();
@@ -452,10 +476,8 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
               requestAnimationFrame(() => {
                 const r = rootRef.current;
                 if (!r) return;
-                const subs = Array.from(
-                  r.querySelectorAll('.home-sidebar-submenu .home-sidebar-sublink')
-                ).filter(isRoughlyVisibleEl);
-                const first = subs[0];
+                rebuildSidebarFocusCacheRef.current?.();
+                const first = visibleSublinksRef.current[0];
                 if (first instanceof HTMLElement) {
                   focusElementSafe(first);
                   scrollElementIntoVisibleScrollAncestors(first, r);
@@ -484,18 +506,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
 
       if (action !== TV_ACTION.UP && action !== TV_ACTION.DOWN) return;
 
-      const targets = getOrderedSidebarFocusTargets(root, settingsOpen);
-      const visible = targets.filter((t) => {
-        try {
-          if (t.hasAttribute('disabled')) return false;
-          const style = window.getComputedStyle(t);
-          if (style.visibility === 'hidden' || style.display === 'none') return false;
-          const r = t.getBoundingClientRect();
-          return r.width >= 2 && r.height >= 2;
-        } catch {
-          return false;
-        }
-      });
+      const visible = visibleNavTargetsRef.current;
       const idx = visible.indexOf(active);
       if (idx < 0) return;
 

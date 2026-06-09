@@ -223,11 +223,11 @@ export function applyTheme(brandConfig) {
   // Mantener compatibilidad con builds previos (si algún CSS/QA lo usa).
   root.setAttribute('data-tv-focus', focusEnabled ? 'on' : 'off');
 
-  // Color de foco (por marca). Si no se setea, cae al primaryColor.
+  // Color de foco: override explícito → secondaryColor → primaryColor.
   const focusColor =
     typeof focusCfg.color === 'string' && focusCfg.color.trim() !== ''
       ? focusCfg.color.trim()
-      : ui.primaryColor;
+      : ui.secondaryColor || ui.primaryColor;
   if (focusColor) {
     root.style.setProperty('--focus-color', focusColor);
     const focusRgb = toRgbTuple(focusColor);

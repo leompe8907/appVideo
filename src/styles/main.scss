@@ -27,6 +27,8 @@
 @use 'pages/epg' as *;
 @use 'pages/player-hud' as *;
 @use 'pages/parental' as *;
+@use 'tv-nav-performance' as *;
+@use 'tv-focus-ring' as *;
 
 // 2. Bootstrap personalizado (usa @import porque Bootstrap lo requiere)
 @import 'custom-bootstrap';

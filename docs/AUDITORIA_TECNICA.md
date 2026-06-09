@@ -1,13 +1,16 @@
 # Auditoría Técnica — appVideo
 ### OTT App para Samsung Tizen 2019+ / LG webOS 4+ / Web
 **Stack:** React 18 + Vite 7 + Zustand 5 + React Router 7 + hls.js + video.js
-**Fecha de análisis:** 2026-06-05
+**Fecha de análisis:** 2026-06-05  
+**Última revisión navegación TV:** 2026-06-09
 
 ---
 
 ## Resumen Ejecutivo
 
-El proyecto está bien estructurado para su propósito y tiene decisiones de diseño correctas (motor de player persistente, preload centralizado, engines separados por plataforma). Sin embargo, acumula **38 hallazgos** agrupados en 9 áreas, varios con impacto directo en la experiencia de usuario en TV (congelamiento de foco, memory leaks, cuellos de botella de parseo, riesgo de pantalla negra en zapping).
+El proyecto está bien estructurado para su propósito y tiene decisiones de diseño correctas (motor de player persistente, preload centralizado, engines separados por plataforma). Sin embargo, acumula **48 hallazgos** agrupados en 9 áreas, varios con impacto directo en la experiencia de usuario en TV (congelamiento de foco, lag perceptible en D-pad ~1 s, memory leaks, cuellos de botella de parseo, riesgo de pantalla negra en zapping).
+
+> **Plan de ejecución navegación TV:** ver `docs/PLAN_NAVEGACION_TV.md` (cobertura por área: login, home, VOD, catchup, buscador, sidebar, parental, popups, OSMS, player).
 
 ---
 
@@ -150,6 +153,95 @@ El proyecto está bien estructurado para su propósito y tiene decisiones de dis
 **Problema:** `'player-top-left'`, `'player-top-center'`, `'player-bottom-actions'` son strings hardcodeados. Si el layout del HUD cambia por configuración de marca (`hudLayout`), la navegación se rompe silenciosamente.
 **Impacto:** Medio — bugs de foco al cambiar layout del player por marca.
 **Acción:** Exportar las constantes de zona desde `PlayerHud.jsx` y consumirlas en el hook.
+
+---
+
+### H-45 · `scroll-behavior: smooth` en contenedores de foco TV
+**Archivos:** `src/styles/pages/_bouquet.scss` (`.bouquet-inicio-scroll`, rails horizontales), otros scroll containers del home shell
+**Problema:** Al mover foco, `scrollElementIntoVisibleScrollAncestors` desplaza contenedores con `scroll-behavior: smooth`. En TV el scroll animado se percibe como lag adicional (~300–800 ms) encima del tiempo de JS.
+**Impacto:** Alto — sensación de navegación “forzada” o lenta entre tarjetas.
+**Acción:** En `.device-tv`, forzar `scroll-behavior: auto` en contenedores navegables. Opcional: parámetro `instant` en `scrollElementIntoVisibleScrollAncestors` para TV.
+
+---
+
+### H-46 · Estilo de foco por elemento (scale + sombras) en lugar de anillo único
+**Archivos:** `src/styles/global.scss` (`[data-focus="on"].device-tv .focused`), estilos por componente (`_catchup.scss`, `_vod.scss`, etc.)
+**Problema:** Cada elemento enfocado aplica `transform: scale(1.05–1.12)` y múltiples `box-shadow`. En GPUs de TV 2019 esto provoca repintados costosos en cada pulsación del D-pad. Las apps OTT maduras suelen usar un **focus ring overlay** (un solo div que se mueve) o un borde ligero sin escalar la tarjeta.
+**Impacto:** Alto — contribuye al lag perceptual aunque el JS sea rápido.
+**Acción:** Introducir `TvFocusRing` (capa única posicionada con `getBoundingClientRect` solo al cambiar foco, o mejor: refs de layout). En TV, desactivar `scale` en `.focused` y limitar a `outline` / borde de 2–3 px.
+
+---
+
+### H-47 · `ChannelCard` — `setState` en cada cambio de foco
+**Archivo:** `src/components/bouquet/BouquetLayouts.jsx` (`ChannelCard`: `focused` local + `setInterval` EPG al enfocar)
+**Problema:** Cada movimiento LRUD dispara `setFocused(true/false)` en dos tarjetas (blur + focus), provocando re-renders React de componentes con imágenes, EPG y estilos. Además duplica la clase `.focused` que ya aplica `main.jsx` vía `focusin` global.
+**Impacto:** Alto en muro de canales con muchas filas.
+**Acción:** Eliminar estado `focused` local; confiar en foco DOM + anillo global. Mover tick de barra EPG a capa no ligada al foco (solo evento en vivo visible) o a un único timer por fila visible.
+
+---
+
+### H-48 · `useChunkedList` no es virtualización de navegación
+**Archivo:** `src/hooks/useChunkedList.js`, usado en `BouquetLayouts.jsx`, rails catchup/VOD
+**Problema:** El chunking pinta progresivamente más ítems hasta montar cientos de nodos DOM. Reduce tiempo de primer paint pero **no limita** nodos activos durante navegación. Apps tipo Netflix virtualizan: solo ~15–25 ítems montados en el viewport + buffer.
+**Impacto:** Alto en grillas EPG/VOD/catchup grandes — más DOM = más costo en spatial nav y scroll.
+**Acción:** Evaluar virtualización por ventana (`@tanstack/react-virtual` o rail propio) en rails horizontales y grid vertical. Mantener chunking solo como fallback de carga de datos, no de DOM.
+
+---
+
+### H-49 · Cobertura incompleta de navegación TV por pantalla
+**Archivos / áreas sin hook LRUD dedicado ni integración con shell:
+| Área | Estado actual | Riesgo |
+|------|---------------|--------|
+| `SearchPage.jsx` | Sin hook TV; input + tabs + resultados sin grid espacial | Foco impredecible, sin puente sidebar |
+| `CatchupPage.jsx` | `tabIndex={0}` nativo; rails sin hook | Lag + sin puente con ads/sidebar |
+| `OsmsPage.jsx` | Lista/detalle sin `tabIndex` ni LRUD | Usuario atrapado o foco perdido |
+| `ParentalSettingsPage.jsx` | Grid de canales sin hook; solo `ParentalPinGate` parcial | Navegación rota en TV |
+| `EpgCardsPage.jsx` | `tabIndex={-1}` en TV + `data-home-spatial-delegate` | **Sin movimiento** con flechas en TV |
+| `ProfilePage.jsx` | Foco inicial parcial; sin LRUD entre perfiles/smartcards | Inconsistente post-login |
+| Modales sueltos | Cada uno con su `keydown` (`ConfirmModal`, `VodDetailModal`, etc.) | Conflictos con H-13 |
+
+**Impacto:** Crítico — experiencia desigual; áreas “rotas” en TV aunque Inicio/VOD funcionen.
+**Acción:** Matriz de cobertura en `PLAN_NAVEGACION_TV.md`. Registrar cada pantalla en `NavigationRouter` con handler de zona o migrar a adaptadores comunes.
+
+---
+
+### H-50 · Navegación basada en geometría DOM vs grid lógico en datos
+**Archivos:** `src/utils/inicioBouquetTvGrid.js`, `src/utils/vodTvGrid.js`, hooks `use*Bouquet*TvNav`, `useVodPageTvNav`
+**Problema:** H-07 propone cachear mediciones DOM, pero el estándar OTT usa **índices fila/columna en el modelo de datos** (`bouquet.items`, categorías VOD). Medir `getBoundingClientRect` en cada invalidación de scroll sigue siendo frágil y costoso frente a un grid derivado de datos.
+**Impacto:** Alto — techo de rendimiento por debajo de apps de streaming comparables.
+**Acción:** Fase 2 del plan: `buildBouquetNavModel(bouquets)` y `buildVodNavModel(categories)` que expongan `{ row, col, id }` sin leer layout. DOM solo para scroll-into-view del destino.
+
+---
+
+### H-51 · `PlayerHud.jsx` — listeners `keydown` duplicados respecto al hook
+**Archivo:** `src/components/player/PlayerHud.jsx` (líneas ~384–433) + `usePlayerHudTvNavigation.js`
+**Problema:** El HUD registra handlers propios de BACK/key además del hook de navegación TV. Duplica trabajo por pulsación y aumenta riesgo de doble `preventDefault` o handlers que no se alinean.
+**Impacto:** Medio-Alto — conflictos en player activo.
+**Acción:** Consolidar toda la lógica de teclas del HUD en un solo módulo registrado en `NavigationRouter` con prioridad máxima cuando `isPlayerActive`.
+
+---
+
+### H-52 · Sin presupuesto de rendimiento para `keydown` en dispositivo TV
+**Archivos:** Transversal (navegación TV)
+**Problema:** No hay métrica ni test que exija p. ej. `< 16 ms` de procesamiento por pulsación en Tizen/webOS de referencia. Las regresiones de lag no se detectan en CI ni en code review.
+**Impacto:** Medio — el problema de ~1 s de lag puede reintroducirse.
+**Acción:** Añadir script/manual de benchmark D-pad + umbral en checklist de Etapa 4. Opcional: `performance.mark` en `NavigationRouter` en builds `DEV` / `?tvNavPerf=1`.
+
+---
+
+### H-53 · `main.jsx` — doble sistema de clases `.focused`
+**Archivo:** `src/main.jsx` (listeners `focusin`/`focusout` globales) + componentes con clase `.focused` manual (`ChannelCard`, catchup, etc.)
+**Problema:** Coexisten el sistema global (`data-focusable`, `.focused` en `focusin`) y estados React locales que también añaden `.focused`. Estilos compiten y se duplica trabajo en cada foco.
+**Impacto:** Medio — CSS inconsistente y renders extra.
+**Acción:** Una sola fuente de verdad: global `focusin` + `TvFocusRing` en TV; eliminar `focused` local en componentes.
+
+---
+
+### H-54 · Sidebar — transición de 380 ms acoplada al foco
+**Archivo:** `src/styles/pages/_home-shell.scss` (`$home-sidebar-duration: 380ms`), `Sidebar.jsx` (`onFocusCapture` expande rail)
+**Problema:** Al volver al sidebar desde contenido, expandir el rail anima ancho/opacidad 380 ms mientras el usuario ya movió el foco. Se percibe como retraso de la UI respecto al input.
+**Impacto:** Medio — especialmente en transiciones sidebar ↔ main.
+**Acción:** En TV: expandir sidebar **sin animación de grid** (`--home-sidebar-transition-duration: 0ms` ya existe parcialmente en `prefers-reduced-motion`; aplicar siempre en `.device-tv`) o pre-expandir antes de `focus()`.
 
 ---
 

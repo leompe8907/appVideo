@@ -1,11 +1,12 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { HomeEpgRoutesLayout } from './components/preload/HomeEpgRoutesLayout';
 import { useAuthValidator } from './hooks/useAuthValidator';
 import { useBrand } from './contexts/BrandContext';
 import { isAuthenticated } from './utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
-import { PreloadGate } from './components/preload/PreloadGate';
+import { TvFocusRing } from './components/navigation/TvFocusRing';
 import HomePage from './pages/HomePage';
 import BouquetPage from './pages/BouquetPage';
 import {
@@ -97,6 +98,7 @@ function App() {
   return (
     <>
       <PlayerProvider>
+        <TvFocusRing />
         <div className="App">
           <Routes>
               {/* Rutas públicas */}
@@ -110,14 +112,16 @@ function App() {
               <Route path="/vod" element={<Navigate to="/home/vod" replace />}/>
               <Route path="/epg" element={<Navigate to="/home/epg" replace />}/>
               <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>}>
-                <Route path="inicio" element={<PreloadGate required="epg"><BouquetPage /></PreloadGate>}/>
-                <Route path="buscador" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><SearchPage /></Suspense></PreloadGate>}/>
-                <Route path="servicios-tv-radio"element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><TvRadioServicesPage /></Suspense></PreloadGate>}/>
-                <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>}/>
-                <Route path="epg" element={<PreloadGate required="epg"> <Suspense fallback={<Loading />}> <EpgCardsPage /></Suspense></PreloadGate>}/>
-                <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>}/>
-                <Route path="control-parental" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><ParentalSettingsPage /></Suspense></PreloadGate>}/>
-                <Route path="osms" element={<Suspense fallback={<Loading />}><OsmsPage /></Suspense>}/>
+                <Route element={<HomeEpgRoutesLayout />}>
+                  <Route path="inicio" element={<BouquetPage />} />
+                  <Route path="buscador" element={<Suspense fallback={<Loading />}><SearchPage /></Suspense>} />
+                  <Route path="servicios-tv-radio" element={<Suspense fallback={<Loading />}><TvRadioServicesPage /></Suspense>} />
+                  <Route path="epg" element={<Suspense fallback={<Loading />}><EpgCardsPage /></Suspense>} />
+                  <Route path="control-parental" element={<Suspense fallback={<Loading />}><ParentalSettingsPage /></Suspense>} />
+                </Route>
+                <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>} />
+                <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>} />
+                <Route path="osms" element={<Suspense fallback={<Loading />}><OsmsPage /></Suspense>} />
                 <Route path="*" element={<Navigate to="/home/inicio" replace />} />
               </Route>
               {/* Fallback */}

@@ -3,9 +3,18 @@ const wallRowsCache = new WeakMap();
 
 function getWallLayoutSignature(wall) {
   const cardCount = wall.querySelectorAll('.channel-card').length;
-  const scrollRoot = wall.closest('.bouquet-inicio-scroll');
-  const scrollTop = scrollRoot instanceof HTMLElement ? scrollRoot.scrollTop : 0;
-  return `${cardCount}|${scrollTop}|${wall.offsetHeight}|${wall.offsetWidth}`;
+  // No incluir scrollTop: invalidar al hacer scroll forzaba rebuild completo en cada flecha.
+  return `${cardCount}|${wall.offsetHeight}|${wall.offsetWidth}`;
+}
+
+/**
+ * Fuerza recomputo de filas en el próximo `buildInicioBouquetChannelRows` para ese muro.
+ * @param {HTMLElement | null | undefined} wall
+ */
+export function invalidateInicioBouquetWallRowsCache(wall) {
+  if (wall instanceof HTMLElement) {
+    wallRowsCache.delete(wall);
+  }
 }
 
 /**

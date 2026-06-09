@@ -1,0 +1,31 @@
+// Ajustes de rendimiento percibido para navegación D-pad en TV (Fase 0 — bajo riesgo).
+// Ver docs/PLAN_NAVEGACION_TV.md
+
+.device-tv {
+  .bouquet-inicio-scroll,
+  .bouquet-vod-recommended .vod-row-cards,
+  .horizontal-slide,
+  .bouquet-row-carousel .horizontal-slide,
+  .bouquet-grid-horizontal .horizontal-slide,
+  .vod-content,
+  .catchup-layout,
+  .search-results,
+  .home-content-stack,
+  .epg-cards-grid {
+    scroll-behavior: auto !important;
+  }
+
+  .home-shell-ui {
+    --home-sidebar-transition-duration: 0ms;
+  }
+
+  [data-focus='on'] & {
+    .focused,
+    button.focused,
+    a.focused,
+    .nav-card.focused,
+    .focusable-card.focused {
+      transform: none !important;
+    }
+  }
+}

@@ -3,7 +3,9 @@
 **Proyecto:** appVideo (Smart TV OTT — Samsung Tizen / LG webOS / Web)  
 **Stack:** React 18 + Vite 7 + Zustand 5 + React Router 7 + hls.js + video.js  
 **Fecha de consolidación:** 2026-06-05  
-**Fuentes:** `AUDITORIA.md`, `AUDITORIA_TECNICA.md`, `AUDITORIA_TECNICA_3.md` + verificación directa del código
+**Última revisión navegación TV:** 2026-06-09  
+**Fuentes:** `AUDITORIA.md`, `AUDITORIA_TECNICA.md`, `AUDITORIA_TECNICA_3.md` + verificación directa del código  
+**Plan detallado navegación:** `docs/PLAN_NAVEGACION_TV.md`
 
 ---
 
@@ -20,11 +22,11 @@ Este documento consolida todos los hallazgos, indica su estado de verificación 
 | Compilación y despliegue | 5 | 4 | 1 | 0 |
 | Player y engines nativos | 10 | 10 | 0 | 0 |
 | Rendimiento de datos | 8 | 7 | 1 | 0 |
-| Navegación TV | 9 | 8 | 1 | 0 |
+| Navegación TV | 19 | 19 | 0 | 0 |
 | Estado y arquitectura React | 8 | 8 | 0 | 0 |
 | Seguridad y sesión | 6 | 5 | 1 | 0 |
 | Build, dependencias y DX | 7 | 6 | 0 | 1 |
-| **Total** | **~53** | **~48** | **~4** | **~1** |
+| **Total** | **~63** | **~58** | **~4** | **~1** |
 
 ---
 
@@ -338,8 +340,23 @@ Antes del plan de acción, se documentan hallazgos que los informes originales d
 
 ## Etapa 4 — Navegación TV y experiencia de usuario
 
-**Duración estimada:** 3–4 semanas  
-**Objetivo:** Eliminar lag de navegación, pérdidas de foco y conflictos entre listeners.
+**Duración estimada:** 6–8 semanas (ampliada; ver `PLAN_NAVEGACION_TV.md`)  
+**Objetivo:** Navegación fluida y uniforme en **todas** las áreas (login, home, VOD, catchup, buscador, sidebar, parental, popups, OSMS, player) con latencia D-pad percibida &lt; 100 ms en hardware 2019.
+
+### Alineación con prácticas OTT (Netflix, Disney+, Pluto)
+
+| Práctica mercado | Hallazgo / acción en este plan |
+|------------------|-------------------------------|
+| Un solo pipeline de input | H-13 → `NavigationRouter` |
+| Stack de foco modal | H-14 → `FocusManager` |
+| Sin medir DOM en cada flecha | H-06, H-07, **H-50** (cache → grid lógico) |
+| Focus ring overlay | **H-46**, **H-53** |
+| Scroll instantáneo al foco | **H-45** |
+| Virtualización de rails | **H-48** |
+| Cobertura por pantalla | **H-49** |
+| Presupuesto de performance | **H-52** |
+
+> La auditoría original cubría arquitectura de input/foco (H-13–H-17). La revisión 2026-06-09 añade capa visual, render path y **brechas por pantalla** (H-45–H-54).
 
 ### 4.1 DOM queries en cada keydown — Sidebar (H-06)
 
@@ -426,6 +443,60 @@ Antes del plan de acción, se documentan hallazgos que los informes originales d
 - **Resolución planificada:**
   1. Agrupar rutas bajo layout padre con `<PreloadGate required="epg"><Outlet /></PreloadGate>`.
   2. Evaluar migración a `createBrowserRouter` con loaders de React Router v7.
+
+### 4.11 Scroll suave en contenedores TV (H-45)
+
+- **Archivos:** `_bouquet.scss`, `_vod.scss`, `_home-shell.scss`
+- **Resolución planificada:**
+  1. Bloque `.device-tv { scroll-behavior: auto !important; }` en contenedores con foco LRUD.
+  2. Flag `instant: true` en utilidades de scroll del shell.
+
+### 4.12 Focus ring overlay y estilos TV livianos (H-46, H-53)
+
+- **Archivos:** `global.scss`, `main.jsx`, componentes con `.focused` local
+- **Resolución planificada:**
+  1. Componente `TvFocusRing` montado una vez en `App` o `HomePage`.
+  2. En TV: quitar `transform: scale` de `.focused`; anillo único sigue al `activeElement`.
+  3. Eliminar estado `focused` local en `ChannelCard`, catchup cards, etc.
+
+### 4.13 Re-renders al enfocar tarjetas (H-47)
+
+- **Archivo:** `BouquetLayouts.jsx` (`ChannelCard`)
+- **Resolución planificada:**
+  1. Quitar `useState(focused)` y clases condicionales.
+  2. Timer EPG de progreso: solo tarjeta con evento live en viewport o un timer global throttled.
+
+### 4.14 Virtualización de rails (H-48)
+
+- **Archivos:** `useChunkedList.js`, rails bouquet/VOD/catchup
+- **Resolución planificada:**
+  1. Piloto en rail VOD recomendado (Inicio) y catchup rails.
+  2. Mantener chunking para hidratar datos; virtualizar DOM por separado.
+
+### 4.15 Cobertura por pantalla (H-49)
+
+- **Áreas sin navegación TV:** Search, Catchup, OSMS, Parental settings, EPG cards, Profile
+- **Resolución planificada:** Ver fases 2–4 en `PLAN_NAVEGACION_TV.md` (handlers por zona registrados en `NavigationRouter`).
+
+### 4.16 Grid lógico en datos (H-50)
+
+- **Resolución planificada:**
+  1. `src/navigation/models/bouquetNavModel.js`, `vodNavModel.js`.
+  2. Hooks de muro/VOD consumen modelo; DOM solo para `focus(id)` + scroll.
+
+### 4.17 Consolidar Player HUD keydown (H-51)
+
+- **Resolución planificada:** Un handler `playerHudZone` en router; eliminar listeners duplicados en `PlayerHud.jsx`.
+
+### 4.18 Presupuesto performance keydown (H-52)
+
+- **Resolución planificada:**
+  1. Checklist manual + opcional telemetría DEV.
+  2. Criterio Etapa 4: 20 pulsaciones D-pad seguidas sin frame &gt; 50 ms en Tizen 5 emulador.
+
+### 4.19 Sidebar sin animación en TV (H-54)
+
+- **Resolución planificada:** `--home-sidebar-transition-duration: 0ms` bajo `.device-tv` (no solo `prefers-reduced-motion`).
 
 ---
 
@@ -559,7 +630,7 @@ Semana 1       │ Etapa 0: Seguridad (tokens, azcopy, cifrado sesión)
 Semana 2–3     │ Etapa 1: Compatibilidad TV (transpilación, scripts nativos, detección plataforma)
 Semana 4–6     │ Etapa 2: Player nativo (activar adapters, try-catch, cleanup, DRM, timeouts)
 Semana 7–9     │ Etapa 3: Rendimiento datos (EPG concurrente, catchup, VOD, inmutabilidad store)
-Semana 10–13   │ Etapa 4: Navegación TV (cache DOM, NavigationRouter, FocusManager)
+Semana 10–17   │ Etapa 4: Navegación TV (router, focus manager, todas las pantallas — ver PLAN_NAVEGACION_TV.md)
 Continuo       │ Etapa 5: Tests, observabilidad, deuda técnica, limpieza
 ```
 
@@ -573,7 +644,7 @@ Continuo       │ Etapa 5: Tests, observabilidad, deuda técnica, limpieza
 | **1** | App arranca sin SyntaxError en LG webOS 4.5 y Samsung Tizen 5; `es-check` pasa en CI |
 | **2** | Reproducción live con engine nativo en hardware real; zapping 20 canales sin crash; DRM funcional |
 | **3** | EPG de 10 canales carga en <3 s; catchup no congela UI >500 ms; sin mutaciones directas en store |
-| **4** | Navegación sidebar/muro sin lag perceptible en D-pad; foco nunca se pierde al cerrar modales |
+| **4** | D-pad &lt; 100 ms percibido en Inicio, VOD, buscador, catchup, OSMS, parental; foco restaurado al cerrar cualquier modal; 0 pantallas sin LRUD en TV |
 | **5** | >60% cobertura en funciones de parseo; errores de producción visibles en dashboard; 0 eslint errors en CI |
 
 ---
@@ -670,7 +741,17 @@ Los hallazgos de navegación (H-06, H-07), player nativo (2.1–2.5) y transpila
 | H-42 | Vendor en linter | 5 | Baja |
 | H-43 | PreloadGate repetido | 4 | Baja |
 | H-44 | i18n fuera de contexto | 5 | Baja |
+| H-45 | scroll-behavior smooth en TV | 4 | Alta |
+| H-46 | Foco scale/sombras por elemento | 4 | Alta |
+| H-47 | setState foco ChannelCard | 4 | Alta |
+| H-48 | Chunking ≠ virtualización | 4 | Alta |
+| H-49 | Pantallas sin hook TV | 4 | **Crítica** |
+| H-50 | Grid DOM vs datos | 4 | Alta |
+| H-51 | PlayerHud keydown duplicado | 4 | Media |
+| H-52 | Sin presupuesto keydown | 4 | Media |
+| H-53 | Doble sistema .focused | 4 | Media |
+| H-54 | Sidebar animación 380 ms | 4 | Media |
 
 ---
 
-*Documento generado a partir de la verificación cruzada de tres informes de auditoría contra el código fuente del proyecto appVideo (commit actual).*
+*Documento generado a partir de la verificación cruzada de informes de auditoría contra el código fuente del proyecto appVideo. Revisión navegación TV: 2026-06-09.*

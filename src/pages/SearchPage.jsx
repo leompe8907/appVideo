@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
+import { useDevice } from '../contexts/DeviceContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import { usePreload } from '../store/usePreload';
 import panaccessService from '../services/panaccessService';
 import { getSearchDebounceMs, searchAll } from '../services/searchService';
 import { useParentalGate } from '../hooks/useParentalGate';
+import { useSearchPageTvNav } from '../hooks/useSearchPageTvNav';
+import { FocusableInput } from '../components/navigation/FocusableInput';
 import EpgEventModal from '../components/epg/EpgEventModal';
 import VodDetailModal from '../components/vod/VodDetailModal';
 import VodDetailModalClassic from '../components/vod/VodDetailModalClassic';
@@ -18,6 +21,7 @@ function SearchTab({ id, label, active, hidden, onSelect }) {
   return (
     <button
       type="button"
+      id={`search-tab-${id}`}
       className={`search-tab${active ? ' active' : ''}`}
       onClick={() => onSelect?.(id)}
     >
@@ -137,6 +141,7 @@ function SearchSection({ title, items, baseIndex, onSelect }) {
 
 export function SearchPage() {
   const { t } = useTranslation();
+  const { isTV } = useDevice();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
   const { requestPlayChannel, requestPlayMedia } = useParentalGate();
@@ -152,28 +157,26 @@ export function SearchPage() {
   const tRef = useRef(t);
   useEffect(() => { tRef.current = t; });
 
+  const searchModalOpen = Boolean(selectedEpgItem || selectedVodItem || selectedCatchupDetail);
+  useSearchPageTvNav({ modalOpen: searchModalOpen });
+
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQuery(query), getSearchDebounceMs());
     return () => clearTimeout(id);
   }, [query]);
 
-  // Best-effort: enfocar input al entrar y abrir teclado en TVs
+  // PC: foco en input al entrar. TV: foco sin abrir IME (Opción B — useSearchPageTvNav).
   useEffect(() => {
+    if (isTV) return undefined;
     const el = inputRef.current;
-    if (!el) return;
-    try { el.focus(); } catch { /* noop */ }
+    if (!el) return undefined;
     try {
-      const len = (el.value || '').length;
-      if (typeof el.setSelectionRange === 'function') el.setSelectionRange(len, len);
-    } catch { /* noop */ }
-    const timer = setTimeout(() => {
-      try {
-        el.focus();
-        if (typeof el.click === 'function') el.click();
-      } catch { /* noop */ }
-    }, 60);
-    return () => clearTimeout(timer);
-  }, []);
+      el.focus();
+    } catch {
+      /* noop */
+    }
+    return undefined;
+  }, [isTV]);
 
   // Cargar VOD/Catchup al entrar al buscador.
   // tRef.current se pasa como snapshot al momento de la carga para evitar
@@ -460,9 +463,9 @@ export function SearchPage() {
       <div className="search-overlay" />
       <div className="search-container">
         <div className="search-header">
-          <input
+          <FocusableInput
             ref={inputRef}
-            id="searchInput"
+            id="search-input-tv"
             className="search-input"
             value={query}
             placeholder={t('search.placeholder', { defaultValue: 'Buscar...' })}
@@ -471,13 +474,19 @@ export function SearchPage() {
               if (e.key === 'Escape') {
                 setQuery('');
               }
-              if (e.key === 'Enter') {
+              if (!isTV && e.key === 'Enter') {
                 const all = resultsAll || [];
                 if (all.length > 0) handleSelect(all[0]);
               }
             }}
+            autoComplete="off"
           />
-          <button type="button" className="search-clear" onClick={() => setQuery('')}>
+          <button
+            type="button"
+            id="search-clear-btn"
+            className="search-clear"
+            onClick={() => setQuery('')}
+          >
             {t('search.clear', { defaultValue: 'Limpiar' })}
           </button>
         </div>

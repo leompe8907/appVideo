@@ -1,0 +1,50 @@
+// Anillo de foco único en TV (TvFocusRing.jsx)
+// Ver docs/PLAN_NAVEGACION_TV.md — paso 6
+
+.tv-focus-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 3px solid var(--focus-color, var(--secondary-color, var(--primary-color, #667eea)));
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 1px rgba(var(--focus-color-rgb, 102, 126, 234), 0.35),
+    0 0 18px rgba(var(--focus-color-rgb, 102, 126, 234), 0.45);
+  opacity: 0;
+  visibility: hidden;
+  will-change: transform, width, height;
+  transition: none;
+}
+
+.tv-focus-ring--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+// Con anillo activo: quitar sombras/scale por elemento (el anillo es la única señal visual).
+[data-focus='on'].device-tv[data-tv-focus-ring='on'] {
+  .focused,
+  button.focused,
+  a.focused,
+  .nav-card.focused,
+  .focusable-card.focused,
+  input.focused,
+  textarea.focused {
+    box-shadow: none !important;
+    transform: none !important;
+    outline: none !important;
+  }
+
+  input.focused,
+  textarea.focused {
+    border-color: var(--focus-color, var(--secondary-color, var(--primary-color, #667eea))) !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .channel-card.focused {
+    z-index: 1;
+  }
+}
