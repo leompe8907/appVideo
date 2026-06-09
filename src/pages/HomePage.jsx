@@ -153,7 +153,7 @@ export function HomePage() {
         className={[
           'home-shell-ui',
           isPlayerActive ? 'home-shell-ui--hidden' : '',
-          sidebarExpanded ? '' : 'home-shell-ui--sidebar-collapsed',
+          'home-shell-ui--sidebar-collapsed',
         ].filter(Boolean).join(' ')}
       >
         {!isPlayerActive && sidebarExpanded && <div className="home-shell-dim" aria-hidden="true" />}

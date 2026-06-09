@@ -107,16 +107,17 @@ html[data-focus='on'].device-tv[data-tv-focus-ring='on'] {
     border-color: transparent !important;
   }
 
-  // Sidebar: fondo sutil sin borde duplicado.
+  // Sidebar: foco vía subrayado (sin anillo TvFocusRing ni bordes gruesos).
   .home-sidebar-link.focused,
   .home-sidebar-settings-btn.focused,
   .home-sidebar-sublink.focused {
-    background: rgba(255, 255, 255, 0.14) !important;
+    background: transparent !important;
     border-color: transparent !important;
+    box-shadow: none !important;
   }
 
   .home-sidebar-link.active.focused {
-    background: rgba(255, 255, 255, 0.22) !important;
+    background: transparent !important;
   }
 
   .search-result.focused {

@@ -5,6 +5,11 @@ const RING_INSET_PX = 4;
 
 function isFocusRingTarget(el) {
   if (!el || !(el instanceof HTMLElement)) return false;
+  try {
+    if (el.closest('.home-sidebar')) return false;
+  } catch {
+    // noop
+  }
   const tag = (el.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'button' || tag === 'select' || tag === 'textarea') return true;
   if (tag === 'a' && el.getAttribute('href')) return true;

@@ -9,6 +9,8 @@
 
 $home-sidebar-ease: cubic-bezier(0.4, 0, 0.2, 1);
 $home-sidebar-duration: 380ms;
+$home-sidebar-rail-width: 72px;
+$home-sidebar-overlay-width: 228px;
 
 .home-shell {
   display: block;
@@ -18,34 +20,31 @@ $home-sidebar-duration: 380ms;
 }
 
 .home-shell-ui {
-  // Ancho de la primera columna (sidebar); los overlays fijos (p. ej. detalle VOD) heredan y
-  // usan `left` para alinearse con el área principal sin tapar el rail.
-  --home-sidebar-width: 240px;
+  // El rail reserva espacio vía margin-left en .home-content; el sidebar es fixed encima.
+  --home-sidebar-width: #{$home-sidebar-rail-width};
   --home-sidebar-transition-duration: #{$home-sidebar-duration};
   --home-sidebar-transition-ease: #{$home-sidebar-ease};
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  display: block;
   min-height: 100vh;
-  transition:
-    grid-template-columns var(--home-sidebar-transition-duration) var(--home-sidebar-transition-ease),
-    --home-sidebar-width var(--home-sidebar-transition-duration) var(--home-sidebar-transition-ease),
-    opacity 200ms ease,
-    transform 220ms ease,
-    visibility 220ms ease;
   position: relative;
+  transition: opacity 200ms ease, transform 220ms ease, visibility 220ms ease;
 }
 
 .home-shell-dim {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.28);
-  z-index: 5;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: $home-sidebar-overlay-width;
+  z-index: 20;
   pointer-events: none;
+  // Velo suave sobre el home visible (no negro sólido bajo el panel del sidebar).
+  background: rgba(12, 14, 20, 0.18);
+  backdrop-filter: blur(3px);
 }
 
 .home-shell-ui--sidebar-collapsed {
-  --home-sidebar-width: 84px;
-  grid-template-columns: 84px minmax(0, 1fr);
+  --home-sidebar-width: #{$home-sidebar-rail-width};
 }
 
 .home-shell-ui--hidden {
@@ -315,18 +314,30 @@ $home-sidebar-duration: 380ms;
 }
 
 .home-sidebar {
-  background: var(--sidebar-bg, rgba(0, 0, 0, 0.45));
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(6px);
-  padding: 1rem 0.75rem;
-  position: relative;
-  z-index: 10; // asegurar que flyouts queden sobre el contenido
+  --sidebar-accent: var(--focus-color, var(--secondary-color, #5b9cf5));
+  --sidebar-rail-width: #{$home-sidebar-rail-width};
+  // Fondo opaco del rail (ignora --sidebar-bg translúcido de marca en el panel fijo).
+  --sidebar-panel-bg: var(--sidebar-panel-bg-theme, #0a0a0a);
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: $home-sidebar-rail-width;
+  height: 100vh;
+  z-index: 30;
+  background: var(--sidebar-panel-bg);
+  border-right: none;
+  backdrop-filter: none;
+  padding: 0.65rem 0 1rem;
   display: flex;
   flex-direction: column;
-  transition: padding $home-sidebar-duration $home-sidebar-ease;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: width var(--home-sidebar-transition-duration) var(--home-sidebar-transition-ease);
 }
 
 .home-sidebar-body {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -334,17 +345,54 @@ $home-sidebar-duration: 380ms;
   gap: 0;
 }
 
+.home-sidebar-toggle {
+  display: grid;
+  grid-template-columns: var(--sidebar-rail-width) minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
+  width: 100%;
+  height: 2.25rem;
+  margin-bottom: 0.35rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  flex-shrink: 0;
+
+  .home-sidebar-toggle-icon {
+    grid-column: 1;
+  }
+
+  &:hover,
+  &:focus-visible {
+    color: #fff;
+    outline: none;
+  }
+}
+
+.home-sidebar-toggle-icon {
+  display: block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.home-sidebar--overlay .home-sidebar-toggle-icon {
+  transform: rotate(-135deg);
+}
+
 .home-sidebar-group {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.15rem;
 }
 
 .home-sidebar-group--brand {
-  flex-shrink: 0;
-  padding-bottom: 0.35rem;
-  margin-bottom: 0.35rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: none;
 }
 
 .home-sidebar-group--nav {
@@ -362,60 +410,16 @@ $home-sidebar-duration: 380ms;
 .home-sidebar-group--settings {
   flex-shrink: 0;
   margin-top: auto;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1.25rem;
+  border-top: none;
 }
 
 .home-sidebar--fixed {
-  position: sticky;
-  top: 0;
   height: 100vh;
 }
 
 .home-sidebar--collapsed {
-  padding-inline: 0.5rem;
-}
-
-.home-sidebar--collapsed .home-sidebar-link {
-  justify-content: center;
-  padding-inline: 0.5rem;
-}
-
-
-.home-sidebar-header {
-  color: #fff;
-  font-size: 1.1rem;
-  font-weight: 700;
-  padding: 0.75rem 0.9rem 1rem;
-  letter-spacing: 0.02em;
-  transition:
-    opacity $home-sidebar-duration $home-sidebar-ease,
-    max-height $home-sidebar-duration $home-sidebar-ease,
-    margin $home-sidebar-duration $home-sidebar-ease,
-    padding $home-sidebar-duration $home-sidebar-ease;
-  overflow: hidden;
-  max-height: 5rem;
-}
-
-.home-sidebar--collapsed .home-sidebar-header {
-  max-height: 0;
-  opacity: 0;
-  margin: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  pointer-events: none;
-  visibility: hidden;
-}
-
-.home-sidebar--collapsed .home-sidebar-group--brand {
-  max-height: 0;
-  opacity: 0;
-  margin: 0;
-  padding: 0;
-  border: none;
-  overflow: hidden;
-  pointer-events: none;
-  visibility: hidden;
+  width: $home-sidebar-rail-width;
 }
 
 .home-sidebar-nav,
@@ -423,43 +427,72 @@ $home-sidebar-duration: 380ms;
   display: flex;
   justify-content: center;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.15rem;
 }
 
 .home-sidebar-settings {
   position: relative;
 }
 
-.home-sidebar-link {
-  display: flex;
+.home-sidebar-link,
+.home-sidebar-settings-btn {
+  display: grid;
+  grid-template-columns: var(--sidebar-rail-width) minmax(0, 1fr);
   align-items: center;
-  gap: 0.55rem;
+  gap: 0;
+  width: 100%;
   text-decoration: none;
-  color: var(--sidebar-text, rgba(255, 255, 255, 0.82));
-  font-size: 0.95rem;
-  border-radius: 10px;
-  padding: 0.68rem 0.8rem;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.98rem;
+  font-weight: 400;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.72rem 0;
   position: relative;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    padding $home-sidebar-duration $home-sidebar-ease;
+  box-sizing: border-box;
+  transition: color 0.15s ease;
+
+  .home-sidebar-icon {
+    justify-self: center;
+    grid-column: 1;
+    opacity: 0.55;
+  }
+
+  .home-sidebar-label {
+    grid-column: 2;
+  }
+
+  &:hover,
+  &:focus-visible {
+    color: rgba(255, 255, 255, 0.78);
+    background: transparent;
+    outline: none;
+
+    .home-sidebar-icon {
+      opacity: 0.85;
+    }
+  }
+
+  &:focus {
+    outline: none;
+  }
 }
 
 .home-sidebar-icon {
   flex: 0 0 auto;
-  opacity: 0.92;
-  height: 2em;
-  width: 2em;
+  height: 1.35rem;
+  width: 1.35rem;
 }
 
 .home-sidebar-label {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
-  transition: opacity 0.28s ease, max-width $home-sidebar-duration $home-sidebar-ease;
+  transition: opacity 0.2s ease, max-width $home-sidebar-duration $home-sidebar-ease;
   overflow: hidden;
   white-space: nowrap;
   max-width: 14rem;
+  line-height: 1.2;
 }
 
 .home-sidebar-badge {
@@ -481,35 +514,106 @@ $home-sidebar-duration: 380ms;
 
 .home-sidebar--collapsed .home-sidebar-badge {
   position: absolute;
-  top: 8px;
-  right: 10px;
+  top: 6px;
+  right: 8px;
 }
 
 .home-sidebar--collapsed .home-sidebar-label {
   opacity: 0;
   max-width: 0;
   pointer-events: none;
+  text-align: center;
+}
+
+// Activo / foco: texto blanco + subrayado azul (referencia UI).
+.home-sidebar-link.active,
+.home-sidebar-settings-btn.active,
+.home-sidebar-link:focus,
+.home-sidebar-settings-btn:focus {
+  color: #fff;
+
+  .home-sidebar-icon {
+    opacity: 1;
+  }
+}
+
+.home-sidebar--collapsed .home-sidebar-link.active::after,
+.home-sidebar--collapsed .home-sidebar-settings-btn.active::after,
+.home-sidebar--collapsed .home-sidebar-link:focus::after,
+.home-sidebar--collapsed .home-sidebar-settings-btn:focus::after {
+  content: '';
+  position: absolute;
+  bottom: 0.35rem;
+  left: calc(var(--sidebar-rail-width) / 2);
+  transform: translateX(-50%);
+  width: 1.6rem;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--sidebar-accent);
+}
+
+.home-sidebar-link.active,
+.home-sidebar-settings-btn.active {
+  background: transparent;
+  border: none;
+}
+
+// Panel expandido: columna de labels con el mismo fondo opaco que el rail cerrado.
+.home-sidebar.home-sidebar--overlay {
+  width: $home-sidebar-overlay-width;
+  max-width: min($home-sidebar-overlay-width, 46vw);
+  overflow: visible;
+  box-shadow: none;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--sidebar-rail-width);
+    right: 0;
+    background: var(--sidebar-panel-bg);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .home-sidebar-link,
+  .home-sidebar-settings-btn {
+    padding-right: 1rem;
+  }
+
+  .home-sidebar-label {
+    opacity: 1;
+    max-width: 14rem;
+    pointer-events: auto;
+    text-align: center;
+  }
+
+  .home-sidebar-link.active .home-sidebar-label::after,
+  .home-sidebar-settings-btn.active .home-sidebar-label::after,
+  .home-sidebar-link:focus .home-sidebar-label::after,
+  .home-sidebar-settings-btn:focus .home-sidebar-label::after {
+    content: '';
+    display: block;
+    width: 100%;
+    max-width: 5.5rem;
+    height: 2px;
+    margin-top: 0.35rem;
+    border-radius: 1px;
+    background: var(--sidebar-accent);
+  }
+
+  .home-sidebar-badge {
+    position: static;
+    grid-column: 2;
+    justify-self: start;
+  }
 }
 
 .home-sidebar-settings-btn {
   width: 100%;
   text-align: left;
-  background: transparent;
-  border: none;
   cursor: pointer;
-}
-
-.home-sidebar-link:hover,
-.home-sidebar-link:focus-visible {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.12);
-  outline: none;
-}
-
-.home-sidebar-link.active {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .home-sidebar-submenu {
@@ -539,11 +643,6 @@ $home-sidebar-duration: 380ms;
   overflow-y: auto;
   overscroll-behavior: contain;
   z-index: 50;
-}
-
-.home-content {
-  position: relative;
-  z-index: 1;
 }
 
 .home-sidebar-sublink {
@@ -606,6 +705,7 @@ $home-sidebar-duration: 380ms;
 }
 
 .home-content {
+  margin-left: $home-sidebar-rail-width;
   min-width: 0;
   min-height: 100vh;
   height: 100vh;
@@ -618,6 +718,7 @@ $home-sidebar-duration: 380ms;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  z-index: 1;
 }
 
 .home-content-stack {
@@ -643,15 +744,14 @@ $home-sidebar-duration: 380ms;
 }
 
 /*
- * TV — sidebar: el foco global (scale + sombras en `a.focused`) rompe el rail estrecho.
- * Mismo criterio que bouquets: borde de marca, sin transform; targets un poco más altos.
+ * TV — sidebar: targets altos; estilo activo/foco = subrayado (ver reglas base .home-sidebar).
  */
 [data-focus='on'].device-tv .home-sidebar {
-  --home-sidebar-tv-item-min-height: 2.75rem;
+  --home-sidebar-tv-item-min-height: 2.85rem;
 
   .home-sidebar-nav,
   .home-sidebar-group--nav {
-    gap: 0.55rem;
+    gap: 0.15rem;
   }
 
   .home-sidebar-link,
@@ -659,21 +759,12 @@ $home-sidebar-duration: 380ms;
     min-height: var(--home-sidebar-tv-item-min-height);
     font-size: 1rem;
     box-sizing: border-box;
-    border: 3px solid transparent;
-    transition:
-      background-color 0.15s ease,
-      color 0.15s ease,
-      border-color 0.12s ease-out,
-      padding $home-sidebar-duration $home-sidebar-ease;
-  }
-
-  .home-sidebar-link.active {
-    border-color: rgba(255, 255, 255, 0.22);
+    border: none;
   }
 
   .home-sidebar-icon {
-    height: 2.2em;
-    width: 2.2em;
+    height: 1.45rem;
+    width: 1.45rem;
   }
 
   .home-sidebar-link.focused,
@@ -681,20 +772,10 @@ $home-sidebar-duration: 380ms;
   .home-sidebar-sublink.focused {
     transform: none !important;
     box-shadow: none !important;
-    -webkit-box-shadow: none !important;
-    -moz-box-shadow: none !important;
     outline: none;
     color: #fff;
-    background: rgba(255, 255, 255, 0.14);
-    border-color: var(--focus-color, var(--primary-color, #667eea)) !important;
-    border-width: 3px !important;
-    z-index: 2;
-    transition: border-color 0.12s ease-out, background-color 0.12s ease !important;
-  }
-
-  .home-sidebar-link.active.focused {
-    background: rgba(255, 255, 255, 0.22);
-    border-color: var(--focus-color, var(--primary-color, #667eea)) !important;
+    background: transparent !important;
+    border: none !important;
   }
 
   .home-sidebar-sublink {
@@ -786,23 +867,12 @@ $home-sidebar-duration: 380ms;
 }
 
 @media (max-width: 1024px) {
-  .home-shell-ui {
-    grid-template-columns: 76px minmax(0, 1fr);
-  }
-
-  .home-sidebar-header {
-    font-size: 0.75rem;
-    text-align: center;
-    padding-inline: 0.4rem;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+  .home-content {
+    margin-left: $home-sidebar-rail-width;
   }
 
   .home-sidebar-link {
-    font-size: 0.78rem;
-    text-align: center;
-    padding-inline: 0.4rem;
+    font-size: 0.9rem;
   }
 }
 

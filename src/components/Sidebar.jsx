@@ -224,11 +224,6 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   /** Evita colapsar el rail cuando hay modal en portal (foco fuera del aside). */
   const blockCollapseForOverlayRef = useRef(false);
   const sidebarFixed = currentBrand?.ui?.sidebar?.fixed !== false;
-  const showClientName = currentBrand?.ui?.sidebar?.showClientName !== false;
-  const clientName =
-    (currentBrand?.ui?.sidebar?.clientName && String(currentBrand.ui.sidebar.clientName).trim()) ||
-    appName ||
-    'App';
   blockCollapseForOverlayRef.current = Boolean(aboutModal || confirmAction);
 
   useLayoutEffect(() => {
@@ -396,10 +391,9 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     return undefined;
   }, [isTV, settingsOpen, location.pathname]);
 
-  // TV: al expandir el rail o abrir ajustes, el layout cambia después del focusin inicial.
-  // Reposicionar scroll + anillo sobre el ítem ya enfocado (coords del modo compacto ya no aplican).
+  // Al expandir el rail (overlay), reposicionar scroll + anillo sobre el ítem activo.
   useLayoutEffect(() => {
-    if (!isTV || !expanded) return undefined;
+    if (!expanded) return undefined;
     const root = rootRef.current;
     const active = document.activeElement;
     if (!(root instanceof HTMLElement)) return undefined;
@@ -407,7 +401,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     scrollElementIntoVisibleScrollAncestors(active, root);
     requestTvFocusRingSync();
     return undefined;
-  }, [isTV, expanded, settingsOpen]);
+  }, [expanded, settingsOpen]);
 
   // TV: UP/DOWN entre ítems; ENTER en enlaces / ajustes / submenú; scroll del rail al mover foco.
   useLayoutEffect(() => {
@@ -545,6 +539,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       className={[
         'home-sidebar',
         expanded ? '' : 'home-sidebar--collapsed',
+        expanded ? 'home-sidebar--overlay' : '',
         sidebarFixed ? 'home-sidebar--fixed' : '',
       ].filter(Boolean).join(' ')}
       aria-label={t('sidebar.menu')}
@@ -587,33 +582,47 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
         onCancel={() => setConfirmAction(null)}
       />
       <div className="home-sidebar-body">
-        {showClientName ? (
-          <div className="home-sidebar-group home-sidebar-group--brand">
-            <div className="home-sidebar-header">{clientName}</div>
-          </div>
-        ) : null}
+        <button
+          type="button"
+          className="home-sidebar-toggle"
+          aria-expanded={expanded}
+          aria-label={expanded ? t('sidebar.collapse', { defaultValue: 'Contraer menú' }) : t('sidebar.expand', { defaultValue: 'Expandir menú' })}
+          onClick={() => setExpandedSafe(!expanded)}
+        >
+          <span className="home-sidebar-toggle-icon" aria-hidden="true" />
+        </button>
 
         <nav className="home-sidebar-group home-sidebar-group--nav" aria-label={t('sidebar.mainNav', { defaultValue: 'Navegación principal' })}>
           <SidebarLink
-            to="/home/inicio"
-            label={t('sidebar.bouquets')}
-            icon="home"
-            onSelect={collapseAfterNav}
-            currentPathname={location.pathname}
-            navigate={navigate}
-          />
-          <SidebarLink
             to="/home/buscador"
-            label={t('sidebar.search', { defaultValue: 'Buscador' })}
+            label={t('sidebar.search', { defaultValue: 'Buscar' })}
             icon="search"
             onSelect={collapseAfterNav}
             currentPathname={location.pathname}
             navigate={navigate}
           />
+          <SidebarLink
+            to="/home/inicio"
+            label={t('sidebar.bouquets', { defaultValue: 'Inicio' })}
+            icon="home"
+            onSelect={collapseAfterNav}
+            currentPathname={location.pathname}
+            navigate={navigate}
+          />
+          {showTvRadioServices ? (
+            <SidebarLink
+              to="/home/servicios-tv-radio"
+              label={t('sidebar.tvRadioServices', { defaultValue: 'Canales' })}
+              icon="channels"
+              onSelect={collapseAfterNav}
+              currentPathname={location.pathname}
+              navigate={navigate}
+            />
+          ) : null}
           {showVod ? (
             <SidebarLink
               to="/home/vod"
-              label={t('sidebar.movies')}
+              label={t('sidebar.movies', { defaultValue: 'Películas' })}
               icon="movies"
               onSelect={collapseAfterNav}
               currentPathname={location.pathname}
@@ -622,22 +631,12 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
           ) : null}
           <SidebarLink
             to="/home/epg"
-            label={t('sidebar.channelGuide')}
+            label={t('sidebar.channelGuide', { defaultValue: 'Guía' })}
             icon="guide"
             onSelect={collapseAfterNav}
             currentPathname={location.pathname}
             navigate={navigate}
           />
-          {showTvRadioServices ? (
-            <SidebarLink
-              to="/home/servicios-tv-radio"
-              label={t('sidebar.tvRadioServices')}
-              icon="channels"
-              onSelect={collapseAfterNav}
-              currentPathname={location.pathname}
-              navigate={navigate}
-            />
-          ) : null}
           {showCatchup ? (
             <SidebarLink
               to="/home/catchup"

@@ -251,6 +251,12 @@ export function applyTheme(brandConfig) {
 
   // Sidebar (Home)
   root.style.setProperty('--sidebar-bg', sidebar.backgroundColor || 'rgba(0, 0, 0, 0.45)');
+  // Panel rail/overlay: opaco, mismo tono que el sidebar cerrado (#0a0a0a o color sólido de marca).
+  const panelBg = sidebar.panelBackgroundColor || sidebar.backgroundColor;
+  root.style.setProperty(
+    '--sidebar-panel-bg-theme',
+    panelBg && !String(panelBg).includes('rgba') ? String(panelBg) : '#0a0a0a'
+  );
   root.style.setProperty('--sidebar-text', sidebar.textColor || 'rgba(255, 255, 255, 0.82)');
   root.style.setProperty('--sidebar-submenu-bg', sidebar.submenuBackgroundColor || 'rgba(0, 0, 0, 0.55)');
   root.style.setProperty('--sidebar-submenu-text', sidebar.submenuTextColor || 'rgba(255, 255, 255, 0.85)');
