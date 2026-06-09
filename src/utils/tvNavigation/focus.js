@@ -19,21 +19,32 @@ function isFocusable(el) {
 export function focusElement(el) {
   if (!isFocusable(el)) return false;
   try {
-    el.focus();
+    el.focus({ preventScroll: true });
     return true;
   } catch {
-    return false;
+    try {
+      el.focus();
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 
 /**
  * Intenta enfocar un elemento por id de forma segura.
- * Retorna true si el foco se aplicó.
+ * @param {string} id
+ * @param {Map<string, HTMLElement>} [cache] Mapa opcional id → elemento (evita getElementById en D-pad).
  */
-export function focusById(id) {
+export function focusById(id, cache) {
   if (!id) return false;
+  const key = String(id);
   try {
-    return focusElement(document.getElementById(String(id)));
+    const cached = cache?.get?.(key);
+    if (cached) return focusElement(cached);
+    const el = document.getElementById(key);
+    if (el && cache) cache.set(key, el);
+    return focusElement(el);
   } catch {
     return false;
   }
@@ -43,10 +54,10 @@ export function focusById(id) {
  * Enfoca el primer id disponible en la lista (best-effort).
  * Retorna el id efectivamente enfocado o null.
  */
-export function focusFirstAvailable(ids) {
+export function focusFirstAvailable(ids, cache) {
   if (!Array.isArray(ids)) return null;
   for (const id of ids) {
-    if (focusById(id)) return id;
+    if (focusById(id, cache)) return id;
   }
   return null;
 }
@@ -84,14 +95,14 @@ export function findFocusableIds(root, selector = '[data-tv-nav]') {
  * Salta elementos disabled o con tabIndex=-1.
  * Retorna el id enfocado, o null si no encontró un destino válido.
  */
-export function focusNextInList(fromId, ids, direction) {
+export function focusNextInList(fromId, ids, direction, cache) {
   if (!Array.isArray(ids) || ids.length === 0) return null;
   const delta = direction === 'up' ? -1 : 1;
   const fromIdx = ids.indexOf(fromId);
   let i = fromIdx >= 0 ? fromIdx + delta : (direction === 'up' ? ids.length - 1 : 0);
   while (i >= 0 && i < ids.length) {
     const id = ids[i];
-    if (focusById(id)) return id;
+    if (focusById(id, cache)) return id;
     i += delta;
   }
   return null;

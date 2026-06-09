@@ -41,10 +41,19 @@ import './styles/main.scss';
     }
   };
 
+  const isTvRingMode = () => {
+    try {
+      return document.documentElement.classList.contains('device-tv');
+    } catch {
+      return false;
+    }
+  };
+
   document.addEventListener(
     'focusin',
     (e) => {
       if (!shouldApply()) return;
+      if (isTvRingMode()) return;
       const el = e.target;
       if (!isInteractive(el)) return;
       try {
@@ -60,6 +69,7 @@ import './styles/main.scss';
   document.addEventListener(
     'focusout',
     (e) => {
+      if (isTvRingMode()) return;
       const el = e.target;
       if (!isInteractive(el)) return;
       try {

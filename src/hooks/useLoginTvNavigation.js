@@ -37,7 +37,16 @@ const LOGIN_ACTIONS_SELECTOR = '[data-tv-nav="login-actions"]';
 // Pequeño retraso para asegurar que los elementos condicionales estén en el DOM
 // (botones que aparecen tras estados como `isSubmitting`, social, etc.).
 const REBUILD_DELAY_MS = 0;
-const INITIAL_FOCUS_DELAY_MS = 300;
+const INITIAL_FOCUS_DELAY_MS = 0;
+
+const LOGIN_STATIC_FOCUS_IDS = [
+  LOGIN_FOCUS_IDS.USERNAME,
+  LOGIN_FOCUS_IDS.PASSWORD,
+  LOGIN_FOCUS_IDS.PASSWORD_TOGGLE,
+  LOGIN_FOCUS_IDS.SUBMIT,
+  LOGIN_FOCUS_IDS.REGISTER,
+  LOGIN_FOCUS_IDS.UDID,
+];
 
 /**
  * Hook que encapsula toda la lógica de navegación remota (LRUD + BACK +
@@ -91,6 +100,20 @@ export function useLoginTvNavigation({
   // de teclado (que se rearma cuando cambia buttonIds) no necesite cerrar
   // sobre estado obsoleto.
   const buttonIdsRef = useRef(buttonIds);
+  const focusCacheRef = useRef(new Map());
+
+  const rebuildFocusCache = (actionIds = buttonIdsRef.current) => {
+    const map = new Map();
+    const ids = [...LOGIN_STATIC_FOCUS_IDS, ...actionIds];
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el instanceof HTMLElement) map.set(id, el);
+    }
+    focusCacheRef.current = map;
+  };
+
+  const focusId = (id) => focusById(id, focusCacheRef.current);
+
   useEffect(() => {
     buttonIdsRef.current = buttonIds;
   }, [buttonIds]);
@@ -100,8 +123,9 @@ export function useLoginTvNavigation({
   // -------------------------------------------------------------------------
   useEffect(() => {
     if (!isTV) return undefined;
+    rebuildFocusCache();
     const timer = setTimeout(() => {
-      focusById(LOGIN_FOCUS_IDS.USERNAME);
+      focusId(LOGIN_FOCUS_IDS.USERNAME);
     }, INITIAL_FOCUS_DELAY_MS);
     return () => clearTimeout(timer);
   }, [isTV]);
@@ -116,7 +140,12 @@ export function useLoginTvNavigation({
 
     const rebuild = () => {
       const ids = findFocusableIds(root, LOGIN_ACTIONS_SELECTOR);
-      setButtonIds((prev) => (areArraysEqual(prev, ids) ? prev : ids));
+      setButtonIds((prev) => {
+        if (areArraysEqual(prev, ids)) return prev;
+        rebuildFocusCache(ids);
+        return ids;
+      });
+      rebuildFocusCache(ids);
     };
 
     const t = setTimeout(rebuild, REBUILD_DELAY_MS);
@@ -147,11 +176,10 @@ export function useLoginTvNavigation({
         e.stopPropagation();
         onCloseQrModal?.();
         setTimeout(
-          () => focusFirstAvailable([
-            LOGIN_FOCUS_IDS.REGISTER,
-            LOGIN_FOCUS_IDS.SUBMIT,
-            LOGIN_FOCUS_IDS.USERNAME,
-          ]),
+          () => focusFirstAvailable(
+            [LOGIN_FOCUS_IDS.REGISTER, LOGIN_FOCUS_IDS.SUBMIT, LOGIN_FOCUS_IDS.USERNAME],
+            focusCacheRef.current
+          ),
           0,
         );
         return;
@@ -161,11 +189,10 @@ export function useLoginTvNavigation({
         e.stopPropagation();
         onCloseUdidModal?.();
         setTimeout(
-          () => focusFirstAvailable([
-            LOGIN_FOCUS_IDS.UDID,
-            LOGIN_FOCUS_IDS.SUBMIT,
-            LOGIN_FOCUS_IDS.USERNAME,
-          ]),
+          () => focusFirstAvailable(
+            [LOGIN_FOCUS_IDS.UDID, LOGIN_FOCUS_IDS.SUBMIT, LOGIN_FOCUS_IDS.USERNAME],
+            focusCacheRef.current
+          ),
           0,
         );
         return;
@@ -182,7 +209,7 @@ export function useLoginTvNavigation({
         const closeId = isQrModalOpen
           ? LOGIN_FOCUS_IDS.MODAL_CLOSE_QR
           : LOGIN_FOCUS_IDS.MODAL_CLOSE_UDID;
-        focusById(closeId);
+        focusId(closeId);
       }
     };
 
@@ -191,11 +218,11 @@ export function useLoginTvNavigation({
         e.preventDefault();
         e.stopPropagation();
         if (activeId === LOGIN_FOCUS_IDS.USERNAME) {
-          focusById(LOGIN_FOCUS_IDS.PASSWORD);
+          focusId(LOGIN_FOCUS_IDS.PASSWORD);
           return;
         }
         if (activeId === LOGIN_FOCUS_IDS.PASSWORD) {
-          focusById(LOGIN_FOCUS_IDS.SUBMIT);
+          focusId(LOGIN_FOCUS_IDS.SUBMIT);
           return;
         }
       }
@@ -204,7 +231,7 @@ export function useLoginTvNavigation({
         e.preventDefault();
         e.stopPropagation();
         if (activeId === LOGIN_FOCUS_IDS.PASSWORD) {
-          focusById(LOGIN_FOCUS_IDS.USERNAME);
+          focusId(LOGIN_FOCUS_IDS.USERNAME);
         }
         // Desde username, UP es no-op (ya está en el tope).
         return;
@@ -217,7 +244,7 @@ export function useLoginTvNavigation({
         if (caret.end >= caret.length) {
           e.preventDefault();
           e.stopPropagation();
-          focusById(LOGIN_FOCUS_IDS.PASSWORD_TOGGLE);
+          focusId(LOGIN_FOCUS_IDS.PASSWORD_TOGGLE);
         }
         return;
       }
@@ -233,19 +260,19 @@ export function useLoginTvNavigation({
       if (action === TV_ACTION.DOWN) {
         e.preventDefault();
         e.stopPropagation();
-        focusById(LOGIN_FOCUS_IDS.SUBMIT);
+        focusId(LOGIN_FOCUS_IDS.SUBMIT);
         return;
       }
       if (action === TV_ACTION.UP) {
         e.preventDefault();
         e.stopPropagation();
-        focusById(LOGIN_FOCUS_IDS.PASSWORD);
+        focusId(LOGIN_FOCUS_IDS.PASSWORD);
         return;
       }
       if (action === TV_ACTION.LEFT) {
         e.preventDefault();
         e.stopPropagation();
-        focusById(LOGIN_FOCUS_IDS.PASSWORD);
+        focusId(LOGIN_FOCUS_IDS.PASSWORD);
       }
       // ENTER lo maneja el click del botón.
     };
@@ -255,22 +282,20 @@ export function useLoginTvNavigation({
       if (action === TV_ACTION.DOWN) {
         e.preventDefault();
         e.stopPropagation();
-        focusNextInList(activeId, ids, 'down');
+        focusNextInList(activeId, ids, 'down', focusCacheRef.current);
         return;
       }
       if (action === TV_ACTION.UP) {
         e.preventDefault();
         e.stopPropagation();
-        // Si subimos desde el primer botón: volver al toggle (si existe)
-        // o al input password como fallback.
         const isFirst = ids[0] === activeId;
         if (isFirst) {
-          if (!focusById(LOGIN_FOCUS_IDS.PASSWORD_TOGGLE)) {
-            focusById(LOGIN_FOCUS_IDS.PASSWORD);
+          if (!focusId(LOGIN_FOCUS_IDS.PASSWORD_TOGGLE)) {
+            focusId(LOGIN_FOCUS_IDS.PASSWORD);
           }
           return;
         }
-        focusNextInList(activeId, ids, 'up');
+        focusNextInList(activeId, ids, 'up', focusCacheRef.current);
       }
       // LEFT/RIGHT no mapeado en botones por ahora.
     };
@@ -279,18 +304,17 @@ export function useLoginTvNavigation({
       if (action === TV_ACTION.DOWN) {
         e.preventDefault();
         e.stopPropagation();
-        focusFirstAvailable([
-          LOGIN_FOCUS_IDS.SUBMIT,
-          LOGIN_FOCUS_IDS.PASSWORD,
-          LOGIN_FOCUS_IDS.USERNAME,
-        ]);
+        focusFirstAvailable(
+          [LOGIN_FOCUS_IDS.SUBMIT, LOGIN_FOCUS_IDS.PASSWORD, LOGIN_FOCUS_IDS.USERNAME],
+          focusCacheRef.current
+        );
       } else if (action === TV_ACTION.UP) {
         e.preventDefault();
         e.stopPropagation();
-        focusFirstAvailable([
-          LOGIN_FOCUS_IDS.PASSWORD,
-          LOGIN_FOCUS_IDS.USERNAME,
-        ]);
+        focusFirstAvailable(
+          [LOGIN_FOCUS_IDS.PASSWORD, LOGIN_FOCUS_IDS.USERNAME],
+          focusCacheRef.current
+        );
       }
     };
 

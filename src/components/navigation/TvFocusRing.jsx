@@ -23,7 +23,6 @@ function isFocusEnabled() {
 
 /**
  * Anillo de foco único en TV (10-foot). Sigue `document.activeElement` sin escalar cada tarjeta.
- * Color vía `--focus-color` / `--focus-color-rgb` (applyTheme → secondaryColor por defecto).
  */
 export function TvFocusRing() {
   const { isTV } = useDevice();
@@ -44,6 +43,9 @@ export function TvFocusRing() {
       if (!ring) return;
       if (!(el instanceof HTMLElement) || !isFocusRingTarget(el)) {
         hideRing();
+        return;
+      }
+      if (targetRef.current === el && ring.classList.contains('tv-focus-ring--visible')) {
         return;
       }
       try {
@@ -89,7 +91,7 @@ export function TvFocusRing() {
       }
       const active = document.activeElement;
       if (isFocusRingTarget(active)) {
-        scheduleUpdate(active);
+        positionRing(active);
       } else {
         hideRing();
       }
@@ -99,10 +101,15 @@ export function TvFocusRing() {
       if (!isFocusEnabled()) return;
       const el = e.target;
       if (!isFocusRingTarget(el)) return;
-      scheduleUpdate(el);
+      positionRing(el);
     };
 
-    const onFocusOut = () => {
+    const onFocusOut = (e) => {
+      const next = e.relatedTarget;
+      if (isFocusRingTarget(next)) {
+        positionRing(next);
+        return;
+      }
       requestAnimationFrame(syncFromActive);
     };
 
@@ -129,7 +136,7 @@ export function TvFocusRing() {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       hideRing();
     };
-  }, [isTV, hideRing, scheduleUpdate]);
+  }, [isTV, hideRing, positionRing, scheduleUpdate]);
 
   if (!isTV) return null;
 

@@ -24,27 +24,126 @@
   visibility: visible;
 }
 
-// Con anillo activo: quitar sombras/scale por elemento (el anillo es la única señal visual).
-[data-focus='on'].device-tv[data-tv-focus-ring='on'] {
+// Con anillo activo: TvFocusRing es la ÚNICA señal visual de foco (sin borde/sombra duplicados).
+// html + atributos para ganar especificidad frente a _login.scss, _bouquet.scss, etc.
+html[data-focus='on'].device-tv[data-tv-focus-ring='on'] {
+  [data-focusable='true'],
+  .focused {
+    transition: none !important;
+  }
+
   .focused,
   button.focused,
   a.focused,
+  input.focused,
+  textarea.focused,
+  select.focused,
   .nav-card.focused,
   .focusable-card.focused,
-  input.focused,
-  textarea.focused {
-    box-shadow: none !important;
-    transform: none !important;
+  .search-result.focused,
+  .channel-card.focused,
+  .home-sidebar-link.focused,
+  .home-sidebar-settings-btn.focused,
+  .home-sidebar-sublink.focused,
+  .player-hud__iconbtn.focused,
+  .player-hud__trackbtn.focused,
+  .player-hud__pillbtn.focused,
+  .player-hud__channel-row.focused,
+  .player-channel-sidebar__row.focused {
     outline: none !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    -moz-box-shadow: none !important;
+    transform: none !important;
+    filter: none !important;
   }
 
-  input.focused,
-  textarea.focused {
-    border-color: var(--focus-color, var(--secondary-color, var(--primary-color, #667eea))) !important;
-    background: rgba(255, 255, 255, 0.12) !important;
+  // Login: quitar anillos/bordes de foco (mantener aspecto base del control).
+  .login-card {
+    input.focused,
+    button.focused,
+    .password-toggle.focused,
+    .login-button.focused,
+    .register-button.focused,
+    .udid-button.focused {
+      border-width: 1px !important;
+      border-color: rgba(255, 255, 255, 0.2) !important;
+      box-shadow: none !important;
+      transform: none !important;
+      filter: none !important;
+    }
+
+    input.focused {
+      background: var(--login-input-bg, rgba(255, 255, 255, 0.1)) !important;
+    }
+
+    .password-toggle.focused {
+      background: var(--login-toggle-bg, rgba(255, 255, 255, 0.1)) !important;
+      color: var(--login-toggle-text, rgba(255, 255, 255, 0.7)) !important;
+    }
+
+    .login-button.focused,
+    .register-button.focused,
+    .udid-button.focused {
+      border: none !important;
+      transform: none !important;
+    }
   }
 
+  // Bouquet / tarjetas: sin borde de foco duplicado.
   .channel-card.focused {
     z-index: 1;
+    border-color: transparent !important;
+
+    .channel-card-lwn-frame {
+      transform: none !important;
+      box-shadow: none !important;
+      -webkit-box-shadow: none !important;
+      border-color: transparent !important;
+    }
+  }
+
+  .channel-card.channel-card--logo_with_number.focused .channel-card-lwn-frame {
+    border-color: transparent !important;
+  }
+
+  // Sidebar: fondo sutil sin borde duplicado.
+  .home-sidebar-link.focused,
+  .home-sidebar-settings-btn.focused,
+  .home-sidebar-sublink.focused {
+    background: rgba(255, 255, 255, 0.14) !important;
+    border-color: transparent !important;
+  }
+
+  .home-sidebar-link.active.focused {
+    background: rgba(255, 255, 255, 0.22) !important;
+  }
+
+  .search-result.focused {
+    background-color: #333 !important;
+    border-color: #444 !important;
+  }
+}
+
+// TV login: altura estable y sin transiciones (el anillo marca el foco).
+html.device-tv .login-card {
+  input,
+  button,
+  .password-toggle {
+    transition: none !important;
+  }
+
+  input,
+  .password-toggle {
+    box-sizing: border-box;
+    border-width: 1px !important;
+    min-height: 3.25rem;
+  }
+
+  .password-toggle {
+    width: 3.25rem;
+    height: 3.25rem;
+    min-height: 3.25rem;
+    padding: 0;
   }
 }
