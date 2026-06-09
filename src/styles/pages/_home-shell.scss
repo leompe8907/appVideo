@@ -443,7 +443,7 @@ $home-sidebar-overlay-width: 228px;
   width: 100%;
   text-decoration: none;
   color: rgba(255, 255, 255, 0.42);
-  font-size: 0.98rem;
+  font-size: 1.25rem;
   font-weight: 400;
   border: none;
   border-radius: 0;
@@ -456,7 +456,7 @@ $home-sidebar-overlay-width: 228px;
   .home-sidebar-icon {
     justify-self: center;
     grid-column: 1;
-    opacity: 0.55;
+    opacity: 5;
   }
 
   .home-sidebar-label {
@@ -481,8 +481,8 @@ $home-sidebar-overlay-width: 228px;
 
 .home-sidebar-icon {
   flex: 0 0 auto;
-  height: 1.35rem;
-  width: 1.35rem;
+  height: 2.25rem;
+  width: 2.25rem;
 }
 
 .home-sidebar-label {
@@ -586,7 +586,11 @@ $home-sidebar-overlay-width: 228px;
     opacity: 1;
     max-width: 14rem;
     pointer-events: auto;
-    text-align: center;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    width: fit-content;
+    color: #fff;
   }
 
   .home-sidebar-link.active .home-sidebar-label::after,
@@ -596,7 +600,6 @@ $home-sidebar-overlay-width: 228px;
     content: '';
     display: block;
     width: 100%;
-    max-width: 5.5rem;
     height: 2px;
     margin-top: 0.35rem;
     border-radius: 1px;
@@ -757,14 +760,14 @@ $home-sidebar-overlay-width: 228px;
   .home-sidebar-link,
   .home-sidebar-settings-btn {
     min-height: var(--home-sidebar-tv-item-min-height);
-    font-size: 1rem;
+    font-size: 1.25rem;
     box-sizing: border-box;
     border: none;
   }
 
   .home-sidebar-icon {
-    height: 1.45rem;
-    width: 1.45rem;
+    height: 1.25rem;
+    width: 1.25rem;
   }
 
   .home-sidebar-link.focused,
@@ -796,7 +799,7 @@ $home-sidebar-overlay-width: 228px;
 
     .home-sidebar-link,
     .home-sidebar-settings-btn {
-      font-size: 1.05rem;
+      font-size: 1.25rem;
     }
 
     .home-sidebar-sublink {
@@ -817,13 +820,13 @@ $home-sidebar-overlay-width: 228px;
 
     .home-sidebar-link,
     .home-sidebar-settings-btn {
-      font-size: 1.1rem;
+      font-size: 1.25rem;
       padding-block: 0.78rem;
     }
 
     .home-sidebar-icon {
-      height: 2.35em;
-      width: 2.35em;
+      height: 1.25rem;
+      width: 1.25rem;
     }
   }
 }
@@ -872,7 +875,7 @@ $home-sidebar-overlay-width: 228px;
   }
 
   .home-sidebar-link {
-    font-size: 0.9rem;
+    font-size: 1.25rem;
   }
 }
 
