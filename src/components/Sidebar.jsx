@@ -12,6 +12,7 @@ import ConfirmModal from './ConfirmModal';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
 import { shouldDeferHomeShellNavigation } from '../utils/homeShellOverlays';
 import { focusElementSafe, scrollElementIntoVisibleScrollAncestors } from '../utils/homeShellNavigation';
+import { requestTvFocusRingSync } from './navigation/TvFocusRing';
 
 /**
  * Orden TV de ítems enfocables del sidebar (nav + ajustes + submenú si está abierto).
@@ -394,6 +395,19 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     rebuild();
     return undefined;
   }, [isTV, settingsOpen, location.pathname]);
+
+  // TV: al expandir el rail o abrir ajustes, el layout cambia después del focusin inicial.
+  // Reposicionar scroll + anillo sobre el ítem ya enfocado (coords del modo compacto ya no aplican).
+  useLayoutEffect(() => {
+    if (!isTV || !expanded) return undefined;
+    const root = rootRef.current;
+    const active = document.activeElement;
+    if (!(root instanceof HTMLElement)) return undefined;
+    if (!(active instanceof HTMLElement) || !root.contains(active)) return undefined;
+    scrollElementIntoVisibleScrollAncestors(active, root);
+    requestTvFocusRingSync();
+    return undefined;
+  }, [isTV, expanded, settingsOpen]);
 
   // TV: UP/DOWN entre ítems; ENTER en enlaces / ajustes / submenú; scroll del rail al mover foco.
   useLayoutEffect(() => {

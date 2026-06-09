@@ -21,6 +21,15 @@ function isFocusEnabled() {
   }
 }
 
+/** Reposiciona el anillo tras cambios de layout (p. ej. sidebar expandido). */
+export function requestTvFocusRingSync() {
+  try {
+    window.dispatchEvent(new CustomEvent('tv-focus-ring-sync'));
+  } catch {
+    // noop
+  }
+}
+
 /**
  * Anillo de foco único en TV (10-foot). Sigue `document.activeElement` sin escalar cada tarjeta.
  */
@@ -43,9 +52,6 @@ export function TvFocusRing() {
       if (!ring) return;
       if (!(el instanceof HTMLElement) || !isFocusRingTarget(el)) {
         hideRing();
-        return;
-      }
-      if (targetRef.current === el && ring.classList.contains('tv-focus-ring--visible')) {
         return;
       }
       try {
@@ -121,10 +127,19 @@ export function TvFocusRing() {
       if (targetRef.current) scheduleUpdate(targetRef.current);
     };
 
+    const onSync = () => {
+      if (targetRef.current) {
+        positionRing(targetRef.current);
+        return;
+      }
+      syncFromActive();
+    };
+
     document.addEventListener('focusin', onFocusIn, true);
     document.addEventListener('focusout', onFocusOut, true);
     window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', onResize);
+    window.addEventListener('tv-focus-ring-sync', onSync);
     syncFromActive();
 
     return () => {
@@ -133,6 +148,7 @@ export function TvFocusRing() {
       document.removeEventListener('focusout', onFocusOut, true);
       window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('tv-focus-ring-sync', onSync);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       hideRing();
     };
