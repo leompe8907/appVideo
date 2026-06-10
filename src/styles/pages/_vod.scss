@@ -21,7 +21,6 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.55);
     z-index: 1;
     pointer-events: none;
   }
@@ -289,8 +288,8 @@
   }
 
   &.focused .vod-card-poster {
-    border-color: #e50914;
-    box-shadow: 0 0 0 2px #e50914;
+    border-color: $secondary-color;
+    box-shadow: 0 0 0 2px $secondary-color;
   }
 }
 
@@ -500,11 +499,11 @@
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
 
   &.fill {
-    background: #e50914;
+    background: $secondary-color;
   }
 
   &.half {
-    background: linear-gradient(90deg, #e50914 50%, rgba(255, 255, 255, 0.3) 50%);
+    background: linear-gradient(90deg, $secondary-color 50%, rgba(255, 255, 255, 0.3) 50%);
   }
 }
 
@@ -566,7 +565,7 @@
   padding: 0.65rem 1.5rem;
   font-size: 1.05rem;
   font-weight: 600;
-  background: #e50914;
+  background: $primary-color;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -574,7 +573,7 @@
   transition: background 0.2s;
 
   &:hover {
-    background: #f40612;
+    background: $secondary-color;
   }
 
   &:focus-visible {
@@ -640,8 +639,8 @@
   }
 
   &.focused {
-    border-color: #e50914;
-    box-shadow: 0 0 0 1px #e50914;
+    border-color: $secondary-color;
+    box-shadow: 0 0 0 1px $secondary-color;
   }
 }
 
@@ -779,8 +778,8 @@
   @include button-base;
 
   &.focused {
-    border: 2px solid #e50914;
-    box-shadow: 0 0 0 2px #e50914;
+    border: 2px solid $secondary-color;
+    box-shadow: 0 0 0 2px $secondary-color;
   }
 }
 
@@ -832,8 +831,8 @@
   height: 1.1em;
   background: rgba(255, 255, 255, 0.3);
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  &.fill { background: #e50914; }
-  &.half { background: linear-gradient(90deg, #e50914 50%, rgba(255, 255, 255, 0.3) 50%); }
+  &.fill { background: $secondary-color; }
+  &.half { background: linear-gradient(90deg, $secondary-color 50%, rgba(255, 255, 255, 0.3) 50%); }
 }
 
 .vod-classic-description {
@@ -947,7 +946,7 @@
   &:hover,
   &.focused {
     background: rgba(255, 255, 255, 0.15);
-    border-color: #e50914;
+    border-color: $secondary-color;
   }
 }
 
@@ -964,7 +963,7 @@
 .vod-classic-play-btn-inline {
   @include button-base;
   padding: 0.5rem 1rem;
-  background: #e50914;
+  background: $primary-color;
   color: #fff;
   border: none;
   border-radius: $border-radius-md;
@@ -992,8 +991,8 @@
   }
 
   &.focused .vod-see-more-poster {
-    border-color: #e50914;
-    background: rgba(229, 9, 20, 0.15);
+    border-color: $secondary-color;
+    background: rgba(var(--secondary-color-rgb, 118, 75, 162), 0.15);
   }
 
   &.vod-see-more-card--poster-text {

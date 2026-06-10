@@ -365,8 +365,8 @@
   }
 
   &.focused .catchup-card-poster {
-    border-color: #e50914;
-    box-shadow: 0 0 0 2px #e50914;
+    border-color: $secondary-color;
+    box-shadow: 0 0 0 2px $secondary-color;
   }
 
   &.disabled,
@@ -395,8 +395,8 @@
   }
 
   &.focused .catchup-see-more-poster {
-    border-color: #e50914;
-    box-shadow: 0 0 0 2px #e50914;
+    border-color: $secondary-color;
+    box-shadow: 0 0 0 2px $secondary-color;
   }
 }
 

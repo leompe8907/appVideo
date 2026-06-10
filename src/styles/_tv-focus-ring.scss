@@ -126,6 +126,45 @@ html[data-focus='on'].device-tv[data-tv-focus-ring='on'] {
   }
 }
 
+// Login con modal abierto: sin recuadro de foco en controles del formulario detrás del backdrop.
+html.device-tv .panaccess-login.login-modal-open .login-card {
+  input:focus,
+  input:focus-visible,
+  button:focus,
+  button:focus-visible,
+  .password-toggle:focus,
+  .password-toggle:focus-visible,
+  .login-button:focus,
+  .login-button:focus-visible,
+  .register-button:focus,
+  .register-button:focus-visible,
+  .udid-button:focus,
+  .udid-button:focus-visible {
+    box-shadow: none !important;
+    filter: none !important;
+    transform: none !important;
+  }
+
+  input:focus,
+  input:focus-visible {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .password-toggle:focus,
+  .password-toggle:focus-visible {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .login-button:focus,
+  .login-button:focus-visible,
+  .register-button:focus,
+  .register-button:focus-visible,
+  .udid-button:focus,
+  .udid-button:focus-visible {
+    border-color: rgba(255, 255, 255, 0.25) !important;
+  }
+}
+
 // TV login: altura estable y sin transiciones (el anillo marca el foco).
 html.device-tv .login-card {
   input,

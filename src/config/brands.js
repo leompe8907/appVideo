@@ -184,11 +184,11 @@ export const BRANDS = [
         assetPath: "backgroundalt.webp",
       },
       qrRegister: {
-        enabled: false,
+        enabled: true,
         url: "https://shop.fotelka.tv/?c=customer&p=register",
       },
       udid: {
-        enabled: false,
+        enabled: true,
         baseUrl: "http://127.0.0.1:8001", //"https://bt-auth.cabledelancer.com",
         requestPath: "/udid/request-udid-manual/",
         wsUrl: "ws://127.0.0.1:8001/ws/auth/", //"wss://bt-auth.cabledelancer.com/ws/auth/",
@@ -202,7 +202,7 @@ export const BRANDS = [
       socialLogin: {
         backendBaseUrl: 'http://127.0.0.1:8000',
         google: {
-          enabled: false,
+          enabled: true,
           redirectUrl: '/wind/auth/google/',
           accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
           // Mantener look del botón fallback aunque OAuth esté configurado.
@@ -210,7 +210,7 @@ export const BRANDS = [
           backendBaseUrl: '',
         },
         facebook: {
-          enabled: false,
+          enabled: true,
           redirectUrl: '/wind/auth/facebook/',
           accessToken: '823584907447149',
           backendBaseUrl: '',
@@ -291,7 +291,7 @@ export const BRANDS = [
       focus: {
         enabled: true,
         // Color del foco (si no se define, cae al primaryColor)
-        color: "#2CE308",
+        color: "#004c77",
         // Escala al enfocar (PC usa estilos base; TV aplica un boost adicional en CSS)
         scale: 1.05,
         // Anillos/sombra (CSS box-shadow). Usan var(--primary-color-rgb) con fallback.
@@ -300,10 +300,10 @@ export const BRANDS = [
         shadow: '0 12px 30px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55)',
       },
       // EPG
-      epgLineColorTime: "#2CE308",
+      epgLineColorTime: "#004c77",
       // Colores
-      primaryColor: "#2CE308", // Color principal de la marca (botones, acentos, etc.)
-      secondaryColor: "#1a8a05", // Color secundario (hover, fondos, etc.)
+      primaryColor: "#004c77", // Color principal de la marca (botones, acentos, etc.)
+      secondaryColor: "#004c77", // Color secundario (hover, fondos, etc.)
       theme: "dark", // Tema global: "dark" o "light"
       // Fuente
       fontFamily: "Arial, sans-serif", // Familia de fuentes CSS (ej. "Arial, sans-serif", "Roboto, sans-serif")
@@ -324,7 +324,7 @@ export const BRANDS = [
     // Configuración específica de bouquets
     bouquets: {
       // Color de la barra de progreso (timeship) en diseños event_and_logo, etc.
-      timeshipColor: "#2CE308",
+      timeshipColor: "#EE8834",
     },
 
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).

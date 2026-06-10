@@ -184,6 +184,10 @@ export function applyTheme(brandConfig) {
   if (primaryRgb) {
     root.style.setProperty('--primary-color-rgb', primaryRgb);
   }
+  const secondaryRgb = toRgbTuple(ui.secondaryColor);
+  if (secondaryRgb) {
+    root.style.setProperty('--secondary-color-rgb', secondaryRgb);
+  }
   // EPG (cards)
   root.style.setProperty(
     '--epg-cards-channel-active-bg',

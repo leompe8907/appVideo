@@ -750,10 +750,10 @@ $bouquet-items-gap: 2rem;
 
         .channel-card-lwn-frame {
           transform: translateY(-2px) scale(1.02);
-          border-color: rgba(255, 255, 255, 0.6);
-          box-shadow: 1px 0 11px 5px rgba(244, 0, 0, 0.61);
-          -webkit-box-shadow: 1px 0 11px 5px rgba(244, 0, 0, 0.61);
-          -moz-box-shadow: 1px 0 11px 5px rgba(244, 0, 0, 0.61);
+          border-color: $secondary-color;
+          box-shadow: 1px 0 11px 5px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.61);
+          -webkit-box-shadow: 1px 0 11px 5px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.61);
+          -moz-box-shadow: 1px 0 11px 5px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.61);
         }
       }
     }
@@ -843,10 +843,10 @@ $bouquet-items-gap: 2rem;
     &:hover,
     &.focused {
       transform: translateY(-2px);
-      border-color: rgba(255, 255, 255, 0.6);
-      box-shadow: 1px 0px 11px 5px rgba(244,0,0,0.61);
-      -webkit-box-shadow: 1px 0px 11px 5px rgba(244,0,0,0.61);
-      -moz-box-shadow: 1px 0px 11px 5px rgba(244,0,0,0.61);
+      border-color: $secondary-color;
+      box-shadow: 1px 0 11px 5px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.61);
+      -webkit-box-shadow: 1px 0 11px 5px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.61);
+      -moz-box-shadow: 1px 0 11px 5px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.61);
       border-radius: 20px;
       transform: scale(1.02);
     }
