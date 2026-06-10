@@ -137,7 +137,7 @@ export const BRANDS = [
   // Bromteck
   {
     brand: "bromteck",
-    appName: "Bromteck",
+    appName: "MultiplusTV",
     drm: "https://cv10.panaccess.com/",
     token: '',
     // Metadatos de integración con DRM (equivalentes al proyecto EPG clásico)
@@ -150,7 +150,7 @@ export const BRANDS = [
     login: {
       theme: {
         cardBackground: "rgba(255, 255, 255, 0.05)",// Fondo de la tarjeta del login
-        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Botón principal (Entrar)
+        submitBg: "#004c77",// Botón principal (Entrar)
         submitText: "#ffffff",// Texto del botón principal
         registerBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón de registro
         registerText: "#ffffff",// Texto del botón de registro
@@ -180,7 +180,7 @@ export const BRANDS = [
       backgroundImage: {
         // Personaliza el fondo del login por marca:
         // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
-        enabled: false,
+        enabled: true,
         assetPath: "backgroundalt.webp",
       },
       qrRegister: {
@@ -284,8 +284,9 @@ export const BRANDS = [
     // Configuración de UI/Tema
     ui: {
       // Splash
-      splashDuration: 3000, // Duración en milisegundos
-      splashAnimado: false, // Si es true busca .gif o video (ver splashVideo), si es false busca .png/.webp/.jpg
+      splashDuration: 8000, // Duración en milisegundos
+      splashAnimado: true, // Si es true busca .gif o video (ver splashVideo), si es false busca .png/.webp/.jpg
+      splashVideo: "splash.mp4",
       // Focus visible (PC + TV) - personalizable por marca
       focus: {
         enabled: true,
