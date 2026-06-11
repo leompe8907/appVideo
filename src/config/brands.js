@@ -138,7 +138,7 @@ export const BRANDS = [
   {
     brand: "bromteck",
     appName: "MultiplusTV",
-    drm: "https://cv10.panaccess.com/",
+    drm: 'https://mw.cabledelancer.com/',
     token: '',
     // Metadatos de integración con DRM (equivalentes al proyecto EPG clásico)
     os: 'HTML5',

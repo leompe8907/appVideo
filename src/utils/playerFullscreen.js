@@ -26,7 +26,7 @@ export function isAppFullscreenActive() {
 }
 
 export function canUseNativeFullscreen() {
-  return window.isSecureContext === true && document.fullscreenEnabled !== false;
+  return document.fullscreenEnabled !== false;
 }
 
 /**
