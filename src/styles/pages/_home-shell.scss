@@ -226,12 +226,12 @@ $home-sidebar-overlay-width: 228px;
   inset: 0;
   width: 100vw;
   height: 100vh;
-  overflow: visible;
+  overflow: hidden;
   z-index: 1000;
   opacity: 0;
   visibility: hidden;
-  transform: scale(0.995);
-  transition: opacity 220ms ease, transform 220ms ease, visibility 220ms ease;
+  // Sin transform: rompe requestFullscreen() en Chrome/Edge/Firefox.
+  transition: opacity 220ms ease, visibility 220ms ease;
   pointer-events: none;
   background: #000;
 }
@@ -239,7 +239,6 @@ $home-sidebar-overlay-width: 228px;
 .home-global-player--active {
   opacity: 1;
   visibility: visible;
-  transform: scale(1);
   pointer-events: auto;
 }
 
@@ -265,32 +264,102 @@ $home-sidebar-overlay-width: 228px;
   pointer-events: none;
 }
 
-// PC — botón maximizar: el contenedor del player es el elemento fullscreen.
-.home-global-player--browser-fullscreen,
-.home-global-player:fullscreen,
-.home-global-player:-webkit-full-screen {
+// PC — pantalla completa nativa: video a cover en todo el viewport del dispositivo.
+@mixin home-global-player-fullscreen-fill {
   position: fixed;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
   max-width: none;
   max-height: none;
   margin: 0;
   padding: 0;
   transform: none;
+  transition: none;
+  overflow: hidden;
   background: #000;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 2147483646;
 
-  .home-global-player__media,
-  video,
-  .video-js,
-  .vjs-tech {
+  .home-global-player__media {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .video-js {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    padding: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  video,
+  .vjs-tech {
+    position: absolute !important;
+    inset: 0 !important;
     width: 100% !important;
     height: 100% !important;
     max-width: none !important;
     max-height: none !important;
     object-fit: cover !important;
+  }
+}
+
+// Contenedor del player en fullscreen nativo (Chrome, Edge, Firefox, Safari).
+.home-global-player:fullscreen,
+.home-global-player:-webkit-full-screen,
+.home-global-player:-moz-full-screen,
+// Fallback CSS cuando la API nativa no está disponible (http://IP sin HTTPS).
+.home-global-player--browser-fullscreen {
+  @include home-global-player-fullscreen-fill;
+}
+
+html.app-player-fullscreen {
+  overflow: hidden;
+  background: #000;
+
+  body,
+  #root,
+  .App,
+  .home-shell {
+    overflow: hidden;
+    background: #000;
+  }
+}
+
+// Fallback si el fullscreen queda en <html> (F11 u otros atajos).
+html:fullscreen,
+html:-webkit-full-screen,
+html:-moz-full-screen {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+
+  body,
+  #root,
+  .App,
+  .home-shell {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+  }
+
+  .home-global-player {
+    @include home-global-player-fullscreen-fill;
   }
 }
 

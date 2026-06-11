@@ -17,6 +17,8 @@ import {
   scheduleRestoreMainShellFocus,
 } from '../utils/homeShellLastContentFocus';
 import { shouldDeferHomeShellNavigation } from '../utils/homeShellOverlays';
+import { usePlayerLoadingVisible } from '../hooks/usePlayerLoadingVisible';
+import { exitAppFullscreenSync } from '../utils/playerFullscreen';
 
 export function HomePlaceholderPage({ title, description }) {
   return (
@@ -32,8 +34,13 @@ export function HomePage() {
   const { pathname } = useLocation();
   const { containerRef, state: playerState, licenseInUsePrompt, confirmLicenseInUse, close } = usePlayer();
   const isPlayerActive = Boolean(playerState?.url);
+  const showPlayerLoading = usePlayerLoadingVisible(isPlayerActive, containerRef, playerState);
   const wasPlayerActiveRef = useRef(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!isPlayerActive) exitAppFullscreenSync();
+  }, [isPlayerActive]);
 
   // TV / teclado: recordar cada foco dentro del contenido principal mientras no hay player.
   useEffect(() => {
@@ -139,9 +146,7 @@ export function HomePage() {
           role={isPlayerActive ? 'application' : undefined}
           aria-label={isPlayerActive ? t('player.player', { defaultValue: 'Reproductor' }) : undefined}
         />
-        {isPlayerActive &&
-          !playerState?.isPlaying &&
-          (playerState?.isLoading || playerState?.isSeeking) && (
+        {showPlayerLoading && (
           <div className="home-global-player-loading">
             <div className="home-global-player-loading-spinner" />
           </div>

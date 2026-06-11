@@ -161,7 +161,7 @@ export class WebEngine extends BaseEngine {
     const id = `app-main-video-${++videoElementIdSeq}`;
     const videoEl = document.createElement('video');
     videoEl.id = id;
-    videoEl.className = 'video-js vjs-default-skin';
+    videoEl.className = 'video-js vjs-default-skin vjs-fill';
     videoEl.setAttribute('playsinline', 'true');
     videoEl.setAttribute('webkit-playsinline', 'true');
     videoEl.setAttribute('preload', 'auto');
@@ -215,6 +215,12 @@ export class WebEngine extends BaseEngine {
       onPlay: () => {
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
       },
+      onPlaying: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
+      },
+      onCanPlay: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADED });
+      },
       onPause: () => {
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
       },
@@ -248,6 +254,8 @@ export class WebEngine extends BaseEngine {
     player.on('durationchange', this._handlers.onDurationChange);
     player.on('ended', this._handlers.onEnded);
     player.on('play', this._handlers.onPlay);
+    player.on('playing', this._handlers.onPlaying);
+    player.on('canplay', this._handlers.onCanPlay);
     player.on('pause', this._handlers.onPause);
     player.on('seeking', this._handlers.onSeeking);
     player.on('seeked', this._handlers.onSeeked);
@@ -262,6 +270,8 @@ export class WebEngine extends BaseEngine {
     player.off('durationchange', this._handlers.onDurationChange);
     player.off('ended', this._handlers.onEnded);
     player.off('play', this._handlers.onPlay);
+    player.off('playing', this._handlers.onPlaying);
+    player.off('canplay', this._handlers.onCanPlay);
     player.off('pause', this._handlers.onPause);
     player.off('seeking', this._handlers.onSeeking);
     player.off('seeked', this._handlers.onSeeked);

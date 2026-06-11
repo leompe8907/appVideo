@@ -230,10 +230,15 @@ export function PlayerProvider({ children }) {
         setState((s) => {
           const nextCurrentTime = typeof currentTime === 'number' ? currentTime : s.currentTime;
           const nextDuration = typeof duration === 'number' ? duration : s.duration;
+          // timeupdate implica reproducción real (HLS/live a veces no dispara 'play').
+          const playbackTickActive =
+            typeof currentTime === 'number' && Number.isFinite(currentTime);
           const clearStaleBufferFlags =
-            s.isPlaying && (s.isLoading || s.isSeeking)
-              ? { isLoading: false, isSeeking: false }
-              : null;
+            playbackTickActive && (s.isLoading || s.isSeeking || !s.isPlaying)
+              ? { isPlaying: true, isLoading: false, isSeeking: false }
+              : s.isPlaying && (s.isLoading || s.isSeeking)
+                ? { isLoading: false, isSeeking: false }
+                : null;
 
           if (s.type === 'service') {
             const initialPlayer = s.liveInitialPlayerTime ?? nextCurrentTime ?? 0;
@@ -312,7 +317,11 @@ export function PlayerProvider({ children }) {
           setState((s) => ({ ...s, isLoading: false, error: null }));
         } else if (engineState === 'seeking') {
           armSeekTimeout();
-          setState((s) => ({ ...s, isSeeking: true, isLoading: true }));
+          setState((s) => ({
+            ...s,
+            isSeeking: true,
+            isLoading: s.isPlaying ? false : true,
+          }));
         } else if (engineState === 'seeked') {
           setState((s) => ({
             ...s,
@@ -329,7 +338,11 @@ export function PlayerProvider({ children }) {
       },
       handleSeekStart: () => {
         armSeekTimeout();
-        setState((s) => ({ ...s, isSeeking: true, isLoading: true }));
+        setState((s) => ({
+          ...s,
+          isSeeking: true,
+          isLoading: s.isPlaying ? false : true,
+        }));
       },
       handleSeekEnd: () => {
         clearSeekTimeout();

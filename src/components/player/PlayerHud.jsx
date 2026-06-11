@@ -20,6 +20,13 @@ import {
   PLAYER_FOCUS_IDS,
 } from '../../hooks/usePlayerHudTvNavigation';
 import { usePlayerChannelZapping } from '../../hooks/usePlayerChannelZapping';
+import {
+  FULLSCREEN_CHANGE_EVENTS,
+  enterAppFullscreen,
+  exitAppFullscreenSync,
+  getNativeFullscreenElement,
+  isAppFullscreenActive,
+} from '../../utils/playerFullscreen';
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
@@ -186,13 +193,14 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     backward,
     skipLiveBy,
     goLive,
+    containerRef,
   } = usePlayer();
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
   const [visible, setVisible] = useState(true);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
-  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement));
+  const [isFullscreen, setIsFullscreen] = useState(() => isAppFullscreenActive());
   const [tracksPopoverPos, setTracksPopoverPos] = useState(null); // { top, left, width } | null
   const hideTimeoutRef = useRef(null);
   const hudRootRef = useRef(null);
@@ -439,17 +447,99 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     return () => clearInterval(timer);
   }, [state?.type, liveWindow, hasContent]);
 
+  const getPlayerFullscreenEl = useCallback(() => {
+    const container = containerRef?.current;
+    if (!container) return null;
+    return container.closest('.home-global-player');
+  }, [containerRef]);
+
+  const syncPlayerFullscreenLayout = useCallback(() => {
+    const container = containerRef?.current;
+    const playerRoot = getPlayerFullscreenEl();
+    if (!container) return;
+
+    const fsEl = getNativeFullscreenElement();
+    const fs = isAppFullscreenActive();
+    const w = fs
+      ? (fsEl?.clientWidth || window.innerWidth || document.documentElement.clientWidth)
+      : container.clientWidth;
+    const h = fs
+      ? (fsEl?.clientHeight || window.innerHeight || document.documentElement.clientHeight)
+      : container.clientHeight;
+    const objectFit = fs ? 'cover' : 'contain';
+
+    const applyVideoLayout = () => {
+      if (playerRoot instanceof HTMLElement) {
+        playerRoot.style.width = fs ? `${w}px` : '';
+        playerRoot.style.height = fs ? `${h}px` : '';
+      }
+
+      if (!fs) {
+        container.querySelectorAll('.video-js, video.vjs-tech, video').forEach((el) => {
+          if (!(el instanceof HTMLElement)) return;
+          el.style.width = '';
+          el.style.height = '';
+          el.style.maxWidth = '';
+          el.style.maxHeight = '';
+          el.style.objectFit = '';
+          el.style.paddingTop = '';
+          el.style.left = '';
+          el.style.top = '';
+          el.style.right = '';
+          el.style.bottom = '';
+        });
+        return;
+      }
+
+      container.querySelectorAll('.video-js').forEach((el) => {
+        if (!(el instanceof HTMLElement)) return;
+        el.classList.add('vjs-fill');
+        el.style.position = 'absolute';
+        el.style.left = '0';
+        el.style.top = '0';
+        el.style.right = '0';
+        el.style.bottom = '0';
+        el.style.width = `${w}px`;
+        el.style.height = `${h}px`;
+        el.style.paddingTop = '0';
+        el.style.maxWidth = 'none';
+        el.style.maxHeight = 'none';
+      });
+
+      container.querySelectorAll('video.vjs-tech, video').forEach((el) => {
+        if (!(el instanceof HTMLVideoElement)) return;
+        el.style.width = '100%';
+        el.style.height = '100%';
+        el.style.objectFit = objectFit;
+        el.style.maxWidth = 'none';
+        el.style.maxHeight = 'none';
+      });
+    };
+
+    applyVideoLayout();
+
+    window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('resize'));
+      requestAnimationFrame(applyVideoLayout);
+    });
+  }, [containerRef, getPlayerFullscreenEl]);
+
   useEffect(() => {
     const onFsChange = () => {
-      const fs = Boolean(document.fullscreenElement);
+      const fs = isAppFullscreenActive();
       setIsFullscreen(fs);
       try {
         document.documentElement.style.setProperty('--player-video-object-fit', fs ? 'cover' : 'contain');
       } catch {
         // noop
       }
+      syncPlayerFullscreenLayout();
     };
-    document.addEventListener('fullscreenchange', onFsChange);
+    const onResize = () => {
+      if (isAppFullscreenActive()) syncPlayerFullscreenLayout();
+    };
+    FULLSCREEN_CHANGE_EVENTS.forEach((ev) => document.addEventListener(ev, onFsChange));
+    window.addEventListener('resize', onResize);
     // Inicializar en montaje (por si el HUD aparece ya en fullscreen)
     onFsChange();
     if (debugEnabled) {
@@ -460,15 +550,18 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
       window.addEventListener('blur', onBlur);
       window.addEventListener('focus', onFocus);
       return () => {
-        document.removeEventListener('fullscreenchange', onFsChange);
+        FULLSCREEN_CHANGE_EVENTS.forEach((ev) => document.removeEventListener(ev, onFsChange));
+        window.removeEventListener('resize', onResize);
         document.removeEventListener('visibilitychange', onVisibility);
         window.removeEventListener('blur', onBlur);
         window.removeEventListener('focus', onFocus);
       };
     }
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debugEnabled]);
+    return () => {
+      FULLSCREEN_CHANGE_EVENTS.forEach((ev) => document.removeEventListener(ev, onFsChange));
+      window.removeEventListener('resize', onResize);
+    };
+  }, [debugEnabled, syncPlayerFullscreenLayout]);
 
   const showPlaybackButtons =
     hasContent &&
@@ -623,26 +716,28 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
 
   const shouldUseEpgInfoModal = state?.type === 'service' && !!state?.item && !!nowNext?.now;
 
-  const toggleFullscreen = async () => {
+  const toggleFullscreen = useCallback(async () => {
     try {
-      if (document.fullscreenElement) {
+      if (isAppFullscreenActive()) {
         log('fullscreen:exit requested');
-        await document.exitFullscreen?.();
+        exitAppFullscreenSync();
+        setIsFullscreen(false);
+        // Dar un frame para que el browser procese el exit antes de recalcular
+        requestAnimationFrame(() => syncPlayerFullscreenLayout());
         return;
       }
 
-      // Modo "F11-like": fullscreen de toda la app (documento).
-      // Es el enfoque más estable y evita que el engine pierda el <video>
-      // o que el browser entre/salga inmediatamente del fullscreen.
-      const el = document.documentElement;
-      if (!el || typeof el.requestFullscreen !== 'function') return;
-      log('fullscreen:enter requested', { target: 'documentElement' });
-      await el.requestFullscreen();
+      // enterAppFullscreen() es async: espera a que el browser confirme el cambio
+      // de viewport antes de sincronizar el layout. Sin el await, clientWidth/Height
+      // todavía reflejan el tamaño pre-fullscreen y el video queda mal dimensionado.
+      const mode = await enterAppFullscreen();
+      log('fullscreen:enter requested', { mode });
+      setIsFullscreen(true);
+      syncPlayerFullscreenLayout();
     } catch (e) {
       log('fullscreen:error', e);
-      // noop (browsers/TVs pueden bloquear si no hay gesto del usuario)
     }
-  };
+  }, [syncPlayerFullscreenLayout]);
 
   return (
     <div
