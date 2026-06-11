@@ -540,7 +540,7 @@ export const BRANDS = [
       // Focus visible (PC + TV) - personalizable por marca
       focus: {
         enabled: true,
-        color: "#ff3336",
+        color: "#3355FF",
         scale: 1.05,
         ring: '0 0 0 4px rgba(var(--primary-color-rgb, 102, 126, 234), 0.7)',
         ring2: '0 0 0 8px rgba(var(--primary-color-rgb, 102, 126, 234), 0.35)',
@@ -549,8 +549,8 @@ export const BRANDS = [
       // EPG
       epgLineColorTime: "#3333FF",
       // Colores
-      primaryColor: "#ff3336",
-      secondaryColor: "#ff3336",
+      primaryColor: "#3355FF",
+      secondaryColor: "#3355FF",
       theme: "light",
       // Fuente
       fontFamily: "Roboto, sans-serif",

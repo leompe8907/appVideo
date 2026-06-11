@@ -307,7 +307,7 @@ $bouquet-items-gap: 2rem;
 
     .bouquet-heading {
       flex-shrink: 0;
-      font-size: 1.25rem;
+      font-size: 1.6rem;
       font-weight: 600;
       color: #fff;
       margin: 0 0 0.35rem;
@@ -385,7 +385,7 @@ $bouquet-items-gap: 2rem;
 
     .bouquet-heading {
       flex-shrink: 0;
-      font-size: 1.25rem;
+      font-size: 1.6rem;
       font-weight: 600;
       color: #fff;
       margin: 0 0 0.35rem;
@@ -409,7 +409,7 @@ $bouquet-items-gap: 2rem;
 
     .bouquet-heading {
       flex-shrink: 0;
-      font-size: 1.25rem;
+      font-size: 1.6rem;
       font-weight: 600;
       color: #fff;
       margin: 0 0 0.35rem;
@@ -425,7 +425,7 @@ $bouquet-items-gap: 2rem;
 
       &.embla-viewport {
         overflow: hidden;
-        height: 18rem;
+        height: 20rem;
         scrollbar-width: none;
         -ms-overflow-style: none;
 
@@ -539,15 +539,15 @@ $bouquet-items-gap: 2rem;
     &.channel-card--event_and_logo {
       display: flex;
       flex-direction: column;
-      height: 15rem;
-      min-height: 15rem;
+      height: 18rem;
+      min-height: 18rem;
       background: transparent;
       background-color: transparent;
 
       .channel-card-frame {
         flex: 0 0 auto;
         border: 2px solid #fff;
-        border-radius: 0.25em;
+        border-radius: 1.25em;
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -609,13 +609,13 @@ $bouquet-items-gap: 2rem;
         }
 
         .channel-card-event-time {
-          font-size: 1rem;
+          font-size: 1.2rem;
           opacity: 0.9;
           font-variant-numeric: tabular-nums;
         }
 
         .channel-card-event-title {
-          font-size: 0.8rem;
+          font-size: 1.2rem;
           font-weight: 500;
           line-height: 1.2;
           display: -webkit-box;
@@ -654,14 +654,14 @@ $bouquet-items-gap: 2rem;
         justify-content: center;
 
         .channel-card-event-time {
-          font-size: 1rem;
+          font-size: 1.2rem;
           opacity: 0.9;
           font-variant-numeric: tabular-nums;
           flex-shrink: 0;
         }
 
         .channel-card-event-title {
-          font-size: 0.9rem;
+          font-size: 1.2rem;
           font-weight: 600;
           line-height: 1.2;
           display: -webkit-box;
@@ -809,13 +809,13 @@ $bouquet-items-gap: 2rem;
         }
 
         .channel-card-event-time {
-          font-size: 1rem;
+          font-size: 1.2rem;
           opacity: 0.9;
           font-variant-numeric: tabular-nums;
         }
 
         .channel-card-event-title {
-          font-size: 0.8rem;
+          font-size: 1.2rem;
           font-weight: 500;
           line-height: 1.2;
           display: -webkit-box;
