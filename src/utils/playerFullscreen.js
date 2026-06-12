@@ -26,12 +26,20 @@ export function isAppFullscreenActive() {
 }
 
 export function canUseNativeFullscreen() {
-  return document.fullscreenEnabled !== false;
+  return (
+    document.fullscreenEnabled === true ||
+    document.webkitFullscreenEnabled === true ||
+    document.mozFullScreenEnabled === true ||
+    document.msFullscreenEnabled === true ||
+    // If all are undefined (like on iOS Safari), we still return true to allow attempting video-specific methods
+    (document.fullscreenEnabled === undefined && 
+     document.webkitFullscreenEnabled === undefined)
+  );
 }
 
 /**
  * Solicita fullscreen nativo. Retorna una Promise que resuelve en `true` si tuvo éxito,
- * o `false` si ningún candidato la soporta. Llamar dentro del gesto del usuario (click).
+ * o `false` si ningún candidato la soporta o fue rechazado. Llamar dentro del gesto del usuario (click).
  *
  * Se pasa `{ navigationUI: 'hide' }` para pedir al browser que oculte su chrome
  * (barra de URL, tabs). No todos los browsers lo honran, pero es la señal correcta.
@@ -41,36 +49,43 @@ export function canUseNativeFullscreen() {
 export async function requestNativeFullscreen() {
   if (!canUseNativeFullscreen()) return false;
 
-  // Preferimos documentElement para que el browser oculte su chrome completo.
-  // El player ya está en position:fixed inset:0 z-index:1000, así que dentro del
-  // fullscreen nativo de <html> el video cubre todo igualmente.
-  const candidates = [
-    document.documentElement,
-    document.body,
-    getPlayerRootElement(),
-    document.querySelector('.home-global-player video'),
-  ].filter(Boolean);
-
-  for (const el of candidates) {
+  // 1. Preferir el estándar requestFullscreen en el documentElement
+  if (document.documentElement && typeof document.documentElement.requestFullscreen === 'function') {
     try {
-      if (typeof el.requestFullscreen === 'function') {
-        await el.requestFullscreen({ navigationUI: 'hide' });
-        return true;
-      }
-      if (typeof el.webkitRequestFullscreen === 'function') {
-        el.webkitRequestFullscreen();
-        return true;
-      }
-      if (typeof el.mozRequestFullScreen === 'function') {
-        el.mozRequestFullScreen();
-        return true;
-      }
-      if (typeof el.msRequestFullscreen === 'function') {
-        el.msRequestFullscreen();
-        return true;
-      }
+      await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+      return true;
     } catch {
-      // Candidato rechazó (e.g. política del browser) → intentar siguiente
+      // Si el estándar falla (p. ej., por falta de permisos o contexto inseguro),
+      // fallamos de inmediato en lugar de hacer loops asíncronos que perderían el gesto de usuario.
+      return false;
+    }
+  }
+
+  // 2. Fallbacks de prefijos antiguos o para iOS Safari (iPhone) que requiere webkitEnterFullscreen en el video
+  const playerRoot = getPlayerRootElement();
+  const videoEl = document.querySelector('.home-global-player video');
+
+  const targets = [
+    { el: document.documentElement, methods: ['webkitRequestFullscreen', 'mozRequestFullScreen', 'msRequestFullscreen'] },
+    { el: document.body, methods: ['webkitRequestFullscreen', 'mozRequestFullScreen', 'msRequestFullscreen'] },
+    { el: playerRoot, methods: ['webkitRequestFullscreen', 'mozRequestFullScreen', 'msRequestFullscreen'] },
+    { el: videoEl, methods: ['webkitRequestFullscreen', 'webkitEnterFullscreen', 'mozRequestFullScreen', 'msRequestFullscreen'] }
+  ].filter(t => t.el);
+
+  for (const target of targets) {
+    for (const method of target.methods) {
+      if (typeof target.el[method] === 'function') {
+        try {
+          const res = target.el[method]();
+          if (res instanceof Promise) {
+            await res;
+          }
+          return true;
+        } catch {
+          // Abortamos de inmediato si falla el método seleccionado para no causar errores en cascada
+          return false;
+        }
+      }
     }
   }
 
@@ -85,36 +100,41 @@ export async function requestNativeFullscreen() {
 export function requestNativeFullscreenSync() {
   if (!canUseNativeFullscreen()) return false;
 
-  const candidates = [
-    document.documentElement,
-    document.body,
-    getPlayerRootElement(),
-    document.querySelector('.home-global-player video'),
-  ].filter(Boolean);
-
-  for (const el of candidates) {
+  if (document.documentElement && typeof document.documentElement.requestFullscreen === 'function') {
     try {
-      if (typeof el.requestFullscreen === 'function') {
-        const result = el.requestFullscreen({ navigationUI: 'hide' });
-        if (result && typeof result.catch === 'function') {
-          result.catch(() => {});
-        }
-        return true;
+      const result = document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+      if (result && typeof result.catch === 'function') {
+        result.catch(() => {});
       }
-      if (typeof el.webkitRequestFullscreen === 'function') {
-        el.webkitRequestFullscreen();
-        return true;
-      }
-      if (typeof el.mozRequestFullScreen === 'function') {
-        el.mozRequestFullScreen();
-        return true;
-      }
-      if (typeof el.msRequestFullscreen === 'function') {
-        el.msRequestFullscreen();
-        return true;
-      }
+      return true;
     } catch {
-      // Probar siguiente candidato
+      return false;
+    }
+  }
+
+  const playerRoot = getPlayerRootElement();
+  const videoEl = document.querySelector('.home-global-player video');
+
+  const targets = [
+    { el: document.documentElement, methods: ['webkitRequestFullscreen', 'mozRequestFullScreen', 'msRequestFullscreen'] },
+    { el: document.body, methods: ['webkitRequestFullscreen', 'mozRequestFullScreen', 'msRequestFullscreen'] },
+    { el: playerRoot, methods: ['webkitRequestFullscreen', 'mozRequestFullScreen', 'msRequestFullscreen'] },
+    { el: videoEl, methods: ['webkitRequestFullscreen', 'webkitEnterFullscreen', 'mozRequestFullScreen', 'msRequestFullscreen'] }
+  ].filter(t => t.el);
+
+  for (const target of targets) {
+    for (const method of target.methods) {
+      if (typeof target.el[method] === 'function') {
+        try {
+          const res = target.el[method]();
+          if (res && typeof res.catch === 'function') {
+            res.catch(() => {});
+          }
+          return true;
+        } catch {
+          // noop
+        }
+      }
     }
   }
 
