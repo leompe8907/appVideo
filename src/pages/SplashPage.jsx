@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { resolveSplashDestination } from '../services/splashAuthFlow';
-import '../styles/components/_splash.scss';
 
 /** Máximo tiempo en fase vídeo antes de forzar navegación (TV puede no disparar ended). */
 const SPLASH_VIDEO_MAX_MS = 45000;
