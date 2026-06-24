@@ -112,8 +112,8 @@ export function EmblaHorizontalRail({ className = '', children, useNativeScroll 
   const { isPC } = useDevice();
 
   const nativeScroll = useMemo(
-    () => !isPC || useNativeScroll || String(className).includes('logo-with-number'),
-    [isPC, useNativeScroll, className]
+    () => !isPC || useNativeScroll,
+    [isPC, useNativeScroll]
   );
 
   if (nativeScroll) {

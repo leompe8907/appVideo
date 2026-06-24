@@ -4,11 +4,11 @@ import {
   filterBouquetsForInicio,
   filterBouquetsForTvRadioServices,
 } from '../../services/tvDataService';
+import { useDevice } from '../../contexts/DeviceContext';
 import { usePreload } from '../../store/usePreload';
 import { resolveBouquetLayoutForDevice } from '../../utils/bouquetLayoutConfig';
 import {
-  BouquetRowCarousel,
-  BouquetGridHorizontal,
+  BouquetHorizontalGrid,
   BouquetGridVertical,
 } from './BouquetLayouts';
 
@@ -20,6 +20,7 @@ import {
  */
 export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio' }) {
   const { t } = useTranslation();
+  const { isTV, isPC } = useDevice();
   const { epg } = usePreload();
 
   const bouquets = useMemo(() => {
@@ -51,7 +52,7 @@ export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio
   return (
     <div className="bouquet-wall">
       {bouquets.map((bouquet) => {
-        const layout = resolveBouquetLayoutForDevice(bouquet);
+        const layout = resolveBouquetLayoutForDevice(bouquet, { isTV, isPC });
         const key = bouquet.bouquetId ?? bouquet.id;
         const layoutProps = {
           bouquet,
@@ -60,6 +61,7 @@ export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio
           gridRows: layout.gridRows,
           gridColumns: layout.gridColumns,
           containerType: layout.containerType,
+          platformLayoutType: layout.platformLayoutType,
           onChannelSelect,
           onChannelFocus,
         };
@@ -68,11 +70,7 @@ export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio
           return <BouquetGridVertical key={key} {...layoutProps} />;
         }
 
-        if (layout.containerType === 'horizontal_multi_row') {
-          return <BouquetGridHorizontal key={key} {...layoutProps} />;
-        }
-
-        return <BouquetRowCarousel key={key} {...layoutProps} />;
+        return <BouquetHorizontalGrid key={key} {...layoutProps} />;
       })}
     </div>
   );

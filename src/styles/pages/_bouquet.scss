@@ -291,19 +291,29 @@ $bouquet-items-gap: 2rem;
     @include bouquet-stack-spacing;
   }
 
-  .bouquet-row-carousel,
-  .bouquet-grid-horizontal {
-    overflow-x: visible;
-    overflow-y: hidden;
-  }
-
-  @include embla-horizontal-rail;
-
-  .bouquet-grid-horizontal {
+  /**
+   * Bouquet horizontal unificado (CSS Grid): carrusel, horizontal_grid y logo_with_number wrap.
+   */
+  .bouquet-horizontal-grid {
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: visible;
+    overflow-y: hidden;
+    --bouquet-cell-width: 14em;
+
+    &--logo-with-number {
+      --bouquet-cell-width: 12.5rem;
+    }
+
+    &--logo-large {
+      --bouquet-cell-width: 16em;
+    }
+
+    &--event-large,
+    &--full-width-line {
+      --bouquet-cell-width: 18em;
+    }
 
     .bouquet-heading {
       flex-shrink: 0;
@@ -314,68 +324,122 @@ $bouquet-items-gap: 2rem;
       padding: 0 0.25rem;
     }
 
-    .bouquet-grid-horizontal-rows {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-
-      @include bouquet-stack-spacing;
-    }
-
-    .horizontal-slide--grid-row {
-      margin: 0;
+    .bouquet-horizontal-grid-track {
+      display: grid;
+      justify-content: start;
+      align-content: start;
+      justify-items: start;
       width: 100%;
       box-sizing: border-box;
-      padding-inline: 0.5rem 0;
+      padding-inline: 1.25rem 1.75rem;
+      gap: var(--bouquet-items-gap, #{$bouquet-items-gap});
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      > .channel-card {
+        width: var(--bouquet-cell-width);
+        max-width: 100%;
+        min-width: 0;
+      }
+
+      &[data-grid-flow='column'] {
+        grid-template-rows: repeat(var(--bouquet-grid-rows, 1), auto);
+        grid-auto-flow: column;
+        grid-auto-columns: var(--bouquet-cell-width);
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-behavior: smooth;
+
+        &[data-grid-rows='1'] {
+          min-height: 18rem;
+          align-content: center;
+        }
+      }
+
+      &[data-grid-flow='row'] {
+        grid-template-columns: repeat(auto-fill, var(--bouquet-cell-width));
+        grid-auto-flow: row;
+        overflow: visible;
+        padding-top: 0.35rem;
+      }
+
+      &--event-line[data-grid-flow='column'][data-grid-rows='1'] {
+        min-height: 20rem;
+      }
+
+      &--event-and-logo[data-grid-flow='column'][data-grid-rows='1'] {
+        min-height: 17rem;
+        align-content: flex-start;
+      }
 
       &.embla-viewport {
+        display: block;
         overflow: hidden;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-
-        &::-webkit-scrollbar {
-          display: none;
-        }
+        padding-inline: 0;
 
         .embla-container {
           display: flex;
           flex-wrap: nowrap;
-          align-items: center;
-          justify-items: center;
+          align-items: flex-start;
           gap: 0;
-          padding-inline-end: 1.75rem;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
+          padding-inline: 1.25rem 1.75rem;
 
           @include bouquet-embla-slide-spacing;
+        }
 
-          &::-webkit-scrollbar {
-            display: none;
+        .embla-slide {
+          flex: 0 0 auto;
+          min-width: 0;
+        }
+
+        &[data-grid-rows='1'] {
+          min-height: 18rem;
+
+          .embla-container {
+            align-items: center;
+            height: 100%;
+          }
+
+          .embla-slide {
+            display: flex;
+            align-items: center;
           }
         }
-      }
 
-      &[data-native-horizontal-rail] {
-        display: flex;
-        flex-wrap: nowrap;
-        align-items: center;
-        justify-items: center;
-        gap: 0;
-        padding-inline: 0.5rem 1.75rem;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scroll-behavior: smooth;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
+        &.bouquet-horizontal-grid-track--logo-with-number[data-grid-rows='1'] {
+          min-height: auto;
+          height: auto;
 
-        @include bouquet-rail-horizontal-items;
+          .embla-container {
+            align-items: flex-start;
+            height: auto;
+          }
+        }
 
-        &::-webkit-scrollbar {
-          display: none;
+        &.bouquet-horizontal-grid-track--event-line[data-grid-rows='1'] {
+          min-height: 20rem;
+        }
+
+        &.bouquet-horizontal-grid-track--event-and-logo[data-grid-rows='1'] {
+          min-height: 17rem;
         }
       }
     }
+
+    .bouquet-horizontal-grid-column {
+      display: flex;
+      flex-direction: column;
+      gap: var(--bouquet-items-gap, #{$bouquet-items-gap});
+      width: var(--bouquet-cell-width);
+      flex-shrink: 0;
+    }
   }
+
+  @include embla-horizontal-rail;
 
   .bouquet-grid-vertical {
     flex: 0 0 auto;
@@ -395,119 +459,11 @@ $bouquet-items-gap: 2rem;
     .bouquet-grid-vertical-content {
       display: grid;
       grid-auto-rows: minmax(10em, auto);
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(var(--bouquet-grid-columns, 1), minmax(0, 1fr));
       gap: var(--bouquet-items-gap, #{$bouquet-items-gap});
       padding: 0 0.25rem;
       justify-items: center;
     }
-  }
-
-  .bouquet-row-carousel {
-    flex: 0 0 auto;
-    display: flex;
-    flex-direction: column;
-
-    .bouquet-heading {
-      flex-shrink: 0;
-      font-size: 1.6rem;
-      font-weight: 600;
-      color: #fff;
-      margin: 0 0 0.35rem;
-      padding: 0 0.25rem;
-    }
-
-    /* Carril base + modificadores por layout (ver bouquetLayoutClasses.js) */
-    .horizontal-slide {
-      margin-left: 0;
-      width: 100%;
-      box-sizing: border-box;
-      padding-inline: 1.25rem 0;
-
-      &.embla-viewport {
-        overflow: hidden;
-        height: 20rem;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-
-        &::-webkit-scrollbar {
-          display: none;
-        }
-
-        .embla-container {
-          display: flex;
-          flex-wrap: nowrap;
-          align-items: center;
-          justify-items: center;
-          height: 100%;
-          gap: 0;
-          padding-inline-end: 1.75rem;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-
-          @include bouquet-embla-slide-spacing;
-
-          &::-webkit-scrollbar {
-            display: none;
-          }
-        }
-
-        .embla-slide {
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-items: center;
-        }
-      }
-
-      &[data-native-horizontal-rail]:not(.horizontal-slide--logo-with-number) {
-        height: 18rem;
-        display: flex;
-        flex-wrap: nowrap;
-        align-items: center;
-        justify-items: center;
-        gap: 0;
-        padding-inline: 1.25rem 1.75rem;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scroll-behavior: smooth;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-
-        @include bouquet-rail-horizontal-items;
-
-        &::-webkit-scrollbar {
-          display: none;
-        }
-      }
-    }
-
-    .horizontal-slide--logo-with-number[data-native-horizontal-rail] {
-      height: auto;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      justify-items: center;
-      justify-content: center;
-      gap: 0;
-      padding-top: 0.35rem;
-      padding-inline: 1.25rem 1.75rem;
-      overflow-x: auto;
-      overflow-y: hidden;
-      scroll-behavior: smooth;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-
-      @include bouquet-rail-wrap-items;
-
-      &::-webkit-scrollbar {
-        display: none;
-      }
-    }
-
-    /* Ejemplos para orientar cada diseño sin tocar el carril base:
-    .horizontal-slide--event-and-logo { align-items: flex-start; height: 17rem; }
-    .horizontal-slide--event-line { height: 20rem; }
-    */
   }
 
   .channel-card {
@@ -1002,8 +958,8 @@ $bouquet-items-gap: 2rem;
 /* TV: scroll nativo (sin Embla) + foco ligero. Espaciado vía márgenes (--bouquet-items-gap), no flex gap. */
 .device-tv .bouquet-page {
   .bouquet-inicio-scroll,
-  .bouquet-row-carousel .embla-viewport,
-  .bouquet-grid-horizontal .horizontal-slide--grid-row.embla-viewport,
+  .bouquet-horizontal-grid-track[data-native-horizontal-rail],
+  .bouquet-horizontal-grid-track.embla-viewport,
   .bouquet-vod-recommended .vod-row-cards.embla-viewport {
     scroll-behavior: auto;
   }
@@ -1031,15 +987,26 @@ $bouquet-items-gap: 2rem;
     }
   }
 
-  .horizontal-slide--logo-with-number[data-native-horizontal-rail] {
-    flex-wrap: wrap;
-    align-content: flex-start;
-    justify-items: center;
-    justify-content: center;
+  .bouquet-horizontal-grid-track {
+    gap: 0;
+
+    > .channel-card {
+      margin-inline-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
+      margin-block-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
+    }
+
+    &[data-grid-flow='column'] {
+      align-content: flex-start;
+      justify-content: start;
+    }
+
+    &[data-grid-flow='row'] {
+      align-content: flex-start;
+      justify-content: start;
+    }
   }
 
-  .bouquet-grid-horizontal .horizontal-slide--grid-row.embla-viewport,
-  .bouquet-row-carousel .horizontal-slide.embla-viewport {
+  .bouquet-horizontal-grid-track.embla-viewport {
     padding-bottom: 0.75rem;
 
     .embla-container {

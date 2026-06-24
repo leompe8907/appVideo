@@ -9,13 +9,18 @@ import { getChannelStableId } from '../../utils/channelId';
 import { proxyImageUrl } from '../../utils/imageProxy';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
 import {
-  getBouquetGridHorizontalClasses,
+  getBouquetHorizontalGridClasses,
   getBouquetGridVerticalClasses,
-  getBouquetRowCarouselClasses,
 } from '../../utils/bouquetLayoutClasses';
-import { buildChannelLogoUrl, getChannelLayoutVariant } from '../../utils/bouquetLayoutConfig';
-import { EmblaHorizontalRail } from '../navigation/EmblaHorizontalRail';
+import {
+  buildChannelLogoUrl,
+  getChannelLayoutVariant,
+  resolveHorizontalGridMode,
+  resolveVerticalGridColumns,
+} from '../../utils/bouquetLayoutConfig';
 import { useChunkedList } from '../../hooks/useChunkedList';
+import { EmblaHorizontalRail } from '../navigation/EmblaHorizontalRail';
+import { groupItemsIntoColumnMajorColumns } from '../../utils/horizontalBouquetGrid';
 
 // --- Helpers EPG para layout event_and_logo ---
 /** Parsea "YYYY-MM-DD HH:mm:ss" a "HH:mm" para mostrar en UI */
@@ -55,21 +60,22 @@ function normalizeColor(color) {
 }
 
 /**
- * Diseño tipo 10foot: fila horizontal de canales por bouquet.
- * Espera un objeto bouquet con:
- * - bouquet.bouquetId
- * - bouquet.name / description
- * - bouquet.items: array de canales { id, name, img, lcn, backgroundColor, ... }
+ * Bouquet horizontal unificado: CSS Grid según customData (horizontal_grid / carrusel).
+ * - flow column + scroll X: multi-fila (rows > 1) o carrusel nowrap
+ * - flow row: logo_with_number con wrap alineado a la izquierda
  */
-export function BouquetRowCarousel({
+export function BouquetHorizontalGrid({
   bouquet,
   onChannelSelect,
   onChannelFocus,
   layoutType,
   logoIndex = '1',
+  gridRows = 1,
   containerType = 'horizontal_carousel',
+  platformLayoutType = null,
 }) {
   const { t } = useTranslation();
+  const { isPC } = useDevice();
   const title =
     bouquet?.name ??
     bouquet?.title ??
@@ -81,31 +87,76 @@ export function BouquetRowCarousel({
   const items = useChunkedList(rawItems);
   if (rawItems.length === 0) return null;
 
-  const { carousel: carouselClass, track: trackClass } = getBouquetRowCarouselClasses(layoutType);
+  const gridMode = resolveHorizontalGridMode(
+    containerType,
+    layoutType,
+    gridRows,
+    platformLayoutType
+  );
+  const { root: rootClass, track: trackClass } = getBouquetHorizontalGridClasses(layoutType);
+  const trackStyle = { '--bouquet-grid-rows': gridMode.rows };
+  const useEmbla = isPC && gridMode.scrollX;
+
+  const renderChannelCard = (channel, index) => (
+    <ChannelCard
+      key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
+      channel={channel}
+      layoutType={layoutType}
+      logoIndex={logoIndex}
+      onSelect={() => onChannelSelect?.(channel, bouquet)}
+      onFocus={() => onChannelFocus?.(channel, bouquet)}
+    />
+  );
+
+  const trackDataProps = {
+    'data-grid-flow': gridMode.flow,
+    'data-grid-rows': gridMode.rows,
+    style: trackStyle,
+    ...(gridMode.scrollX && !useEmbla ? { 'data-native-horizontal-rail': true } : {}),
+  };
+
+  const renderTrackContent = () => {
+    if (useEmbla && gridMode.rows > 1) {
+      const columns = groupItemsIntoColumnMajorColumns(items, gridMode.rows);
+      return columns.map((column, colIndex) => (
+        <div key={`col-${colIndex}`} className="bouquet-horizontal-grid-column">
+          {column.map(({ item, index }) => renderChannelCard(item, index))}
+        </div>
+      ));
+    }
+
+    return items.map((channel, index) => renderChannelCard(channel, index));
+  };
 
   return (
     <div
-      className={carouselClass}
+      className={rootClass}
       data-bouquet-id={bouquet.bouquetId ?? bouquet.id ?? ''}
       data-layout={layoutType ?? ''}
       data-container-type={containerType}
+      data-grid-rows={gridMode.rows}
+      data-grid-flow={gridMode.flow}
+      data-platform-layout-type={platformLayoutType ?? ''}
     >
       <h4 className="bouquet-heading">{title}</h4>
-      <EmblaHorizontalRail className={trackClass}>
-        {items.map((channel, index) => (
-          <ChannelCard
-            key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
-            channel={channel}
-            layoutType={layoutType}
-            logoIndex={logoIndex}
-            onSelect={() => onChannelSelect?.(channel, bouquet)}
-            onFocus={() => onChannelFocus?.(channel, bouquet)}
-          />
-        ))}
-      </EmblaHorizontalRail>
+      {useEmbla ? (
+        <EmblaHorizontalRail className={trackClass} {...trackDataProps}>
+          {renderTrackContent()}
+        </EmblaHorizontalRail>
+      ) : (
+        <div className={trackClass} {...trackDataProps}>
+          {renderTrackContent()}
+        </div>
+      )}
     </div>
   );
 }
+
+/** @deprecated Alias de BouquetHorizontalGrid */
+export const BouquetRowCarousel = BouquetHorizontalGrid;
+
+/** @deprecated Alias de BouquetHorizontalGrid */
+export const BouquetGridHorizontal = BouquetHorizontalGrid;
 
 /**
  * Tarjeta de canal. Su diseño concreto depende de la variante:
@@ -395,70 +446,6 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
     </div>
   );
 }
-
-/**
- * Layout de tipo grid horizontal: 3 filas de canales que se desplazan en horizontal
- * de izquierda a derecha para un mismo bouquet.
- */
-export function BouquetGridHorizontal({
-  bouquet,
-  onChannelSelect,
-  onChannelFocus,
-  layoutType,
-  logoIndex = '1',
-  gridRows = 3,
-  containerType = 'horizontal_multi_row',
-}) {
-  const { t } = useTranslation();
-  const title =
-    bouquet?.name ??
-    bouquet?.title ??
-    bouquet?.Name ??
-    bouquet?.Title ??
-    t('bouquet.unknown');
-
-  const rawItems = Array.isArray(bouquet?.items) ? bouquet.items : [];
-  const items = useChunkedList(rawItems);
-  if (rawItems.length === 0) return null;
-
-  const rowCount = Math.max(1, Math.min(Number(gridRows) || 3, 6));
-  const rows = Array.from({ length: rowCount }, () => []);
-  items.forEach((channel, index) => {
-    const rowIndex = index % rowCount;
-    rows[rowIndex].push({ channel, index });
-  });
-
-  const { root: gridClass, track: trackClass } = getBouquetGridHorizontalClasses(layoutType);
-
-  return (
-    <div
-      className={gridClass}
-      data-bouquet-id={bouquet.bouquetId ?? bouquet.id ?? ''}
-      data-layout={layoutType ?? ''}
-      data-container-type={containerType}
-      data-grid-rows={rowCount}
-    >
-      <h4 className="bouquet-heading">{title}</h4>
-      <div className="bouquet-grid-horizontal-rows">
-        {rows.map((row, rowIndex) => (
-          <EmblaHorizontalRail key={`row-${rowIndex}`} className={trackClass}>
-            {row.map(({ channel, index }) => (
-              <ChannelCard
-                key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
-                channel={channel}
-                layoutType={layoutType}
-                logoIndex={logoIndex}
-                onSelect={() => onChannelSelect?.(channel, bouquet)}
-                onFocus={() => onChannelFocus?.(channel, bouquet)}
-              />
-            ))}
-          </EmblaHorizontalRail>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /**
  * Layout de tipo grid vertical: N columnas de canales que se desplazan
  * de arriba hacia abajo.
@@ -469,8 +456,9 @@ export function BouquetGridVertical({
   onChannelFocus,
   layoutType,
   logoIndex = '1',
-  gridColumns = null,
+  gridColumns = 1,
   containerType = 'vertical_grid',
+  platformLayoutType = null,
 }) {
   const { t } = useTranslation();
   const title =
@@ -485,10 +473,11 @@ export function BouquetGridVertical({
   if (rawItems.length === 0) return null;
 
   const { root: gridClass, track: trackClass } = getBouquetGridVerticalClasses(layoutType);
-  const trackStyle =
-    gridColumns != null && Number(gridColumns) > 0
-      ? { gridTemplateColumns: `repeat(${Number(gridColumns)}, minmax(0, 1fr))` }
-      : undefined;
+  const columnCount = resolveVerticalGridColumns(gridColumns);
+  const trackStyle = {
+    '--bouquet-grid-columns': columnCount,
+    gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+  };
 
   return (
     <div
@@ -496,9 +485,11 @@ export function BouquetGridVertical({
       data-bouquet-id={bouquet.bouquetId ?? bouquet.id ?? ''}
       data-layout={layoutType ?? ''}
       data-container-type={containerType}
+      data-grid-columns={columnCount}
+      data-platform-layout-type={platformLayoutType ?? ''}
     >
       <h4 className="bouquet-heading">{title}</h4>
-      <div className={trackClass} style={trackStyle}>
+      <div className={trackClass} style={trackStyle} data-grid-columns={columnCount}>
         {items.map((channel, index) => (
           <ChannelCard
             key={channel.id ?? `${index}-${channel.lcn ?? ''}`}

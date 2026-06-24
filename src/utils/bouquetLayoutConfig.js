@@ -1,20 +1,119 @@
 /**
- * Parseo y resolución de layout de bouquet (customData v2: layouts.tv en PC y TV + legacy).
+ * Parseo y resolución de layout de bouquet (customData v2: layouts por dispositivo + legacy).
  */
 
 export const DEFAULT_CARD_DESIGN = 'service_layout_logo_normal';
 
 /** @typedef {'horizontal_carousel' | 'horizontal_multi_row' | 'vertical_grid'} BouquetContainerType */
 
+/** @typedef {'column' | 'row'} HorizontalGridFlow */
+
+/**
+ * @typedef {object} HorizontalGridMode
+ * @property {HorizontalGridFlow} flow
+ * @property {number} rows
+ * @property {boolean} scrollX
+ */
+
 /**
  * @typedef {object} BouquetLayoutResolved
  * @property {BouquetContainerType} containerType
  * @property {string} cardDesign
- * @property {string} layoutType - alias de cardDesign (compat)
+ * @property {string} layoutType
  * @property {number} gridRows
- * @property {number | null} gridColumns
+ * @property {number} gridColumns
  * @property {string} logoIndex
+ * @property {string | null} platformLayoutType
  */
+
+/** Alias de card_design → nombre canónico service_layout_* */
+const CARD_DESIGN_CANONICAL = {
+  service_layout_logo_normal: 'service_layout_logo_normal',
+  logo_normal: 'service_layout_logo_normal',
+  logo: 'service_layout_logo_normal',
+
+  service_layout_logo_with_number: 'service_layout_logo_with_number',
+  logo_with_number: 'service_layout_logo_with_number',
+  'logo+lcn': 'service_layout_logo_with_number',
+
+  service_layout_logo_large: 'service_layout_logo_large',
+  logo_large: 'service_layout_logo_large',
+  logo_grande: 'service_layout_logo_large',
+  service_layout_logo_grande: 'service_layout_logo_large',
+
+  service_layout_event_normal: 'service_layout_event_normal',
+  event_normal: 'service_layout_event_normal',
+  event: 'service_layout_event_normal',
+
+  service_layout_event_large: 'service_layout_event_large',
+  event_large: 'service_layout_event_large',
+
+  service_layout_event_and_logo: 'service_layout_event_and_logo',
+  event_and_logo: 'service_layout_event_and_logo',
+  'event+logo': 'service_layout_event_and_logo',
+
+  service_layout_event_and_logo_overlay: 'service_layout_event_and_logo_overlay',
+  event_and_logo_overlay: 'service_layout_event_and_logo_overlay',
+
+  service_layout_event_with_logo_top_right: 'service_layout_event_and_logo_overlay',
+  event_with_logo_top_right: 'service_layout_event_and_logo_overlay',
+
+  service_layout_event_with_logo_top_left: 'service_layout_event_and_logo_overlay',
+  event_with_logo_top_left: 'service_layout_event_and_logo_overlay',
+
+  service_layout_event_with_logo_bottom_right: 'service_layout_event_and_logo_overlay',
+  event_with_logo_bottom_right: 'service_layout_event_and_logo_overlay',
+
+  service_layout_event_with_logo_bottom_left: 'service_layout_event_and_logo_overlay',
+  event_with_logo_bottom_left: 'service_layout_event_and_logo_overlay',
+
+  service_layout_event_line: 'service_layout_event_line',
+  event_line: 'service_layout_event_line',
+  eventline: 'service_layout_event_line',
+
+  service_layout_full_width_line: 'service_layout_full_width_line',
+  full_width_line: 'service_layout_full_width_line',
+
+  service_layout_detailed: 'service_layout_detailed',
+  detailed: 'service_layout_detailed',
+
+  service_layout_channel_full_info: 'service_layout_channel_full_info',
+  channel_full_info: 'service_layout_channel_full_info',
+
+  service_layout_grid_horizontal: 'service_layout_grid_horizontal',
+  grid_horizontal: 'service_layout_grid_horizontal',
+  'grid-h': 'service_layout_grid_horizontal',
+  grid_h: 'service_layout_grid_horizontal',
+
+  service_layout_grid_vertical: 'service_layout_grid_vertical',
+  grid_vertical: 'service_layout_grid_vertical',
+  'grid-v': 'service_layout_grid_vertical',
+  grid_v: 'service_layout_grid_vertical',
+};
+
+const VERTICAL_GRID_TYPES = new Set([
+  'vertical_grid',
+  'vertical-grid',
+  'service_layout_grid_vertical',
+  'grid_vertical',
+  'grid-v',
+  'grid_v',
+]);
+
+const HORIZONTAL_GRID_TYPES = new Set([
+  'horizontal_grid',
+  'horizontal-grid',
+  'service_layout_grid_horizontal',
+  'grid_horizontal',
+  'grid-h',
+  'grid_h',
+]);
+
+const HORIZONTAL_CAROUSEL_TYPES = new Set([
+  'horizontal_carousel',
+  'carousel',
+  'row_carousel',
+]);
 
 /**
  * @param {*} customData
@@ -49,53 +148,61 @@ export function normalizeCardDesign(raw) {
   if (!raw) return DEFAULT_CARD_DESIGN;
   const value = String(raw).toLowerCase().trim();
 
-  if (value === 'service_layout_logo_normal' || value === 'logo_normal' || value === 'logo') {
-    return 'service_layout_logo_normal';
+  if (CARD_DESIGN_CANONICAL[value]) {
+    return CARD_DESIGN_CANONICAL[value];
   }
-  if (
-    value === 'service_layout_logo_with_number' ||
-    value === 'logo_with_number' ||
-    value === 'logo+lcn'
-  ) {
-    return 'service_layout_logo_with_number';
-  }
-  if (value === 'service_layout_event_normal' || value === 'event_normal' || value === 'event') {
-    return 'service_layout_event_normal';
-  }
-  if (
-    value === 'service_layout_event_and_logo' ||
-    value === 'event_and_logo' ||
-    value === 'event+logo'
-  ) {
-    return 'service_layout_event_and_logo';
-  }
-  if (
-    value === 'service_layout_event_and_logo_overlay' ||
-    value === 'event_and_logo_overlay'
-  ) {
-    return 'service_layout_event_and_logo_overlay';
-  }
-  if (value === 'service_layout_event_line' || value === 'event_line' || value === 'eventline') {
-    return 'service_layout_event_line';
-  }
-  if (
-    value === 'service_layout_grid_horizontal' ||
-    value === 'grid_horizontal' ||
-    value === 'grid-h' ||
-    value === 'grid_h'
-  ) {
-    return 'service_layout_grid_horizontal';
-  }
-  if (
-    value === 'service_layout_grid_vertical' ||
-    value === 'grid_vertical' ||
-    value === 'grid-v' ||
-    value === 'grid_v'
-  ) {
-    return 'service_layout_grid_vertical';
+
+  if (value.startsWith('service_layout_')) {
+    return value;
   }
 
   return DEFAULT_CARD_DESIGN;
+}
+
+/**
+ * @param {{ isTV?: boolean; isPC?: boolean }} [device]
+ * @returns {'tv' | 'desktop' | 'mobile'}
+ */
+export function getDeviceLayoutKey(device = {}) {
+  if (device.isTV) return 'tv';
+  if (device.isPC) return 'desktop';
+  return 'mobile';
+}
+
+/**
+ * @param {string | null | undefined} type
+ * @returns {boolean}
+ */
+export function isVerticalGridPlatformType(type) {
+  return VERTICAL_GRID_TYPES.has(String(type || '').toLowerCase().trim());
+}
+
+/**
+ * @param {string | null | undefined} type
+ * @returns {boolean}
+ */
+export function isHorizontalGridPlatformType(type) {
+  return HORIZONTAL_GRID_TYPES.has(String(type || '').toLowerCase().trim());
+}
+
+/**
+ * @param {number | null | undefined} columns
+ * @returns {number}
+ */
+export function resolveVerticalGridColumns(columns) {
+  const n = Number(columns);
+  if (Number.isFinite(n) && n > 0) return Math.floor(n);
+  return 1;
+}
+
+/**
+ * @param {number | null | undefined} rows
+ * @returns {number}
+ */
+export function resolveHorizontalGridRows(rows) {
+  const n = Number(rows);
+  if (Number.isFinite(n) && n > 0) return Math.min(Math.floor(n), 6);
+  return 1;
 }
 
 /**
@@ -150,10 +257,6 @@ function normalizePlatformEntry(entry) {
   };
 }
 
-/**
- * @param {Record<string, unknown>} layouts
- * @returns {Record<string, ReturnType<typeof normalizePlatformEntry>>}
- */
 function normalizePlatformLayouts(layouts) {
   const out = {};
   if (!layouts || typeof layouts !== 'object') return out;
@@ -167,11 +270,6 @@ function normalizePlatformLayouts(layouts) {
   return out;
 }
 
-/**
- * Extrae layout legacy (un solo valor) del objeto customData plano.
- * @param {object | null} obj
- * @returns {string}
- */
 function extractLegacyLayoutFromObject(obj) {
   if (!obj) return DEFAULT_CARD_DESIGN;
 
@@ -189,7 +287,6 @@ function extractLegacyLayoutFromObject(obj) {
 
 /**
  * @param {*} customData
- * @returns {{ format: 'platform' | 'legacy'; layouts: Record<string, ReturnType<typeof normalizePlatformEntry>> | null; legacyCardDesign: string }}
  */
 export function parseBouquetCustomData(customData) {
   const obj = parseCustomDataToObject(customData);
@@ -223,52 +320,34 @@ export function parseBouquetCustomData(customData) {
  */
 function platformEntryToResolved(entry) {
   const type = entry.type;
+  const rows = resolveHorizontalGridRows(entry.rows);
   let containerType = 'horizontal_carousel';
-  let gridRows = 1;
+  let gridRows = rows;
 
-  if (
-    type === 'vertical_grid' ||
-    type === 'vertical-grid' ||
-    type === 'service_layout_grid_vertical' ||
-    type === 'grid_vertical' ||
-    type === 'grid-v' ||
-    type === 'grid_v'
-  ) {
+  if (isVerticalGridPlatformType(type)) {
     containerType = 'vertical_grid';
-    gridRows = entry.rows > 0 ? entry.rows : 1;
-  } else if (
-    type === 'service_layout_grid_horizontal' ||
-    type === 'grid_horizontal' ||
-    type === 'grid-h' ||
-    type === 'grid_h'
-  ) {
-    containerType = 'horizontal_multi_row';
-    gridRows = entry.rows > 1 ? entry.rows : 3;
-  } else if (type === 'horizontal_grid' || type === 'horizontal-grid') {
-    if (entry.rows > 1) {
+    gridRows = rows;
+  } else if (isHorizontalGridPlatformType(type)) {
+    if (rows > 1) {
       containerType = 'horizontal_multi_row';
-      gridRows = entry.rows;
+      gridRows = rows;
     } else {
       containerType = 'horizontal_carousel';
       gridRows = 1;
     }
-  } else if (
-    type === 'horizontal_carousel' ||
-    type === 'carousel' ||
-    type === 'row_carousel'
-  ) {
+  } else if (HORIZONTAL_CAROUSEL_TYPES.has(type)) {
     containerType = 'horizontal_carousel';
     gridRows = 1;
   } else {
     const card = entry.cardDesign;
     if (card === 'service_layout_grid_horizontal') {
-      containerType = 'horizontal_multi_row';
-      gridRows = entry.rows > 1 ? entry.rows : 3;
+      containerType = rows > 1 ? 'horizontal_multi_row' : 'horizontal_carousel';
+      gridRows = rows;
     } else if (card === 'service_layout_grid_vertical') {
       containerType = 'vertical_grid';
-    } else if (entry.rows > 1) {
+    } else if (rows > 1) {
       containerType = 'horizontal_multi_row';
-      gridRows = entry.rows;
+      gridRows = rows;
     }
   }
 
@@ -278,13 +357,17 @@ function platformEntryToResolved(entry) {
       ? DEFAULT_CARD_DESIGN
       : entry.cardDesign;
 
+  const gridColumns =
+    containerType === 'vertical_grid' ? resolveVerticalGridColumns(entry.columns) : null;
+
   return {
     containerType,
     cardDesign,
     layoutType: cardDesign,
     gridRows,
-    gridColumns: entry.columns,
+    gridColumns,
     logoIndex: entry.logoIndex,
+    platformLayoutType: type,
   };
 }
 
@@ -301,8 +384,9 @@ export function legacyLayoutTypeToResolved(legacyType) {
       cardDesign: DEFAULT_CARD_DESIGN,
       layoutType: DEFAULT_CARD_DESIGN,
       gridRows: 3,
-      gridColumns: null,
+      gridColumns: 1,
       logoIndex: '1',
+      platformLayoutType: 'service_layout_grid_horizontal',
     };
   }
 
@@ -312,8 +396,9 @@ export function legacyLayoutTypeToResolved(legacyType) {
       cardDesign: DEFAULT_CARD_DESIGN,
       layoutType: DEFAULT_CARD_DESIGN,
       gridRows: 1,
-      gridColumns: null,
+      gridColumns: 1,
       logoIndex: '1',
+      platformLayoutType: 'service_layout_grid_vertical',
     };
   }
 
@@ -322,30 +407,47 @@ export function legacyLayoutTypeToResolved(legacyType) {
     cardDesign: normalized,
     layoutType: normalized,
     gridRows: 1,
-    gridColumns: null,
+    gridColumns: 1,
     logoIndex: '1',
+    platformLayoutType: null,
   };
 }
 
 /**
- * Entrada de layout de plataforma: siempre `tv` (PC y TV usan el mismo bloque).
  * @param {Record<string, unknown> | null | undefined} layouts
- * @returns {ReturnType<typeof normalizePlatformEntry> | null}
+ * @param {'tv' | 'desktop' | 'mobile'} [deviceKey]
  */
-export function pickPlatformLayoutEntry(layouts) {
+export function pickPlatformLayoutEntry(layouts, deviceKey = 'tv') {
   if (!layouts || typeof layouts !== 'object') return null;
-  const entry = layouts.tv ?? layouts.mobile ?? layouts.tablet ?? layouts.desktop;
+
+  const key = String(deviceKey || 'tv').toLowerCase();
+  let entry = null;
+
+  if (key === 'tv') {
+    entry = layouts.tv;
+  } else if (key === 'desktop') {
+    entry = layouts.desktop ?? layouts.tv ?? layouts.mobile ?? layouts.tablet;
+  } else if (key === 'mobile') {
+    entry = layouts.mobile ?? layouts.tablet ?? layouts.desktop ?? layouts.tv;
+  }
+
+  if (!entry || typeof entry !== 'object') {
+    entry = layouts.tv ?? layouts.desktop ?? layouts.mobile ?? layouts.tablet;
+  }
+
   if (!entry || typeof entry !== 'object') return null;
   return normalizePlatformEntry(entry);
 }
 
 /**
- * Resuelve layout activo del bouquet (customData v2: siempre `layouts.tv` en PC y TV).
  * @param {{ bouquetLayouts?: Record<string, unknown> | null; layoutType?: string; customData?: * }} bouquet
+ * @param {{ isTV?: boolean; isPC?: boolean }} [device]
  * @returns {BouquetLayoutResolved}
  */
-export function resolveBouquetLayoutForDevice(bouquet) {
-  const entry = pickPlatformLayoutEntry(bouquet?.bouquetLayouts);
+export function resolveBouquetLayoutForDevice(bouquet, device = {}) {
+  const deviceKey = getDeviceLayoutKey(device);
+
+  const entry = pickPlatformLayoutEntry(bouquet?.bouquetLayouts, deviceKey);
   if (entry) {
     return platformEntryToResolved(entry);
   }
@@ -353,7 +455,7 @@ export function resolveBouquetLayoutForDevice(bouquet) {
   if (bouquet?.customData) {
     const parsed = parseBouquetCustomData(bouquet.customData);
     if (parsed.format === 'platform' && parsed.layouts) {
-      const fromCustom = pickPlatformLayoutEntry(parsed.layouts);
+      const fromCustom = pickPlatformLayoutEntry(parsed.layouts, deviceKey);
       if (fromCustom) {
         return platformEntryToResolved(fromCustom);
       }
@@ -364,14 +466,7 @@ export function resolveBouquetLayoutForDevice(bouquet) {
 }
 
 /**
- * URL de thumb del logo según logo2id y logo_index (carpeta v, v2, …).
- * @param {*} channel
- * @param {string} [baseUrl]
- * @param {string} [logoIndex]
- * @returns {string | null}
- */
-/**
- * Variante interna de tarjeta para CSS (`channel-card--*`).
+ * Variante interna de tarjeta para CSS y render (`channel-card--*`).
  * @param {string | null | undefined} cardDesign
  * @returns {string}
  */
@@ -379,7 +474,15 @@ export function getChannelLayoutVariant(cardDesign) {
   if (!cardDesign) return 'logo';
   const value = String(cardDesign).toLowerCase();
 
-  if (value === 'service_layout_logo_normal' || value === 'logo_normal' || value === 'logo') {
+  if (
+    value === 'service_layout_logo_normal' ||
+    value === 'logo_normal' ||
+    value === 'logo' ||
+    value === 'service_layout_logo_large' ||
+    value === 'logo_large' ||
+    value === 'logo_grande' ||
+    value === 'service_layout_logo_grande'
+  ) {
     return 'logo';
   }
   if (
@@ -389,7 +492,23 @@ export function getChannelLayoutVariant(cardDesign) {
   ) {
     return 'logo_with_number';
   }
-  if (value === 'service_layout_event_normal' || value === 'event_normal' || value === 'event') {
+  if (
+    value === 'service_layout_channel_full_info' ||
+    value === 'channel_full_info'
+  ) {
+    return 'logo_with_number';
+  }
+  if (
+    value === 'service_layout_detailed' ||
+    value === 'detailed'
+  ) {
+    return 'event_and_logo';
+  }
+  if (
+    value === 'service_layout_event_normal' ||
+    value === 'event_normal' ||
+    value === 'event'
+  ) {
     return 'event';
   }
   if (
@@ -401,17 +520,83 @@ export function getChannelLayoutVariant(cardDesign) {
   }
   if (
     value === 'service_layout_event_and_logo_overlay' ||
-    value === 'event_and_logo_overlay'
+    value === 'event_and_logo_overlay' ||
+    value === 'service_layout_event_with_logo_top_right' ||
+    value === 'event_with_logo_top_right' ||
+    value === 'service_layout_event_with_logo_top_left' ||
+    value === 'event_with_logo_top_left' ||
+    value === 'service_layout_event_with_logo_bottom_right' ||
+    value === 'event_with_logo_bottom_right' ||
+    value === 'service_layout_event_with_logo_bottom_left' ||
+    value === 'event_with_logo_bottom_left'
   ) {
     return 'event_and_logo_overlay';
   }
-  if (value === 'service_layout_event_line' || value === 'event_line' || value === 'eventline') {
+  if (
+    value === 'service_layout_event_line' ||
+    value === 'event_line' ||
+    value === 'eventline' ||
+    value === 'service_layout_event_large' ||
+    value === 'event_large' ||
+    value === 'service_layout_full_width_line' ||
+    value === 'full_width_line'
+  ) {
     return 'event_line';
   }
 
   return 'logo';
 }
 
+/**
+ * Modo de render horizontal según customData (type, rows, card_design legacy).
+ * @param {BouquetContainerType | string} containerType
+ * @param {string | null | undefined} cardDesign
+ * @param {number | null | undefined} gridRows
+ * @param {string | null | undefined} [platformLayoutType]
+ * @returns {HorizontalGridMode}
+ */
+export function resolveHorizontalGridMode(
+  containerType,
+  cardDesign,
+  gridRows,
+  platformLayoutType = null
+) {
+  const rows = resolveHorizontalGridRows(gridRows);
+  const rawType = String(platformLayoutType || '').toLowerCase().trim();
+
+  if (containerType === 'horizontal_multi_row' && rows > 1) {
+    return { flow: 'column', rows, scrollX: true };
+  }
+
+  if (isHorizontalGridPlatformType(rawType)) {
+    return { flow: 'column', rows: rows > 1 ? rows : 1, scrollX: true };
+  }
+
+  if (HORIZONTAL_CAROUSEL_TYPES.has(rawType)) {
+    return { flow: 'column', rows: 1, scrollX: true };
+  }
+
+  if (
+    platformLayoutType == null &&
+    containerType === 'horizontal_carousel' &&
+    getChannelLayoutVariant(cardDesign) === 'logo_with_number'
+  ) {
+    return { flow: 'row', rows: 1, scrollX: false };
+  }
+
+  if (containerType === 'horizontal_carousel') {
+    return { flow: 'column', rows: 1, scrollX: true };
+  }
+
+  return { flow: 'column', rows: 1, scrollX: true };
+}
+
+/**
+ * @param {*} channel
+ * @param {string} [baseUrl]
+ * @param {string} [logoIndex]
+ * @returns {string | null}
+ */
 export function buildChannelLogoUrl(channel, baseUrl, logoIndex = '1') {
   if (!channel) return null;
 

@@ -1,6 +1,5 @@
 /**
- * Slugs CSS por tipo de layout de bouquet (carrusel / grid).
- * Se usan como modificadores: `.horizontal-slide--{slug}`, `.bouquet-row-carousel--{slug}`.
+ * Slugs CSS por card_design de bouquet.
  */
 const LAYOUT_SLUG_BY_TYPE = {
   service_layout_logo_normal: 'logo-normal',
@@ -11,20 +10,49 @@ const LAYOUT_SLUG_BY_TYPE = {
   logo_with_number: 'logo-with-number',
   'logo+lcn': 'logo-with-number',
 
+  service_layout_logo_large: 'logo-large',
+  logo_large: 'logo-large',
+  logo_grande: 'logo-large',
+  service_layout_logo_grande: 'logo-large',
+
   service_layout_event_normal: 'event-normal',
   event_normal: 'event-normal',
   event: 'event-normal',
+
+  service_layout_event_large: 'event-large',
+  event_large: 'event-large',
 
   service_layout_event_and_logo: 'event-and-logo',
   event_and_logo: 'event-and-logo',
   'event+logo': 'event-and-logo',
 
+  service_layout_detailed: 'detailed',
+  detailed: 'detailed',
+
+  service_layout_channel_full_info: 'channel-full-info',
+  channel_full_info: 'channel-full-info',
+
   service_layout_event_and_logo_overlay: 'event-and-logo-overlay',
   event_and_logo_overlay: 'event-and-logo-overlay',
+
+  service_layout_event_with_logo_top_right: 'event-logo-top-right',
+  event_with_logo_top_right: 'event-logo-top-right',
+
+  service_layout_event_with_logo_top_left: 'event-logo-top-left',
+  event_with_logo_top_left: 'event-logo-top-left',
+
+  service_layout_event_with_logo_bottom_right: 'event-logo-bottom-right',
+  event_with_logo_bottom_right: 'event-logo-bottom-right',
+
+  service_layout_event_with_logo_bottom_left: 'event-logo-bottom-left',
+  event_with_logo_bottom_left: 'event-logo-bottom-left',
 
   service_layout_event_line: 'event-line',
   event_line: 'event-line',
   eventline: 'event-line',
+
+  service_layout_full_width_line: 'full-width-line',
+  full_width_line: 'full-width-line',
 
   service_layout_grid_horizontal: 'grid-horizontal',
   grid_horizontal: 'grid-horizontal',
@@ -45,43 +73,38 @@ export function getBouquetLayoutSlug(layoutType) {
   const key = String(layoutType || '')
     .toLowerCase()
     .trim();
-  return LAYOUT_SLUG_BY_TYPE[key] || 'logo-normal';
+
+  if (LAYOUT_SLUG_BY_TYPE[key]) {
+    return LAYOUT_SLUG_BY_TYPE[key];
+  }
+
+  if (key.startsWith('service_layout_')) {
+    return key.replace(/^service_layout_/, '').replace(/_/g, '-');
+  }
+
+  return 'logo-normal';
 }
 
-/**
- * Clases del carrusel en fila (BouquetRowCarousel).
- * @param {string | null | undefined} layoutType
- * @returns {{ carousel: string; track: string; slug: string }}
- */
+export function getBouquetHorizontalGridClasses(layoutType) {
+  const slug = getBouquetLayoutSlug(layoutType);
+  return {
+    slug,
+    root: `bouquet-horizontal-grid bouquet-horizontal-grid--${slug}`,
+    track: `bouquet-horizontal-grid-track bouquet-horizontal-grid-track--${slug}`,
+  };
+}
+
+/** @deprecated */
 export function getBouquetRowCarouselClasses(layoutType) {
-  const slug = getBouquetLayoutSlug(layoutType);
-  return {
-    slug,
-    carousel: `bouquet-row-carousel bouquet-row-carousel--${slug}`,
-    track: `horizontal-slide horizontal-slide--${slug}`,
-  };
+  const { slug, root, track } = getBouquetHorizontalGridClasses(layoutType);
+  return { slug, carousel: root, track };
 }
 
-/**
- * Clases del grid horizontal (3 filas con scroll horizontal cada una).
- * @param {string | null | undefined} layoutType
- * @returns {{ root: string; track: string; slug: string }}
- */
+/** @deprecated */
 export function getBouquetGridHorizontalClasses(layoutType) {
-  const slug = getBouquetLayoutSlug(layoutType);
-  return {
-    slug,
-    root: `bouquet-grid-horizontal bouquet-grid-horizontal--${slug}`,
-    track: `horizontal-slide horizontal-slide--grid-row horizontal-slide--${slug}`,
-  };
+  return getBouquetHorizontalGridClasses(layoutType);
 }
 
-/**
- * Clases del grid vertical (columnas fijas).
- * Mantiene `.bouquet-grid-vertical-content` para navegación TV.
- * @param {string | null | undefined} layoutType
- * @returns {{ root: string; track: string; slug: string }}
- */
 export function getBouquetGridVerticalClasses(layoutType) {
   const slug = getBouquetLayoutSlug(layoutType);
   return {

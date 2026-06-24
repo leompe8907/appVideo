@@ -10,7 +10,8 @@
   .embla-rail-wrap .embla-viewport,
   .embla-rail-wrap .embla-container,
   .vod-row-cards.embla-viewport,
-  .catchup-rail-cards.embla-viewport {
+  .catchup-rail-cards.embla-viewport,
+  .bouquet-horizontal-grid-track.embla-viewport {
     @include scrollbar-hidden;
   }
 

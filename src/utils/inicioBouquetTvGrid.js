@@ -1,3 +1,5 @@
+import { buildColumnFlowGridRows } from './horizontalBouquetGrid';
+
 /** @type {WeakMap<HTMLElement, { rows: HTMLElement[][], signature: string }>} */
 const wallRowsCache = new WeakMap();
 
@@ -19,8 +21,7 @@ export function invalidateInicioBouquetWallRowsCache(wall) {
 
 /**
  * Agrupa tarjetas de canal en filas visuales (misma altura en pantalla).
- * Cubre grid vertical, carruseles con flex-wrap (logo+LCN), etc.
- * Carruseles de una sola fila siguen siendo una fila lógica.
+ * Cubre grid vertical, grid row-flow (logo+LCN), etc.
  * @param {HTMLElement[]} cards
  * @returns {HTMLElement[][]}
  */
@@ -77,8 +78,25 @@ export function groupChannelCardsIntoVisualRows(cards) {
 }
 
 /**
+ * Filas lógicas de un track grid horizontal (flow column o row).
+ * @param {HTMLElement} track
+ * @returns {HTMLElement[][]}
+ */
+function buildRowsFromHorizontalGridTrack(track) {
+  const flow = track.getAttribute('data-grid-flow') || 'column';
+  const rowsN = parseInt(track.getAttribute('data-grid-rows') || '1', 10) || 1;
+  const cards = [...track.querySelectorAll('.channel-card')];
+  if (!cards.length) return [];
+
+  if (flow === 'column') {
+    return buildColumnFlowGridRows(cards, rowsN);
+  }
+
+  return groupChannelCardsIntoVisualRows(cards);
+}
+
+/**
  * Modelo de filas/columnas del muro de bouquets en Inicio (TV).
- * Cada contenedor de tarjetas se parte en filas visuales (wrap, grid, etc.).
  * @param {HTMLElement | null | undefined} wall
  * @returns {HTMLElement[][]}
  */
@@ -93,13 +111,10 @@ export function buildInicioBouquetChannelRows(wall) {
 
   const rows = [];
   try {
-    wall.querySelectorAll('.bouquet-row-carousel .horizontal-slide').forEach((slide) => {
-      const cards = [...slide.querySelectorAll('.channel-card')];
-      if (cards.length) rows.push(...groupChannelCardsIntoVisualRows(cards));
-    });
-    wall.querySelectorAll('.bouquet-grid-horizontal .horizontal-slide').forEach((slide) => {
-      const cards = [...slide.querySelectorAll('.channel-card')];
-      if (cards.length) rows.push(...groupChannelCardsIntoVisualRows(cards));
+    wall.querySelectorAll('.bouquet-horizontal-grid-track').forEach((track) => {
+      if (track instanceof HTMLElement) {
+        rows.push(...buildRowsFromHorizontalGridTrack(track));
+      }
     });
     wall.querySelectorAll('.bouquet-grid-vertical-content').forEach((content) => {
       const cards = [...content.querySelectorAll('.channel-card')];
@@ -127,10 +142,9 @@ export function findChannelCardCellInRows(card, rows) {
 }
 
 /**
- * True si `activeElement` es (o está dentro de) la tarjeta de canal más a la izquierda
- * de **su** fila en `.bouquet-wall` dentro de `scrollRoot` (cualquier bouquet del muro de Inicio).
+ * True si `activeElement` es la tarjeta más a la izquierda de su fila en el muro.
  * @param {HTMLElement} activeElement
- * @param {HTMLElement | null | undefined} scrollRoot — p. ej. `.bouquet-inicio-scroll`
+ * @param {HTMLElement | null | undefined} scrollRoot
  * @returns {boolean}
  */
 export function isLeftmostChannelCardInInicioWall(activeElement, scrollRoot) {
