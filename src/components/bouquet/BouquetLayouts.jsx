@@ -84,18 +84,19 @@ export function BouquetHorizontalGrid({
     t('bouquet.unknown');
 
   const rawItems = Array.isArray(bouquet?.items) ? bouquet.items : [];
-  const items = useChunkedList(rawItems);
   if (rawItems.length === 0) return null;
 
   const gridMode = resolveHorizontalGridMode(
     containerType,
     layoutType,
     gridRows,
-    platformLayoutType
+    platformLayoutType,
+    { isPC }
   );
+  const useEmbla = isPC && gridMode.scrollX;
+  const items = useChunkedList(rawItems, { enabled: !useEmbla });
   const { root: rootClass, track: trackClass } = getBouquetHorizontalGridClasses(layoutType);
   const trackStyle = { '--bouquet-grid-rows': gridMode.rows };
-  const useEmbla = isPC && gridMode.scrollX;
 
   const renderChannelCard = (channel, index) => (
     <ChannelCard
@@ -140,7 +141,7 @@ export function BouquetHorizontalGrid({
     >
       <h4 className="bouquet-heading">{title}</h4>
       {useEmbla ? (
-        <EmblaHorizontalRail className={trackClass} {...trackDataProps}>
+        <EmblaHorizontalRail className="bouquet-horizontal-embla-viewport">
           {renderTrackContent()}
         </EmblaHorizontalRail>
       ) : (

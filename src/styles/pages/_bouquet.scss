@@ -437,6 +437,67 @@ $bouquet-items-gap: 2rem;
       width: var(--bouquet-cell-width);
       flex-shrink: 0;
     }
+
+    /**
+     * PC + Embla: viewport dedicado (sin grid nativo ni data-grid-* que rompen el carrusel).
+     * Misma idea que .vod-row-cards.embla-viewport en el carril VOD de Inicio.
+     */
+    .bouquet-horizontal-embla-viewport {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      min-height: 18rem;
+
+      &.embla-viewport {
+        overflow: hidden;
+        padding-inline: 0;
+        scroll-behavior: auto;
+
+        .embla-container {
+          display: flex;
+          flex-wrap: nowrap;
+          align-items: flex-start;
+          gap: 0;
+          padding-inline: 1.25rem 1.75rem;
+          touch-action: pan-y pinch-zoom;
+
+          @include bouquet-embla-slide-spacing;
+        }
+
+        .embla-slide {
+          flex: 0 0 var(--bouquet-cell-width, 14em);
+          min-width: var(--bouquet-cell-width, 14em);
+          max-width: none;
+          display: flex;
+          align-items: flex-start;
+          height: auto;
+
+          > .channel-card {
+            width: var(--bouquet-cell-width, 14em);
+            max-width: none;
+            min-width: 0;
+            flex-shrink: 0;
+          }
+
+          > .bouquet-horizontal-grid-column {
+            width: var(--bouquet-cell-width, 14em);
+            flex-shrink: 0;
+          }
+        }
+      }
+    }
+
+    &--logo-with-number .bouquet-horizontal-embla-viewport {
+      min-height: auto;
+    }
+
+    &--event-line .bouquet-horizontal-embla-viewport {
+      min-height: 20rem;
+    }
+
+    &--event-and-logo .bouquet-horizontal-embla-viewport {
+      min-height: 17rem;
+    }
   }
 
   @include embla-horizontal-rail;

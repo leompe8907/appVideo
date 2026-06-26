@@ -44,6 +44,33 @@ function EmblaRailWithArrows({ className = '', children, ...rest }) {
     };
   }, [emblaApi, syncArrows]);
 
+  // Recalcular snaps/flechas cuando cambia el contenido o el tamaño del viewport.
+  useEffect(() => {
+    if (!emblaApi) return undefined;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        emblaApi.reInit();
+        syncArrows();
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [emblaApi, slides.length, syncArrows]);
+
+  useEffect(() => {
+    const node = emblaRef.current;
+    if (!node || !emblaApi) return undefined;
+    const ro = new ResizeObserver(() => {
+      emblaApi.reInit();
+      syncArrows();
+    });
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [emblaRef, emblaApi, syncArrows]);
+
   useEffect(() => {
     const hideViewportScrollbar = () => {
       const node = emblaRef.current;

@@ -553,16 +553,19 @@ export function getChannelLayoutVariant(cardDesign) {
  * @param {string | null | undefined} cardDesign
  * @param {number | null | undefined} gridRows
  * @param {string | null | undefined} [platformLayoutType]
+ * @param {{ isPC?: boolean }} [device]
  * @returns {HorizontalGridMode}
  */
 export function resolveHorizontalGridMode(
   containerType,
   cardDesign,
   gridRows,
-  platformLayoutType = null
+  platformLayoutType = null,
+  device = {}
 ) {
   const rows = resolveHorizontalGridRows(gridRows);
   const rawType = String(platformLayoutType || '').toLowerCase().trim();
+  const isPC = Boolean(device.isPC);
 
   if (containerType === 'horizontal_multi_row' && rows > 1) {
     return { flow: 'column', rows, scrollX: true };
@@ -576,7 +579,9 @@ export function resolveHorizontalGridMode(
     return { flow: 'column', rows: 1, scrollX: true };
   }
 
+  // TV: logo+LCN en filas con wrap. PC: mismo carril horizontal con flechas que el resto de bouquets.
   if (
+    !isPC &&
     platformLayoutType == null &&
     containerType === 'horizontal_carousel' &&
     getChannelLayoutVariant(cardDesign) === 'logo_with_number'
