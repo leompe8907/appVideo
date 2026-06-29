@@ -1,6 +1,7 @@
 @use '../variables' as *;
 @use '../mixins' as *;
 
+// Teclado OSD — diseño 10-foot (lectura ~1.5 m en TV)
 .osd-keyboard-container {
   position: fixed;
   inset: 0;
@@ -8,88 +9,107 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(10px);
+  padding: clamp(0.75rem, 2.5vmin, 2rem);
+  background-color: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(14px);
   outline: none;
   font-family: inherit;
   color: #ffffff;
 }
 
 .osd-keyboard-box {
-  width: 900px;
-  background: rgba(20, 20, 20, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 36px 40px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  width: min(96vw, 92vmin);
+  max-height: 94vh;
+  overflow-y: auto;
+  background: linear-gradient(
+    165deg,
+    rgba(32, 34, 42, 0.97) 0%,
+    rgba(18, 19, 24, 0.98) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: clamp(1rem, 2vmin, 1.75rem);
+  padding: clamp(1.5rem, 4.5vmin, 3rem);
+  box-shadow:
+    0 2vmin 6vmin rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
 }
 
 .osd-keyboard-title {
-  font-size: 1.4rem;
-  font-weight: 600;
-  margin-bottom: 20px;
-  color: rgba(255, 255, 255, 0.8);
-  letter-spacing: 0.5px;
+  font-size: clamp(1.15rem, 3.2vmin, 2rem);
+  font-weight: 700;
+  margin-bottom: clamp(1rem, 2.8vmin, 2rem);
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-align: center;
 }
 
 .osd-keyboard-input-preview-wrapper {
   position: relative;
   width: 100%;
-  margin-bottom: 32px;
+  margin-bottom: clamp(1.25rem, 3.5vmin, 2.5rem);
 }
 
 .osd-keyboard-input-preview {
   width: 100%;
-  height: 60px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  padding: 0 20px;
-  font-size: 1.6rem;
+  height: clamp(3.25rem, 7vmin, 5.5rem);
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: clamp(0.6rem, 1.2vmin, 1rem);
+  padding: 0 clamp(1rem, 2.8vmin, 2rem);
+  font-size: clamp(1.25rem, 3.6vmin, 2.25rem);
+  font-weight: 500;
   color: #ffffff;
   outline: none;
   text-align: center;
-  transition: border-color 0.2s ease;
-  letter-spacing: 1px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  letter-spacing: 0.08em;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.35);
 
   &:focus {
     border-color: var(--focus-color, #ffffff);
+    box-shadow:
+      inset 0 2px 8px rgba(0, 0, 0, 0.35),
+      0 0 0 2px rgba(255, 255, 255, 0.12);
   }
 }
 
 .osd-keyboard-clear-preview {
   position: absolute;
-  right: 15px;
+  right: clamp(0.65rem, 2vmin, 1.25rem);
   top: 50%;
   transform: translateY(-50%);
-  font-size: 1.8rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: clamp(1.5rem, 4vmin, 2.5rem);
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.45);
   cursor: pointer;
-  padding: 5px 10px;
+  padding: clamp(0.25rem, 0.8vmin, 0.6rem) clamp(0.5rem, 1.4vmin, 1rem);
   user-select: none;
+  border-radius: 50%;
+  transition: color 0.2s ease, background 0.2s ease;
 
   &:hover {
     color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
   }
 }
 
 .osd-keyboard-lang-selector {
   display: flex;
-  gap: 10px;
-  margin-bottom: 25px;
+  gap: clamp(0.5rem, 1.4vmin, 1rem);
+  margin-bottom: clamp(1rem, 2.8vmin, 2rem);
 }
 
 .osd-keyboard-lang-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  padding: 8px 16px;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: clamp(0.45rem, 0.9vmin, 0.75rem);
+  padding: clamp(0.45rem, 1.2vmin, 0.85rem) clamp(0.9rem, 2.2vmin, 1.5rem);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: clamp(0.95rem, 2.4vmin, 1.35rem);
   font-weight: bold;
   cursor: pointer;
   outline: none;
@@ -100,71 +120,103 @@
     background: var(--focus-color, #3a86ff);
     color: #ffffff;
     border-color: transparent;
-    box-shadow: 0 0 10px var(--focus-color, rgba(58, 134, 255, 0.5));
+    box-shadow: 0 0 1.6vmin var(--focus-color, rgba(58, 134, 255, 0.5));
   }
 }
 
+// Área interior: margen entre el borde del panel y las teclas periféricas
 .osd-keyboard-grid {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: clamp(0.75rem, 2vmin, 1.35rem);
   width: 100%;
+  padding: clamp(1.25rem, 3.5vmin, 2.75rem);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: clamp(0.85rem, 1.6vmin, 1.35rem);
+  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.25);
 }
 
 .osd-keyboard-row {
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: clamp(0.65rem, 1.8vmin, 1.25rem);
   width: 100%;
 
   &--actions {
-    margin-top: 22px;
-    gap: 14px;
+    margin-top: clamp(0.5rem, 1.5vmin, 1.25rem);
+    padding-top: clamp(0.75rem, 2vmin, 1.35rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    gap: clamp(0.65rem, 1.8vmin, 1.25rem);
   }
 }
 
 .osd-keyboard-key {
   flex: 1;
-  height: 56px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  min-width: 0;
+  height: clamp(3.5rem, 7.5vmin, 5.75rem);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.07) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: clamp(0.55rem, 1.1vmin, 0.9rem);
   color: #ffffff;
-  font-size: 1.3rem;
-  font-weight: 500;
+  font-size: clamp(1.35rem, 3.8vmin, 2.4rem);
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   outline: none;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
   user-select: none;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 
   &:focus,
   &--focused {
     background: #ffffff;
-    color: #000000;
+    color: #0d0d0f;
     border-color: transparent;
-    transform: scale(1.05);
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
-    font-weight: bold;
+    transform: scale(1.06);
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.2),
+      0 0 2vmin rgba(255, 255, 255, 0.45);
+    font-weight: 800;
+    text-shadow: none;
   }
 
   &--action {
-    background: rgba(255, 255, 255, 0.15);
-    font-size: 1.1rem;
-    font-weight: 600;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.1) 100%
+    );
+    font-size: clamp(1rem, 2.8vmin, 1.75rem);
+    font-weight: 700;
+    letter-spacing: 0.02em;
 
     &:focus,
     &--focused {
       background: var(--focus-color, #3a86ff);
       color: #ffffff;
-      box-shadow: 0 0 15px var(--focus-color, rgba(58, 134, 255, 0.6));
+      box-shadow:
+        0 0 0 3px rgba(255, 255, 255, 0.15),
+        0 0 2.2vmin var(--focus-color, rgba(58, 134, 255, 0.65));
     }
 
     &-active {
       background: var(--focus-color, #3a86ff);
       color: #ffffff;
+      border-color: transparent;
     }
   }
 
@@ -182,46 +234,63 @@
 
   &--cancel {
     flex: 1.5;
-    background: rgba(239, 71, 111, 0.2);
-    border-color: rgba(239, 71, 111, 0.3);
-    color: #ef476f;
+    background: linear-gradient(
+      180deg,
+      rgba(239, 71, 111, 0.28) 0%,
+      rgba(239, 71, 111, 0.16) 100%
+    );
+    border-color: rgba(239, 71, 111, 0.35);
+    color: #ff8fa8;
 
     &:focus,
     &--focused {
       background: #ef476f;
       color: #ffffff;
-      box-shadow: 0 0 15px rgba(239, 71, 111, 0.6);
+      box-shadow:
+        0 0 0 3px rgba(239, 71, 111, 0.25),
+        0 0 2.2vmin rgba(239, 71, 111, 0.55);
     }
   }
 
   &--ok {
     flex: 1.5;
-    background: rgba(6, 214, 160, 0.2);
-    border-color: rgba(6, 214, 160, 0.3);
-    color: #06d6a0;
+    background: linear-gradient(
+      180deg,
+      rgba(6, 214, 160, 0.28) 0%,
+      rgba(6, 214, 160, 0.16) 100%
+    );
+    border-color: rgba(6, 214, 160, 0.35);
+    color: #5eecc4;
 
     &:focus,
     &--focused {
       background: #06d6a0;
-      color: #ffffff;
-      box-shadow: 0 0 15px rgba(6, 214, 160, 0.6);
+      color: #0d1a16;
+      box-shadow:
+        0 0 0 3px rgba(6, 214, 160, 0.25),
+        0 0 2.2vmin rgba(6, 214, 160, 0.55);
     }
   }
 }
 
 .osd-keyboard-box--numeric {
-  width: 400px !important;
+  width: min(70vw, 52vmin);
 }
 
 .osd-keyboard-grid--numeric {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: clamp(0.85rem, 2.2vmin, 1.5rem);
+  padding: clamp(1.5rem, 4vmin, 3rem);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: clamp(0.85rem, 1.6vmin, 1.35rem);
+  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.25);
 }
 
 .osd-keyboard-key--num {
-  font-size: 1.5rem !important;
-  font-weight: 600 !important;
-  height: 64px !important;
+  font-size: clamp(1.5rem, 4.2vmin, 2.6rem);
+  font-weight: 700;
+  height: clamp(3.75rem, 8vmin, 6.25rem);
 }
