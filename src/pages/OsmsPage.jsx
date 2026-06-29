@@ -10,6 +10,7 @@ import {
   groupOsmsByDay,
   previewText,
 } from '../utils/osmsFormat';
+import { useOsmsTvNav } from '../hooks/useOsmsTvNav';
 import '../styles/pages/_osms.scss';
 
 export function OsmsPage() {
@@ -30,6 +31,8 @@ export function OsmsPage() {
   const [readIds, setReadIds] = useState(() => new Set());
   const initialUnreadRef = useRef(null);
   const openedFromNavRef = useRef(null);
+
+  useOsmsTvNav({ itemsCount: items?.length ?? 0 });
 
   if (initialUnreadRef.current === null && (items?.length ?? 0) > 0) {
     initialUnreadRef.current = captureInitialUnreadIds(items, hasNew, unreadCount);
@@ -118,6 +121,7 @@ export function OsmsPage() {
         <div className="osms-page__actions">
           <button
             type="button"
+            id="osms-btn-refresh"
             className="osms-page__btn"
             onClick={() => refreshOsms({ force: true })}
             disabled={status === 'loading'}
@@ -126,6 +130,7 @@ export function OsmsPage() {
           </button>
           <button
             type="button"
+            id="osms-btn-seen"
             className="osms-page__btn osms-page__btn--ghost"
             onClick={markAllRead}
           >
@@ -154,35 +159,40 @@ export function OsmsPage() {
         <div className="osms-page__layout">
           <aside className="osms-page__list-panel" aria-label={t('osms.title')}>
             <div className="osms-page__list" role="list">
-              {groups.map((group) => (
-                <section key={group.label} className="osms-list-group" aria-label={group.label}>
-                  <h3 className="osms-list-group__label">{group.label}</h3>
-                  {group.items.map((m) => {
-                    const unread = isUnread(m.id);
-                    const active = selectedId != null && String(m.id) === String(selectedId);
-                    const preview = previewText(m.message, 72) || t('osms.noMessage');
-                    const dateText = formatCardDate(m.time, i18n.language);
+              {(() => {
+                let globalIdx = 0;
+                return groups.map((group) => (
+                  <section key={group.label} className="osms-list-group" aria-label={group.label}>
+                    <h3 className="osms-list-group__label">{group.label}</h3>
+                    {group.items.map((m) => {
+                      const unread = isUnread(m.id);
+                      const active = selectedId != null && String(m.id) === String(selectedId);
+                      const preview = previewText(m.message, 72) || t('osms.noMessage');
+                      const dateText = formatCardDate(m.time, i18n.language);
+                      const index = globalIdx++;
 
-                    return (
-                      <button
-                        key={String(m.id)}
-                        type="button"
-                        className={`osms-list-item${active ? ' is-active' : ''}${unread ? ' osms-list-item--unread' : ''}`}
-                        onClick={() => selectMessage(m)}
-                        role="listitem"
-                      >
-                        <div className="osms-list-item__meta">
-                          {unread && <span className="osms-list-item__dot" aria-hidden="true" />}
-                          <time className="osms-list-item__date" dateTime={m.time?.toISOString?.()}>
-                            {dateText}
-                          </time>
-                        </div>
-                        <p className="osms-list-item__preview">{preview}</p>
-                      </button>
-                    );
-                  })}
-                </section>
-              ))}
+                      return (
+                        <button
+                          key={String(m.id)}
+                          id={`osms-item-${index}`}
+                          type="button"
+                          className={`osms-list-item${active ? ' is-active' : ''}${unread ? ' osms-list-item--unread' : ''}`}
+                          onClick={() => selectMessage(m)}
+                          role="listitem"
+                        >
+                          <div className="osms-list-item__meta">
+                            {unread && <span className="osms-list-item__dot" aria-hidden="true" />}
+                            <time className="osms-list-item__date" dateTime={m.time?.toISOString?.()}>
+                              {dateText}
+                            </time>
+                          </div>
+                          <p className="osms-list-item__preview">{preview}</p>
+                        </button>
+                      );
+                    })}
+                  </section>
+                ));
+              })()}
             </div>
           </aside>
 

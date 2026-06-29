@@ -151,17 +151,33 @@ export function useSearchPageTvNav(opts = {}) {
         }
       } else if (isSearchResult(active)) {
         const resIdx = results.indexOf(active);
-        if (action === TV_ACTION.UP) {
+        const cols = 6; // 6 columnas de resultados
+
+        if (action === TV_ACTION.LEFT) {
           if (resIdx > 0) {
             target = results[resIdx - 1];
+          }
+        } else if (action === TV_ACTION.RIGHT) {
+          if (resIdx < results.length - 1) {
+            target = results[resIdx + 1];
+          }
+        } else if (action === TV_ACTION.UP) {
+          if (resIdx >= cols) {
+            target = results[resIdx - cols];
           } else if (tabs.length > 0) {
             const activeTab = tabs.find((t) => t.classList.contains('active'));
-            target = activeTab ?? tabs[tabs.length - 1];
+            target = activeTab ?? tabs[Math.min(resIdx, tabs.length - 1)];
           } else if (input instanceof HTMLElement) {
             target = input;
           }
-        } else if (action === TV_ACTION.DOWN && resIdx >= 0 && resIdx < results.length - 1) {
-          target = results[resIdx + 1];
+        } else if (action === TV_ACTION.DOWN) {
+          if (resIdx + cols < results.length) {
+            target = results[resIdx + cols];
+          } else if (resIdx < results.length - 1 && Math.floor(resIdx / cols) < Math.floor((results.length - 1) / cols)) {
+            // Si estamos en la penúltima fila y abajo hay menos de 'cols' elementos (fila incompleta),
+            // el DOWN nos lleva al último elemento disponible
+            target = results[results.length - 1];
+          }
         }
       }
 

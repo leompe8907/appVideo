@@ -1,18 +1,19 @@
-import { forwardRef, useEffect, useRef, useState } from 'react';
+import { forwardRef, useRef } from 'react';
 import { useDevice } from '../../contexts/DeviceContext';
+import { useOsdKeyboard } from '../../contexts/OsdKeyboardContext';
 
 /**
- * Wrapper simple de <input>.
- * Se eliminó completamente la lógica de navegación por foco/control remoto.
+ * Wrapper de <input> para TV y Web.
+ * En TV, desactiva la edición directa nativa para evitar que se abra el teclado virtual del OS (IME).
+ * Al presionar ENTER, abre el teclado virtual OSD personalizado con soporte multi-idioma.
  */
 export const FocusableInput = forwardRef(function FocusableInput(
-  { className = '', ...inputProps },
+  { className = '', enableOsdKeyboard = true, title = '', ...inputProps },
   ref
 ) {
   const { isTV } = useDevice();
+  const { showKeyboard } = useOsdKeyboard();
   const innerRef = useRef(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const isEditingRef = useRef(false);
 
   const setRefs = (el) => {
     innerRef.current = el;
@@ -24,89 +25,63 @@ export const FocusableInput = forwardRef(function FocusableInput(
     }
   };
 
-  // TV: permitir navegar con foco REAL en input, pero sin abrir IME hasta que el usuario presione ENTER.
-  // Estrategia: mantener readOnly mientras NO estamos editando; en ENTER habilitamos edición.
-  useEffect(() => {
-    if (!isTV) return;
-    setIsEditing(false);
-    isEditingRef.current = false;
-  }, [isTV]);
+  const setInputValue = (val) => {
+    const el = innerRef.current;
+    if (!el) return;
+    try {
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      ).set;
+      nativeInputValueSetter.call(el, val);
+      const ev = new Event('input', { bubbles: true });
+      el.dispatchEvent(ev);
+    } catch (err) {
+      console.error('[FocusableInput] Error al establecer valor:', err);
+    }
+  };
 
   const onKeyDown = (e) => {
     inputProps.onKeyDown?.(e);
-    if (!isTV) return;
-    if (inputProps.disabled) return;
+    if (!isTV || !enableOsdKeyboard) return;
+    if (inputProps.disabled || inputProps.readOnly) return;
+
     if (e.key === 'Enter' || e.keyCode === 13) {
       e.preventDefault();
       e.stopPropagation();
 
-      if (isEditingRef.current) {
-        // Ya estaba editando → salir de edición, cerrar teclado virtual.
-        setIsEditing(false);
-        isEditingRef.current = false;
+      const el = innerRef.current;
+      if (!el) return;
+
+      // Quitar foco del input para evitar glitches de dibujado del cursor
+      el.blur();
+
+      // Abrir el teclado virtual OSD asíncrono
+      showKeyboard({
+        title: title || inputProps.placeholder || '',
+        type: inputProps.inputMode === 'numeric' ? 'numeric' : (inputProps.type || 'text'),
+        initialValue: el.value || '',
+      }).then((result) => {
+        if (result !== null) {
+          setInputValue(result);
+        }
+        // Restaurar foco al input después de cerrar
         requestAnimationFrame(() => {
-          const el = innerRef.current;
-          if (!el) return;
           try {
-            el.readOnly = true;
-            el.blur();
-          } catch {
-            // noop
-          }
-        });
-      } else {
-        // No estaba editando → entrar en edición, abrir IME.
-        setIsEditing(true);
-        isEditingRef.current = true;
-        requestAnimationFrame(() => {
-          const el = innerRef.current;
-          if (!el) return;
-          try {
-            el.readOnly = false;
             el.focus({ preventScroll: true });
-            el.click?.();
-            if (typeof el.value === 'string') {
-              const len = el.value.length;
-              el.setSelectionRange?.(len, len);
-            }
           } catch {
             // noop
           }
         });
-      }
-    }
-  };
-
-  const onFocus = (e) => {
-    inputProps.onFocus?.(e);
-    if (!isTV) return;
-    // Mientras no esté editando, asegurar que no dispare teclado.
-    try {
-      if (!isEditing && innerRef.current) innerRef.current.readOnly = true;
-    } catch {
-      // noop
-    }
-  };
-
-  const onBlur = (e) => {
-    inputProps.onBlur?.(e);
-    if (!isTV) return;
-    setIsEditing(false);
-    isEditingRef.current = false;
-    try {
-      if (innerRef.current) innerRef.current.readOnly = true;
-    } catch {
-      // noop
+      });
     }
   };
 
   const mergedProps = {
     ...inputProps,
-    // Solo TV: navegable sin IME hasta ENTER
-    readOnly: isTV ? !isEditing : inputProps.readOnly,
+    // En TV forzamos readOnly para que el navegador no abra el teclado nativo (IME) al recibir foco
+    readOnly: isTV ? true : inputProps.readOnly,
     onKeyDown,
-    onFocus,
-    onBlur,
   };
 
   return <input ref={setRefs} className={className} {...mergedProps} />;
@@ -115,4 +90,3 @@ export const FocusableInput = forwardRef(function FocusableInput(
 FocusableInput.displayName = 'FocusableInput';
 
 export default FocusableInput;
-

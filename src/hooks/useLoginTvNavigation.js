@@ -319,6 +319,9 @@ export function useLoginTvNavigation({
     };
 
     const onKeyDown = (e) => {
+      if (document.querySelector('.osd-keyboard-container')) {
+        return;
+      }
       const action = getTvActionFromKeyEvent(e);
       if (!action) return;
 

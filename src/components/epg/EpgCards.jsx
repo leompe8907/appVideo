@@ -10,6 +10,7 @@ import EpgEventModal from './EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useEpgReminderStore } from '../../store/epgReminderStore';
 import { getChannelStableId, dedupeStreams } from '../../utils/channelId';
+import { useEpgCardsTvNav } from '../../hooks/useEpgCardsTvNav';
 import '../epg/epg-common.scss';
 
 function asMs(dateLike) {
@@ -84,6 +85,7 @@ function computeSlots(epgItems, { nowMs, epgPastEnabled = false } = {}) {
 }
 
 function Card({
+  id,
   onEnter,
   title,
   timeText,
@@ -91,13 +93,12 @@ function Card({
   progressPercent,
   disabled,
 }) {
-  const { isTV } = useDevice();
-
   return (
     <div
+      id={id}
       className={`epg-card ${disabled ? 'disabled' : ''} ${isLive ? 'epg-card--live-now' : ''}`}
       role="button"
-      tabIndex={isTV ? -1 : (disabled ? -1 : 0)}
+      tabIndex={disabled ? -1 : 0}
       onClick={() => {
         if (disabled) return;
         onEnter?.();
@@ -148,6 +149,12 @@ export function EpgCards({ onSelect }) {
     const streams = dedupeStreams(epg?.streams || []);
     return [...streams].sort((a, b) => Number(a.lcn ?? 0) - Number(b.lcn ?? 0));
   }, [epg?.streams]);
+
+  useEpgCardsTvNav({
+    modalOpen: Boolean(detail),
+    epgPastEnabled,
+    channelsCount: channels.length,
+  });
 
   const resolveChannelLiveUrl = (channel) => {
     if (!channel) return null;
@@ -227,7 +234,7 @@ export function EpgCards({ onSelect }) {
           </div>
         </div>
 
-        {channels.map((channel) => {
+        {channels.map((channel, rowIdx) => {
           const { before, now, next, later, isLive } = computeSlots(channel.epgItems, {
             nowMs,
             epgPastEnabled,
@@ -308,6 +315,7 @@ export function EpgCards({ onSelect }) {
               <div className="epg-cards-row-cards" style={{ ['--epg-cards-cols']: epgPastEnabled ? 4 : 3 }}>
                 {epgPastEnabled && (
                   <Card
+                    id={`epg-card-${rowIdx}-0`}
                     disabled={!before}
                     onEnter={() => {
                       setDetail({ channel, event: before, isLive: false });
@@ -319,6 +327,7 @@ export function EpgCards({ onSelect }) {
                   />
                 )}
                 <Card
+                  id={`epg-card-${rowIdx}-${epgPastEnabled ? 1 : 0}`}
                   disabled={!now}
                   onEnter={() => {
                     setDetail({ channel, event: now, isLive });
@@ -330,6 +339,7 @@ export function EpgCards({ onSelect }) {
                   progressPercent={nowProgress}
                 />
                 <Card
+                  id={`epg-card-${rowIdx}-${epgPastEnabled ? 2 : 1}`}
                   disabled={!next}
                   onEnter={() => {
                     setDetail({ channel, event: next, isLive: false });
@@ -340,6 +350,7 @@ export function EpgCards({ onSelect }) {
                   isLive={false}
                 />
                 <Card
+                  id={`epg-card-${rowIdx}-${epgPastEnabled ? 3 : 2}`}
                   disabled={!later}
                   onEnter={() => {
                     setDetail({ channel, event: later, isLive: false });

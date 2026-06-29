@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
+import { FocusableInput } from '../navigation/FocusableInput';
 
 export function ParentalPinGate({
   open,
@@ -48,6 +49,9 @@ export function ParentalPinGate({
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => {
+      if (document.querySelector('.osd-keyboard-container')) {
+        return;
+      }
       const key = e.key || e.code;
       const code = e.keyCode || e.which;
       const keyStr = String(key || '');
@@ -88,7 +92,7 @@ export function ParentalPinGate({
         <div className="parental-pin-title">{effectiveTitle}</div>
         <div className="parental-pin-message">{effectiveMessage}</div>
 
-        <input
+        <FocusableInput
           ref={pinInputRef}
           className="parental-pin-input"
           value={pin}

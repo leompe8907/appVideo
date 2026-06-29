@@ -7,6 +7,8 @@ import { useBrand } from './contexts/BrandContext';
 import { isAuthenticated } from './utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
 import { TvFocusRing } from './components/navigation/TvFocusRing';
+import { OsdKeyboardProvider } from './contexts/OsdKeyboardContext';
+import { navigationRouter } from './navigation/NavigationRouter';
 import HomePage from './pages/HomePage';
 import BouquetPage from './pages/BouquetPage';
 import {
@@ -78,6 +80,11 @@ function App() {
   }, []);
 
   useEffect(() => {
+    navigationRouter.start();
+    return () => navigationRouter.stop();
+  }, []);
+
+  useEffect(() => {
     setOnSessionInvalid(() => {
       navigate('/', { replace: true });
     });
@@ -98,36 +105,38 @@ function App() {
   return (
     <>
       <PlayerProvider>
-        <TvFocusRing />
-        <div className="App">
-          <Routes>
-              {/* Rutas públicas */}
-              <Route path="/" element={<Suspense fallback={<Loading />}><SplashPage /></Suspense>}/>
-              <Route path="/login" element={<Suspense fallback={<Loading />}><LoginPage /></Suspense>}/>
-              {/* Rutas protegidas */}
-              <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<Loading />}><ProfilePage /></Suspense></ProtectedRoute>}/>
-              <Route path="/smartcard" element={<ProtectedRoute><Suspense fallback={<Loading />}><SmartCardPage /></Suspense></ProtectedRoute>}/>
-              <Route path="/preload" element={<ProtectedRoute><Suspense fallback={<Loading />}><PreloadDataPage /></Suspense></ProtectedRoute>}/>
-              <Route path="/inicio" element={<Navigate to="/home/inicio" replace />}/>
-              <Route path="/vod" element={<Navigate to="/home/vod" replace />}/>
-              <Route path="/epg" element={<Navigate to="/home/epg" replace />}/>
-              <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>}>
-                <Route element={<HomeEpgRoutesLayout />}>
-                  <Route path="inicio" element={<BouquetPage />} />
-                  <Route path="buscador" element={<Suspense fallback={<Loading />}><SearchPage /></Suspense>} />
-                  <Route path="servicios-tv-radio" element={<Suspense fallback={<Loading />}><TvRadioServicesPage /></Suspense>} />
-                  <Route path="epg" element={<Suspense fallback={<Loading />}><EpgCardsPage /></Suspense>} />
-                  <Route path="control-parental" element={<Suspense fallback={<Loading />}><ParentalSettingsPage /></Suspense>} />
+        <OsdKeyboardProvider>
+          <TvFocusRing />
+          <div className="App">
+            <Routes>
+                {/* Rutas públicas */}
+                <Route path="/" element={<Suspense fallback={<Loading />}><SplashPage /></Suspense>}/>
+                <Route path="/login" element={<Suspense fallback={<Loading />}><LoginPage /></Suspense>}/>
+                {/* Rutas protegidas */}
+                <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<Loading />}><ProfilePage /></Suspense></ProtectedRoute>}/>
+                <Route path="/smartcard" element={<ProtectedRoute><Suspense fallback={<Loading />}><SmartCardPage /></Suspense></ProtectedRoute>}/>
+                <Route path="/preload" element={<ProtectedRoute><Suspense fallback={<Loading />}><PreloadDataPage /></Suspense></ProtectedRoute>}/>
+                <Route path="/inicio" element={<Navigate to="/home/inicio" replace />}/>
+                <Route path="/vod" element={<Navigate to="/home/vod" replace />}/>
+                <Route path="/epg" element={<Navigate to="/home/epg" replace />}/>
+                <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>}>
+                  <Route element={<HomeEpgRoutesLayout />}>
+                    <Route path="inicio" element={<BouquetPage />} />
+                    <Route path="buscador" element={<Suspense fallback={<Loading />}><SearchPage /></Suspense>} />
+                    <Route path="servicios-tv-radio" element={<Suspense fallback={<Loading />}><TvRadioServicesPage /></Suspense>} />
+                    <Route path="epg" element={<Suspense fallback={<Loading />}><EpgCardsPage /></Suspense>} />
+                    <Route path="control-parental" element={<Suspense fallback={<Loading />}><ParentalSettingsPage /></Suspense>} />
+                  </Route>
+                  <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>} />
+                  <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>} />
+                  <Route path="osms" element={<Suspense fallback={<Loading />}><OsmsPage /></Suspense>} />
+                  <Route path="*" element={<Navigate to="/home/inicio" replace />} />
                 </Route>
-                <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>} />
-                <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>} />
-                <Route path="osms" element={<Suspense fallback={<Loading />}><OsmsPage /></Suspense>} />
-                <Route path="*" element={<Navigate to="/home/inicio" replace />} />
-              </Route>
-              {/* Fallback */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+        </OsdKeyboardProvider>
       </PlayerProvider>
     </>
   );
