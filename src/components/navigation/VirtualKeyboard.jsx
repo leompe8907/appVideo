@@ -36,12 +36,12 @@ const NUMERIC_LAYOUT = [
   ['CANCEL', '0', 'OK']
 ];
 
-const LANG_LABELS = {
-  en: 'ENG',
-  es: 'ESP',
-  pt: 'POR',
-  bg: 'БГ'
-};
+const DEFAULT_LAYOUT_LANG = 'en';
+
+function resolveLayoutLanguage(language) {
+  const code = (language || DEFAULT_LAYOUT_LANG).slice(0, 2).toLowerCase();
+  return LAYOUTS[code] ? code : DEFAULT_LAYOUT_LANG;
+}
 
 export function VirtualKeyboard({
   initialValue = '',
@@ -52,65 +52,53 @@ export function VirtualKeyboard({
 }) {
   const { t, i18n } = useTranslation();
   const [value, setValue] = useState(initialValue);
-  const [layoutLanguage, setLayoutLanguage] = useState('es');
+  const [layoutLanguage, setLayoutLanguage] = useState(() => resolveLayoutLanguage(i18n.language));
   const [isUppercase, setIsUppercase] = useState(false);
 
   const isNumericMode = type === 'numeric';
 
-  // Foco matricial
-  const [activeRow, setActiveRow] = useState(0); 
-  const [activeCol, setActiveCol] = useState(0);
-  const [activeActionKey, setActiveActionKey] = useState('space'); // shift, space, backspace, cancel, ok
-  const [activeLangIndex, setActiveLangIndex] = useState(0);
+  // Coordenadas en Ref local (DOM puro, 0ms render lag)
+  const coordsRef = useRef({
+    row: 0,
+    col: 0,
+    actionKey: 'space',
+  });
 
   const containerRef = useRef(null);
 
-  // Inicializar idioma por defecto del teclado según el idioma de la app
+  // Sincronizar layout con el idioma de la app (TV); fallback a inglés si no hay teclado
   useEffect(() => {
     if (isNumericMode) {
-      setActiveRow(0);
-      setActiveCol(0);
+      coordsRef.current.row = 0;
+      coordsRef.current.col = 0;
       return;
     }
-    const appLang = (i18n.language || 'es').slice(0, 2);
-    if (LAYOUTS[appLang]) {
-      setLayoutLanguage(appLang);
-      setActiveLangIndex(Object.keys(LAYOUTS).indexOf(appLang));
-    } else {
-      setLayoutLanguage('es');
-      setActiveLangIndex(Object.keys(LAYOUTS).indexOf('es'));
-    }
+    setLayoutLanguage(resolveLayoutLanguage(i18n.language));
   }, [i18n.language, isNumericMode]);
 
-  // Forzar foco en el contenedor del teclado para interceptar teclas
+  // Forzar foco en el primer elemento al montar o al cambiar de layout
   useEffect(() => {
-    containerRef.current?.focus();
-  }, []);
-
-  // Sincronizar el foco visual del DOM según la fila/columna activa
-  useEffect(() => {
-    let targetId = '';
-    if (isNumericMode) {
-      targetId = `key-num-${activeRow}-${activeCol}`;
-    } else {
-      if (activeRow === -1) {
-        targetId = `key-lang-${activeLangIndex}`;
-      } else if (activeRow === 4) {
-        targetId = `key-action-${activeActionKey}`;
+    const tId = setTimeout(() => {
+      const { row, col, actionKey } = coordsRef.current;
+      let targetId = '';
+      if (isNumericMode) {
+        targetId = `key-num-${row}-${col}`;
+      } else if (row === 4) {
+        targetId = `key-action-${actionKey}`;
       } else {
-        targetId = `key-char-${activeRow}-${activeCol}`;
+        targetId = `key-char-${row}-${col}`;
       }
-    }
-
-    const el = document.getElementById(targetId);
-    if (el) {
-      try {
-        el.focus({ preventScroll: true });
-      } catch {
-        // noop
+      const el = document.getElementById(targetId);
+      if (el) {
+        try {
+          el.focus({ preventScroll: true });
+        } catch {
+          // noop
+        }
       }
-    }
-  }, [activeRow, activeCol, activeActionKey, activeLangIndex, isNumericMode]);
+    }, 100);
+    return () => clearTimeout(tId);
+  }, [layoutLanguage, isUppercase, isNumericMode]);
 
   const handleCharPress = (char) => {
     setValue((prev) => {
@@ -133,10 +121,6 @@ export function VirtualKeyboard({
     }
   };
 
-  const handleLangPress = (lang) => {
-    setLayoutLanguage(lang);
-  };
-
   const handleKeyDown = (e) => {
     const key = e.key || e.code;
     const keyCode = e.keyCode || e.which;
@@ -150,41 +134,65 @@ export function VirtualKeyboard({
       return;
     }
 
-    let nextRow = activeRow;
-    let nextCol = activeCol;
-    let nextLangIdx = activeLangIndex;
-    let nextAction = activeActionKey;
+    const active = document.activeElement;
+    if (!active || !(active instanceof HTMLElement)) return;
 
-    const languages = Object.keys(LAYOUTS);
+    let row = coordsRef.current.row;
+    let col = coordsRef.current.col;
+    let actionKey = coordsRef.current.actionKey;
+
+    // Auto-detectar posición actual desde el ID del elemento enfocado
+    if (active.id.startsWith('key-num-')) {
+      const match = active.id.match(/^key-num-(\d+)-(\d+)$/);
+      if (match) {
+        row = parseInt(match[1], 10);
+        col = parseInt(match[2], 10);
+      }
+    } else if (active.id.startsWith('key-char-')) {
+      const match = active.id.match(/^key-char-(\d+)-(\d+)$/);
+      if (match) {
+        row = parseInt(match[1], 10);
+        col = parseInt(match[2], 10);
+      }
+    } else if (active.id.startsWith('key-action-')) {
+      const match = active.id.match(/^key-action-(.+)$/);
+      if (match) {
+        row = 4;
+        actionKey = match[1];
+      }
+    }
+
+    let nextRow = row;
+    let nextCol = col;
+    let nextAction = actionKey;
 
     if (isNumericMode) {
       // Navegación matricial 4x3 para teclado numérico
       if (key === 'ArrowRight') {
         e.preventDefault();
         e.stopPropagation();
-        if (activeCol < 2) nextCol = activeCol + 1;
+        if (col < 2) nextCol = col + 1;
       } else if (key === 'ArrowLeft') {
         e.preventDefault();
         e.stopPropagation();
-        if (activeCol > 0) nextCol = activeCol - 1;
+        if (col > 0) nextCol = col - 1;
       } else if (key === 'ArrowDown') {
         e.preventDefault();
         e.stopPropagation();
-        if (activeRow < 3) nextRow = activeRow + 1;
+        if (row < 3) nextRow = row + 1;
       } else if (key === 'ArrowUp') {
         e.preventDefault();
         e.stopPropagation();
-        if (activeRow > 0) nextRow = activeRow - 1;
+        if (row > 0) nextRow = row - 1;
       } else if (key === 'Enter') {
         e.preventDefault();
         e.stopPropagation();
-        const numKey = NUMERIC_LAYOUT[activeRow][activeCol];
+        const numKey = NUMERIC_LAYOUT[row][col];
         if (numKey === 'CANCEL') {
           onCancel?.();
         } else if (numKey === 'OK') {
           onConfirm?.(value);
         } else {
-          // Es un número
           setValue((prev) => prev + numKey);
         }
       }
@@ -193,91 +201,96 @@ export function VirtualKeyboard({
       if (key === 'ArrowRight') {
         e.preventDefault();
         e.stopPropagation();
-        if (activeRow === -1) {
-          if (activeLangIndex < languages.length - 1) {
-            nextLangIdx = activeLangIndex + 1;
-          }
-        } else if (activeRow === 4) {
+        if (row === 4) {
           const actions = ['shift', 'space', 'backspace', 'cancel', 'ok'];
-          const currentIdx = actions.indexOf(activeActionKey);
+          const currentIdx = actions.indexOf(actionKey);
           if (currentIdx < actions.length - 1) {
             nextAction = actions[currentIdx + 1];
           }
         } else {
-          if (activeCol < 9) {
-            nextCol = activeCol + 1;
+          if (col < 9) {
+            nextCol = col + 1;
           }
         }
       } else if (key === 'ArrowLeft') {
         e.preventDefault();
         e.stopPropagation();
-        if (activeRow === -1) {
-          if (activeLangIndex > 0) {
-            nextLangIdx = activeLangIndex - 1;
-          }
-        } else if (activeRow === 4) {
+        if (row === 4) {
           const actions = ['shift', 'space', 'backspace', 'cancel', 'ok'];
-          const currentIdx = actions.indexOf(activeActionKey);
+          const currentIdx = actions.indexOf(actionKey);
           if (currentIdx > 0) {
             nextAction = actions[currentIdx - 1];
           }
         } else {
-          if (activeCol > 0) {
-            nextCol = activeCol - 1;
+          if (col > 0) {
+            nextCol = col - 1;
           }
         }
       } else if (key === 'ArrowDown') {
         e.preventDefault();
         e.stopPropagation();
-        if (activeRow === -1) {
-          nextRow = 0;
-          nextCol = Math.min(activeLangIndex * 2, 9);
-        } else if (activeRow < 3) {
-          nextRow = activeRow + 1;
-        } else if (activeRow === 3) {
+        if (row < 3) {
+          nextRow = row + 1;
+        } else if (row === 3) {
           nextRow = 4;
-          if (activeCol <= 1) nextAction = 'shift';
-          else if (activeCol <= 4) nextAction = 'space';
-          else if (activeCol <= 6) nextAction = 'backspace';
-          else if (activeCol <= 8) nextAction = 'cancel';
+          if (col <= 1) nextAction = 'shift';
+          else if (col <= 4) nextAction = 'space';
+          else if (col <= 6) nextAction = 'backspace';
+          else if (col <= 8) nextAction = 'cancel';
           else nextAction = 'ok';
         }
       } else if (key === 'ArrowUp') {
         e.preventDefault();
         e.stopPropagation();
-        if (activeRow === 4) {
+        if (row === 4) {
           nextRow = 3;
-          if (activeActionKey === 'shift') nextCol = 1;
-          else if (activeActionKey === 'space') nextCol = 3;
-          else if (activeActionKey === 'backspace') nextCol = 6;
-          else if (activeActionKey === 'cancel') nextCol = 8;
+          if (actionKey === 'shift') nextCol = 1;
+          else if (actionKey === 'space') nextCol = 3;
+          else if (actionKey === 'backspace') nextCol = 6;
+          else if (actionKey === 'cancel') nextCol = 8;
           else nextCol = 9;
-        } else if (activeRow > 0) {
-          nextRow = activeRow - 1;
-        } else if (activeRow === 0) {
-          nextRow = -1;
-          nextLangIdx = Math.min(Math.floor(activeCol / 2), languages.length - 1);
+        } else if (row > 0) {
+          nextRow = row - 1;
         }
       } else if (key === 'Enter') {
         e.preventDefault();
         e.stopPropagation();
-        if (activeRow === -1) {
-          handleLangPress(languages[activeLangIndex]);
-        } else if (activeRow === 4) {
-          handleActionPress(activeActionKey);
+        if (row === 4) {
+          handleActionPress(actionKey);
         } else {
-          handleCharPress(LAYOUTS[layoutLanguage][activeRow][activeCol]);
+          handleCharPress(LAYOUTS[layoutLanguage][row][col]);
         }
       }
     }
 
-    setActiveRow(nextRow);
-    setActiveCol(nextCol);
-    setActiveLangIndex(nextLangIdx);
-    setActiveActionKey(nextAction);
+    // Actualizar coordenadas en Ref
+    coordsRef.current = {
+      row: nextRow,
+      col: nextCol,
+      actionKey: nextAction
+    };
+
+    // Enfocar directamente a través del DOM sin re-renderizar
+    let targetId = '';
+    if (isNumericMode) {
+      targetId = `key-num-${nextRow}-${nextCol}`;
+    } else if (nextRow === 4) {
+      targetId = `key-action-${nextAction}`;
+    } else {
+      targetId = `key-char-${nextRow}-${nextCol}`;
+    }
+
+    const targetEl = document.getElementById(targetId);
+    if (targetEl) {
+      try {
+        targetEl.focus({ preventScroll: true });
+      } catch {
+        // noop
+      }
+    }
   };
 
-  const currentLayout = LAYOUTS[layoutLanguage] || LAYOUTS.es;
+  const currentLayout = LAYOUTS[layoutLanguage] || LAYOUTS[DEFAULT_LAYOUT_LANG];
 
   return (
     <div
@@ -315,9 +328,7 @@ export function VirtualKeyboard({
             {NUMERIC_LAYOUT.map((row, rIdx) => (
               <div key={rIdx} className="osd-keyboard-row">
                 {row.map((btnLabel, cIdx) => {
-                  const isFocused = activeRow === rIdx && activeCol === cIdx;
                   let keyClass = 'osd-keyboard-key osd-keyboard-key--num';
-                  if (isFocused) keyClass += ' osd-keyboard-key--focused';
                   if (btnLabel === 'CANCEL') keyClass += ' osd-keyboard-key--cancel';
                   if (btnLabel === 'OK') keyClass += ' osd-keyboard-key--ok';
 
@@ -326,9 +337,13 @@ export function VirtualKeyboard({
                       id={`key-num-${rIdx}-${cIdx}`}
                       key={cIdx}
                       className={keyClass}
+                      onFocus={() => {
+                        coordsRef.current.row = rIdx;
+                        coordsRef.current.col = cIdx;
+                      }}
                       onClick={() => {
-                        setActiveRow(rIdx);
-                        setActiveCol(cIdx);
+                        coordsRef.current.row = rIdx;
+                        coordsRef.current.col = cIdx;
                         if (btnLabel === 'CANCEL') {
                           onCancel?.();
                         } else if (btnLabel === 'OK') {
@@ -337,7 +352,7 @@ export function VirtualKeyboard({
                           setValue((prev) => prev + btnLabel);
                         }
                       }}
-                      tabIndex={-1}
+                      tabIndex={0}
                     >
                       {btnLabel === 'CANCEL' ? t('keyboard.cancel', { defaultValue: 'Cancelar' }) : btnLabel}
                     </button>
@@ -348,45 +363,26 @@ export function VirtualKeyboard({
           </div>
         ) : (
           /* Renderizado de Teclado QWERTY */
-          <>
-            {/* Language Tabs */}
-            <div className="osd-keyboard-lang-selector">
-              {Object.keys(LAYOUTS).map((lang, idx) => (
-                <button
-                  id={`key-lang-${idx}`}
-                  key={lang}
-                  className={`osd-keyboard-lang-btn ${
-                    layoutLanguage === lang ? 'osd-keyboard-lang-btn--active' : ''
-                  }`}
-                  onClick={() => {
-                    handleLangPress(lang);
-                    setActiveLangIndex(idx);
-                    setActiveRow(-1);
-                  }}
-                  tabIndex={-1}
-                >
-                  {LANG_LABELS[lang]}
-                </button>
-              ))}
-            </div>
-
-            <div className="osd-keyboard-grid">
+          <div className="osd-keyboard-grid">
               {currentLayout.map((row, rIdx) => (
                 <div key={rIdx} className="osd-keyboard-row">
                   {row.map((char, cIdx) => {
                     const displayChar = isUppercase ? char.toUpperCase() : char.toLowerCase();
-                    const isFocused = activeRow === rIdx && activeCol === cIdx;
                     return (
                       <button
                         id={`key-char-${rIdx}-${cIdx}`}
                         key={cIdx}
-                        className={`osd-keyboard-key ${isFocused ? 'osd-keyboard-key--focused' : ''}`}
+                        className="osd-keyboard-key"
+                        onFocus={() => {
+                          coordsRef.current.row = rIdx;
+                          coordsRef.current.col = cIdx;
+                        }}
                         onClick={() => {
                           handleCharPress(char);
-                          setActiveRow(rIdx);
-                          setActiveCol(cIdx);
+                          coordsRef.current.row = rIdx;
+                          coordsRef.current.col = cIdx;
                         }}
-                        tabIndex={-1}
+                        tabIndex={0}
                       >
                         {displayChar}
                       </button>
@@ -399,81 +395,90 @@ export function VirtualKeyboard({
               <div className="osd-keyboard-row osd-keyboard-row--actions">
                 <button
                   id="key-action-shift"
-                  className={`osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--shift ${
-                    activeRow === 4 && activeActionKey === 'shift' ? 'osd-keyboard-key--focused' : ''
-                  } ${isUppercase ? 'osd-keyboard-key--action-active' : ''}`}
+                  className={`osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--shift ${isUppercase ? 'osd-keyboard-key--action-active' : ''}`}
+                  onFocus={() => {
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'shift';
+                  }}
                   onClick={() => {
                     handleActionPress('shift');
-                    setActiveRow(4);
-                    setActiveActionKey('shift');
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'shift';
                   }}
-                  tabIndex={-1}
+                  tabIndex={0}
                 >
                   ⇧ {t('keyboard.shift', { defaultValue: 'Mayús' })}
                 </button>
 
                 <button
                   id="key-action-space"
-                  className={`osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--space ${
-                    activeRow === 4 && activeActionKey === 'space' ? 'osd-keyboard-key--focused' : ''
-                  }`}
+                  className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--space"
+                  onFocus={() => {
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'space';
+                  }}
                   onClick={() => {
                     handleActionPress('space');
-                    setActiveRow(4);
-                    setActiveActionKey('space');
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'space';
                   }}
-                  tabIndex={-1}
+                  tabIndex={0}
                 >
                   [ {t('keyboard.space', { defaultValue: 'Espacio' })} ]
                 </button>
 
                 <button
                   id="key-action-backspace"
-                  className={`osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--backspace ${
-                    activeRow === 4 && activeActionKey === 'backspace' ? 'osd-keyboard-key--focused' : ''
-                  }`}
+                  className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--backspace"
+                  onFocus={() => {
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'backspace';
+                  }}
                   onClick={() => {
                     handleActionPress('backspace');
-                    setActiveRow(4);
-                    setActiveActionKey('backspace');
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'backspace';
                   }}
-                  tabIndex={-1}
+                  tabIndex={0}
                 >
                   ⌫ {t('keyboard.delete', { defaultValue: 'Borrar' })}
                 </button>
 
                 <button
                   id="key-action-cancel"
-                  className={`osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--cancel ${
-                    activeRow === 4 && activeActionKey === 'cancel' ? 'osd-keyboard-key--focused' : ''
-                  }`}
+                  className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--cancel"
+                  onFocus={() => {
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'cancel';
+                  }}
                   onClick={() => {
                     handleActionPress('cancel');
-                    setActiveRow(4);
-                    setActiveActionKey('cancel');
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'cancel';
                   }}
-                  tabIndex={-1}
+                  tabIndex={0}
                 >
                   {t('keyboard.cancel', { defaultValue: 'Cancelar' })}
                 </button>
 
                 <button
                   id="key-action-ok"
-                  className={`osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--ok ${
-                    activeRow === 4 && activeActionKey === 'ok' ? 'osd-keyboard-key--focused' : ''
-                  }`}
+                  className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--ok"
+                  onFocus={() => {
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'ok';
+                  }}
                   onClick={() => {
                     handleActionPress('ok');
-                    setActiveRow(4);
-                    setActiveActionKey('ok');
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'ok';
                   }}
-                  tabIndex={-1}
+                  tabIndex={0}
                 >
                   {t('keyboard.confirm', { defaultValue: 'OK' })}
                 </button>
               </div>
             </div>
-          </>
         )}
       </div>
     </div>

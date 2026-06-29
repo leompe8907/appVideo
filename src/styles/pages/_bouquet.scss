@@ -1049,11 +1049,13 @@ $bouquet-items-gap: 2rem;
   }
 
   .bouquet-horizontal-grid-track {
-    gap: 0;
+    gap: 0 !important;
 
-    > .channel-card {
-      margin-inline-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
-      margin-block-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
+    > .channel-card,
+    > .vod-card,
+    > .bouquet-horizontal-grid-column {
+      margin-inline-end: var(--bouquet-items-gap, #{$bouquet-items-gap}) !important;
+      margin-block-end: var(--bouquet-items-gap, #{$bouquet-items-gap}) !important;
     }
 
     &[data-grid-flow='column'] {
