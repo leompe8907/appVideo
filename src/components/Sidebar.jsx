@@ -661,6 +661,17 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
               <span className="home-sidebar-label">
                 {t('common.settings', { defaultValue: 'Configuración' })}
               </span>
+              {currentBrand?.features?.osms && osmsUnreadCount > 0 ? (
+                <span
+                  className="home-sidebar-badge home-sidebar-badge--settings"
+                  aria-label={t('osms.unreadBadge', {
+                    count: osmsUnreadCount,
+                    defaultValue: `${osmsUnreadCount} sin leer`,
+                  })}
+                >
+                  {osmsUnreadCount}
+                </span>
+              ) : null}
             </button>
             {settingsOpen && (
               <div

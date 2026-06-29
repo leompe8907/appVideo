@@ -40,7 +40,17 @@
     "refreshing": "Refreshing…",
     "markSeen": "Mark as seen",
     "new": "New",
-    "disabled": "OSMS is not enabled for this brand."
+    "disabled": "OSMS is not enabled for this brand.",
+    "groupToday": "Today",
+    "groupYesterday": "Yesterday",
+    "groupEarlier": "Earlier",
+    "back": "Back",
+    "markRead": "Mark as read",
+    "emptyHint": "Operator messages will appear here when available.",
+    "notificationTitle": "New operator message",
+    "notificationView": "View message",
+    "notificationDismiss": "Not now",
+    "unreadBadge": "{{count}} unread"
   },
   "search": {
     "placeholder": "Search...",

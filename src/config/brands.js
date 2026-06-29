@@ -137,8 +137,8 @@ export const BRANDS = [
   // Bromteck
   {
     brand: "bromteck",
-    appName: "MultiplusTV",
-    drm: 'https://mw.cabledelancer.com/',
+    appName: "Bromteck",
+    drm: "https://cv01.panaccess.com/",
     token: '',
     // Metadatos de integración con DRM (equivalentes al proyecto EPG clásico)
     os: 'HTML5',
@@ -365,7 +365,7 @@ export const BRANDS = [
     features: {
       profiles: false, // Si es true → redirige a /profile después del login, si es false → redirige a /smartcard después del login
       showRating: true, // Equivalente a showRating en 10foot
-      osms: false, // Equivalente a osmsEnabled en 10foot
+      osms: true, // Equivalente a osmsEnabled en 10foot
     },
 
     vod: {
@@ -1119,7 +1119,7 @@ export const BRANDS = [
     features: {
       profiles: false,
       showRating: true, // Equivalente a showRating en 10foot
-      osms: false, // Equivalente a osmsEnabled en 10foot
+      osms: true, // Equivalente a osmsEnabled en 10foot
     },
 
     vod: {

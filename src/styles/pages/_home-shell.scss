@@ -782,6 +782,21 @@ html:-moz-full-screen {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.home-sidebar-settings-btn {
+  position: relative;
+}
+
+.home-sidebar-badge--settings {
+  margin-left: auto;
+}
+
+.home-sidebar--collapsed .home-sidebar-badge--settings {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  margin-left: 0;
+}
+
 .home-sidebar-badge--sub {
   position: static;
   min-width: 20px;

@@ -40,7 +40,17 @@
     "refreshing": "Atualizando…",
     "markSeen": "Marcar como vistos",
     "new": "Novos",
-    "disabled": "OSMS não está habilitado para esta marca."
+    "disabled": "OSMS não está habilitado para esta marca.",
+    "groupToday": "Hoje",
+    "groupYesterday": "Ontem",
+    "groupEarlier": "Anteriores",
+    "back": "Voltar",
+    "markRead": "Marcar como lido",
+    "emptyHint": "As mensagens do operador aparecerão aqui quando estiverem disponíveis.",
+    "notificationTitle": "Nova mensagem do operador",
+    "notificationView": "Ver mensagem",
+    "notificationDismiss": "Agora não",
+    "unreadBadge": "{{count}} não lidas"
   },
   "search": {
     "placeholder": "Buscar...",

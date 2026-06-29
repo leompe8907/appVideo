@@ -15,6 +15,8 @@ export const HOME_SHELL_OVERLAY_SELECTORS = Object.freeze({
   vodCategory: '.vod-category-overlay[role="dialog"]',
   profileModals: '.create-profile-overlay[role="dialog"]',
   messageModal: '.message-modal-overlay[role="dialog"]',
+  osmsNotification: '.osms-notification-overlay[role="dialog"]',
+  osmsMessageModal: '.osms-modal-overlay[role="dialog"]',
 });
 
 /** @deprecated usar isEpgEventModalOverlayInDom */
@@ -72,6 +74,8 @@ export function shouldDeferHomeShellNavigation() {
       s.vodCategory,
       s.profileModals,
       s.messageModal,
+      s.osmsNotification,
+      s.osmsMessageModal,
     ];
     for (const sel of checks) {
       if (document.querySelector(sel)) return true;

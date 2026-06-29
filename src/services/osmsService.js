@@ -55,6 +55,42 @@ export function getNewestOsmTime(items) {
   return newest?.time ?? null;
 }
 
+export function getNewestOsmItem(items) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  return items.reduce((acc, cur) => {
+    const t = cur?.time?.getTime?.();
+    if (!Number.isFinite(t)) return acc;
+    if (!acc) return cur;
+    const at = acc.time.getTime();
+    return t > at ? cur : acc;
+  }, null);
+}
+
+/** ID más alto conocido (para polling incremental getOsms). */
+export function getLastKnownOsmId(items) {
+  if (!Array.isArray(items) || items.length === 0) return -1;
+  let maxId = -1;
+  for (const item of items) {
+    const n = Number(item?.id);
+    if (Number.isFinite(n) && n > maxId) maxId = n;
+  }
+  return maxId;
+}
+
+/** Fusiona listas por id y ordena por fecha descendente. */
+export function mergeOsmsItems(existing, incoming) {
+  const byId = new Map();
+  for (const item of existing || []) {
+    if (item?.id != null && item.id !== '') byId.set(String(item.id), item);
+  }
+  for (const item of incoming || []) {
+    if (item?.id != null && item.id !== '') byId.set(String(item.id), item);
+  }
+  return Array.from(byId.values()).sort(
+    (a, b) => (b.time?.getTime?.() ?? 0) - (a.time?.getTime?.() ?? 0)
+  );
+}
+
 /**
  * Fetch de OSMs desde Panaccess (getOsms).
  * @param {Object} options
@@ -74,5 +110,8 @@ export default {
   fetchOsms,
   normalizeOsms,
   getNewestOsmTime,
+  getNewestOsmItem,
+  getLastKnownOsmId,
+  mergeOsmsItems,
 };
 

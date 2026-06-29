@@ -1,5 +1,11 @@
 import { create } from 'zustand';
-import { fetchOsms, getNewestOsmTime } from '../services/osmsService';
+import {
+  fetchOsms,
+  getLastKnownOsmId,
+  getNewestOsmItem,
+  getNewestOsmTime,
+  mergeOsmsItems,
+} from '../services/osmsService';
 import { getBrandItem, resolveBrandId, setBrandItem } from '../utils/brandStorage';
 
 const LS_LAST_COUNT = 'osms.lastCount';
@@ -56,6 +62,11 @@ function computeUnread(items) {
   return { currentCount, newestMs, hasNew, unreadCount };
 }
 
+function pickNewestAmong(items) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  return getNewestOsmItem(items);
+}
+
 const initialState = {
   status: 'idle', // 'idle' | 'loading' | 'ready' | 'error'
   items: [],
@@ -64,26 +75,58 @@ const initialState = {
   hasNew: false,
   unreadCount: 0,
   currentCount: 0,
+  pendingNotification: null,
 };
 
 export const useOsmsStore = create((set, get) => ({
   ...initialState,
 
-  refreshOsms: async (options = {}) => {
-    const { force = false, lastKnownId = -1, days = 30 } = options;
+  /**
+   * Carga o sondeo de OSMS.
+   * @param {Object} options
+   * @param {number} [options.days=30]
+   * @param {'auto'|'full'|'incremental'} [options.mode='auto']
+   */
+  pollOsms: async (options = {}) => {
+    const { days = 30, mode = 'auto' } = options;
     const state = get();
     if (state.status === 'loading') return;
-    if (!force && state.status === 'ready' && (state.items?.length ?? 0) > 0) {
-      return;
+
+    const hasCached = (state.items?.length ?? 0) > 0;
+    let fetchMode = mode;
+    if (mode === 'auto') {
+      fetchMode = hasCached ? 'incremental' : 'full';
     }
 
-    set((s) => ({ ...s, status: 'loading', error: null }));
+    const lastKnownId = fetchMode === 'full' ? -1 : getLastKnownOsmId(state.items);
+
+    if (!hasCached) {
+      set((s) => ({ ...s, status: 'loading', error: null }));
+    }
+
     try {
-      const items = await fetchOsms({ lastKnownId, days, enableRetry: true });
+      const incoming = await fetchOsms({ lastKnownId, days, enableRetry: true });
+      const prevIds = new Set((state.items || []).map((m) => String(m.id)));
+      const newlyArrived = (incoming || []).filter((m) => !prevIds.has(String(m.id)));
+
+      let items;
+      if (fetchMode === 'full') {
+        items = incoming;
+      } else if (!hasCached) {
+        items = incoming;
+      } else {
+        items = mergeOsmsItems(state.items, incoming);
+      }
+
       const { currentCount, newestMs, hasNew, unreadCount } = computeUnread(items);
 
       safeSet(LS_LAST_COUNT, String(currentCount));
       safeSet(LS_LAST_NEWEST_TIME, newestMs != null ? String(newestMs) : '');
+
+      const notifyItem =
+        fetchMode === 'incremental' && newlyArrived.length > 0
+          ? pickNewestAmong(newlyArrived)
+          : null;
 
       set((s) => ({
         ...s,
@@ -94,16 +137,25 @@ export const useOsmsStore = create((set, get) => ({
         hasNew,
         unreadCount,
         currentCount,
+        pendingNotification: notifyItem ?? s.pendingNotification,
       }));
     } catch (err) {
       const message = err?.message || err?.errorInfo?.userMessage || 'Error al obtener OSMS';
-      // si ya hay data, mantenerla “ready”
       set((s) => {
-        const hasCached = (s.items?.length ?? 0) > 0;
-        const nextStatus = hasCached ? 'ready' : 'error';
-        return { ...s, status: nextStatus, error: hasCached ? null : message };
+        const hasItems = (s.items?.length ?? 0) > 0;
+        const nextStatus = hasItems ? 'ready' : 'error';
+        return { ...s, status: nextStatus, error: hasItems ? null : message };
       });
     }
+  },
+
+  refreshOsms: async (options = {}) => {
+    const { force = false, days = 30 } = options;
+    return get().pollOsms({ days, mode: force ? 'full' : 'auto' });
+  },
+
+  dismissOsmsNotification: () => {
+    set((s) => ({ ...s, pendingNotification: null }));
   },
 
   markAsSeen: () => {
@@ -115,7 +167,13 @@ export const useOsmsStore = create((set, get) => ({
     safeSet(LS_LAST_SEEN_COUNT, String(currentCount));
     safeSet(LS_LAST_SEEN_NEWEST_TIME, newestMs != null ? String(newestMs) : '');
 
-    set((s) => ({ ...s, hasNew: false, unreadCount: 0, currentCount }));
+    set((s) => ({
+      ...s,
+      hasNew: false,
+      unreadCount: 0,
+      currentCount,
+      pendingNotification: null,
+    }));
   },
 
   resetOsms: () => {
@@ -124,4 +182,3 @@ export const useOsmsStore = create((set, get) => ({
 }));
 
 export default useOsmsStore;
-
