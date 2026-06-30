@@ -485,6 +485,7 @@ export function SearchPage() {
             type="button"
             id="search-clear-btn"
             className="search-clear"
+            tabIndex={0}
             onClick={() => setQuery('')}
           >
             {t('search.clear', { defaultValue: 'Limpiar' })}

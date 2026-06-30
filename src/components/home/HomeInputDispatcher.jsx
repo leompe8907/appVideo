@@ -128,6 +128,10 @@ export function HomeInputDispatcher({ isPlayerActive }) {
         if (!mainEl.contains(active)) return;
 
         const path = location.pathname || '';
+        // Buscador: LRUD del header (input ↔ limpiar) lo gestiona useSearchPageTvNav.
+        if (path === '/home/buscador' && active.closest('.search-header')) {
+          return;
+        }
         const bouquetScrollRoot =
           path === '/home/inicio' || path === '/home/servicios-tv-radio'
             ? document.querySelector('.bouquet-inicio-scroll')

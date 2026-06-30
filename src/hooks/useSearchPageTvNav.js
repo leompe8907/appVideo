@@ -7,6 +7,7 @@ import {
   focusElementSafe,
   scrollElementIntoVisibleScrollAncestors,
 } from '../utils/homeShellNavigation';
+import { rememberMainShellFocus } from '../utils/homeShellLastContentFocus';
 
 const TARGET_PATH = '/home/buscador';
 const INPUT_ID = 'search-input-tv';
@@ -42,6 +43,20 @@ function isSearchTab(el) {
 
 function isSearchResult(el) {
   return el instanceof HTMLElement && el.classList.contains('search-result');
+}
+
+function querySidebar() {
+  return document.querySelector('aside.home-sidebar[data-home-scope="sidebar"]');
+}
+
+function getSearchSidebarFocusTarget() {
+  const sidebar = querySidebar();
+  if (!(sidebar instanceof HTMLElement)) return null;
+  const target =
+    sidebar.querySelector('a.home-sidebar-link[href="/home/buscador"]') ||
+    sidebar.querySelector('a.home-sidebar-link.active') ||
+    sidebar.querySelector('a.home-sidebar-link');
+  return target instanceof HTMLElement ? target : null;
 }
 
 function isInputEditing() {
@@ -125,7 +140,12 @@ export function useSearchPageTvNav(opts = {}) {
       let target = null;
 
       if (isSearchInput(active)) {
-        if (action === TV_ACTION.RIGHT && clearBtn instanceof HTMLElement) {
+        if (action === TV_ACTION.LEFT) {
+          target = getSearchSidebarFocusTarget();
+          if (target) {
+            rememberMainShellFocus(active);
+          }
+        } else if (action === TV_ACTION.RIGHT && clearBtn instanceof HTMLElement) {
           target = clearBtn;
         } else if (action === TV_ACTION.DOWN) {
           target = tabs[0] ?? results[0] ?? null;
@@ -188,7 +208,10 @@ export function useSearchPageTvNav(opts = {}) {
         e.preventDefault();
         e.stopPropagation();
         focusElementSafe(target);
-        if (root instanceof HTMLElement) {
+        const sidebar = querySidebar();
+        if (sidebar instanceof HTMLElement && sidebar.contains(target)) {
+          scrollElementIntoVisibleScrollAncestors(target, sidebar);
+        } else if (root instanceof HTMLElement) {
           scrollElementIntoVisibleScrollAncestors(target, root);
         }
       }
