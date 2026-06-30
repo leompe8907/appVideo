@@ -154,11 +154,14 @@ export function useSearchPageTvNav(opts = {}) {
         const cols = 6; // 6 columnas de resultados
 
         if (action === TV_ACTION.LEFT) {
-          if (resIdx > 0) {
+          if (resIdx % cols > 0 && resIdx > 0) {
             target = results[resIdx - 1];
+          } else {
+            // Permitir que el evento se propague para salir al Sidebar
+            return;
           }
         } else if (action === TV_ACTION.RIGHT) {
-          if (resIdx < results.length - 1) {
+          if (resIdx % cols < cols - 1 && resIdx < results.length - 1) {
             target = results[resIdx + 1];
           }
         } else if (action === TV_ACTION.UP) {

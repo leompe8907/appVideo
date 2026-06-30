@@ -76,6 +76,24 @@ export function VirtualKeyboard({
     setLayoutLanguage(resolveLayoutLanguage(i18n.language));
   }, [i18n.language, isNumericMode]);
 
+  // Interceptar el botón VOLVER del control remoto en Smart TVs de forma global
+  useEffect(() => {
+    const handleGlobalBack = (e) => {
+      const key = e.key || e.code;
+      const keyCode = e.keyCode || e.which;
+      const isTvBackCodes = keyCode === 10009 || keyCode === 461;
+      
+      if (key === 'Escape' || isTvBackCodes) {
+        e.preventDefault();
+        e.stopPropagation();
+        onCancel?.();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalBack, { capture: true });
+    return () => window.removeEventListener('keydown', handleGlobalBack, { capture: true });
+  }, [onCancel]);
+
   // Forzar foco en el primer elemento al montar o al cambiar de layout
   useEffect(() => {
     const tId = setTimeout(() => {

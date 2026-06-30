@@ -38,7 +38,7 @@
 }
 
 .osd-keyboard-title {
-  font-size: clamp(1.15rem, 3.2vmin, 2rem);
+  font-size: clamp(1.5rem, 4vmin, 2.5rem);
   font-weight: 700;
   margin-bottom: clamp(1rem, 2.8vmin, 2rem);
   color: rgba(255, 255, 255, 0.92);
@@ -55,12 +55,12 @@
 
 .osd-keyboard-input-preview {
   width: 100%;
-  height: clamp(3.25rem, 7vmin, 5.5rem);
+  height: clamp(4rem, 8.5vmin, 6.5rem);
   background: rgba(0, 0, 0, 0.45);
   border: 2px solid rgba(255, 255, 255, 0.18);
   border-radius: clamp(0.6rem, 1.2vmin, 1rem);
   padding: 0 clamp(1rem, 2.8vmin, 2rem);
-  font-size: clamp(1.25rem, 3.6vmin, 2.25rem);
+  font-size: clamp(1.65rem, 4.5vmin, 2.85rem);
   font-weight: 500;
   color: #ffffff;
   outline: none;
@@ -107,9 +107,9 @@
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: clamp(0.45rem, 0.9vmin, 0.75rem);
-  padding: clamp(0.45rem, 1.2vmin, 0.85rem) clamp(0.9rem, 2.2vmin, 1.5rem);
+  padding: clamp(0.6rem, 1.5vmin, 1.1rem) clamp(1.1rem, 2.8vmin, 1.9rem);
   color: rgba(255, 255, 255, 0.65);
-  font-size: clamp(0.95rem, 2.4vmin, 1.35rem);
+  font-size: clamp(1.35rem, 3.2vmin, 1.8rem);
   font-weight: bold;
   cursor: pointer;
   outline: none;
@@ -154,7 +154,7 @@
 .osd-keyboard-key {
   flex: 1;
   min-width: 0;
-  height: clamp(3.5rem, 7.5vmin, 5.75rem);
+  height: clamp(4.5rem, 9.5vmin, 7.5rem);
   background: linear-gradient(
     180deg,
     rgba(255, 255, 255, 0.14) 0%,
@@ -163,7 +163,7 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: clamp(0.55rem, 1.1vmin, 0.9rem);
   color: #ffffff;
-  font-size: clamp(1.35rem, 3.8vmin, 2.4rem);
+  font-size: clamp(1.75rem, 4.8vmin, 3.2rem);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -200,7 +200,7 @@
       rgba(255, 255, 255, 0.18) 0%,
       rgba(255, 255, 255, 0.1) 100%
     );
-    font-size: clamp(1rem, 2.8vmin, 1.75rem);
+    font-size: clamp(1.35rem, 3.8vmin, 2.3rem);
     font-weight: 700;
     letter-spacing: 0.02em;
 
@@ -274,7 +274,7 @@
 }
 
 .osd-keyboard-box--numeric {
-  width: min(70vw, 52vmin);
+  width: min(80vw, 62vmin);
 }
 
 .osd-keyboard-grid--numeric {
@@ -290,7 +290,7 @@
 }
 
 .osd-keyboard-key--num {
-  font-size: clamp(1.5rem, 4.2vmin, 2.6rem);
+  font-size: clamp(1.95rem, 5.2vmin, 3.2rem);
   font-weight: 700;
-  height: clamp(3.75rem, 8vmin, 6.25rem);
+  height: clamp(4.75rem, 10vmin, 7.75rem);
 }
