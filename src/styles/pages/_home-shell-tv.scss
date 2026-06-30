@@ -41,6 +41,32 @@
     width: 3vw;
   }
 
+  // Toggle superior: misma altura y centrado en el rail que el resto de iconos
+  .home-sidebar-toggle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: var(--home-sidebar-tv-item-min-height);
+    height: auto;
+    margin-bottom: 0.35rem;
+
+    .home-sidebar-toggle-icon {
+      flex: 0 0 auto;
+      width: 1.4vw;
+      height: 1.4vw;
+      border-right-width: 2px;
+      border-bottom-width: 2px;
+    }
+  }
+
+  &.home-sidebar--overlay .home-sidebar-toggle {
+    justify-content: flex-start;
+
+    .home-sidebar-toggle-icon {
+      margin-left: calc((var(--sidebar-rail-width) - 1.4vw) / 2);
+    }
+  }
+
   .home-sidebar-link.focused,
   .home-sidebar-settings-btn.focused,
   .home-sidebar-sublink.focused {
@@ -126,6 +152,15 @@
     .home-sidebar-icon {
       height: 2vw;
       width: 2vw;
+    }
+
+    .home-sidebar-toggle .home-sidebar-toggle-icon {
+      width: 1vw;
+      height: 1vw;
+    }
+
+    &.home-sidebar--overlay .home-sidebar-toggle .home-sidebar-toggle-icon {
+      margin-left: calc((var(--sidebar-rail-width) - 1vw) / 2);
     }
   }
 }
