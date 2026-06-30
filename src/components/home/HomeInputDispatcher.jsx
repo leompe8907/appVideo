@@ -128,8 +128,8 @@ export function HomeInputDispatcher({ isPlayerActive }) {
         if (!mainEl.contains(active)) return;
 
         const path = location.pathname || '';
-        // Buscador: LRUD del header (input ↔ limpiar) lo gestiona useSearchPageTvNav.
-        if (path === '/home/buscador' && active.closest('.search-header')) {
+        // Buscador: LRUD del header y grilla de resultados lo gestiona useSearchPageTvNav.
+        if (path === '/home/buscador' && active.closest('.search-page')) {
           return;
         }
         const bouquetScrollRoot =
