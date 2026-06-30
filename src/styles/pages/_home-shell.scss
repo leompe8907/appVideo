@@ -4,11 +4,24 @@
 @property --home-sidebar-width {
   syntax: '<length>';
   inherits: true;
-  initial-value: 240px;
+  initial-value: 72px;
+}
+
+@property --sidebar-rail-width {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 72px;
+}
+
+@property --sidebar-overlay-width {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 228px;
 }
 
 $home-sidebar-ease: cubic-bezier(0.4, 0, 0.2, 1);
 $home-sidebar-duration: 380ms;
+// Anchos sidebar — PC (TV: overrides en pages/_home-shell-tv.scss)
 $home-sidebar-rail-width: 4.2vw;
 $home-sidebar-overlay-width: 15vw;
 
@@ -21,7 +34,9 @@ $home-sidebar-overlay-width: 15vw;
 
 .home-shell-ui {
   // El rail reserva espacio vía margin-left en .home-content; el sidebar es fixed encima.
-  --home-sidebar-width: #{$home-sidebar-rail-width};
+  --sidebar-rail-width: #{$home-sidebar-rail-width};
+  --sidebar-overlay-width: #{$home-sidebar-overlay-width};
+  --home-sidebar-width: var(--sidebar-rail-width);
   --home-sidebar-transition-duration: #{$home-sidebar-duration};
   --home-sidebar-transition-ease: #{$home-sidebar-ease};
   display: block;
@@ -35,7 +50,7 @@ $home-sidebar-overlay-width: 15vw;
   top: 0;
   right: 0;
   bottom: 0;
-  left: $home-sidebar-overlay-width;
+  left: var(--sidebar-overlay-width);
   z-index: 20;
   pointer-events: none;
   // Velo suave sobre el home visible (no negro sólido bajo el panel del sidebar).
@@ -44,7 +59,7 @@ $home-sidebar-overlay-width: 15vw;
 }
 
 .home-shell-ui--sidebar-collapsed {
-  --home-sidebar-width: #{$home-sidebar-rail-width};
+  --home-sidebar-width: var(--sidebar-rail-width);
 }
 
 .home-shell-ui--hidden {
@@ -414,13 +429,12 @@ html:-moz-full-screen {
 
 .home-sidebar {
   --sidebar-accent: var(--focus-color, var(--secondary-color, #5b9cf5));
-  --sidebar-rail-width: #{$home-sidebar-rail-width};
   // Fondo opaco del rail (ignora --sidebar-bg translúcido de marca en el panel fijo).
   --sidebar-panel-bg: var(--sidebar-panel-bg-theme, #0a0a0a);
   position: fixed;
   left: 0;
   top: 0;
-  width: $home-sidebar-rail-width;
+  width: var(--sidebar-rail-width);
   height: 100vh;
   z-index: 30;
   background: var(--sidebar-panel-bg);
@@ -518,7 +532,7 @@ html:-moz-full-screen {
 }
 
 .home-sidebar--collapsed {
-  width: $home-sidebar-rail-width;
+  width: var(--sidebar-rail-width);
 }
 
 .home-sidebar-nav,
@@ -659,8 +673,8 @@ html:-moz-full-screen {
 
 // Panel expandido: columna de labels con el mismo fondo opaco que el rail cerrado.
 .home-sidebar.home-sidebar--overlay {
-  width: $home-sidebar-overlay-width;
-  max-width: min($home-sidebar-overlay-width, 46vw);
+  width: var(--sidebar-overlay-width);
+  max-width: min(var(--sidebar-overlay-width), 46vw);
   overflow: visible;
   box-shadow: none;
 
@@ -822,7 +836,7 @@ html:-moz-full-screen {
 }
 
 .home-content {
-  margin-left: $home-sidebar-rail-width;
+  margin-left: var(--sidebar-rail-width);
   min-width: 0;
   min-height: 100vh;
   height: 100vh;
@@ -852,97 +866,6 @@ html:-moz-full-screen {
   min-width: 0;
   overflow: auto;
   position: relative;
-}
-
-/* TV: separa el contenido del outlet del banner inferior del shell (evita sensación de solapamiento). */
-.device-tv .home-content-outlet {
-  padding-bottom: 0.9rem;
-  box-sizing: border-box;
-}
-
-/*
- * TV — sidebar: targets altos; estilo activo/foco = subrayado (ver reglas base .home-sidebar).
- */
-[data-focus='on'].device-tv .home-sidebar {
-  --home-sidebar-tv-item-min-height: 2.85rem;
-
-  .home-sidebar-nav,
-  .home-sidebar-group--nav {
-    gap: 0.15rem;
-  }
-
-  .home-sidebar-link,
-  .home-sidebar-settings-btn {
-    min-height: var(--home-sidebar-tv-item-min-height);
-    font-size: 1.25rem;
-    box-sizing: border-box;
-    border: none;
-  }
-
-  .home-sidebar-icon {
-    height: 1.25rem;
-    width: 1.25rem;
-  }
-
-  .home-sidebar-link.focused,
-  .home-sidebar-settings-btn.focused,
-  .home-sidebar-sublink.focused {
-    transform: none !important;
-    box-shadow: none !important;
-    outline: none;
-    color: #fff;
-    background: transparent !important;
-    border: none !important;
-  }
-
-  .home-sidebar-sublink {
-    min-height: 2.6rem;
-    font-size: 0.98rem;
-    box-sizing: border-box;
-    border: 3px solid transparent;
-    transition:
-      background-color 0.15s ease,
-      color 0.15s ease,
-      border-color 0.12s ease-out;
-  }
-}
-
-@media (min-height: 900px) {
-  [data-focus='on'].device-tv .home-sidebar {
-    --home-sidebar-tv-item-min-height: 3rem;
-
-    .home-sidebar-link,
-    .home-sidebar-settings-btn {
-      font-size: 1.25rem;
-    }
-
-    .home-sidebar-sublink {
-      min-height: 2.85rem;
-      font-size: 1rem;
-    }
-  }
-}
-
-@media (min-height: 1080px) {
-  [data-focus='on'].device-tv .home-sidebar {
-    --home-sidebar-tv-item-min-height: 3.25rem;
-
-    .home-sidebar-nav,
-    .home-sidebar-group--nav {
-      gap: 0.65rem;
-    }
-
-    .home-sidebar-link,
-    .home-sidebar-settings-btn {
-      font-size: 1.25rem;
-      padding-block: 0.78rem;
-    }
-
-    .home-sidebar-icon {
-      height: 1.25rem;
-      width: 1.25rem;
-    }
-  }
 }
 
 .home-placeholder {
@@ -985,7 +908,7 @@ html:-moz-full-screen {
 
 @media (max-width: 1024px) {
   .home-content {
-    margin-left: $home-sidebar-rail-width;
+    margin-left: var(--sidebar-rail-width);
   }
 
   .home-sidebar-link {
