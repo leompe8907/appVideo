@@ -54,13 +54,29 @@
 
   .home-sidebar-sublink {
     min-height: 5vw;
-    font-size: 3vw;
+    font-size: 2vw;
     box-sizing: border-box;
     border: 3px solid transparent;
     transition:
       background-color 0.15s ease,
       color 0.15s ease,
       border-color 0.12s ease-out;
+  }
+
+  // Configuración colapsada: centrar icono en el rail (el label oculto no debe ocupar columna 2)
+  &.home-sidebar--collapsed .home-sidebar-settings-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+
+    .home-sidebar-icon {
+      flex: 0 0 auto;
+    }
+
+    .home-sidebar-label {
+      display: none;
+    }
   }
 
   // Configuración expandida: icono + texto (+ badge) en una sola fila horizontal
