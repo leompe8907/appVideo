@@ -653,7 +653,9 @@ html:-moz-full-screen {
 .home-sidebar--collapsed .home-sidebar-link.active::after,
 .home-sidebar--collapsed .home-sidebar-settings-btn.active::after,
 .home-sidebar--collapsed .home-sidebar-link:focus::after,
-.home-sidebar--collapsed .home-sidebar-settings-btn:focus::after {
+.home-sidebar--collapsed .home-sidebar-settings-btn:focus::after,
+.home-sidebar--collapsed .home-sidebar-link.focused::after,
+.home-sidebar--collapsed .home-sidebar-settings-btn.focused::after {
   content: '';
   position: absolute;
   bottom: 0.35rem;
@@ -697,19 +699,22 @@ html:-moz-full-screen {
 
   .home-sidebar-label {
     opacity: 1;
-    max-width: var(--sidebar-overlay-width);
+    max-width: calc(var(--sidebar-overlay-width) - var(--sidebar-rail-width));
     pointer-events: auto;
     display: inline-flex;
     flex-direction: column;
     align-items: center;
-    width: 100%;
+    width: fit-content;
+    justify-self: start;
     color: #fff;
   }
 
   .home-sidebar-link.active .home-sidebar-label::after,
   .home-sidebar-settings-btn.active .home-sidebar-label::after,
   .home-sidebar-link:focus .home-sidebar-label::after,
-  .home-sidebar-settings-btn:focus .home-sidebar-label::after {
+  .home-sidebar-settings-btn:focus .home-sidebar-label::after,
+  .home-sidebar-link.focused .home-sidebar-label::after,
+  .home-sidebar-settings-btn.focused .home-sidebar-label::after {
     content: '';
     display: block;
     width: 100%;
