@@ -8,6 +8,7 @@ import {
   scrollElementIntoVisibleScrollAncestors,
 } from '../utils/homeShellNavigation';
 import { rememberMainShellFocus } from '../utils/homeShellLastContentFocus';
+import { useSearchSessionStore } from '../store/searchSessionStore';
 
 const TARGET_PATH = '/home/buscador';
 const INPUT_ID = 'search-input-tv';
@@ -69,10 +70,12 @@ function isInputEditing() {
  * Navegación TV en buscador — Opción B:
  * LRUD entre input → tabs → resultados; IME solo al pulsar ENTER en el input (FocusableInput).
  *
- * @param {{ modalOpen?: boolean }} opts
+ * @param {{ modalOpen?: boolean, restoreSignal?: string, resultCount?: number }} opts
  */
 export function useSearchPageTvNav(opts = {}) {
   const modalOpen = Boolean(opts.modalOpen);
+  const restoreSignal = opts.restoreSignal ?? '';
+  const resultCount = opts.resultCount ?? 0;
   const { isTV } = useDevice();
   const location = useLocation();
   const initialFocusRef = useRef(false);
@@ -87,12 +90,51 @@ export function useSearchPageTvNav(opts = {}) {
     if (!isTV) return undefined;
     if (location.pathname !== TARGET_PATH) return undefined;
     if (initialFocusRef.current) return undefined;
+    if (modalOpen) return undefined;
 
-    const input = document.getElementById(INPUT_ID);
-    if (input instanceof HTMLElement && focusElementSafe(input)) {
-      initialFocusRef.current = true;
-    }
-  }, [isTV, location.pathname]);
+    let cancelled = false;
+    let attempts = 0;
+
+    const escapeAttr = (value) => {
+      if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+        return CSS.escape(value);
+      }
+      return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    };
+
+    const tryRestoreFocus = () => {
+      if (cancelled || initialFocusRef.current) return;
+
+      const focusedKey = useSearchSessionStore.getState().focusedResultKey;
+      if (focusedKey && resultCount > 0) {
+        const el = document.querySelector(`[data-search-result-key="${escapeAttr(focusedKey)}"]`);
+        if (el instanceof HTMLElement && focusElementSafe(el)) {
+          initialFocusRef.current = true;
+          const root = querySearchRoot();
+          if (root instanceof HTMLElement) {
+            scrollElementIntoVisibleScrollAncestors(el, root);
+          }
+          return;
+        }
+      }
+
+      const input = document.getElementById(INPUT_ID);
+      if (input instanceof HTMLElement && focusElementSafe(input)) {
+        initialFocusRef.current = true;
+        return;
+      }
+
+      attempts += 1;
+      if (attempts < 30) {
+        requestAnimationFrame(tryRestoreFocus);
+      }
+    };
+
+    requestAnimationFrame(tryRestoreFocus);
+    return () => {
+      cancelled = true;
+    };
+  }, [isTV, location.pathname, modalOpen, restoreSignal, resultCount]);
 
   useLayoutEffect(() => {
     if (!isTV) return undefined;
@@ -108,6 +150,10 @@ export function useSearchPageTvNav(opts = {}) {
       if (!root || !root.contains(t)) return;
       if (isSearchResult(t)) {
         scrollElementIntoVisibleScrollAncestors(t, root);
+        const key = t.getAttribute('data-search-result-key');
+        if (key) {
+          useSearchSessionStore.getState().setFocusedResultKey(key);
+        }
       }
     };
 

@@ -200,11 +200,11 @@ export const BRANDS = [
         privateKeyUrl: "/cableatlantico/keys/private_key.pem",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
-        backendBaseUrl: 'http://127.0.0.1:8000',
+        backendBaseUrl: 'http://backend.wind.do',
         google: {
           enabled: true,
           redirectUrl: '/wind/auth/google/',
-          accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
+          accessToken: '487078023200-686hite4p619jtaobfa4oksvhoal7qc1.apps.googleusercontent.com',
           // Mantener look del botón fallback aunque OAuth esté configurado.
           preferCustomButton: true,
           backendBaseUrl: '',

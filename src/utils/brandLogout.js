@@ -6,6 +6,7 @@ import { useParentalStore } from '../store/parentalStore';
 import { useEpgReminderStore } from '../store/epgReminderStore';
 import { useOsmsStore } from '../store/osmsStore';
 import { usePreloadStore } from '../store/preloadStore';
+import { useSearchSessionStore } from '../store/searchSessionStore';
 
 export function resetBrandStoresOnLogout() {
   try {
@@ -25,6 +26,11 @@ export function resetBrandStoresOnLogout() {
   }
   try {
     usePreloadStore.getState().resetPreload?.();
+  } catch {
+    // noop
+  }
+  try {
+    useSearchSessionStore.getState().resetOnLogout?.();
   } catch {
     // noop
   }

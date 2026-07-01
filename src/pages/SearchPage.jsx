@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
@@ -9,6 +10,7 @@ import { getSearchDebounceMs, searchAll } from '../services/searchService';
 import { useParentalGate } from '../hooks/useParentalGate';
 import { useSearchPageTvNav } from '../hooks/useSearchPageTvNav';
 import { FocusableInput } from '../components/navigation/FocusableInput';
+import { buildSearchResultKey, useSearchSessionStore } from '../store/searchSessionStore';
 import EpgEventModal from '../components/epg/EpgEventModal';
 import VodDetailModal from '../components/vod/VodDetailModal';
 import VodDetailModalClassic from '../components/vod/VodDetailModalClassic';
@@ -33,6 +35,7 @@ function SearchTab({ id, label, active, hidden, onSelect }) {
 function ResultItem({ item, onSelect }) {
   const { t } = useTranslation();
   const placeholderUrl = useBrandPlaceholderUrl();
+  const resultKey = buildSearchResultKey(item);
 
   const [imgSrc, setImgSrc] = useState(item.logo || '');
   useEffect(() => {
@@ -59,6 +62,7 @@ function ResultItem({ item, onSelect }) {
     <button
       type="button"
       className={`search-result${isEpg ? ' search-result--epg' : ''}`}
+      data-search-result-key={resultKey || undefined}
       onClick={() => onSelect?.(item)}
     >
       {(imgSrc || placeholderUrl) ? (
@@ -141,15 +145,21 @@ function SearchSection({ title, items, baseIndex, onSelect }) {
 
 export function SearchPage() {
   const { t } = useTranslation();
+  const location = useLocation();
   const { isTV } = useDevice();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
   const { requestPlayChannel, requestPlayMedia } = useParentalGate();
   const { epg, vod, catchup, loadVOD, loadCatchup } = usePreload();
 
-  const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('all'); // all | service | vod | catchup | epg
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const query = useSearchSessionStore((s) => s.query);
+  const activeTab = useSearchSessionStore((s) => s.activeTab);
+  const setSessionQuery = useSearchSessionStore((s) => s.setQuery);
+  const setSessionActiveTab = useSearchSessionStore((s) => s.setActiveTab);
+  const bindBrand = useSearchSessionStore((s) => s.bindBrand);
+  const touchCatalogSnapshot = useSearchSessionStore((s) => s.touchCatalogSnapshot);
+
+  const [debouncedQuery, setDebouncedQuery] = useState(() => useSearchSessionStore.getState().query);
   const [selectedEpgItem, setSelectedEpgItem] = useState(null);
   const [selectedVodItem, setSelectedVodItem] = useState(null);
   const [selectedCatchupDetail, setSelectedCatchupDetail] = useState(null);
@@ -158,12 +168,34 @@ export function SearchPage() {
   useEffect(() => { tRef.current = t; });
 
   const searchModalOpen = Boolean(selectedEpgItem || selectedVodItem || selectedCatchupDetail);
-  useSearchPageTvNav({ modalOpen: searchModalOpen });
 
   useEffect(() => {
+    if (location.pathname !== '/home/buscador') return;
+    const store = useSearchSessionStore.getState();
+    if (store.isExpired()) {
+      store.reset();
+      setDebouncedQuery('');
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!currentBrand?.brand) return;
+    bindBrand(currentBrand.brand);
+  }, [currentBrand?.brand, bindBrand]);
+
+  useEffect(() => {
+    touchCatalogSnapshot({
+      epgLastLoadedAt: epg.lastLoadedAt ?? null,
+      vodLastLoadedAt: vod.lastLoadedAt ?? null,
+      catchupLastLoadedAt: catchup.lastLoadedAt ?? null,
+    });
+  }, [epg.lastLoadedAt, vod.lastLoadedAt, catchup.lastLoadedAt, touchCatalogSnapshot]);
+
+  useEffect(() => {
+    if (query === debouncedQuery) return undefined;
     const id = setTimeout(() => setDebouncedQuery(query), getSearchDebounceMs());
     return () => clearTimeout(id);
-  }, [query]);
+  }, [query, debouncedQuery]);
 
   // PC: foco en input al entrar. TV: foco sin abrir IME (Opción B — useSearchPageTvNav).
   useEffect(() => {
@@ -236,6 +268,12 @@ export function SearchPage() {
     if (effectiveTab === 'epg') return grouped.epgEvents.length;
     return 0;
   }, [effectiveTab, grouped]);
+
+  useSearchPageTvNav({
+    modalOpen: searchModalOpen,
+    restoreSignal: debouncedQuery,
+    resultCount: visibleCount,
+  });
 
   const findCatchupGroupForEvent = useCallback((event, groups) => {
     if (!event) return null;
@@ -469,10 +507,10 @@ export function SearchPage() {
             className="search-input"
             value={query}
             placeholder={t('search.placeholder', { defaultValue: 'Buscar...' })}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => setSessionQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
-                setQuery('');
+                setSessionQuery('');
               }
               if (!isTV && e.key === 'Enter') {
                 const all = resultsAll || [];
@@ -486,7 +524,7 @@ export function SearchPage() {
             id="search-clear-btn"
             className="search-clear"
             tabIndex={0}
-            onClick={() => setQuery('')}
+            onClick={() => setSessionQuery('')}
           >
             {t('search.clear', { defaultValue: 'Limpiar' })}
           </button>
@@ -494,11 +532,11 @@ export function SearchPage() {
 
         {!hideAllTab && (
           <div className="search-tabs" role="tablist" aria-label={t('search.tabs', { defaultValue: 'Tabs de búsqueda' })}>
-            <SearchTab id="all" label={t('search.tabAll', { defaultValue: 'Todos' })} active={activeTab === 'all'} hidden={totalCategories < 2} onSelect={setActiveTab} />
-            <SearchTab id="service" label={t('search.tabServices', { defaultValue: 'Servicios' })} active={activeTab === 'service'} hidden={hideServiceTab} onSelect={setActiveTab} />
-            <SearchTab id="epg" label={t('search.tabEpg', { defaultValue: 'EPG' })} active={activeTab === 'epg'} hidden={hideEpgTab} onSelect={setActiveTab} />
-            <SearchTab id="vod" label={t('search.tabVod', { defaultValue: 'VOD' })} active={activeTab === 'vod'} hidden={hideVodTab} onSelect={setActiveTab} />
-            <SearchTab id="catchup" label={t('search.tabCatchup', { defaultValue: 'Catchup' })} active={activeTab === 'catchup'} hidden={hideCatchupTab} onSelect={setActiveTab} />
+            <SearchTab id="all" label={t('search.tabAll', { defaultValue: 'Todos' })} active={activeTab === 'all'} hidden={totalCategories < 2} onSelect={setSessionActiveTab} />
+            <SearchTab id="service" label={t('search.tabServices', { defaultValue: 'Servicios' })} active={activeTab === 'service'} hidden={hideServiceTab} onSelect={setSessionActiveTab} />
+            <SearchTab id="epg" label={t('search.tabEpg', { defaultValue: 'EPG' })} active={activeTab === 'epg'} hidden={hideEpgTab} onSelect={setSessionActiveTab} />
+            <SearchTab id="vod" label={t('search.tabVod', { defaultValue: 'VOD' })} active={activeTab === 'vod'} hidden={hideVodTab} onSelect={setSessionActiveTab} />
+            <SearchTab id="catchup" label={t('search.tabCatchup', { defaultValue: 'Catchup' })} active={activeTab === 'catchup'} hidden={hideCatchupTab} onSelect={setSessionActiveTab} />
           </div>
         )}
 
