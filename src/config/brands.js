@@ -1201,7 +1201,7 @@ export const BRANDS = [
       },
       qrRegister: {
         enabled: true,
-        url: "https://shop.fotelka.tv/?c=customer&p=register",
+        url: "https://backend.wind.do/wind/register/",
       },
       udid: {
         enabled: false,
