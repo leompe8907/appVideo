@@ -1216,7 +1216,7 @@ export const BRANDS = [
         privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
       },
       socialLogin: {
-        backendBaseUrl: 'http://127.0.0.1:8000',
+        backendBaseUrl: 'http://backend.wind.do',
         google: {
           enabled: true,
           redirectUrl: '/wind/auth/google/',
