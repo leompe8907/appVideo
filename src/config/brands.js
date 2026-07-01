@@ -1220,7 +1220,7 @@ export const BRANDS = [
         google: {
           enabled: true,
           redirectUrl: '/wind/auth/google/',
-          accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
+          accessToken: '487078023200-686hite4p619jtaobfa4oksvhoal7qc1.apps.googleusercontent.com',
           preferCustomButton: true,
           backendBaseUrl: '',
         },
