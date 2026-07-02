@@ -17,6 +17,7 @@ export const HOME_SHELL_OVERLAY_SELECTORS = Object.freeze({
   messageModal: '.message-modal-overlay[role="dialog"]',
   osmsNotification: '.osms-notification-overlay[role="dialog"]',
   osmsMessageModal: '.osms-modal-overlay[role="dialog"]',
+  osdKeyboard: '.osd-keyboard-container',
 });
 
 /** @deprecated usar isEpgEventModalOverlayInDom */
@@ -57,6 +58,38 @@ export function dismissEpgReminderOverlayFromDom() {
 }
 
 /**
+ * @returns {boolean}
+ */
+export function isOsdKeyboardOverlayInDom() {
+  try {
+    return Boolean(document.querySelector(HOME_SHELL_OVERLAY_SELECTORS.osdKeyboard));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Cierra el teclado virtual OSD (mismos ids que VirtualKeyboard).
+ * @returns {boolean} true si se disparó cierre
+ */
+export function dismissOsdKeyboardOverlayFromDom() {
+  try {
+    const root = document.querySelector(HOME_SHELL_OVERLAY_SELECTORS.osdKeyboard);
+    if (!root) return false;
+    const cancelBtn =
+      document.getElementById('key-action-cancel') ||
+      root.querySelector('.osd-keyboard-key--cancel');
+    if (cancelBtn && typeof cancelBtn.click === 'function') {
+      cancelBtn.click();
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Overlays/portales que deben recibir input antes que el shell (BACK, LRUD sidebar↔main).
  * @returns {boolean}
  */
@@ -76,6 +109,7 @@ export function shouldDeferHomeShellNavigation() {
       s.messageModal,
       s.osmsNotification,
       s.osmsMessageModal,
+      s.osdKeyboard,
     ];
     for (const sel of checks) {
       if (document.querySelector(sel)) return true;

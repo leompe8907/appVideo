@@ -1,4 +1,5 @@
-import { getTvActionFromKeyEvent } from '../utils/tvRemote';
+import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
+import { isOsdKeyboardOverlayInDom } from '../utils/homeShellOverlays';
 import { focusManager } from './FocusManager';
 
 /**
@@ -56,8 +57,13 @@ class NavigationRouter {
   }
 
   onKeyDown(e) {
-    // Si el teclado virtual OSD está montado en pantalla, dejamos que intercepte todas las teclas
-    if (document.querySelector('.osd-keyboard-container')) {
+    // Teclado OSD abierto: bloquear BACK nativo del WebView; el cierre lo gestiona VirtualKeyboard / HomeInputDispatcher.
+    if (isOsdKeyboardOverlayInDom()) {
+      const action = getTvActionFromKeyEvent(e);
+      if (action === TV_ACTION.BACK) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       return;
     }
 

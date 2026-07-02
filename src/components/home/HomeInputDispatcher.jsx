@@ -4,7 +4,9 @@ import { useDevice } from '../../contexts/DeviceContext';
 import { getTvActionFromKeyEvent, isTextInputElement, TV_ACTION } from '../../utils/tvRemote';
 import {
   dismissEpgReminderOverlayFromDom,
+  dismissOsdKeyboardOverlayFromDom,
   isEpgEventModalOverlayInDom,
+  isOsdKeyboardOverlayInDom,
   shouldDeferHomeShellNavigation,
 } from '../../utils/homeShellOverlays';
 import {
@@ -56,9 +58,23 @@ export function HomeInputDispatcher({ isPlayerActive }) {
           }
         }
 
+        // Teclado virtual OSD: cerrar overlay y bloquear BACK nativo del WebView (evita history.back).
+        if (isOsdKeyboardOverlayInDom()) {
+          const dismissed = dismissOsdKeyboardOverlayFromDom();
+          if (dismissed) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+        }
+
         if (isPlayerActive) return;
 
-        if (shouldDeferHomeShellNavigation()) return;
+        if (shouldDeferHomeShellNavigation()) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
 
         if (isTextInputElement(document.activeElement)) return;
 
