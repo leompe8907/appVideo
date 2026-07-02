@@ -64,6 +64,13 @@ export function isTextInputElement(el) {
   return type === 'text' || type === 'password' || type === 'email' || type === 'number' || type === '';
 }
 
+/** Input de texto en edición real (no readOnly/disabled). En TV los FocusableInput son readOnly. */
+export function isEditableTextInputElement(el) {
+  if (!isTextInputElement(el)) return false;
+  if (el.readOnly || el.disabled) return false;
+  return true;
+}
+
 export function getCaretInfo(inputEl) {
   try {
     const v = String(inputEl?.value ?? '');

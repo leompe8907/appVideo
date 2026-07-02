@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDevice } from '../../contexts/DeviceContext';
-import { getTvActionFromKeyEvent, isTextInputElement, TV_ACTION } from '../../utils/tvRemote';
+import { getTvActionFromKeyEvent, isEditableTextInputElement, isTextInputElement, TV_ACTION } from '../../utils/tvRemote';
 import {
   dismissEpgReminderOverlayFromDom,
   dismissOsdKeyboardOverlayFromDom,
@@ -76,7 +76,7 @@ export function HomeInputDispatcher({ isPlayerActive }) {
           return;
         }
 
-        if (isTextInputElement(document.activeElement)) return;
+        if (isEditableTextInputElement(document.activeElement)) return;
 
         const path = location.pathname || '';
         if (path.startsWith('/home/') && path !== '/home/inicio') {
