@@ -274,12 +274,12 @@ $home-sidebar-overlay-width: 15vw;
   inset: 0;
   width: 100%;
   height: 100%;
-  // En ventana: evitar recortes. En fullscreen: llenar pantalla.
+  // Siempre contain: evita recortar logos cuando el stream trae letterbox embebido.
   object-fit: var(--player-video-object-fit, contain);
   pointer-events: none;
 }
 
-// PC — pantalla completa nativa: video a cover en todo el viewport del dispositivo.
+// PC — pantalla completa nativa: vídeo contain (sin crop por letterbox del operador).
 @mixin home-global-player-fullscreen-fill {
   position: fixed;
   inset: 0;
@@ -327,7 +327,7 @@ $home-sidebar-overlay-width: 15vw;
     height: 100% !important;
     max-width: none !important;
     max-height: none !important;
-    object-fit: cover !important;
+    object-fit: contain !important;
   }
 }
 

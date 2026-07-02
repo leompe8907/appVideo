@@ -466,7 +466,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     const h = fs
       ? (fsEl?.clientHeight || window.innerHeight || document.documentElement.clientHeight)
       : container.clientHeight;
-    const objectFit = fs ? 'cover' : 'contain';
+    const objectFit = 'contain';
 
     const applyVideoLayout = () => {
       if (playerRoot instanceof HTMLElement) {
@@ -529,7 +529,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
       const fs = isAppFullscreenActive();
       setIsFullscreen(fs);
       try {
-        document.documentElement.style.setProperty('--player-video-object-fit', fs ? 'cover' : 'contain');
+        document.documentElement.style.setProperty('--player-video-object-fit', 'contain');
       } catch {
         // noop
       }

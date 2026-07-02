@@ -20,7 +20,7 @@ export function isCssPlayerFullscreen() {
   return getPlayerRootElement()?.classList.contains(CSS_FULLSCREEN_CLASS) === true;
 }
 
-/** Fullscreen nativo o fallback CSS (maximizado con cover). */
+/** Fullscreen nativo o fallback CSS (maximizado, vídeo en contain). */
 export function isAppFullscreenActive() {
   return Boolean(getNativeFullscreenElement()) || isCssPlayerFullscreen();
 }
@@ -164,7 +164,7 @@ export function exitNativeFullscreenSync() {
   }
 }
 
-/** Maximizado con cover cuando la API nativa no está disponible (p. ej. http://IP:3000). */
+/** Maximizado en viewport; vídeo siempre contain (sin recortar logos/bordes). */
 export function setCssPlayerFullscreen(enabled) {
   const root = getPlayerRootElement();
   const html = document.documentElement;
@@ -172,7 +172,7 @@ export function setCssPlayerFullscreen(enabled) {
 
   root.classList.toggle(CSS_FULLSCREEN_CLASS, enabled);
   html.classList.toggle(HTML_FULLSCREEN_CLASS, enabled);
-  html.style.setProperty('--player-video-object-fit', enabled ? 'cover' : 'contain');
+  html.style.setProperty('--player-video-object-fit', 'contain');
 }
 
 export function exitAppFullscreenSync() {
