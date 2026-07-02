@@ -25,17 +25,26 @@ export const FocusableInput = forwardRef(function FocusableInput(
     }
   };
 
-  const setInputValue = (val) => {
+  const commitInputValue = (val) => {
     const el = innerRef.current;
     if (!el) return;
+    const next = String(val ?? '');
+
+    if (typeof inputProps.onChange === 'function') {
+      inputProps.onChange({
+        target: { value: next, name: el.name ?? inputProps.name ?? '' },
+        currentTarget: el,
+      });
+      return;
+    }
+
     try {
       const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
         window.HTMLInputElement.prototype,
         'value'
       ).set;
-      nativeInputValueSetter.call(el, val);
-      const ev = new Event('input', { bubbles: true });
-      el.dispatchEvent(ev);
+      nativeInputValueSetter.call(el, next);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
     } catch (err) {
       console.error('[FocusableInput] Error al establecer valor:', err);
     }
@@ -63,7 +72,7 @@ export const FocusableInput = forwardRef(function FocusableInput(
         initialValue: el.value || '',
       }).then((result) => {
         if (result !== null) {
-          setInputValue(result);
+          commitInputValue(result);
         }
         // Restaurar foco al input después de cerrar
         requestAnimationFrame(() => {
