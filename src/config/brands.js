@@ -29,6 +29,43 @@
  *     @param {string} [ui.sidebar.clientName] - Texto personalizado; por defecto usa appName.
  *   @param {Object} ui.playerLoading - Estilo del overlay de carga de reproducción.
  *     @param {boolean} ui.playerLoading.premium - true: overlay premium (blur + gradientes + glow); false: overlay simple.
+ *   @param {Object} [ui.search] - Tema de la pantalla Buscador (/home/buscador). Opcional; sin definir usa defaults en CSS.
+ *     @param {string} [ui.search.overlayBg] - Fondo del overlay detrás del panel.
+ *     @param {string} [ui.search.panelBg] - Fondo del panel principal.
+ *     @param {Object} [ui.search.header] - Barra superior (input + limpiar).
+ *       @param {string} [ui.search.header.bg] - Fondo de la barra.
+ *       @param {string} [ui.search.header.text] - Color de texto en la barra.
+ *     @param {Object} [ui.search.input] - Campo de búsqueda.
+ *       @param {string} [ui.search.input.bg] - Fondo del input.
+ *       @param {string} [ui.search.input.text] - Color del texto.
+ *       @param {string} [ui.search.input.placeholder] - Color del placeholder.
+ *       @param {string} [ui.search.input.focusedBg] - Fondo al enfocar.
+ *       @param {string} [ui.search.input.focusedBorder] - Borde al enfocar (default: --focus-color).
+ *       @param {string} [ui.search.input.focusedShadow] - Sombra/box-shadow al enfocar.
+ *     @param {Object} [ui.search.clearButton] - Botón limpiar.
+ *       @param {string} [ui.search.clearButton.bg] - Fondo.
+ *       @param {string} [ui.search.clearButton.text] - Texto.
+ *       @param {string} [ui.search.clearButton.hoverBg] - Fondo en hover/foco.
+ *     @param {Object} [ui.search.tabs] - Pestañas de filtro (Todos, TV, VOD…).
+ *       @param {string} [ui.search.tabs.bg] - Fondo inactivo.
+ *       @param {string} [ui.search.tabs.text] - Texto inactivo.
+ *       @param {string} [ui.search.tabs.hoverBg] - Fondo hover/foco inactivo.
+ *       @param {string} [ui.search.tabs.activeBg] - Fondo activo (default: --primary-color).
+ *       @param {string} [ui.search.tabs.activeText] - Texto activo.
+ *       @param {string} [ui.search.tabs.activeHoverBg] - Fondo activo en hover/foco.
+ *     @param {Object} [ui.search.results] - Área y tarjetas de resultados.
+ *       @param {string} [ui.search.results.areaBg] - Fondo del contenedor scroll.
+ *       @param {string} [ui.search.results.cardBg] - Fondo de cada tarjeta.
+ *       @param {string} [ui.search.results.cardBorder] - Borde de tarjeta.
+ *       @param {string} [ui.search.results.cardHoverBg] - Fondo tarjeta hover/foco.
+ *       @param {string} [ui.search.results.cardFocusBorder] - Borde tarjeta hover/foco (default: --focus-color).
+ *       @param {string} [ui.search.results.titleText] - Títulos y nombres.
+ *       @param {string} [ui.search.results.metaText] - Metadatos secundarios (hora, actor, etc.).
+ *       @param {string} [ui.search.results.sectionTitleBg] - Fondo del título de sección (tab Todos).
+ *       @param {string} [ui.search.results.thumbBg] - Fondo de miniatura/placeholder.
+ *     @param {Object} [ui.search.empty] - Estados vacíos y contador.
+ *       @param {string} [ui.search.empty.text] - Mensaje sin resultados.
+ *       @param {string} [ui.search.empty.countText] - Texto del contador de resultados.
  *
  * @param {Object} features - Funcionalidades activas o no para esta marca:
  *   @param {boolean} features.profiles - true: tras login redirige a /profile; false: redirige a /smartcard.
@@ -319,6 +356,51 @@ export const BRANDS = [
         submenuTextColor: 'rgba(255, 255, 255, 0.85)',
         fixed: true,
       },
+      // Buscador (/home/buscador)
+      search: {
+        overlayBg: 'rgba(0, 0, 0, 0.55)',
+        panelBg: 'rgba(0, 0, 0, 0.92)',
+        header: {
+          bg: '#1a3a4a',
+          text: '#ffffff',
+        },
+        input: {
+          bg: 'transparent',
+          text: '#ffffff',
+          placeholder: 'rgba(255, 255, 255, 0.45)',
+          focusedBg: 'rgba(255, 255, 255, 0.08)',
+          focusedBorder: '#004c77',
+          focusedShadow: '0 0 0 2px rgba(0, 76, 119, 0.45)',
+        },
+        clearButton: {
+          bg: '#c0392b',
+          text: '#ffffff',
+          hoverBg: '#e74c3c',
+        },
+        tabs: {
+          bg: 'rgba(255, 255, 255, 0.08)',
+          text: 'rgba(255, 255, 255, 0.9)',
+          hoverBg: 'rgba(255, 255, 255, 0.18)',
+          activeBg: '#004c77',
+          activeText: '#ffffff',
+          activeHoverBg: '#003a5c',
+        },
+        results: {
+          areaBg: '#141f26',
+          cardBg: '#1a3a4a',
+          cardBorder: '#2a5568',
+          cardHoverBg: '#254a5c',
+          cardFocusBorder: '#004c77',
+          titleText: '#ffffff',
+          metaText: 'rgba(255, 255, 255, 0.65)',
+          sectionTitleBg: 'rgba(255, 255, 255, 0.06)',
+          thumbBg: 'rgba(255, 255, 255, 0.06)',
+        },
+        empty: {
+          text: 'rgba(255, 255, 255, 0.75)',
+          countText: 'rgba(255, 255, 255, 0.65)',
+        },
+      },
     },
 
     // Configuración específica de bouquets
@@ -565,6 +647,51 @@ export const BRANDS = [
         submenuBackgroundColor: 'rgb(0, 0, 0)',
         submenuTextColor: 'rgba(255, 255, 255, 0.85)',
         fixed: true,
+      },
+      // Buscador (/home/buscador)
+      search: {
+        overlayBg: 'rgba(0, 0, 0, 0.35)',
+        panelBg: 'rgba(248, 249, 255, 0.98)',
+        header: {
+          bg: '#e8ebff',
+          text: '#1a1a2e',
+        },
+        input: {
+          bg: 'rgba(255, 255, 255, 0.85)',
+          text: '#1a1a2e',
+          placeholder: 'rgba(26, 26, 46, 0.45)',
+          focusedBg: '#ffffff',
+          focusedBorder: '#3355FF',
+          focusedShadow: '0 0 0 2px rgba(51, 85, 255, 0.35)',
+        },
+        clearButton: {
+          bg: '#dc3545',
+          text: '#ffffff',
+          hoverBg: '#c82333',
+        },
+        tabs: {
+          bg: 'rgba(51, 85, 255, 0.1)',
+          text: 'rgba(26, 26, 46, 0.85)',
+          hoverBg: 'rgba(51, 85, 255, 0.18)',
+          activeBg: '#3355FF',
+          activeText: '#ffffff',
+          activeHoverBg: '#2244dd',
+        },
+        results: {
+          areaBg: '#eceef8',
+          cardBg: '#ffffff',
+          cardBorder: '#d0d5f0',
+          cardHoverBg: '#f0f2ff',
+          cardFocusBorder: '#3355FF',
+          titleText: '#1a1a2e',
+          metaText: 'rgba(26, 26, 46, 0.65)',
+          sectionTitleBg: 'rgba(51, 85, 255, 0.08)',
+          thumbBg: 'rgba(51, 85, 255, 0.06)',
+        },
+        empty: {
+          text: 'rgba(26, 26, 46, 0.75)',
+          countText: 'rgba(26, 26, 46, 0.55)',
+        },
       },
     },
 
@@ -837,6 +964,51 @@ export const BRANDS = [
         submenuTextColor: 'rgba(255, 255, 255, 0.85)',
         fixed: true,
       },
+      // Buscador (/home/buscador)
+      search: {
+        overlayBg: 'rgba(0, 0, 0, 0.55)',
+        panelBg: 'rgba(0, 0, 0, 0.92)',
+        header: {
+          bg: '#2a2018',
+          text: '#ffffff',
+        },
+        input: {
+          bg: 'transparent',
+          text: '#ffffff',
+          placeholder: 'rgba(255, 255, 255, 0.45)',
+          focusedBg: 'rgba(255, 107, 53, 0.12)',
+          focusedBorder: '#FF6B35',
+          focusedShadow: '0 0 0 2px rgba(255, 107, 53, 0.4)',
+        },
+        clearButton: {
+          bg: '#c0392b',
+          text: '#ffffff',
+          hoverBg: '#e74c3c',
+        },
+        tabs: {
+          bg: 'rgba(255, 255, 255, 0.08)',
+          text: 'rgba(255, 255, 255, 0.9)',
+          hoverBg: 'rgba(255, 255, 255, 0.18)',
+          activeBg: '#FF6B35',
+          activeText: '#ffffff',
+          activeHoverBg: '#cc5528',
+        },
+        results: {
+          areaBg: '#1a1410',
+          cardBg: '#2a2018',
+          cardBorder: '#4a3528',
+          cardHoverBg: '#3d2e22',
+          cardFocusBorder: '#FF6B35',
+          titleText: '#ffffff',
+          metaText: 'rgba(255, 255, 255, 0.65)',
+          sectionTitleBg: 'rgba(255, 107, 53, 0.1)',
+          thumbBg: 'rgba(255, 255, 255, 0.06)',
+        },
+        empty: {
+          text: 'rgba(255, 255, 255, 0.75)',
+          countText: 'rgba(255, 255, 255, 0.65)',
+        },
+      },
     },
 
     // Configuración específica de bouquets
@@ -1073,6 +1245,51 @@ export const BRANDS = [
         submenuBackgroundColor: 'rgba(0, 0, 0, 0.55)',
         submenuTextColor: 'rgba(255, 255, 255, 0.85)',
         fixed: true,
+      },
+      // Buscador (/home/buscador)
+      search: {
+        overlayBg: 'rgba(0, 0, 0, 0.35)',
+        panelBg: 'rgba(248, 248, 255, 0.98)',
+        header: {
+          bg: '#e8e8ff',
+          text: '#1a1a2e',
+        },
+        input: {
+          bg: 'rgba(255, 255, 255, 0.85)',
+          text: '#1a1a2e',
+          placeholder: 'rgba(26, 26, 46, 0.45)',
+          focusedBg: '#ffffff',
+          focusedBorder: '#3333FF',
+          focusedShadow: '0 0 0 2px rgba(51, 51, 255, 0.35)',
+        },
+        clearButton: {
+          bg: '#dc3545',
+          text: '#ffffff',
+          hoverBg: '#c82333',
+        },
+        tabs: {
+          bg: 'rgba(51, 51, 255, 0.1)',
+          text: 'rgba(26, 26, 46, 0.85)',
+          hoverBg: 'rgba(51, 51, 255, 0.18)',
+          activeBg: '#3333FF',
+          activeText: '#ffffff',
+          activeHoverBg: '#1a1aaa',
+        },
+        results: {
+          areaBg: '#ececf5',
+          cardBg: '#ffffff',
+          cardBorder: '#d0d0f0',
+          cardHoverBg: '#f0f0ff',
+          cardFocusBorder: '#3333FF',
+          titleText: '#1a1a2e',
+          metaText: 'rgba(26, 26, 46, 0.65)',
+          sectionTitleBg: 'rgba(51, 51, 255, 0.08)',
+          thumbBg: 'rgba(51, 51, 255, 0.06)',
+        },
+        empty: {
+          text: 'rgba(26, 26, 46, 0.75)',
+          countText: 'rgba(26, 26, 46, 0.55)',
+        },
       },
     },
 
@@ -1318,6 +1535,51 @@ export const BRANDS = [
         submenuBackgroundColor: 'rgb(0, 0, 0)',
         submenuTextColor: 'rgba(255, 255, 255, 0.85)',
         fixed: true,
+      },
+      // Buscador (/home/buscador)
+      search: {
+        overlayBg: '#00182D', // Capa oscura detrás del panel de búsqueda
+        panelBg: '#012B4F', // Fondo del panel principal del buscador
+        header: {
+          bg: '#012B4F', // Fondo de la barra superior (input + botón limpiar)
+          text: '#ffffff', // Color de texto en la barra superior
+        },
+        input: {
+          bg: 'transparent', // Fondo del campo de búsqueda
+          text: '#ffffff', // Color del texto que escribe el usuario
+          placeholder: '#ffffff', // Color del placeholder ("Buscar…")
+          focusedBg: '#012B4F', // Fondo del input al enfocar (TV/PC)
+          focusedBorder: '#012B4F', // Borde del input al enfocar
+          focusedShadow: '0 0 0 2px #3AA3AE', // Sombra/anillo del input al enfocar
+        },
+        clearButton: {
+          bg: '#012B4F', // Fondo del botón "Limpiar"
+          text: '#ffffff', // Texto del botón "Limpiar"
+          hoverBg: '#012B4F', // Fondo del botón "Limpiar" en hover/foco
+        },
+        tabs: {
+          bg: '#012B4F', // Fondo de pestañas inactivas (Todos, TV, VOD…)
+          text: '#ffffff', // Texto de pestañas inactivas
+          hoverBg: '#012B4F', // Fondo de pestaña inactiva en hover/foco
+          activeBg: '#3AA3AE', // Fondo de la pestaña seleccionada
+          activeText: '#ffffff', // Texto de la pestaña seleccionada
+          activeHoverBg: '#012B4F', // Fondo de pestaña activa en hover/foco
+        },
+        results: {
+          areaBg: '#012B4F', // Fondo del área con scroll de resultados
+          cardBg: '#012B4F', // Fondo de cada tarjeta de resultado
+          cardBorder: '#012B4F', // Borde de cada tarjeta
+          cardHoverBg: '#134a6b', // Fondo de tarjeta en hover/foco
+          cardFocusBorder: '#012B4F', // Borde de tarjeta en hover/foco (mando TV)
+          titleText: '#ffffff', // Títulos, nombres de canal y eventos
+          metaText: '#ffffff', // Metadatos: hora EPG, actor, director, año VOD
+          sectionTitleBg: '#012B4F', // Fondo del título de sección en tab "Todos"
+          thumbBg: '#012B4F', // Fondo de miniatura o placeholder sin imagen
+        },
+        empty: {
+          text: 'rgba(255, 255, 255, 0.75)', // Mensaje cuando no hay resultados
+          countText: 'rgba(255, 255, 255, 0.65)', // Texto del contador "X resultados"
+        },
       },
     },
 
@@ -1589,6 +1851,51 @@ export const BRANDS = [
         submenuBackgroundColor: 'rgb(0, 0, 0)',
         submenuTextColor: 'rgba(255, 255, 255, 0.85)',
         fixed: true,
+      },
+      // Buscador (/home/buscador)
+      search: {
+        overlayBg: 'rgba(0, 0, 0, 0.55)',
+        panelBg: 'rgba(1, 43, 79, 0.96)',
+        header: {
+          bg: '#0a2d4f',
+          text: '#ffffff',
+        },
+        input: {
+          bg: 'transparent',
+          text: '#ffffff',
+          placeholder: 'rgba(255, 255, 255, 0.45)',
+          focusedBg: 'rgba(58, 163, 174, 0.12)',
+          focusedBorder: '#3AA3AE',
+          focusedShadow: '0 0 0 2px rgba(58, 163, 174, 0.45)',
+        },
+        clearButton: {
+          bg: '#c0392b',
+          text: '#ffffff',
+          hoverBg: '#e74c3c',
+        },
+        tabs: {
+          bg: 'rgba(255, 255, 255, 0.08)',
+          text: 'rgba(255, 255, 255, 0.9)',
+          hoverBg: 'rgba(255, 255, 255, 0.18)',
+          activeBg: '#3AA3AE',
+          activeText: '#ffffff',
+          activeHoverBg: '#2C7F88',
+        },
+        results: {
+          areaBg: '#061a2e',
+          cardBg: '#0a2d4f',
+          cardBorder: '#1a4a6e',
+          cardHoverBg: '#134a6b',
+          cardFocusBorder: '#3AA3AE',
+          titleText: '#ffffff',
+          metaText: 'rgba(255, 255, 255, 0.65)',
+          sectionTitleBg: 'rgba(58, 163, 174, 0.12)',
+          thumbBg: 'rgba(255, 255, 255, 0.06)',
+        },
+        empty: {
+          text: 'rgba(255, 255, 255, 0.75)',
+          countText: 'rgba(255, 255, 255, 0.65)',
+        },
       },
     },
 

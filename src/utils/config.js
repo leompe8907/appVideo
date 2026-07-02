@@ -133,6 +133,59 @@ export function scheduleHomeBackgroundResolution(brandConfig) {
 }
 
 /**
+ * Variables CSS del buscador desde `ui.search` (solo setea claves definidas en marca).
+ * @param {HTMLElement} root
+ * @param {Object} ui
+ * @param {(name: string, value: unknown) => void} setOptional
+ */
+function applySearchTheme(root, ui, setOptional) {
+  const search = ui.search || {};
+  const header = search.header || {};
+  const input = search.input || {};
+  const clearBtn = search.clearButton || {};
+  const tabs = search.tabs || {};
+  const results = search.results || {};
+  const empty = search.empty || {};
+
+  setOptional('--search-overlay-bg', search.overlayBg);
+  setOptional('--search-panel-bg', search.panelBg);
+
+  setOptional('--search-header-bg', header.bg);
+  setOptional('--search-header-text', header.text);
+
+  setOptional('--search-input-bg', input.bg);
+  setOptional('--search-input-text', input.text);
+  setOptional('--search-input-placeholder', input.placeholder);
+  setOptional('--search-input-focused-bg', input.focusedBg);
+  setOptional('--search-input-focused-border', input.focusedBorder);
+  setOptional('--search-input-focused-shadow', input.focusedShadow);
+
+  setOptional('--search-clear-bg', clearBtn.bg);
+  setOptional('--search-clear-text', clearBtn.text);
+  setOptional('--search-clear-hover-bg', clearBtn.hoverBg);
+
+  setOptional('--search-tab-bg', tabs.bg);
+  setOptional('--search-tab-text', tabs.text);
+  setOptional('--search-tab-hover-bg', tabs.hoverBg);
+  setOptional('--search-tab-active-bg', tabs.activeBg);
+  setOptional('--search-tab-active-text', tabs.activeText);
+  setOptional('--search-tab-active-hover-bg', tabs.activeHoverBg);
+
+  setOptional('--search-results-area-bg', results.areaBg);
+  setOptional('--search-results-card-bg', results.cardBg);
+  setOptional('--search-results-card-border', results.cardBorder);
+  setOptional('--search-results-card-hover-bg', results.cardHoverBg);
+  setOptional('--search-results-card-focus-border', results.cardFocusBorder);
+  setOptional('--search-results-title-text', results.titleText);
+  setOptional('--search-results-meta-text', results.metaText);
+  setOptional('--search-results-section-title-bg', results.sectionTitleBg);
+  setOptional('--search-results-thumb-bg', results.thumbBg);
+
+  setOptional('--search-empty-text', empty.text);
+  setOptional('--search-empty-count-text', empty.countText);
+}
+
+/**
  * Aplica tema dinámicamente al documento
  * @param {Object} brandConfig - Configuración de la marca
  */
@@ -264,6 +317,9 @@ export function applyTheme(brandConfig) {
   root.style.setProperty('--sidebar-text', sidebar.textColor || 'rgba(255, 255, 255, 0.82)');
   root.style.setProperty('--sidebar-submenu-bg', sidebar.submenuBackgroundColor || 'rgba(0, 0, 0, 0.55)');
   root.style.setProperty('--sidebar-submenu-text', sidebar.submenuTextColor || 'rgba(255, 255, 255, 0.85)');
+
+  // Buscador (/home/buscador): `ui.search`
+  applySearchTheme(root, ui, setOptional);
 
   // Fondo home: una sola imagen (ver `scheduleHomeBackgroundResolution`).
   scheduleHomeBackgroundResolution(brandConfig);
