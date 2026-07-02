@@ -1,4 +1,5 @@
 @use '../variables' as *;
+@use '../mixins' as *;
 
 // ─── Contenedor raíz ────────────────────────────────────────────────────────
 
@@ -148,33 +149,7 @@
   border-radius: 10px;
   padding: 10px;
   box-sizing: border-box;
-
-  // Firefox
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.35) rgba(0, 0, 0, 0.4);
-
-  // WebKit (Chrome, Edge, Safari)
-  &::-webkit-scrollbar {
-    width: 10px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.35);
-    border-radius: 8px;
-    margin: 4px 0;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.22);
-    border-radius: 8px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-
-    &:hover {
-      background: rgba(0, 123, 255, 0.55);
-      background-clip: padding-box;
-    }
-  }
+  @include scrollbar-hidden;
 }
 
 .search-empty {
