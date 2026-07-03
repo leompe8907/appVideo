@@ -581,7 +581,7 @@
 
 .player-channel-sidebar__row {
   display: grid;
-  grid-template-columns: 11rem 2rem 1fr;
+  grid-template-columns: 11rem auto 1fr;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;

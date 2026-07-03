@@ -95,7 +95,8 @@ html[data-focus='on'].device-tv[data-tv-focus-ring='on'] {
     z-index: 1;
     border-color: transparent !important;
 
-    .channel-card-lwn-frame {
+    .channel-card-lwn-frame,
+    .channel-card-frame {
       transform: none !important;
       box-shadow: none !important;
       -webkit-box-shadow: none !important;
@@ -103,7 +104,9 @@ html[data-focus='on'].device-tv[data-tv-focus-ring='on'] {
     }
   }
 
-  .channel-card.channel-card--logo_with_number.focused .channel-card-lwn-frame {
+  .channel-card.channel-card--logo_with_number.focused .channel-card-lwn-frame,
+  .channel-card.channel-card--event_and_logo.focused .channel-card-frame,
+  .channel-card.channel-card--event_and_logo_overlay.focused .channel-card-frame {
     border-color: transparent !important;
   }
 

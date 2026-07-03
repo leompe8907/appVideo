@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useDevice } from '../../contexts/DeviceContext';
 
 const RING_INSET_PX = 4;
+const CHANNEL_CARD_RING_INNER_SELECTORS = ['.channel-card-frame', '.channel-card-lwn-frame'];
 
 function isFocusRingTarget(el) {
   if (!el || !(el instanceof HTMLElement)) return false;
@@ -16,6 +17,17 @@ function isFocusRingTarget(el) {
   if (el.getAttribute('role') === 'button') return true;
   if (typeof el.tabIndex === 'number' && el.tabIndex >= 0) return true;
   return false;
+}
+
+/** Bouquet: el anillo sigue el marco visual (logo + evento), no toda la tarjeta con texto debajo. */
+function resolveFocusRingTarget(el) {
+  if (!(el instanceof HTMLElement)) return el;
+  if (!el.classList.contains('channel-card')) return el;
+  for (const selector of CHANNEL_CARD_RING_INNER_SELECTORS) {
+    const inner = el.querySelector(selector);
+    if (inner instanceof HTMLElement) return inner;
+  }
+  return el;
 }
 
 function isFocusEnabled() {
@@ -60,15 +72,18 @@ export function TvFocusRing() {
         return;
       }
       try {
-        const r = el.getBoundingClientRect();
+        const visualTarget = resolveFocusRingTarget(el);
+        const r = visualTarget.getBoundingClientRect();
         if (r.width < 2 || r.height < 2) {
           hideRing();
           return;
         }
         const pad = RING_INSET_PX;
+        const radius = window.getComputedStyle(visualTarget).borderRadius;
         ring.style.width = `${r.width + pad * 2}px`;
         ring.style.height = `${r.height + pad * 2}px`;
         ring.style.transform = `translate3d(${Math.round(r.left - pad)}px, ${Math.round(r.top - pad)}px, 0)`;
+        ring.style.borderRadius = radius && radius !== '0px' ? radius : '10px';
         ring.classList.add('tv-focus-ring--visible');
         targetRef.current = el;
       } catch {

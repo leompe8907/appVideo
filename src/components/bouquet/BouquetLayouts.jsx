@@ -360,7 +360,7 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
           )}
         </>
       ) : variant === 'event_and_logo_overlay' ? (
-        <>
+        <div className="channel-card-frame">
           {(logoImage || placeholderImageUrl) && (
             <div className="channel-card-logo-top">
               <img
@@ -404,7 +404,7 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
               </div>
             </div>
           </div>
-        </>
+        </div>
       ) : variant === 'logo_with_number' ? (
         <>
           <div className="channel-card-lwn-frame" style={logoWithNumberFrameStyle}>
