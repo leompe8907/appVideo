@@ -114,6 +114,12 @@ $search-tabs-gap-x: 1.5rem;
 $search-tabs-gap-y: 0.85rem;
 $search-tabs-height-tv: 4.5rem;
 
+/** Tipografía de resultados solo en TV (lectura a ~1,5 m). */
+$search-tv-count-size: 1.5rem;
+$search-tv-section-title-size: 1.75rem;
+$search-tv-result-title-size: 1.5rem;
+$search-tv-result-meta-size: 1.3rem;
+
 .search-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -182,7 +188,13 @@ $search-tabs-height-tv: 4.5rem;
     }
   }
 
+  .search-tab {
+    font-size: 1.45rem;
+    padding: 12px 26px;
+  }
+
   .search-results {
+    padding: 14px 16px;
     @include scrollbar-hidden;
 
     &::-webkit-scrollbar {
@@ -190,6 +202,47 @@ $search-tabs-height-tv: 4.5rem;
       height: 0 !important;
       display: none !important;
     }
+  }
+
+  .search-count {
+    font-size: $search-tv-count-size;
+    font-weight: 600;
+    color: var(--search-empty-count-text, rgba(255, 255, 255, 0.88));
+    margin-bottom: 12px;
+    padding: 0 6px;
+  }
+
+  .search-empty {
+    font-size: 1.4rem;
+  }
+
+  .search-section__title {
+    font-size: $search-tv-section-title-size;
+    padding: 10px 16px;
+  }
+
+  .search-result {
+    height: auto;
+    min-height: 24rem;
+    padding: 12px 14px;
+  }
+
+  .search-result__name,
+  .search-result__event-title {
+    font-size: $search-tv-result-title-size;
+    line-height: 1.35;
+  }
+
+  .search-result__vod-meta,
+  .search-result__channel,
+  .search-result__time {
+    font-size: $search-tv-result-meta-size;
+    line-height: 1.3;
+  }
+
+  .search-result__vod-meta,
+  .search-result__time {
+    color: var(--search-results-meta-text, rgba(255, 255, 255, 0.82));
   }
 }
 
