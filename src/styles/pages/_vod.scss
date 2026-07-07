@@ -195,16 +195,19 @@
           flex-wrap: nowrap;
           align-items: center;
           gap: $spacing-md;
-          padding-inline-end: 1.75rem;
+          padding-inline: 0.85rem 1.75rem;
         }
 
         .embla-slide {
           flex: 0 0 auto;
           min-width: 0;
+          // Margen interno para que scale(1.05) no se recorte en el viewport.
+          padding: 0.65rem 0.45rem;
+          box-sizing: border-box;
 
           .vod-card {
             flex-shrink: 0;
-            margin-left: 0.5rem;
+            margin-left: 0;
           }
         }
       }
@@ -231,6 +234,14 @@
     color: rgba(255, 255, 255, 0.7);
     margin: $spacing-xl 0 0;
     font-size: 1rem;
+  }
+}
+
+// PC + Embla: sin scale en el carril (evita recorte y que las tarjetas tapen las flechas).
+.device-pc .vod-page .vod-row-cards.embla-viewport .vod-card {
+  &:hover,
+  &.focused {
+    transform: none;
   }
 }
 
