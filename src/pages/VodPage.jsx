@@ -109,7 +109,10 @@ export function VodPage() {
   const handleVodSelectFromCategoryModal = (item) => {
     if (!item?.id) return;
     const active = document.activeElement;
-    if (active instanceof HTMLElement) rememberVodCategoryFocus(active);
+    if (active instanceof HTMLElement) {
+      const card = active.closest('.vod-card');
+      rememberVodCategoryFocus(card instanceof HTMLElement ? card : active);
+    }
     setDetailItem(item);
   };
 

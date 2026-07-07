@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { useDevice } from '../contexts/DeviceContext';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
 import { findFocusableElements, focusNextElementInList } from '../utils/tvNavigation';
@@ -26,9 +26,21 @@ export function useVodOverlayTvNav(opts) {
   const categoryOpen = Boolean(opts?.categoryOpen);
   const onCloseDetail = opts?.onCloseDetail;
   const onCloseCategory = opts?.onCloseCategory;
+  /** Evita robar el foco al primer ítem al volver del detalle (restoreVodFocusAfterDetailClose). */
+  const skipCategoryGridInitialFocusRef = useRef(false);
 
   useLayoutEffect(() => {
-    if (!isTV || !categoryOpen || detailOpen) return undefined;
+    if (!isTV || !categoryOpen) return undefined;
+
+    if (detailOpen) {
+      skipCategoryGridInitialFocusRef.current = true;
+      return undefined;
+    }
+
+    if (skipCategoryGridInitialFocusRef.current) {
+      skipCategoryGridInitialFocusRef.current = false;
+      return undefined;
+    }
 
     const timer = setTimeout(() => {
       const grid = document.querySelector(VOD_CATEGORY_GRID_SELECTOR);
