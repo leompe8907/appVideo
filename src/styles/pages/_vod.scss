@@ -1143,12 +1143,29 @@
   }
 }
 
+/** Tipografía y tarjetas VOD solo en TV (lectura a ~1,5 m). */
+$vod-tv-card-width: 14em;
+$vod-tv-page-title-size: 1.85rem;
+$vod-tv-row-title-size: 1.45rem;
+$vod-tv-card-title-size: 1.15rem;
+$vod-tv-category-title-size: 1.75rem;
+$vod-tv-category-close-size: 1.15rem;
+
 /* TV: más aire al pie de la página VOD (carriles por género) respecto al borde / banner inferior. */
 .device-tv .vod-page {
   .vod-content {
     padding-bottom: 2.85rem;
     scroll-padding-block-end: 2rem;
     scroll-behavior: auto;
+    @include scrollbar-hidden;
+  }
+
+  .vod-title {
+    font-size: $vod-tv-page-title-size;
+  }
+
+  .vod-row-title {
+    font-size: $vod-tv-row-title-size;
   }
 
   .vod-row {
@@ -1160,7 +1177,49 @@
   }
 
   .vod-card {
+    width: $vod-tv-card-width;
     scroll-margin-inline: 0.75rem 1.25rem;
     scroll-margin-block: 0.35rem;
+
+    .vod-card-title {
+      font-size: $vod-tv-card-title-size;
+      margin-top: 0.5rem;
+    }
+  }
+
+  .vod-see-more-card .vod-see-more-icon {
+    font-size: calc(#{$vod-tv-card-width} * 0.65);
+  }
+}
+
+.device-tv .vod-category-overlay {
+  .vod-category-title {
+    font-size: $vod-tv-category-title-size;
+  }
+
+  .vod-category-close {
+    font-size: $vod-tv-category-close-size;
+    min-height: 48px;
+    padding-inline: 1.5rem;
+  }
+
+  .vod-category-grid {
+    gap: 1.5rem;
+    @include scrollbar-hidden;
+
+    &::-webkit-scrollbar {
+      width: 0 !important;
+      height: 0 !important;
+      display: none !important;
+    }
+
+    .vod-card {
+      width: 100%;
+
+      .vod-card-title {
+        font-size: $vod-tv-card-title-size;
+        margin-top: 0.5rem;
+      }
+    }
   }
 }

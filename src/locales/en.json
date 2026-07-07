@@ -243,7 +243,7 @@
     "notAvailableYet": "This program is not available in catch-up yet"
   },
   "vod": {
-    "title": "VOD",
+    "title": "Movies",
     "back": "← Back",
     "loading": "Loading VOD...",
     "errorLoad": "Error loading VOD.",
