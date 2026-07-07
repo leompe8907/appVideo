@@ -235,8 +235,15 @@
 }
 
 // VodCard
+$vod-card-width: 11.5em;
+$vod-poster-height: calc(#{$vod-card-width} * 3 / 2);
+
 .vod-card {
-  width: 11.5em;
+  width: $vod-card-width;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  vertical-align: top;
   background: transparent;
   border: none;
   padding: 0;
@@ -249,6 +256,9 @@
   .vod-card-poster {
     width: 100%;
     aspect-ratio: 2/3;
+    flex-shrink: 0;
+    // Sin imagen (p. ej. «Ver más»), WebKit TV no siempre aplica aspect-ratio.
+    min-height: $vod-poster-height;
     border-radius: $border-radius-md;
     overflow: hidden;
     background: rgba(40, 40, 40, 0.8);
@@ -971,34 +981,27 @@
   font-size: 0.95rem;
 }
 
-// VodSeeMoreCard (décimo ítem "Ver más") — misma estructura que VodCard: poster + título
+// VodSeeMoreCard — misma lógica que VodCard: el póster (aspect-ratio 2/3) define la altura.
 .vod-see-more-card {
-  margin-left: 1.5rem;
   .vod-see-more-poster {
     @include flex-center;
-    background: rgba(255, 255, 255, 0.08);
-    border: 2px dashed rgba(255, 255, 255, 0.25);
+    width: 100%;
+    flex-shrink: 0;
+    // Borde, fondo, aspect-ratio y min-height: heredados de .vod-card-poster.
   }
 
   .vod-see-more-icon {
-    font-size: 9.75rem;
+    font-size: 3.5em;
+    line-height: 1;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.9);
   }
 
-  .vod-see-more-title {
-    margin-top: 0.35rem;
-  }
-
-  &.focused .vod-see-more-poster {
-    border-color: $secondary-color;
-    background: rgba(var(--secondary-color-rgb, 118, 75, 162), 0.15);
-  }
+  // Foco/hover: heredados de .vod-card (borde, sombra, scale).
 
   &.vod-see-more-card--poster-text {
     .vod-see-more-poster {
       padding: 0.5rem 0.6rem;
-      height: 19em;
     }
 
     .vod-see-more-poster-label {
@@ -1145,6 +1148,7 @@
 
 /** Tipografía y tarjetas VOD solo en TV (lectura a ~1,5 m). */
 $vod-tv-card-width: 14em;
+$vod-tv-poster-height: calc(#{$vod-tv-card-width} * 3 / 2);
 $vod-tv-page-title-size: 1.85rem;
 $vod-tv-row-title-size: 1.45rem;
 $vod-tv-card-title-size: 1.15rem;
@@ -1181,14 +1185,15 @@ $vod-tv-category-close-size: 1.15rem;
     scroll-margin-inline: 0.75rem 1.25rem;
     scroll-margin-block: 0.35rem;
 
+    .vod-card-poster {
+      min-height: $vod-tv-poster-height;
+      height: $vod-tv-poster-height;
+    }
+
     .vod-card-title {
       font-size: $vod-tv-card-title-size;
       margin-top: 0.5rem;
     }
-  }
-
-  .vod-see-more-card .vod-see-more-icon {
-    font-size: calc(#{$vod-tv-card-width} * 0.65);
   }
 }
 
