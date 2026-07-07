@@ -4,9 +4,8 @@ import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
 import { findFocusableElements, focusNextElementInList } from '../utils/tvNavigation';
 import { focusElementSafe, scrollElementIntoVisibleScrollAncestors } from '../utils/homeShellNavigation';
 import {
-  buildVodCategoryGridRows,
-  findVodCardCellInRows,
   getVodRowFocusables,
+  resolveVodCategoryGridTarget,
   VOD_DETAIL_FOCUS_SELECTOR,
   VOD_CATEGORY_GRID_SELECTOR,
 } from '../utils/vodTvGrid';
@@ -79,34 +78,25 @@ export function useVodOverlayTvNav(opts) {
       const card = active.closest('.vod-card');
       if (!card || !grid.contains(card)) return false;
 
-      const rows = buildVodCategoryGridRows(grid);
-      const pos = findVodCardCellInRows(card, rows);
-      if (!pos) return false;
-
-      let target = null;
-      if (action === TV_ACTION.RIGHT) {
-        const row = rows[pos.ri];
-        if (pos.ci + 1 < row.length) target = row[pos.ci + 1];
-      } else if (action === TV_ACTION.LEFT) {
-        const row = rows[pos.ri];
-        if (pos.ci > 0) target = row[pos.ci - 1];
-      } else if (action === TV_ACTION.DOWN) {
-        const nextRi = pos.ri + 1;
-        if (nextRi < rows.length) {
-          const nextRow = rows[nextRi];
-          target = nextRow[Math.min(pos.ci, nextRow.length - 1)];
+      if (action === TV_ACTION.UP) {
+        const upTarget = resolveVodCategoryGridTarget(grid, card, action);
+        if (upTarget) {
+          e.preventDefault();
+          e.stopPropagation();
+          focusElementSafe(upTarget);
+          scrollElementIntoVisibleScrollAncestors(upTarget, grid);
+          return true;
         }
-      } else if (action === TV_ACTION.UP) {
-        const prevRi = pos.ri - 1;
-        if (prevRi >= 0) {
-          const prevRow = rows[prevRi];
-          target = prevRow[Math.min(pos.ci, prevRow.length - 1)];
-        } else {
-          const closeBtn = document.getElementById('vod-category-close-tv');
-          if (closeBtn instanceof HTMLElement) target = closeBtn;
+        const closeBtn = document.getElementById('vod-category-close-tv');
+        if (closeBtn instanceof HTMLElement) {
+          e.preventDefault();
+          e.stopPropagation();
+          focusElementSafe(closeBtn);
         }
+        return true;
       }
 
+      const target = resolveVodCategoryGridTarget(grid, card, action);
       if (target && target !== active) {
         e.preventDefault();
         e.stopPropagation();

@@ -245,8 +245,8 @@
   }
 }
 
-// VodCard
-$vod-card-width: 11.5em;
+// VodCard — ancho fluido con clamp (carrusel + modal comparten variables).
+$vod-card-width: clamp(9rem, 10.5vw, 12.5em);
 $vod-poster-height: calc(#{$vod-card-width} * 3 / 2);
 
 .vod-card {
@@ -268,8 +268,6 @@ $vod-poster-height: calc(#{$vod-card-width} * 3 / 2);
     width: 100%;
     aspect-ratio: 2/3;
     flex-shrink: 0;
-    // Sin imagen (p. ej. «Ver más»), WebKit TV no siempre aplica aspect-ratio.
-    min-height: $vod-poster-height;
     border-radius: $border-radius-md;
     overflow: hidden;
     background: rgba(40, 40, 40, 0.8);
@@ -311,6 +309,14 @@ $vod-poster-height: calc(#{$vod-card-width} * 3 / 2);
   &.focused .vod-card-poster {
     border-color: $secondary-color;
     box-shadow: 0 0 0 2px $secondary-color;
+  }
+}
+
+// PC: clamp en ancho + min-height del póster (navegadores modernos).
+.device-pc {
+  .vod-page .vod-card .vod-card-poster,
+  .vod-category-overlay .vod-card .vod-card-poster {
+    min-height: $vod-poster-height;
   }
 }
 
@@ -1106,14 +1112,11 @@ $vod-poster-height: calc(#{$vod-card-width} * 3 / 2);
   }
 }
 
-// Grid con columnas fijas para navegación espacial predecible en TV (derecha/abajo coherentes)
+// Grid del modal «Ver más» — mismas medidas que el carrusel.
 .vod-category-grid {
   display: grid;
-  // En PC/notebook: columnas fluidas que se adaptan al ancho disponible.
-  // En TV, .device-tv sobreescribe esto con 7 columnas fijas.
-  grid-template-columns: repeat(auto-fill, minmax(clamp(8rem, 12vw, 11.5rem), 1fr));
-  // Sin grid-auto-rows: cada fila toma la altura natural de su contenido.
-  // Fijar la altura de fila con aspect-ratio variable causaba solapamiento.
+  grid-template-columns: repeat(auto-fill, minmax($vod-card-width, $vod-card-width));
+  justify-content: space-evenly;
   height: min(80vh);
   gap: clamp(0.6rem, 1.2vw, 1.25rem);
   padding: 1.5rem clamp(1rem, 2.5vw, 3rem) 2rem clamp(1rem, 2.5vw, 3rem);
@@ -1122,30 +1125,14 @@ $vod-poster-height: calc(#{$vod-card-width} * 3 / 2);
   scrollbar-width: none;
   -ms-overflow-style: none;
   align-content: start;
-  // Sin align-items: center — alineaba las cards al centro de la fila y
-  // dejaba espacio vacío arriba/abajo que se superponía con la fila siguiente.
   align-items: start;
-
-  // En TV: mantener las 7 columnas fijas para que la navegación espacial
-  // (arriba/abajo/izq/der) sea predecible y coherente.
-  .device-tv & {
-    grid-template-columns: repeat(7, 1fr);
-    gap: 1.25rem;
-    padding: 1.5rem 3rem 2rem 3rem;
-  }
 
   .vod-card {
     margin: 0;
     min-width: 0;
+    width: $vod-card-width;
     display: flex;
     flex-direction: column;
-    // En PC las cards llenan su celda del grid en lugar de tener ancho fijo.
-    width: 100%;
-  }
-
-  // En TV restaurar el ancho fijo original.
-  .device-tv & .vod-card {
-    width: 11.5em;
   }
 
   .vod-card-poster {
@@ -1157,14 +1144,30 @@ $vod-poster-height: calc(#{$vod-card-width} * 3 / 2);
   }
 }
 
-/** Tipografía y tarjetas VOD solo en TV (lectura a ~1,5 m). */
+/** TV: tamaños fijos en em (WebKit TV no evalúa bien calc(clamp())). */
 $vod-tv-card-width: 14em;
-$vod-tv-poster-height: calc(#{$vod-tv-card-width} * 3 / 2);
+$vod-tv-poster-height: 21em;
 $vod-tv-page-title-size: 1.85rem;
 $vod-tv-row-title-size: 1.45rem;
 $vod-tv-card-title-size: 1.15rem;
 $vod-tv-category-title-size: 1.75rem;
 $vod-tv-category-close-size: 1.15rem;
+
+@mixin vod-tv-poster-box {
+  aspect-ratio: auto;
+  flex: 0 0 $vod-tv-poster-height;
+  height: $vod-tv-poster-height;
+  min-height: $vod-tv-poster-height;
+  max-height: $vod-tv-poster-height;
+
+  img {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
 
 /* TV: más aire al pie de la página VOD (carriles por género) respecto al borde / banner inferior. */
 .device-tv .vod-page {
@@ -1197,11 +1200,25 @@ $vod-tv-category-close-size: 1.15rem;
     scroll-margin-block: 0.35rem;
 
     .vod-card-poster {
-      min-height: $vod-tv-poster-height;
-      height: $vod-tv-poster-height;
+      @include vod-tv-poster-box;
     }
 
     .vod-card-title {
+      font-size: $vod-tv-card-title-size;
+      margin-top: 0.5rem;
+    }
+  }
+
+  .vod-see-more-card {
+    width: $vod-tv-card-width;
+
+    .vod-card-poster,
+    .vod-see-more-poster {
+      @include vod-tv-poster-box;
+    }
+
+    .vod-card-title,
+    .vod-see-more-title {
       font-size: $vod-tv-card-title-size;
       margin-top: 0.5rem;
     }
@@ -1220,9 +1237,11 @@ $vod-tv-category-close-size: 1.15rem;
   }
 
   .vod-category-grid {
+    // auto-fill + em fijos: sin clamp en minmax (compatible con WebKit TV).
     grid-template-columns: repeat(auto-fill, minmax($vod-tv-card-width, $vod-tv-card-width));
-    justify-content: start;
-    gap: 1.5rem;
+    justify-content: space-evenly;
+    gap: 1.25rem;
+    padding: 1.5rem 3rem 2rem;
     @include scrollbar-hidden;
 
     &::-webkit-scrollbar {
@@ -1235,8 +1254,7 @@ $vod-tv-category-close-size: 1.15rem;
       width: $vod-tv-card-width;
 
       .vod-card-poster {
-        min-height: $vod-tv-poster-height;
-        height: $vod-tv-poster-height;
+        @include vod-tv-poster-box;
       }
 
       .vod-card-title {
