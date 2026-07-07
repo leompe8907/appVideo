@@ -1220,6 +1220,8 @@ $vod-tv-category-close-size: 1.15rem;
   }
 
   .vod-category-grid {
+    grid-template-columns: repeat(auto-fill, minmax($vod-tv-card-width, $vod-tv-card-width));
+    justify-content: start;
     gap: 1.5rem;
     @include scrollbar-hidden;
 
@@ -1230,7 +1232,12 @@ $vod-tv-category-close-size: 1.15rem;
     }
 
     .vod-card {
-      width: 100%;
+      width: $vod-tv-card-width;
+
+      .vod-card-poster {
+        min-height: $vod-tv-poster-height;
+        height: $vod-tv-poster-height;
+      }
 
       .vod-card-title {
         font-size: $vod-tv-card-title-size;
