@@ -448,7 +448,7 @@ $vod-poster-height: calc(#{$vod-card-width} * 3 / 2);
 .vod-detail-poster-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: fill;
   display: block;
 }
 
