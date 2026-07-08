@@ -12,6 +12,7 @@ import {
   buildVodBouquetRows,
   findVodCardCellInRows,
 } from '../utils/vodTvGrid';
+import { requestTvFocusRingSync } from '../components/navigation/TvFocusRing';
 
 const TARGET_PATH = '/home/vod';
 
@@ -38,6 +39,20 @@ export function useVodPageTvNav() {
     if (!isTV) return undefined;
     if (location.pathname !== TARGET_PATH) return undefined;
     if (initialFocusPlacedRef.current) return undefined;
+
+    const content = document.querySelector('.vod-page .vod-content');
+    const active = document.activeElement;
+    if (
+      content instanceof HTMLElement &&
+      active instanceof HTMLElement &&
+      content.contains(active) &&
+      active.closest('.vod-card, .vod-see-more-card')
+    ) {
+      initialFocusPlacedRef.current = true;
+      requestTvFocusRingSync();
+      return undefined;
+    }
+
     if (vod.status !== 'ready') return undefined;
 
     let cancelled = false;

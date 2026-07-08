@@ -11,7 +11,7 @@ import { setLoggedOut, getActiveLicense, getCredentials } from '../utils/userSes
 import ConfirmModal from './ConfirmModal';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
 import { shouldDeferHomeShellNavigation } from '../utils/homeShellOverlays';
-import { focusElementSafe, scrollElementIntoVisibleScrollAncestors } from '../utils/homeShellNavigation';
+import { focusElementSafe, scheduleFocusFirstMainContent, scrollElementIntoVisibleScrollAncestors } from '../utils/homeShellNavigation';
 import { requestTvFocusRingSync } from './navigation/TvFocusRing';
 
 /**
@@ -206,6 +206,8 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   const visibleNavTargetsRef = useRef([]);
   const visibleSublinksRef = useRef([]);
   const rebuildSidebarFocusCacheRef = useRef(() => {});
+  const tvMainFocusCancelRef = useRef(null);
+  const pendingTvNavFocusRef = useRef(false);
   /** Evita colapsar el rail cuando hay modal en portal (foco fuera del aside). */
   const blockCollapseForOverlayRef = useRef(false);
   const sidebarFixed = currentBrand?.ui?.sidebar?.fixed !== false;
@@ -320,9 +322,21 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
 
   const collapseSidebar = () => setExpandedSafe(false);
 
-  /** En TV el rail se mantiene al navegar por teclado; en escritorio se colapsa al cambiar de sección. */
+  /** Tras elegir sección: en PC solo colapsa; en TV marca foco pendiente tras cambiar ruta. */
   const collapseAfterNav = () => {
-    if (!isTV) collapseSidebar();
+    collapseSidebar();
+    if (isTV) pendingTvNavFocusRef.current = true;
+  };
+
+  const runPendingTvMainFocus = () => {
+    if (tvMainFocusCancelRef.current) {
+      tvMainFocusCancelRef.current();
+      tvMainFocusCancelRef.current = null;
+    }
+    tvMainFocusCancelRef.current = scheduleFocusFirstMainContent({
+      pathname: location.pathname,
+      maxAttempts: 48,
+    });
   };
 
   const scheduleCollapseIfOutside = () => {
@@ -347,6 +361,10 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
         clearTimeout(blurTimerRef.current);
         blurTimerRef.current = null;
       }
+      if (tvMainFocusCancelRef.current) {
+        tvMainFocusCancelRef.current();
+        tvMainFocusCancelRef.current = null;
+      }
     };
   }, []);
 
@@ -356,11 +374,26 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     setSettingsOpen(false);
   }, [expanded]);
 
-  // Si la ruta cambia (navegación desde cualquier origen), colapsar el sidebar (no TV: foco LRUD).
+  // Si la ruta cambia (navegación desde cualquier origen), colapsar el sidebar.
   useEffect(() => {
-    if (!isTV) collapseSidebar();
+    collapseSidebar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname, isTV]);
+  }, [location.pathname]);
+
+  // TV: tras elegir sección en sidebar, enfocar primer ítem de la ruta nueva (post-navegación).
+  useEffect(() => {
+    if (!isTV || !pendingTvNavFocusRef.current) return undefined;
+    pendingTvNavFocusRef.current = false;
+    runPendingTvMainFocus();
+    return () => {
+      if (tvMainFocusCancelRef.current) {
+        tvMainFocusCancelRef.current();
+        tvMainFocusCancelRef.current = null;
+      }
+    };
+    // location.key: misma ruta con replace (p. ej. re-entrar a Inicio).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, location.key, isTV]);
 
   // TV: cache de ítems enfocables (recalcula al cambiar ruta o submenú, no en cada keydown).
   useLayoutEffect(() => {
