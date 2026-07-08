@@ -9,6 +9,7 @@ import {
   VOD_DETAIL_FOCUS_SELECTOR,
   VOD_CATEGORY_GRID_SELECTOR,
 } from '../utils/vodTvGrid';
+import { isHomePlayerActiveInDom } from '../utils/homeShellOverlays';
 
 /**
  * Navegación TV en overlays VOD (modal categoría + detalle) y BACK con restauración de foco.
@@ -170,6 +171,9 @@ export function useVodOverlayTvNav(opts) {
 
     const onKeyDown = (e) => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
+      // Con player activo, BACK lo consume PlayerHud (evita cerrar detalle VOD en el mismo evento).
+      if (isHomePlayerActiveInDom()) return;
+
       const action = getTvActionFromKeyEvent(e);
       if (!action) return;
 

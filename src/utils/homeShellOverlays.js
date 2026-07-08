@@ -3,6 +3,15 @@
  * Usados por HomeInputDispatcher para prioridad de BACK sin acoplar a React state ajeno.
  */
 
+/** Player a pantalla completa (BACK lo gestiona el HUD, no los overlays del shell). */
+export function isHomePlayerActiveInDom() {
+  try {
+    return Boolean(document.querySelector('.home-shell--player-active'));
+  } catch {
+    return false;
+  }
+}
+
 export const HOME_SHELL_OVERLAY_SELECTORS = Object.freeze({
   confirmModal: '.confirm-modal-overlay',
   parentalPin: '.parental-pin-overlay[role="dialog"]',

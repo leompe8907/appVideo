@@ -90,11 +90,12 @@ export function HomePage() {
     }
   }, [isPlayerActive, containerRef]);
 
-  // Al cerrar el player (botón volver / BACK): restaurar el último foco del contenido principal.
+  // Al cerrar el player: restaurar foco del main salvo detalle VOD abierto (el modal lo restaura en TV).
   useLayoutEffect(() => {
     const wasActive = wasPlayerActiveRef.current;
     wasPlayerActiveRef.current = isPlayerActive;
     if (isPlayerActive || !wasActive) return undefined;
+    if (document.querySelector('.vod-detail-overlay[role="dialog"]')) return undefined;
     return scheduleRestoreMainShellFocus();
   }, [isPlayerActive]);
 

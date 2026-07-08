@@ -3,10 +3,11 @@
  * Película: reproducir. Serie: lista de episodios y reproducir.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDevice } from '../../contexts/DeviceContext';
+import { usePlayer } from '../../contexts/PlayerContext';
 import panaccessService from '../../services/panaccessService';
 import { getVodImageUrl } from '../../services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
@@ -19,6 +20,9 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay, infoOnl
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
   const { isTV } = useDevice();
+  const { state: playerState } = usePlayer();
+  const playerActiveRef = useRef(Boolean(playerState?.url));
+  const wasPlayerActiveRef = useRef(Boolean(playerState?.url));
   const baseUrl = currentBrand?.drm || '';
   const [seriesInfo, setSeriesInfo] = useState(null);
   const [loading, setLoading] = useState(!!item?.isSeries);
@@ -27,8 +31,15 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay, infoOnl
   const [extraMeta, setExtraMeta] = useState(null);
 
   useEffect(() => {
+    playerActiveRef.current = Boolean(playerState?.url);
+  }, [playerState?.url]);
+
+  useEffect(() => {
     if (!item) return undefined;
     const onKeyDown = (e) => {
+      // Player activo: BACK lo gestiona PlayerHud (mismo criterio que botón volver en pantalla).
+      if (playerActiveRef.current) return;
+
       const key = String(e.key || '');
       const code = String(e.code || '');
       const keyCode = Number(e.keyCode || e.which || 0);
@@ -56,6 +67,24 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay, infoOnl
     }, 400);
     return () => clearTimeout(t);
   }, [isTV, loading, infoOnly]);
+
+  // TV: al cerrar el player con BACK del control, volver a enfocar Reproducir (como botón en pantalla).
+  useEffect(() => {
+    if (!isTV || infoOnly || loading) return undefined;
+
+    const isPlayerActive = Boolean(playerState?.url);
+    const wasActive = wasPlayerActiveRef.current;
+    wasPlayerActiveRef.current = isPlayerActive;
+
+    if (isPlayerActive || !wasActive) return undefined;
+
+    const t = setTimeout(() => {
+      const btn = document.getElementById('vod-detail-play');
+      if (btn instanceof HTMLElement) btn.focus();
+    }, 400);
+
+    return () => clearTimeout(t);
+  }, [isTV, infoOnly, loading, playerState?.url]);
 
   const vodDetailConfig = currentBrand?.vod?.vodDetail || {};
   const contentPosition = vodDetailConfig.contentPosition === 'top' || vodDetailConfig.contentPosition === 'middle'
