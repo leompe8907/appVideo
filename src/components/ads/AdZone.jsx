@@ -68,14 +68,13 @@ export function AdZone({ zoneKey, ads, onActivate }) {
     return () => window.clearTimeout(timerId);
   }, [count, currentIndex, currentAd, hasMultiple, interactionPaused]);
 
-  const syncFocusRingIfFocused = useCallback(() => {
-    if (!isFocused) return;
+  const syncFocusRingOnLayoutChange = useCallback(() => {
     requestAnimationFrame(() => requestTvFocusRingSync());
-  }, [isFocused]);
+  }, []);
 
   useEffect(() => {
-    syncFocusRingIfFocused();
-  }, [currentIndex, currentAd?.file, syncFocusRingIfFocused]);
+    syncFocusRingOnLayoutChange();
+  }, [currentIndex, currentAd?.file, syncFocusRingOnLayoutChange]);
 
   useEffect(() => {
     if (!currentAd?.dismissTime || currentAd.dismissTime <= 0) return undefined;
@@ -219,7 +218,7 @@ export function AdZone({ zoneKey, ads, onActivate }) {
       )}
 
       <div className="home-ad-slide">
-        {currentAd && <AdMedia ad={currentAd} onLayoutChange={syncFocusRingIfFocused} />}
+        {currentAd && <AdMedia ad={currentAd} onLayoutChange={syncFocusRingOnLayoutChange} />}
       </div>
 
       {hasMultiple && (

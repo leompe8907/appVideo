@@ -3,6 +3,11 @@ import { useDevice } from '../../contexts/DeviceContext';
 
 const RING_INSET_PX = 4;
 const CHANNEL_CARD_RING_INNER_SELECTORS = ['.channel-card-frame', '.channel-card-lwn-frame'];
+const LAYOUT_ANCHOR_SELECTORS = [
+  '.home-ad-zone',
+  '.home-content-stack',
+  'main.home-content[data-home-scope="content"]',
+];
 
 function isFocusRingTarget(el) {
   if (!el || !(el instanceof HTMLElement)) return false;
@@ -36,6 +41,26 @@ function resolveFocusRingTarget(el) {
   return el;
 }
 
+/** Contenedores cuyo resize desplaza hermanos (p. ej. publicidad → bouquet). */
+function resolveLayoutAnchors(focusEl) {
+  const anchors = new Set();
+  if (!(focusEl instanceof HTMLElement)) return anchors;
+
+  try {
+    for (const selector of LAYOUT_ANCHOR_SELECTORS) {
+      document.querySelectorAll(selector).forEach((node) => {
+        if (node instanceof HTMLElement) anchors.add(node);
+      });
+    }
+    const scrollRoot = focusEl.closest('.bouquet-inicio-scroll, .vod-content, .home-content-outlet');
+    if (scrollRoot instanceof HTMLElement) anchors.add(scrollRoot);
+  } catch {
+    // noop
+  }
+
+  return anchors;
+}
+
 function isFocusEnabled() {
   try {
     return document.documentElement.getAttribute('data-focus') !== 'off';
@@ -60,48 +85,65 @@ export function TvFocusRing() {
   const { isTV } = useDevice();
   const ringRef = useRef(null);
   const targetRef = useRef(null);
-  const observedVisualRef = useRef(null);
+  const observedSetRef = useRef(new Set());
   const resizeObserverRef = useRef(null);
   const rafRef = useRef(null);
 
-  const unobserveVisualTarget = useCallback(() => {
+  const unobserveAll = useCallback(() => {
     const ro = resizeObserverRef.current;
-    const observed = observedVisualRef.current;
-    if (ro && observed instanceof HTMLElement) {
-      try {
-        ro.unobserve(observed);
-      } catch {
-        // noop
-      }
-    }
-    observedVisualRef.current = null;
-  }, []);
-
-  const observeVisualTarget = useCallback(
-    (visualTarget) => {
-      const ro = resizeObserverRef.current;
-      if (!ro) return;
-      if (observedVisualRef.current === visualTarget) return;
-      unobserveVisualTarget();
-      if (visualTarget instanceof HTMLElement) {
-        observedVisualRef.current = visualTarget;
+    const observed = observedSetRef.current;
+    if (ro) {
+      for (const node of observed) {
         try {
-          ro.observe(visualTarget);
+          ro.unobserve(node);
         } catch {
-          observedVisualRef.current = null;
+          // noop
         }
       }
+    }
+    observed.clear();
+  }, []);
+
+  const observeLayoutContext = useCallback(
+    (focusEl, visualTarget) => {
+      const ro = resizeObserverRef.current;
+      if (!ro) return;
+
+      const next = new Set();
+      if (visualTarget instanceof HTMLElement) next.add(visualTarget);
+      resolveLayoutAnchors(focusEl).forEach((node) => next.add(node));
+
+      const prev = observedSetRef.current;
+      for (const node of prev) {
+        if (!next.has(node)) {
+          try {
+            ro.unobserve(node);
+          } catch {
+            // noop
+          }
+        }
+      }
+      for (const node of next) {
+        if (!prev.has(node)) {
+          try {
+            ro.observe(node);
+          } catch {
+            // noop
+          }
+        }
+      }
+      observedSetRef.current = next;
     },
-    [unobserveVisualTarget],
+    [],
   );
 
   const hideRing = useCallback(() => {
     const ring = ringRef.current;
     if (!ring) return;
-    unobserveVisualTarget();
+    unobserveAll();
     ring.classList.remove('tv-focus-ring--visible');
     targetRef.current = null;
-  }, [unobserveVisualTarget]);
+  }, [unobserveAll]);
 
   const positionRing = useCallback(
     (el) => {
@@ -126,12 +168,12 @@ export function TvFocusRing() {
         ring.style.borderRadius = radius && radius !== '0px' ? radius : '10px';
         ring.classList.add('tv-focus-ring--visible');
         targetRef.current = el;
-        observeVisualTarget(visualTarget);
+        observeLayoutContext(el, visualTarget);
       } catch {
         hideRing();
       }
     },
-    [hideRing, observeVisualTarget],
+    [hideRing, observeLayoutContext],
   );
 
   const scheduleUpdate = useCallback(
