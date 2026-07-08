@@ -540,7 +540,7 @@ $vod-poster-height: calc(#{$vod-card-width} * 3 / 2);
 
 .vod-detail-description-wrap {
   margin-bottom: 0.75rem;
-  max-width: 60ch;
+  max-width: 90%;
 }
 
 .vod-detail-description {
@@ -1149,14 +1149,27 @@ $vod-poster-height: calc(#{$vod-card-width} * 3 / 2);
 }
 
 /** TV: tamaños fijos en em (WebKit TV no evalúa bien calc(clamp())). */
-$vod-tv-card-width: 14em;
-$vod-tv-poster-height: 21em;
-$vod-tv-detail-poster-width: 18em;
-$vod-tv-page-title-size: 1.85rem;
-$vod-tv-row-title-size: 1.45rem;
-$vod-tv-card-title-size: 1.15rem;
-$vod-tv-category-title-size: 1.75rem;
-$vod-tv-category-close-size: 1.15rem;
+$vod-tv-card-width: 14em; // tamaño de los carruseles de género
+$vod-tv-poster-height: 21em; // tamaño de los posters de los carruseles de género
+$vod-tv-detail-poster-width: 18em; // tamaño del poster del detalle VOD
+$vod-tv-page-title-size: 1.85rem; // tamaño del título de la página VOD
+$vod-tv-row-title-size: 1.45rem; // tamaño de los títulos de las filas de los carruseles de género
+$vod-tv-card-title-size: 1.15rem; // tamaño de los títulos de las cartas de los carruseles de género
+$vod-tv-category-title-size: 1.75rem; // tamaño del título del modal de género
+$vod-tv-category-close-size: 1.15rem; // tamaño del botón de cerrar el modal de género
+$vod-tv-detail-title-size: 2.5rem; // tamaño del título del detalle VOD
+$vod-tv-detail-meta-size: 1.45rem; // tamaño de los metadatos del detalle VOD
+$vod-tv-detail-description-size: 1.2rem; // tamaño de la descripción del detalle VOD
+$vod-tv-detail-read-more-size: 1.1rem; // tamaño del botón de leer más del detalle VOD
+$vod-tv-detail-play-btn-size: 1.3rem; // tamaño del botón de play del detalle VOD
+$vod-tv-detail-episodes-title-size: 1.4rem; // tamaño del título de los episodios del detalle VOD 
+$vod-tv-detail-episode-name-size: 1.05rem; // tamaño del nombre del episodio del detalle VOD
+$vod-tv-detail-episode-duration-size: 0.95rem; // tamaño de la duración del episodio del detalle VOD
+$vod-tv-classic-title-size: 2.1rem; // tamaño del título del detalle VOD
+$vod-tv-classic-body-size: 1.25rem; // tamaño del cuerpo del detalle VOD
+$vod-tv-classic-category-size: 1.2rem; // tamaño de la categoría del detalle VOD
+$vod-tv-classic-episodes-label-size: 1.35rem; // tamaño del título de los episodios del detalle VOD
+$vod-tv-classic-episode-btn-size: 1.15rem; // tamaño del botón de play del episodio del detalle VOD
 
 @mixin vod-tv-poster-box {
   aspect-ratio: auto;
@@ -1281,6 +1294,40 @@ $vod-tv-category-close-size: 1.15rem;
     width: $vod-tv-detail-poster-width;
     margin-right: 2rem;
   }
+
+  .vod-detail-title {
+    font-size: $vod-tv-detail-title-size;
+  }
+
+  .vod-detail-meta-item,
+  .vod-detail-parental,
+  .vod-detail-category-tag {
+    font-size: $vod-tv-detail-meta-size;
+  }
+
+  .vod-detail-description {
+    font-size: $vod-tv-detail-description-size;
+  }
+
+  .vod-detail-read-more {
+    font-size: $vod-tv-detail-read-more-size;
+  }
+
+  .vod-detail-play-btn {
+    font-size: $vod-tv-detail-play-btn-size;
+  }
+
+  .vod-detail-episodes-title {
+    font-size: $vod-tv-detail-episodes-title-size;
+  }
+
+  .vod-episode-name {
+    font-size: $vod-tv-detail-episode-name-size;
+  }
+
+  .vod-episode-duration {
+    font-size: $vod-tv-detail-episode-duration-size;
+  }
 }
 
 /* TV: layout classic — columna del poster más ancha.
@@ -1314,5 +1361,39 @@ $vod-tv-category-close-size: 1.15rem;
 
   .vod-classic-serie-picture {
     max-width: 100%;
+  }
+
+  .vod-classic-top-right {
+    font-size: $vod-tv-classic-body-size;
+  }
+
+  .vod-classic-title {
+    font-size: $vod-tv-classic-title-size;
+  }
+
+  .vod-classic-category {
+    font-size: $vod-tv-classic-category-size;
+  }
+
+  .vod-classic-description {
+    font-size: $vod-tv-classic-body-size;
+  }
+
+  .vod-classic-serie-info {
+    .vod-classic-title {
+      font-size: $vod-tv-classic-title-size;
+    }
+
+    .vod-classic-description {
+      font-size: $vod-tv-classic-body-size;
+    }
+  }
+
+  .vod-classic-episodes-label {
+    font-size: $vod-tv-classic-episodes-label-size;
+  }
+
+  .vod-classic-episode-btn {
+    font-size: $vod-tv-classic-episode-btn-size;
   }
 }
