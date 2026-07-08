@@ -1159,6 +1159,9 @@ $vod-tv-category-title-size: 1.75rem; // tamaño del título del modal de géner
 $vod-tv-category-close-size: 1.15rem; // tamaño del botón de cerrar el modal de género
 $vod-tv-detail-title-size: 2.5rem; // tamaño del título del detalle VOD
 $vod-tv-detail-meta-size: 1.45rem; // tamaño de los metadatos del detalle VOD
+$vod-tv-detail-meta-gap-x: 1.25rem; // separación horizontal entre chips de meta (sin gap en flex)
+$vod-tv-detail-meta-gap-y: 0.75rem; // separación vertical entre chips de meta al hacer wrap
+$vod-tv-detail-category-tag-gap: 0.35rem; // separación entre etiquetas de categoría
 $vod-tv-detail-description-size: 1.2rem; // tamaño de la descripción del detalle VOD
 $vod-tv-detail-read-more-size: 1.1rem; // tamaño del botón de leer más del detalle VOD
 $vod-tv-detail-play-btn-size: 1.3rem; // tamaño del botón de play del detalle VOD
@@ -1297,6 +1300,33 @@ $vod-tv-classic-episode-btn-size: 1.15rem; // tamaño del botón de play del epi
 
   .vod-detail-title {
     font-size: $vod-tv-detail-title-size;
+  }
+
+  // Samsung/LG 2019: gap en flex no aplica; simular con margin en hijos directos.
+  .vod-detail-meta {
+    gap: 0;
+
+    > * {
+      margin-right: $vod-tv-detail-meta-gap-x;
+      margin-bottom: $vod-tv-detail-meta-gap-y;
+    }
+  }
+
+  .vod-detail-meta-categories {
+    gap: 0;
+
+    .vod-detail-category-tag {
+      margin-right: $vod-tv-detail-category-tag-gap;
+      margin-bottom: $vod-tv-detail-category-tag-gap;
+    }
+  }
+
+  .vod-detail-rating {
+    gap: 0;
+
+    .vod-detail-star + .vod-detail-star {
+      margin-left: 0.15rem;
+    }
   }
 
   .vod-detail-meta-item,
