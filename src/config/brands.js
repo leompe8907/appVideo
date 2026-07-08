@@ -781,13 +781,13 @@ export const BRANDS = [
         showDescription: true, // Mostrar bloque de descripción
         playButtonColor: null, // Color del botón Reproducir (hex/css)
         starRatingColor: null, // Color de las estrellas rellenas (hex/css)
-        heroGradientOpacity: 0.95, // Opacidad del gradiente inferior del hero (0–1)    
+        heroGradientOpacity: 1.0, // Opacidad del gradiente inferior del hero (0–1)    
         posterWidthMin: 100, // Ancho mínimo del poster en px
         posterWidthMax: 200, // Ancho máximo del poster en px
         categoryTagBackground: "rgba(255, 255, 255, 0.12)", // Color/fondo de las etiquetas de categoría (css)
         categoryTagBorderColor: "rgba(255, 255, 255, 0.2)", // Borde de las etiquetas de categoría (css)
         parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)", // Borde del badge de clasificación por edades (css)
-        contentPosition: "middle", // "top" | "middle" | "bottom" - posición vertical del bloque poster + info
+        contentPosition: "bottom", // "top" | "middle" | "bottom" - posición vertical del bloque poster + info
       },
     },
     // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
