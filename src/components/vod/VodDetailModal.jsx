@@ -13,6 +13,7 @@ import { getVodImageUrl } from '../../services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';
+import { requestTvFocusRingSync } from '../navigation/TvFocusRing';
 
 const DESCRIPTION_MAX_LENGTH = 180;
 
@@ -29,6 +30,18 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay, infoOnl
   const [error, setError] = useState(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [extraMeta, setExtraMeta] = useState(null);
+
+  // TV: al cambiar "Ver más/Ver menos" el tamaño del botón cambia sin cambiar el foco.
+  // Forzar re-sync del TvFocusRing para que el borde se ajuste al texto.
+  useEffect(() => {
+    if (!isTV) return;
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement)) return;
+    if (!active.classList.contains('vod-detail-read-more')) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => requestTvFocusRingSync());
+    });
+  }, [isTV, descriptionExpanded]);
 
   useEffect(() => {
     playerActiveRef.current = Boolean(playerState?.url);

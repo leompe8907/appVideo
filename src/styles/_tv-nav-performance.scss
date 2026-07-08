@@ -19,6 +19,12 @@
   }
 
   [data-focus='on'] & {
+    // WebKit TV (Samsung/LG 2019): evitar "estelas" al cambiar foco.
+    // Si un elemento pierde `.focused`, la transición puede quedar renderizada hasta el próximo repaint.
+    [data-focusable='true'] {
+      transition: none !important;
+    }
+
     .focused,
     button.focused,
     a.focused,

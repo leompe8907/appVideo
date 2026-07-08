@@ -58,6 +58,18 @@ html[data-focus='on'].device-tv[data-tv-focus-ring='on'] {
     filter: none !important;
   }
 
+  // Importante: muchos componentes pintan "foco" en hijos cuando el padre tiene `.focused`
+  // (p. ej. `.vod-card.focused .vod-card-poster { box-shadow... }`).
+  // Con TvFocusRing activo, anulamos esos efectos para evitar remanentes visuales.
+  .focused * {
+    transition: none !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    -moz-box-shadow: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+
   // Login: quitar anillos/bordes de foco (mantener aspecto base del control).
   .login-card {
     input.focused,
