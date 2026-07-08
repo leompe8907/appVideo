@@ -22,6 +22,12 @@ function isFocusRingTarget(el) {
 /** Bouquet: el anillo sigue el marco visual (logo + evento), no toda la tarjeta con texto debajo. */
 function resolveFocusRingTarget(el) {
   if (!(el instanceof HTMLElement)) return el;
+  if (el.classList.contains('home-ad-zone')) {
+    const media = el.querySelector('.home-ad-media');
+    if (media instanceof HTMLElement) return media;
+    const slide = el.querySelector('.home-ad-slide');
+    if (slide instanceof HTMLElement) return slide;
+  }
   if (!el.classList.contains('channel-card')) return el;
   for (const selector of CHANNEL_CARD_RING_INNER_SELECTORS) {
     const inner = el.querySelector(selector);
@@ -54,14 +60,48 @@ export function TvFocusRing() {
   const { isTV } = useDevice();
   const ringRef = useRef(null);
   const targetRef = useRef(null);
+  const observedVisualRef = useRef(null);
+  const resizeObserverRef = useRef(null);
   const rafRef = useRef(null);
+
+  const unobserveVisualTarget = useCallback(() => {
+    const ro = resizeObserverRef.current;
+    const observed = observedVisualRef.current;
+    if (ro && observed instanceof HTMLElement) {
+      try {
+        ro.unobserve(observed);
+      } catch {
+        // noop
+      }
+    }
+    observedVisualRef.current = null;
+  }, []);
+
+  const observeVisualTarget = useCallback(
+    (visualTarget) => {
+      const ro = resizeObserverRef.current;
+      if (!ro) return;
+      if (observedVisualRef.current === visualTarget) return;
+      unobserveVisualTarget();
+      if (visualTarget instanceof HTMLElement) {
+        observedVisualRef.current = visualTarget;
+        try {
+          ro.observe(visualTarget);
+        } catch {
+          observedVisualRef.current = null;
+        }
+      }
+    },
+    [unobserveVisualTarget],
+  );
 
   const hideRing = useCallback(() => {
     const ring = ringRef.current;
     if (!ring) return;
+    unobserveVisualTarget();
     ring.classList.remove('tv-focus-ring--visible');
     targetRef.current = null;
-  }, []);
+  }, [unobserveVisualTarget]);
 
   const positionRing = useCallback(
     (el) => {
@@ -86,11 +126,12 @@ export function TvFocusRing() {
         ring.style.borderRadius = radius && radius !== '0px' ? radius : '10px';
         ring.classList.add('tv-focus-ring--visible');
         targetRef.current = el;
+        observeVisualTarget(visualTarget);
       } catch {
         hideRing();
       }
     },
-    [hideRing]
+    [hideRing, observeVisualTarget],
   );
 
   const scheduleUpdate = useCallback(
@@ -109,6 +150,10 @@ export function TvFocusRing() {
 
     const root = document.documentElement;
     root.setAttribute('data-tv-focus-ring', 'on');
+
+    resizeObserverRef.current = new ResizeObserver(() => {
+      if (targetRef.current) scheduleUpdate(targetRef.current);
+    });
 
     const syncFromActive = () => {
       if (!isFocusEnabled()) {
@@ -170,6 +215,8 @@ export function TvFocusRing() {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('tv-focus-ring-sync', onSync);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       hideRing();
     };
   }, [isTV, hideRing, positionRing, scheduleUpdate]);

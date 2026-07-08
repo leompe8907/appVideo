@@ -11,6 +11,7 @@ export function BrandFallbackImage({
   placeholderClassName,
   loading,
   onError: onErrorProp,
+  onLoad: onLoadProp,
 }) {
   const placeholderUrl = useBrandPlaceholderUrl();
   const [imgSrc, setImgSrc] = useState(() => src || placeholderUrl || '');
@@ -48,6 +49,7 @@ export function BrandFallbackImage({
       className={className}
       loading={loading}
       onError={handleError}
+      onLoad={onLoadProp}
     />
   );
 }

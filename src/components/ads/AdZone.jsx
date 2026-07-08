@@ -7,9 +7,10 @@ import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { getDisplayTimeMs, isVideoUrl } from '../../utils/adsData';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
+import { requestTvFocusRingSync } from '../navigation/TvFocusRing';
 import { BrandFallbackImage } from '../common/BrandFallbackImage';
 
-function AdMedia({ ad, className = '' }) {
+function AdMedia({ ad, className = '', onLayoutChange }) {
   if (!ad?.file) return null;
   if (isVideoUrl(ad.file)) {
     const lower = ad.file.toLowerCase();
@@ -24,6 +25,7 @@ function AdMedia({ ad, className = '' }) {
         loop
         playsInline
         tabIndex={-1}
+        onLoadedMetadata={onLayoutChange}
       >
         <source src={ad.file} type={type} />
       </video>
@@ -34,6 +36,7 @@ function AdMedia({ ad, className = '' }) {
       src={ad.file}
       alt={ad.name || ''}
       className={`home-ad-media home-ad-media--img ${className}`.trim()}
+      onLoad={onLayoutChange}
     />
   );
 }
@@ -64,6 +67,15 @@ export function AdZone({ zoneKey, ads, onActivate }) {
     }, ms);
     return () => window.clearTimeout(timerId);
   }, [count, currentIndex, currentAd, hasMultiple, interactionPaused]);
+
+  const syncFocusRingIfFocused = useCallback(() => {
+    if (!isFocused) return;
+    requestAnimationFrame(() => requestTvFocusRingSync());
+  }, [isFocused]);
+
+  useEffect(() => {
+    syncFocusRingIfFocused();
+  }, [currentIndex, currentAd?.file, syncFocusRingIfFocused]);
 
   useEffect(() => {
     if (!currentAd?.dismissTime || currentAd.dismissTime <= 0) return undefined;
@@ -206,7 +218,9 @@ export function AdZone({ zoneKey, ads, onActivate }) {
         </>
       )}
 
-      <div className="home-ad-slide">{currentAd && <AdMedia ad={currentAd} />}</div>
+      <div className="home-ad-slide">
+        {currentAd && <AdMedia ad={currentAd} onLayoutChange={syncFocusRingIfFocused} />}
+      </div>
 
       {hasMultiple && (
         <div
