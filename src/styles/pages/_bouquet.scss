@@ -302,6 +302,19 @@ $bouquet-items-gap: 2rem;
     overflow-y: hidden;
     --bouquet-cell-width: 14em;
 
+    // TV (WebKit antiguo): no depender de `gap` para separar tarjetas.
+    // Usamos márgenes en los hijos para que el layout sea estable.
+    .device-tv & {
+      .bouquet-horizontal-grid-track {
+        gap: 0 !important;
+
+        > .channel-card {
+          margin-inline-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
+          margin-block-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
+        }
+      }
+    }
+
     &--logo-with-number {
       --bouquet-cell-width: 12.5rem;
     }

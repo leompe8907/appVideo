@@ -73,21 +73,55 @@
  *   @param {boolean} features.osms - true: habilita la integración OSMS y su menú; false: la deshabilita.
  *
  * @param {Object} login - Bloque unificado de configuración del Login por marca.
+ *   @param {Object} login.theme - Colores y estilos del formulario (CSS: hex, rgba, gradiente o var(--primary-color)).
+ *     @param {string} login.theme.cardBackground - Fondo de la tarjeta central del formulario.
+ *     @param {string} login.theme.submitBg - Fondo del botón principal "Entrar".
+ *     @param {string} login.theme.submitText - Color del texto del botón "Entrar".
+ *     @param {string} login.theme.registerBg - Fondo del botón "Registrarse" (QR).
+ *     @param {string} login.theme.registerText - Color del texto del botón "Registrarse".
+ *     @param {string} login.theme.udidBg - Fondo del botón "Login UDID".
+ *     @param {string} login.theme.udidText - Color del texto del botón UDID.
+ *     @param {string} login.theme.toggleBg - Fondo del botón mostrar/ocultar contraseña.
+ *     @param {string} login.theme.toggleText - Color del texto del toggle de contraseña.
+ *     @param {Object} login.theme.inputs - Campos usuario/contraseña.
+ *       @param {string} login.theme.inputs.bg - Fondo de los campos.
+ *       @param {string} login.theme.inputs.border - Borde de los campos.
+ *       @param {string} login.theme.inputs.text - Color del texto escrito.
+ *       @param {string} login.theme.inputs.placeholder - Color del placeholder (--login-input-placeholder).
+ *       @param {string|null} login.theme.inputs.focusedBg - Fondo con foco (TV/teclado).
+ *       @param {string|null} login.theme.inputs.focusedBorder - Borde con foco; null = ui.primaryColor.
+ *       @param {string|null} login.theme.inputs.focusedShadow - Sombra con foco; null = anillo primaryColor.
+ *     @param {Object} login.theme.social - Botones Google/Facebook (fallback custom).
+ *       @param {string} login.theme.social.bg - Fondo de botones sociales.
+ *       @param {string} login.theme.social.border - Borde de botones sociales.
+ *       @param {string} login.theme.social.text - Texto de botones sociales.
+ *     @param {string} login.theme.modalCloseBg - Fondo del botón cerrar modal QR/UDID.
+ *     @param {string} login.theme.modalCloseText - Texto del botón cerrar modal.
+ *   @param {Object} login.backgroundImage - Imagen de fondo de pantalla completa.
+ *     @param {boolean} login.backgroundImage.enabled - true: usa assetPath; false: assets.background o background.png.
+ *     @param {string} login.backgroundImage.assetPath - Archivo en la carpeta de assets de la marca.
  *   @param {Object} login.qrRegister - Registro por QR en Login:
  *     @param {boolean} login.qrRegister.enabled - Habilita/deshabilita el botón/modal de registro QR.
  *     @param {string} login.qrRegister.url - URL destino codificada en el QR.
  *   @param {Object} login.udid - Login por UDID:
  *     @param {boolean} login.udid.enabled - Habilita/deshabilita el login externo por UDID.
- *     @param {string} login.udid.baseUrl - Base del backend propio para request de UDID.
- *     @param {string} login.udid.requestPath - Path para solicitar código UDID (default recomendado: /udid/request-udid-manual/).
- *     @param {string} login.udid.wsUrl - WebSocket para esperar confirmación remota.
+ *     @param {string} login.udid.baseUrl - Base HTTP del backend UDID.
+ *     @param {string} login.udid.requestPath - Path POST para solicitar código UDID (recomendado: /udid/request-udid-manual/).
+ *     @param {string} login.udid.wsUrl - WebSocket para recibir credenciales cifradas.
+ *     @param {string} login.udid.appType - Tipo de app enviado al backend (ej. "10foot", "web").
+ *     @param {string} login.udid.appVersion - Versión enviada al backend.
+ *     @param {number} login.udid.maxReconnectAttempts - Reintentos máximos de reconexión WebSocket.
+ *     @param {number[]} login.udid.reconnectMs - Delays entre reintentos (ms).
+ *     @param {number} login.udid.heartbeatMs - Intervalo de ping WebSocket (ms).
+ *     @param {string} login.udid.privateKeyUrl - Ruta pública PEM para descifrar encrypted_credentials; vacío = deshabilitado.
  *   @param {Object} login.socialLogin - Login social (Google / Facebook) por marca:
- *     @param {string} login.socialLogin.backendBaseUrl - Base del backend win (ej. http://127.0.0.1:8000); alternativa: VITE_SOCIAL_AUTH_BASE_URL.
- *     @param {Object} login.socialLogin.google - Google Identity + POST a /wind/auth/google/.
+ *     @param {string} login.socialLogin.backendBaseUrl - Base común del backend; alternativa: VITE_SOCIAL_AUTH_BASE_URL.
+ *     @param {Object} login.socialLogin.google - Google Identity + POST OAuth.
  *       @param {boolean} login.socialLogin.google.enabled - Muestra el botón (solo escritorio; en TV se oculta).
- *       @param {string} login.socialLogin.google.redirectUrl - Si es absoluta (http...), URL del POST; si empieza con /, path relativo a la base.
- *       @param {string} login.socialLogin.google.backendBaseUrl - Base solo para Google (opcional; si no, socialLogin.backendBaseUrl).
- *       @param {string} login.socialLogin.google.accessToken - OAuth client_id de Google (GIS); alternativa: VITE_GOOGLE_CLIENT_ID.
+ *       @param {string} login.socialLogin.google.redirectUrl - URL absoluta del POST o path relativo a la base.
+ *       @param {string} login.socialLogin.google.accessToken - Google OAuth client_id; alternativa: VITE_GOOGLE_CLIENT_ID.
+ *       @param {boolean} login.socialLogin.google.preferCustomButton - true: botón custom con theme.social; false: widget GIS nativo.
+ *       @param {string} login.socialLogin.google.backendBaseUrl - Base solo para Google; vacío = socialLogin.backendBaseUrl.
  *     @param {Object} login.socialLogin.facebook - Misma forma que google (enabled, redirectUrl, accessToken, backendBaseUrl).
  *
  * @param {boolean} hashPasswordBeforeLogin - true: hashear contraseña en cliente antes de enviar (ej. Panaccess);
@@ -185,72 +219,72 @@ export const BRANDS = [
     version: "1.0.2",
 
     login: {
+      // --- Tema visual (colores CSS: hex, rgba, gradiente o var(--primary-color)) ---
       theme: {
-        cardBackground: "rgba(255, 255, 255, 0.05)",// Fondo de la tarjeta del login
-        submitBg: "#004c77",// Botón principal (Entrar)
-        submitText: "#ffffff",// Texto del botón principal
-        registerBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón de registro
-        registerText: "#ffffff",// Texto del botón de registro
-        udidBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón UDID
-        udidText: "#ffffff",// Texto del botón UDID
-        toggleBg: "rgba(255, 255, 255, 0.1)",// Fondo del botón de toggle
-        toggleText: "rgba(255, 255, 255, 0.7)",// Texto del botón de toggle
+        cardBackground: "rgba(255, 255, 255, 0.05)", // Fondo de la tarjeta central del formulario
+        submitBg: "#004c77", // Fondo del botón principal "Entrar"
+        submitText: "#ffffff", // Texto del botón "Entrar"
+        registerBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Registrarse" (QR)
+        registerText: "#ffffff", // Texto del botón "Registrarse"
+        udidBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Login UDID"
+        udidText: "#ffffff", // Texto del botón UDID
+        toggleBg: "rgba(255, 255, 255, 0.1)", // Fondo del botón mostrar/ocultar contraseña
+        toggleText: "rgba(255, 255, 255, 0.7)", // Texto del toggle de contraseña
         inputs: {
-          // Inputs (usuario/contraseña) - personalizable por marca
-          bg: "rgba(255, 255, 255, 0.1)",
-          border: "rgba(255, 255, 255, 0.2)",
-          text: "#ffffff",
-          placeholder: "rgba(255, 255, 255, 0.4)",
-          focusedBg: "rgba(255, 255, 255, 0.15)",
-          focusedBorder: null,
-          focusedShadow: null,
+          bg: "rgba(255, 255, 255, 0.1)", // Fondo campos usuario/contraseña
+          border: "rgba(255, 255, 255, 0.2)", // Borde de los campos
+          text: "#ffffff", // Color del texto escrito
+          placeholder: "rgba(255, 255, 255, 0.4)", // Color del placeholder
+          focusedBg: "rgba(255, 255, 255, 0.15)", // Fondo cuando el campo tiene foco (TV/teclado)
+          focusedBorder: null, // Borde con foco; null = usa ui.primaryColor
+          focusedShadow: null, // Sombra con foco; null = usa anillo primaryColor
         },
         social: {
-          // Botones login social (Google/Facebook)
-          bg: "rgba(255, 255, 255, 0.08)",
-          border: "rgba(255, 255, 255, 0.22)",
-          text: "rgba(255, 255, 255, 0.92)",
+          bg: "rgba(255, 255, 255, 0.08)", // Fondo botones Google/Facebook (fallback custom)
+          border: "rgba(255, 255, 255, 0.22)", // Borde botones sociales
+          text: "rgba(255, 255, 255, 0.92)", // Texto botones sociales
         },
-        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Fondo del botón cerrar modal
-        modalCloseText: "#ffffff",// Texto del botón cerrar modal
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
+        modalCloseText: "#ffffff", // Texto botón cerrar modal
       },
+      // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
-        // Personaliza el fondo del login por marca:
-        // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
-        enabled: true,
-        assetPath: "backgroundalt.webp",
+        enabled: true, // true: usa assetPath; false: usa assets.background o background.png por defecto
+        assetPath: "backgroundalt.webp", // Archivo en la carpeta de assets de la marca
       },
+      // --- Registro por código QR ---
       qrRegister: {
-        enabled: true,
-        url: "https://shop.fotelka.tv/?c=customer&p=register",
+        enabled: true, // Muestra botón y modal de registro con QR
+        url: "https://shop.fotelka.tv/?c=customer&p=register", // URL codificada en el QR de registro
       },
+      // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
-        enabled: true,
-        baseUrl: "http://127.0.0.1:8001", //"https://bt-auth.cabledelancer.com",
-        requestPath: "/udid/request-udid-manual/",
-        wsUrl: "ws://127.0.0.1:8001/ws/auth/", //"wss://bt-auth.cabledelancer.com/ws/auth/",
-        appType: "10foot",
-        appVersion: "1.0",
-        maxReconnectAttempts: 3,
-        reconnectMs: [3000, 6000, 10000],
-        heartbeatMs: 30000,
-        privateKeyUrl: "/cableatlantico/keys/private_key.pem",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+        enabled: true, // Muestra botón y flujo UDID
+        baseUrl: "http://127.0.0.1:8001", // Base HTTP del backend UDID
+        requestPath: "/udid/request-udid-manual/", // Endpoint POST para solicitar código UDID
+        wsUrl: "ws://127.0.0.1:8001/ws/auth/", // WebSocket para recibir credenciales cifradas
+        appType: "10foot", // Tipo de app enviado al backend
+        appVersion: "1.0", // Versión enviada al backend
+        maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
+        reconnectMs: [3000, 6000, 10000], // Delays entre reintentos (ms)
+        heartbeatMs: 30000, // Intervalo de ping WebSocket (ms)
+        privateKeyUrl: "/cableatlantico/keys/private_key.pem", // Ruta pública PEM para descifrar encrypted_credentials
       },
+      // --- Login social (Google / Facebook); oculto en TV ---
       socialLogin: {
-        backendBaseUrl: 'http://backend.wind.do',
+        backendBaseUrl: "http://backend.wind.do", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
         google: {
-          enabled: true,
-          redirectUrl: '/wind/auth/google/',
-          accessToken: '487078023200-686hite4p619jtaobfa4oksvhoal7qc1.apps.googleusercontent.com',
-          // Mantener look del botón fallback aunque OAuth esté configurado.
-          preferCustomButton: true,
-          backendBaseUrl: '',
+          enabled: true, // Muestra botón Google (solo escritorio)
+          redirectUrl: "/wind/auth/google/", // Path relativo a backendBaseUrl o URL absoluta del POST OAuth
+          accessToken: "487078023200-686hite4p619jtaobfa4oksvhoal7qc1.apps.googleusercontent.com", // Google OAuth client_id
+          preferCustomButton: true, // true: botón custom con theme.social; false: widget GIS nativo
+          backendBaseUrl: "", // Base específica Google; vacío = usa socialLogin.backendBaseUrl
         },
         facebook: {
-          enabled: true,
-          redirectUrl: '/wind/auth/facebook/',
-          accessToken: '823584907447149',
-          backendBaseUrl: '',
+          enabled: true, // Muestra botón Facebook (solo escritorio)
+          redirectUrl: "/wind/auth/facebook/", // Path relativo o URL absoluta del POST OAuth
+          accessToken: "823584907447149", // Facebook App ID
+          backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
       },
     },
@@ -492,71 +526,72 @@ export const BRANDS = [
     version: "2.0.2",
 
     login: {
+      // --- Tema visual (colores CSS: hex, rgba, gradiente o var(--primary-color)) ---
       theme: {
-        cardBackground: "rgba(255, 255, 255, 0.05)",// Fondo de la tarjeta del login
-        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Botón principal (Entrar)
-        submitText: "#ffffff",// Texto del botón principal
-        registerBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón de registro
-        registerText: "#ffffff",// Texto del botón de registro
-        udidBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón UDID
-        udidText: "#ffffff",// Texto del botón UDID
-        toggleBg: "rgba(255, 255, 255, 0.1)",// Fondo del botón de toggle
-        toggleText: "rgba(255, 255, 255, 0.7)",// Texto del botón de toggle
+        cardBackground: "rgba(255, 255, 255, 0.05)", // Fondo de la tarjeta central del formulario
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo del botón principal "Entrar"
+        submitText: "#ffffff", // Texto del botón "Entrar"
+        registerBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Registrarse" (QR)
+        registerText: "#ffffff", // Texto del botón "Registrarse"
+        udidBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Login UDID"
+        udidText: "#ffffff", // Texto del botón UDID
+        toggleBg: "rgba(255, 255, 255, 0.1)", // Fondo del botón mostrar/ocultar contraseña
+        toggleText: "rgba(255, 255, 255, 0.7)", // Texto del toggle de contraseña
         inputs: {
-          // Inputs (usuario/contraseña) - personalizable por marca
-          bg: "rgba(255, 255, 255, 0.1)",
-          border: "rgba(255, 255, 255, 0.2)",
-          text: "#ffffff",
-          placeholder: "rgba(255, 255, 255, 0.4)",
-          focusedBg: "rgba(255, 255, 255, 0.15)",
-          focusedBorder: null,
-          focusedShadow: null,
+          bg: "rgba(255, 255, 255, 0.1)", // Fondo campos usuario/contraseña
+          border: "rgba(255, 255, 255, 0.2)", // Borde de los campos
+          text: "#ffffff", // Color del texto escrito
+          placeholder: "rgba(255, 255, 255, 0.4)", // Color del placeholder
+          focusedBg: "rgba(255, 255, 255, 0.15)", // Fondo cuando el campo tiene foco (TV/teclado)
+          focusedBorder: null, // Borde con foco; null = usa ui.primaryColor
+          focusedShadow: null, // Sombra con foco; null = usa anillo primaryColor
         },
         social: {
-          // Botones login social (Google/Facebook)
-          bg: "rgba(255, 255, 255, 0.08)",
-          border: "rgba(255, 255, 255, 0.22)",
-          text: "rgba(255, 255, 255, 0.92)",
+          bg: "rgba(255, 255, 255, 0.08)", // Fondo botones Google/Facebook (fallback custom)
+          border: "rgba(255, 255, 255, 0.22)", // Borde botones sociales
+          text: "rgba(255, 255, 255, 0.92)", // Texto botones sociales
         },
-        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Fondo del botón cerrar modal
-        modalCloseText: "#ffffff",// Texto del botón cerrar modal
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
+        modalCloseText: "#ffffff", // Texto botón cerrar modal
       },
+      // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
-        // Personaliza el fondo del login por marca:
-        // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
-        enabled: false,
-        assetPath: "backgroundalt.webp",
+        enabled: false, // true: usa assetPath; false: usa assets.background o background.png por defecto
+        assetPath: "backgroundalt.webp", // Archivo en la carpeta de assets de la marca
       },
+      // --- Registro por código QR ---
       qrRegister: {
-        enabled: false,
-        url: "",
+        enabled: false, // Muestra botón y modal de registro con QR
+        url: "", // URL codificada en el QR de registro
       },
+      // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
-        enabled: false,
-        baseUrl: "",
-        requestPath: "",
-        wsUrl: "",
-        appType: "10foot",
-        appVersion: "1.0",
-        maxReconnectAttempts: 3,
-        reconnectMs: [3000, 6000, 10000],
-        heartbeatMs: 30000,
-        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+        enabled: false, // Muestra botón y flujo UDID
+        baseUrl: "", // Base HTTP del backend UDID
+        requestPath: "", // Endpoint POST para solicitar código UDID
+        wsUrl: "", // WebSocket para recibir credenciales cifradas
+        appType: "10foot", // Tipo de app enviado al backend
+        appVersion: "1.0", // Versión enviada al backend
+        maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
+        reconnectMs: [3000, 6000, 10000], // Delays entre reintentos (ms)
+        heartbeatMs: 30000, // Intervalo de ping WebSocket (ms)
+        privateKeyUrl: "", // Ruta pública PEM para descifrar encrypted_credentials
       },
+      // --- Login social (Google / Facebook); oculto en TV ---
       socialLogin: {
-        backendBaseUrl: 'http://127.0.0.1:8000',
+        backendBaseUrl: "http://127.0.0.1:8000", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
         google: {
-          enabled: false,
-          redirectUrl: '',
-          accessToken: '',
-          preferCustomButton: true,
-          backendBaseUrl: '',
+          enabled: false, // Muestra botón Google (solo escritorio)
+          redirectUrl: "", // Path relativo a backendBaseUrl o URL absoluta del POST OAuth
+          accessToken: "", // Google OAuth client_id
+          preferCustomButton: true, // true: botón custom con theme.social; false: widget GIS nativo
+          backendBaseUrl: "", // Base específica Google; vacío = usa socialLogin.backendBaseUrl
         },
         facebook: {
-          enabled: false,
-          redirectUrl: '',
-          accessToken: '',
-          backendBaseUrl: '',
+          enabled: false, // Muestra botón Facebook (solo escritorio)
+          redirectUrl: "", // Path relativo o URL absoluta del POST OAuth
+          accessToken: "", // Facebook App ID
+          backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
       },
     },
@@ -810,71 +845,72 @@ export const BRANDS = [
     version: "2.0.3",
 
     login: {
+      // --- Tema visual (colores CSS: hex, rgba, gradiente o var(--primary-color)) ---
       theme: {
-        cardBackground: "rgba(255, 255, 255, 0.05)",// Fondo de la tarjeta del login
-        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Botón principal (Entrar)
-        submitText: "#ffffff",// Texto del botón principal
-        registerBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón de registro
-        registerText: "#ffffff",// Texto del botón de registro
-        udidBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón UDID
-        udidText: "#ffffff",// Texto del botón UDID
-        toggleBg: "rgba(255, 255, 255, 0.1)",// Fondo del botón de toggle
-        toggleText: "rgba(255, 255, 255, 0.7)",// Texto del botón de toggle
+        cardBackground: "rgba(255, 255, 255, 0.05)", // Fondo de la tarjeta central del formulario
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo del botón principal "Entrar"
+        submitText: "#ffffff", // Texto del botón "Entrar"
+        registerBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Registrarse" (QR)
+        registerText: "#ffffff", // Texto del botón "Registrarse"
+        udidBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Login UDID"
+        udidText: "#ffffff", // Texto del botón UDID
+        toggleBg: "rgba(255, 255, 255, 0.1)", // Fondo del botón mostrar/ocultar contraseña
+        toggleText: "rgba(255, 255, 255, 0.7)", // Texto del toggle de contraseña
         inputs: {
-          // Inputs (usuario/contraseña) - personalizable por marca
-          bg: "rgba(255, 255, 255, 0.1)",
-          border: "rgba(255, 255, 255, 0.2)",
-          text: "#ffffff",
-          placeholder: "rgba(255, 255, 255, 0.4)",
-          focusedBg: "rgba(255, 255, 255, 0.15)",
-          focusedBorder: null,
-          focusedShadow: null,
+          bg: "rgba(255, 255, 255, 0.1)", // Fondo campos usuario/contraseña
+          border: "rgba(255, 255, 255, 0.2)", // Borde de los campos
+          text: "#ffffff", // Color del texto escrito
+          placeholder: "rgba(255, 255, 255, 0.4)", // Color del placeholder
+          focusedBg: "rgba(255, 255, 255, 0.15)", // Fondo cuando el campo tiene foco (TV/teclado)
+          focusedBorder: null, // Borde con foco; null = usa ui.primaryColor
+          focusedShadow: null, // Sombra con foco; null = usa anillo primaryColor
         },
         social: {
-          // Botones login social (Google/Facebook)
-          bg: "rgba(255, 255, 255, 0.08)",
-          border: "rgba(255, 255, 255, 0.22)",
-          text: "rgba(255, 255, 255, 0.92)",
+          bg: "rgba(255, 255, 255, 0.08)", // Fondo botones Google/Facebook (fallback custom)
+          border: "rgba(255, 255, 255, 0.22)", // Borde botones sociales
+          text: "rgba(255, 255, 255, 0.92)", // Texto botones sociales
         },
-        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Fondo del botón cerrar modal
-        modalCloseText: "#ffffff",// Texto del botón cerrar modal
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
+        modalCloseText: "#ffffff", // Texto botón cerrar modal
       },
+      // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
-        // Personaliza el fondo del login por marca:
-        // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
-        enabled: false,
-        assetPath: "backgroundalt.webp",
+        enabled: false, // true: usa assetPath; false: usa assets.background o background.png por defecto
+        assetPath: "backgroundalt.webp", // Archivo en la carpeta de assets de la marca
       },
+      // --- Registro por código QR ---
       qrRegister: {
-        enabled: false,
-        url: "https://shop.fotelka.tv/?c=customer&p=register",
+        enabled: false, // Muestra botón y modal de registro con QR
+        url: "https://shop.fotelka.tv/?c=customer&p=register", // URL codificada en el QR de registro
       },
+      // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
-        enabled: false,
-        baseUrl: "",
-        requestPath: "",
-        wsUrl: "",
-        appType: "10foot",
-        appVersion: "1.0",
-        maxReconnectAttempts: 3,
-        reconnectMs: [3000, 6000, 10000],
-        heartbeatMs: 30000,
-        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+        enabled: false, // Muestra botón y flujo UDID
+        baseUrl: "", // Base HTTP del backend UDID
+        requestPath: "", // Endpoint POST para solicitar código UDID
+        wsUrl: "", // WebSocket para recibir credenciales cifradas
+        appType: "10foot", // Tipo de app enviado al backend
+        appVersion: "1.0", // Versión enviada al backend
+        maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
+        reconnectMs: [3000, 6000, 10000], // Delays entre reintentos (ms)
+        heartbeatMs: 30000, // Intervalo de ping WebSocket (ms)
+        privateKeyUrl: "", // Ruta pública PEM para descifrar encrypted_credentials
       },
+      // --- Login social (Google / Facebook); oculto en TV ---
       socialLogin: {
-        backendBaseUrl: 'http://127.0.0.1:8000',
+        backendBaseUrl: "http://127.0.0.1:8000", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
         google: {
-          enabled: false,
-          redirectUrl: '/wind/auth/google/',
-          accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
-          preferCustomButton: true,
-          backendBaseUrl: '',
+          enabled: false, // Muestra botón Google (solo escritorio)
+          redirectUrl: "/wind/auth/google/", // Path relativo a backendBaseUrl o URL absoluta del POST OAuth
+          accessToken: "803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com", // Google OAuth client_id
+          preferCustomButton: true, // true: botón custom con theme.social; false: widget GIS nativo
+          backendBaseUrl: "", // Base específica Google; vacío = usa socialLogin.backendBaseUrl
         },
         facebook: {
-          enabled: false,
-          redirectUrl: '/wind/auth/facebook/',
-          accessToken: '823584907447149',
-          backendBaseUrl: '',
+          enabled: false, // Muestra botón Facebook (solo escritorio)
+          redirectUrl: "/wind/auth/facebook/", // Path relativo o URL absoluta del POST OAuth
+          accessToken: "823584907447149", // Facebook App ID
+          backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
       },
     },
@@ -1098,70 +1134,75 @@ export const BRANDS = [
     version: "1.0.2",
 
     login: {
+      // --- Tema visual (colores CSS: hex, rgba, gradiente o var(--primary-color)) ---
       theme: {
-        cardBackground: "rgba(255, 255, 255, 0.05)",
-        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
-        submitText: "#ffffff",
-        registerBg: "rgba(255, 255, 255, 0.12)",
-        registerText: "#ffffff",
-        udidBg: "rgba(255, 255, 255, 0.12)",
-        udidText: "#ffffff",
-        toggleBg: "rgba(255, 255, 255, 0.1)",
-        toggleText: "rgba(255, 255, 255, 0.7)",
+        cardBackground: "rgba(255, 255, 255, 0.05)", // Fondo de la tarjeta central del formulario
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo del botón principal "Entrar"
+        submitText: "#ffffff", // Texto del botón "Entrar"
+        registerBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Registrarse" (QR)
+        registerText: "#ffffff", // Texto del botón "Registrarse"
+        udidBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Login UDID"
+        udidText: "#ffffff", // Texto del botón UDID
+        toggleBg: "rgba(255, 255, 255, 0.1)", // Fondo del botón mostrar/ocultar contraseña
+        toggleText: "rgba(255, 255, 255, 0.7)", // Texto del toggle de contraseña
         inputs: {
-          bg: "rgba(255, 255, 255, 0.1)",
-          border: "rgba(255, 255, 255, 0.2)",
-          text: "#ffffff",
-          placeholder: "rgba(255, 255, 255, 0.4)",
-          focusedBg: "rgba(255, 255, 255, 0.15)",
-          focusedBorder: null,
-          focusedShadow: null,
+          bg: "rgba(255, 255, 255, 0.1)", // Fondo campos usuario/contraseña
+          border: "rgba(255, 255, 255, 0.2)", // Borde de los campos
+          text: "#ffffff", // Color del texto escrito
+          placeholder: "rgba(255, 255, 255, 0.4)", // Color del placeholder
+          focusedBg: "rgba(255, 255, 255, 0.15)", // Fondo cuando el campo tiene foco (TV/teclado)
+          focusedBorder: null, // Borde con foco; null = usa ui.primaryColor
+          focusedShadow: null, // Sombra con foco; null = usa anillo primaryColor
         },
         social: {
-          bg: "rgba(255, 255, 255, 0.08)",
-          border: "rgba(255, 255, 255, 0.22)",
-          text: "rgba(255, 255, 255, 0.92)",
+          bg: "rgba(255, 255, 255, 0.08)", // Fondo botones Google/Facebook (fallback custom)
+          border: "rgba(255, 255, 255, 0.22)", // Borde botones sociales
+          text: "rgba(255, 255, 255, 0.92)", // Texto botones sociales
         },
-        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",
-        modalCloseText: "#ffffff",
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
+        modalCloseText: "#ffffff", // Texto botón cerrar modal
       },
+      // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
-        enabled: false,
-        assetPath: "backgroundalt.webp",
+        enabled: false, // true: usa assetPath; false: usa assets.background o background.png por defecto
+        assetPath: "backgroundalt.webp", // Archivo en la carpeta de assets de la marca
       },
+      // --- Registro por código QR ---
       qrRegister: {
-        enabled: false,
-        url: "https://shop.fotelka.tv/?c=customer&p=register",
+        enabled: false, // Muestra botón y modal de registro con QR
+        url: "https://shop.fotelka.tv/?c=customer&p=register", // URL codificada en el QR de registro
       },
+      // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
-        enabled: true,
-        baseUrl: "http://127.0.0.1:8000", //"https://bt-auth.cabledelancer.com",
-        requestPath: "/udid/request-udid-manual/",
-        wsUrl: "ws://127.0.0.1:8000/ws/auth/", //"wss://bt-auth.cabledelancer.com/ws/auth/",
-        appType: "10foot",
-        appVersion: "1.0",
-        maxReconnectAttempts: 3,
-        reconnectMs: [3000, 6000, 10000],
-        heartbeatMs: 30000,
-        privateKeyUrl: "/cableatlantico/keys/private_key.pem",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+        enabled: true, // Muestra botón y flujo UDID
+        baseUrl: "http://127.0.0.1:8000", // Base HTTP del backend UDID
+        requestPath: "/udid/request-udid-manual/", // Endpoint POST para solicitar código UDID
+        wsUrl: "ws://127.0.0.1:8000/ws/auth/", // WebSocket para recibir credenciales cifradas
+        appType: "10foot", // Tipo de app enviado al backend
+        appVersion: "1.0", // Versión enviada al backend
+        maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
+        reconnectMs: [3000, 6000, 10000], // Delays entre reintentos (ms)
+        heartbeatMs: 30000, // Intervalo de ping WebSocket (ms)
+        privateKeyUrl: "/cableatlantico/keys/private_key.pem", // Ruta pública PEM para descifrar encrypted_credentials
       },
+      // --- Login social (Google / Facebook); oculto en TV ---
       socialLogin: {
-        backendBaseUrl: '',
+        backendBaseUrl: "", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
         google: {
-          enabled: false,
-          redirectUrl: '',
-          accessToken: '',
-          preferCustomButton: true,
-          backendBaseUrl: '',
+          enabled: false, // Muestra botón Google (solo escritorio)
+          redirectUrl: "", // Path relativo a backendBaseUrl o URL absoluta del POST OAuth
+          accessToken: "", // Google OAuth client_id
+          preferCustomButton: true, // true: botón custom con theme.social; false: widget GIS nativo
+          backendBaseUrl: "", // Base específica Google; vacío = usa socialLogin.backendBaseUrl
         },
         facebook: {
-          enabled: false,
-          redirectUrl: '',
-          accessToken: '',
-          backendBaseUrl: '',
+          enabled: false, // Muestra botón Facebook (solo escritorio)
+          redirectUrl: "", // Path relativo o URL absoluta del POST OAuth
+          accessToken: "", // Facebook App ID
+          backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
       },
-    },    
+    },
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
@@ -1381,71 +1422,72 @@ export const BRANDS = [
     version: "1.0.0",
 
     login: {
+      // --- Tema visual (colores CSS: hex, rgba, gradiente o var(--primary-color)) ---
       theme: {
-        cardBackground: "rgba(255, 255, 255, 0.05)",// Fondo de la tarjeta del login
-        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Botón principal (Entrar)
-        submitText: "#ffffff",// Texto del botón principal
-        registerBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón de registro
-        registerText: "#ffffff",// Texto del botón de registro
-        udidBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón UDID
-        udidText: "#ffffff",// Texto del botón UDID
-        toggleBg: "rgba(255, 255, 255, 0.1)",// Fondo del botón de toggle
-        toggleText: "rgba(255, 255, 255, 0.7)",// Texto del botón de toggle
+        cardBackground: "rgba(255, 255, 255, 0.05)", // Fondo de la tarjeta central del formulario
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo del botón principal "Entrar"
+        submitText: "#ffffff", // Texto del botón "Entrar"
+        registerBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Registrarse" (QR)
+        registerText: "#ffffff", // Texto del botón "Registrarse"
+        udidBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Login UDID"
+        udidText: "#ffffff", // Texto del botón UDID
+        toggleBg: "rgba(255, 255, 255, 0.1)", // Fondo del botón mostrar/ocultar contraseña
+        toggleText: "rgba(255, 255, 255, 0.7)", // Texto del toggle de contraseña
         inputs: {
-          // Inputs (usuario/contraseña) - personalizable por marca
-          bg: "rgba(255, 255, 255, 0.1)",
-          border: "rgba(255, 255, 255, 0.2)",
-          text: "#ffffff",
-          placeholder: "rgba(255, 255, 255, 0.4)",
-          focusedBg: "rgba(255, 255, 255, 0.15)",
-          focusedBorder: null,
-          focusedShadow: null,
+          bg: "rgba(255, 255, 255, 0.1)", // Fondo campos usuario/contraseña
+          border: "rgba(255, 255, 255, 0.2)", // Borde de los campos
+          text: "#ffffff", // Color del texto escrito
+          placeholder: "rgba(255, 255, 255, 0.4)", // Color del placeholder
+          focusedBg: "rgba(255, 255, 255, 0.15)", // Fondo cuando el campo tiene foco (TV/teclado)
+          focusedBorder: null, // Borde con foco; null = usa ui.primaryColor
+          focusedShadow: null, // Sombra con foco; null = usa anillo primaryColor
         },
         social: {
-          // Botones login social (Google/Facebook)
-          bg: "rgba(255, 255, 255, 0.08)",
-          border: "rgba(255, 255, 255, 0.22)",
-          text: "rgba(255, 255, 255, 0.92)",
+          bg: "rgba(255, 255, 255, 0.08)", // Fondo botones Google/Facebook (fallback custom)
+          border: "rgba(255, 255, 255, 0.22)", // Borde botones sociales
+          text: "rgba(255, 255, 255, 0.92)", // Texto botones sociales
         },
-        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Fondo del botón cerrar modal
-        modalCloseText: "#ffffff",// Texto del botón cerrar modal
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
+        modalCloseText: "#ffffff", // Texto botón cerrar modal
       },
+      // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
-        // Personaliza el fondo del login por marca:
-        // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
-        enabled: true,
-        assetPath: "backgroundalt.webp",
+        enabled: true, // true: usa assetPath; false: usa assets.background o background.png por defecto
+        assetPath: "backgroundalt.webp", // Archivo en la carpeta de assets de la marca
       },
+      // --- Registro por código QR ---
       qrRegister: {
-        enabled: true,
-        url: "https://backend.wind.do/wind/register/",
+        enabled: true, // Muestra botón y modal de registro con QR
+        url: "https://backend.wind.do/wind/register/", // URL codificada en el QR de registro
       },
+      // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
-        enabled: false,
-        baseUrl: "",
-        requestPath: "",
-        wsUrl: "",
-        appType: "10foot",
-        appVersion: "1.0",
-        maxReconnectAttempts: 3,
-        reconnectMs: [3000, 6000, 10000],
-        heartbeatMs: 30000,
-        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+        enabled: false, // Muestra botón y flujo UDID
+        baseUrl: "", // Base HTTP del backend UDID
+        requestPath: "", // Endpoint POST para solicitar código UDID
+        wsUrl: "", // WebSocket para recibir credenciales cifradas
+        appType: "10foot", // Tipo de app enviado al backend
+        appVersion: "1.0", // Versión enviada al backend
+        maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
+        reconnectMs: [3000, 6000, 10000], // Delays entre reintentos (ms)
+        heartbeatMs: 30000, // Intervalo de ping WebSocket (ms)
+        privateKeyUrl: "", // Ruta pública PEM para descifrar encrypted_credentials
       },
+      // --- Login social (Google / Facebook); oculto en TV ---
       socialLogin: {
-        backendBaseUrl: 'https://backend.wind.do',
+        backendBaseUrl: "https://backend.wind.do", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
         google: {
-          enabled: true,
-          redirectUrl: '/wind/auth/google/',
-          accessToken: '487078023200-686hite4p619jtaobfa4oksvhoal7qc1.apps.googleusercontent.com',
-          preferCustomButton: true,
-          backendBaseUrl: '',
+          enabled: true, // Muestra botón Google (solo escritorio)
+          redirectUrl: "/wind/auth/google/", // Path relativo a backendBaseUrl o URL absoluta del POST OAuth
+          accessToken: "487078023200-686hite4p619jtaobfa4oksvhoal7qc1.apps.googleusercontent.com", // Google OAuth client_id
+          preferCustomButton: true, // true: botón custom con theme.social; false: widget GIS nativo
+          backendBaseUrl: "", // Base específica Google; vacío = usa socialLogin.backendBaseUrl
         },
         facebook: {
-          enabled: true,
-          redirectUrl: '/wind/auth/facebook/',
-          accessToken: '823584907447149',
-          backendBaseUrl: '',
+          enabled: true, // Muestra botón Facebook (solo escritorio)
+          redirectUrl: "/wind/auth/facebook/", // Path relativo o URL absoluta del POST OAuth
+          accessToken: "823584907447149", // Facebook App ID
+          backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
       },
     },
@@ -1698,71 +1740,72 @@ export const BRANDS = [
     version: "1.0.0",
 
     login: {
+      // --- Tema visual (colores CSS: hex, rgba, gradiente o var(--primary-color)) ---
       theme: {
-        cardBackground: "rgba(255, 255, 255, 0.05)",// Fondo de la tarjeta del login
-        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Botón principal (Entrar)
-        submitText: "#ffffff",// Texto del botón principal
-        registerBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón de registro
-        registerText: "#ffffff",// Texto del botón de registro
-        udidBg: "rgba(255, 255, 255, 0.12)",// Fondo del botón UDID
-        udidText: "#ffffff",// Texto del botón UDID
-        toggleBg: "rgba(255, 255, 255, 0.1)",// Fondo del botón de toggle
-        toggleText: "rgba(255, 255, 255, 0.7)",// Texto del botón de toggle
+        cardBackground: "rgba(255, 255, 255, 0.05)", // Fondo de la tarjeta central del formulario
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo del botón principal "Entrar"
+        submitText: "#ffffff", // Texto del botón "Entrar"
+        registerBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Registrarse" (QR)
+        registerText: "#ffffff", // Texto del botón "Registrarse"
+        udidBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Login UDID"
+        udidText: "#ffffff", // Texto del botón UDID
+        toggleBg: "rgba(255, 255, 255, 0.1)", // Fondo del botón mostrar/ocultar contraseña
+        toggleText: "rgba(255, 255, 255, 0.7)", // Texto del toggle de contraseña
         inputs: {
-          // Inputs (usuario/contraseña) - personalizable por marca
-          bg: "rgba(255, 255, 255, 0.1)",
-          border: "rgba(255, 255, 255, 0.2)",
-          text: "#ffffff",
-          placeholder: "rgba(255, 255, 255, 0.4)",
-          focusedBg: "rgba(255, 255, 255, 0.15)",
-          focusedBorder: null,
-          focusedShadow: null,
+          bg: "rgba(255, 255, 255, 0.1)", // Fondo campos usuario/contraseña
+          border: "rgba(255, 255, 255, 0.2)", // Borde de los campos
+          text: "#ffffff", // Color del texto escrito
+          placeholder: "rgba(255, 255, 255, 0.4)", // Color del placeholder
+          focusedBg: "rgba(255, 255, 255, 0.15)", // Fondo cuando el campo tiene foco (TV/teclado)
+          focusedBorder: null, // Borde con foco; null = usa ui.primaryColor
+          focusedShadow: null, // Sombra con foco; null = usa anillo primaryColor
         },
         social: {
-          // Botones login social (Google/Facebook)
-          bg: "rgba(255, 255, 255, 0.08)",
-          border: "rgba(255, 255, 255, 0.22)",
-          text: "rgba(255, 255, 255, 0.92)",
+          bg: "rgba(255, 255, 255, 0.08)", // Fondo botones Google/Facebook (fallback custom)
+          border: "rgba(255, 255, 255, 0.22)", // Borde botones sociales
+          text: "rgba(255, 255, 255, 0.92)", // Texto botones sociales
         },
-        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)",// Fondo del botón cerrar modal
-        modalCloseText: "#ffffff",// Texto del botón cerrar modal
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
+        modalCloseText: "#ffffff", // Texto botón cerrar modal
       },
+      // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
-        // Personaliza el fondo del login por marca:
-        // - assetPath: nombre de asset dentro de la carpeta de la marca (ej. "background.png", "login-bg.webp")
-        enabled: false,
-        assetPath: "backgroundalt.webp",
+        enabled: false, // true: usa assetPath; false: usa assets.background o background.png por defecto
+        assetPath: "backgroundalt.webp", // Archivo en la carpeta de assets de la marca
       },
+      // --- Registro por código QR ---
       qrRegister: {
-        enabled: false,
-        url: "https://shop.fotelka.tv/?c=customer&p=register",
+        enabled: false, // Muestra botón y modal de registro con QR
+        url: "https://shop.fotelka.tv/?c=customer&p=register", // URL codificada en el QR de registro
       },
+      // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
-        enabled: true,
-        baseUrl: "",
-        requestPath: "",
-        wsUrl: "",
-        appType: "10foot",
-        appVersion: "1.0",
-        maxReconnectAttempts: 3,
-        reconnectMs: [3000, 6000, 10000],
-        heartbeatMs: 30000,
-        privateKeyUrl: "",// Clave privada RSA-OAEP para descifrar `encrypted_credentials` del backend UDID.
+        enabled: true, // Muestra botón y flujo UDID
+        baseUrl: "", // Base HTTP del backend UDID
+        requestPath: "", // Endpoint POST para solicitar código UDID
+        wsUrl: "", // WebSocket para recibir credenciales cifradas
+        appType: "10foot", // Tipo de app enviado al backend
+        appVersion: "1.0", // Versión enviada al backend
+        maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
+        reconnectMs: [3000, 6000, 10000], // Delays entre reintentos (ms)
+        heartbeatMs: 30000, // Intervalo de ping WebSocket (ms)
+        privateKeyUrl: "", // Ruta pública PEM para descifrar encrypted_credentials
       },
+      // --- Login social (Google / Facebook); oculto en TV ---
       socialLogin: {
-        backendBaseUrl: 'http://127.0.0.1:8000/',
+        backendBaseUrl: "http://127.0.0.1:8000/", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
         google: {
-          enabled: true,
-          redirectUrl: '/wind/auth/google/',
-          accessToken: '803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com',
-          preferCustomButton: true,
-          backendBaseUrl: '',
+          enabled: true, // Muestra botón Google (solo escritorio)
+          redirectUrl: "/wind/auth/google/", // Path relativo a backendBaseUrl o URL absoluta del POST OAuth
+          accessToken: "803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com", // Google OAuth client_id
+          preferCustomButton: true, // true: botón custom con theme.social; false: widget GIS nativo
+          backendBaseUrl: "", // Base específica Google; vacío = usa socialLogin.backendBaseUrl
         },
         facebook: {
-          enabled: true,
-          redirectUrl: '',
-          accessToken: '',
-          backendBaseUrl: '',
+          enabled: true, // Muestra botón Facebook (solo escritorio)
+          redirectUrl: "", // Path relativo o URL absoluta del POST OAuth
+          accessToken: "", // Facebook App ID
+          backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
       },
     },
