@@ -19,6 +19,7 @@ import {
   getFacebookAccessToken,
 } from '../services/facebookSocialLogin';
 import { preloadImage } from '../utils/assetLoader';
+import { LOGIN_SOCIAL_LOGOS } from '../constants/login/socialLogos.js';
 import '../styles/components/_login.scss';
 
 export function LoginPage() {
@@ -606,7 +607,12 @@ export function LoginPage() {
                     style={{ width: '100%', pointerEvents: 'none' }}
                     aria-hidden="true"
                   >
-                    <span className="social-button__icon social-button__icon--google" aria-hidden="true" />
+                    <img
+                      src={LOGIN_SOCIAL_LOGOS.google}
+                      alt=""
+                      className="social-button__icon"
+                      aria-hidden="true"
+                    />
                     {t('login.continueWithGoogle')}
                   </FocusableButton>
 
@@ -636,7 +642,12 @@ export function LoginPage() {
                   tabIndex={0}
                   data-tv-nav="login-actions"
                 >
-                  <span className="social-button__icon social-button__icon--google" aria-hidden="true" />
+                  <img
+                    src={LOGIN_SOCIAL_LOGOS.google}
+                    alt=""
+                    className="social-button__icon"
+                    aria-hidden="true"
+                  />
                   {t('login.continueWithGoogle')}
                 </FocusableButton>
               )}
@@ -650,7 +661,12 @@ export function LoginPage() {
                   tabIndex={0}
                   data-tv-nav="login-actions"
                 >
-                  <span className="social-button__icon social-button__icon--facebook" aria-hidden="true" />
+                  <img
+                    src={LOGIN_SOCIAL_LOGOS.facebook}
+                    alt=""
+                    className="social-button__icon"
+                    aria-hidden="true"
+                  />
                   {t('login.continueWithFacebook')}
                 </FocusableButton>
               )}
