@@ -24,8 +24,10 @@ export const LOGIN_FOCUS_IDS = Object.freeze({
   USERNAME: 'username',
   PASSWORD: 'password',
   PASSWORD_TOGGLE: 'login-password-toggle',
+  FORGOT_PASSWORD: 'login-forgot-password',
   SUBMIT: 'login-submit',
   REGISTER: 'login-register',
+  SUBSCRIBE: 'login-subscribe',
   UDID: 'login-udid',
   MODAL_CLOSE_QR: 'login-modal-close-qr',
   MODAL_CLOSE_UDID: 'login-modal-close-udid',
@@ -43,8 +45,10 @@ const LOGIN_STATIC_FOCUS_IDS = [
   LOGIN_FOCUS_IDS.USERNAME,
   LOGIN_FOCUS_IDS.PASSWORD,
   LOGIN_FOCUS_IDS.PASSWORD_TOGGLE,
+  LOGIN_FOCUS_IDS.FORGOT_PASSWORD,
   LOGIN_FOCUS_IDS.SUBMIT,
   LOGIN_FOCUS_IDS.REGISTER,
+  LOGIN_FOCUS_IDS.SUBSCRIBE,
   LOGIN_FOCUS_IDS.UDID,
 ];
 
@@ -73,7 +77,7 @@ const LOGIN_STATIC_FOCUS_IDS = [
  * @param {boolean} params.isQrModalOpen
  * @param {boolean} params.isUdidModalOpen
  * @param {boolean} params.isSubmitting
- * @param {boolean} params.qrRegisterEnabled
+ * @param {boolean} params.forgotPasswordEnabled
  * @param {boolean} params.udidEnabled
  * @param {boolean} params.googleEnabled
  * @param {boolean} params.facebookEnabled
@@ -88,6 +92,7 @@ export function useLoginTvNavigation({
   isUdidModalOpen,
   isSubmitting,
   qrRegisterEnabled,
+  forgotPasswordEnabled,
   udidEnabled,
   googleEnabled,
   facebookEnabled,
@@ -155,6 +160,7 @@ export function useLoginTvNavigation({
     loginFormRef,
     isSubmitting,
     qrRegisterEnabled,
+    forgotPasswordEnabled,
     udidEnabled,
     googleEnabled,
     facebookEnabled,
@@ -177,7 +183,7 @@ export function useLoginTvNavigation({
         onCloseQrModal?.();
         setTimeout(
           () => focusFirstAvailable(
-            [LOGIN_FOCUS_IDS.REGISTER, LOGIN_FOCUS_IDS.SUBMIT, LOGIN_FOCUS_IDS.USERNAME],
+            [LOGIN_FOCUS_IDS.SUBSCRIBE, LOGIN_FOCUS_IDS.SUBMIT, LOGIN_FOCUS_IDS.USERNAME],
             focusCacheRef.current
           ),
           0,
@@ -222,6 +228,7 @@ export function useLoginTvNavigation({
           return;
         }
         if (activeId === LOGIN_FOCUS_IDS.PASSWORD) {
+          if (forgotPasswordEnabled && focusId(LOGIN_FOCUS_IDS.FORGOT_PASSWORD)) return;
           focusId(LOGIN_FOCUS_IDS.SUBMIT);
           return;
         }
@@ -233,13 +240,10 @@ export function useLoginTvNavigation({
         if (activeId === LOGIN_FOCUS_IDS.PASSWORD) {
           focusId(LOGIN_FOCUS_IDS.USERNAME);
         }
-        // Desde username, UP es no-op (ya está en el tope).
         return;
       }
 
       if (action === TV_ACTION.RIGHT && activeId === LOGIN_FOCUS_IDS.PASSWORD) {
-        // password → toggle con RIGHT, pero sin romper caret:
-        // solo si el caret está al final del texto.
         const caret = getCaretInfo(active);
         if (caret.end >= caret.length) {
           e.preventDefault();
@@ -253,7 +257,20 @@ export function useLoginTvNavigation({
         e.preventDefault();
         return;
       }
-      // LEFT/RIGHT sin caso especial: dejar que el input mueva el caret.
+    };
+
+    const handleForgotPasswordAction = (action, e) => {
+      if (action === TV_ACTION.DOWN) {
+        e.preventDefault();
+        e.stopPropagation();
+        focusId(LOGIN_FOCUS_IDS.SUBMIT);
+        return;
+      }
+      if (action === TV_ACTION.UP) {
+        e.preventDefault();
+        e.stopPropagation();
+        focusId(LOGIN_FOCUS_IDS.PASSWORD);
+      }
     };
 
     const handlePasswordToggleAction = (action, e) => {
@@ -290,6 +307,7 @@ export function useLoginTvNavigation({
         e.stopPropagation();
         const isFirst = ids[0] === activeId;
         if (isFirst) {
+          if (forgotPasswordEnabled && focusId(LOGIN_FOCUS_IDS.FORGOT_PASSWORD)) return;
           if (!focusId(LOGIN_FOCUS_IDS.PASSWORD_TOGGLE)) {
             focusId(LOGIN_FOCUS_IDS.PASSWORD);
           }
@@ -349,6 +367,11 @@ export function useLoginTvNavigation({
         return;
       }
 
+      if (activeId === LOGIN_FOCUS_IDS.FORGOT_PASSWORD) {
+        handleForgotPasswordAction(action, e);
+        return;
+      }
+
       const ids = buttonIdsRef.current;
       if (activeId && ids.includes(activeId)) {
         handleButtonAction(action, e, activeId);
@@ -384,6 +407,7 @@ export function useLoginTvNavigation({
     isTV,
     isQrModalOpen,
     isUdidModalOpen,
+    forgotPasswordEnabled,
     onCloseQrModal,
     onCloseUdidModal,
   ]);

@@ -341,6 +341,8 @@ export function applyTheme(brandConfig) {
   setLoginVar('--login-toggle-text', loginTheme.toggleText);
   setLoginVar('--login-modal-close-bg', loginTheme.modalCloseBg);
   setLoginVar('--login-modal-close-text', loginTheme.modalCloseText);
+  setLoginVar('--login-link-color', loginTheme.linkColor);
+  setLoginVar('--login-divider-color', loginTheme.dividerColor);
 
   // Login Inputs (colores por marca): `login.theme.inputs`
   const loginInputs = loginTheme.inputs || {};

@@ -97,12 +97,17 @@
  *       @param {string} login.theme.social.text - Texto de botones sociales.
  *     @param {string} login.theme.modalCloseBg - Fondo del botón cerrar modal QR/UDID.
  *     @param {string} login.theme.modalCloseText - Texto del botón cerrar modal.
+ *     @param {string|null} login.theme.linkColor - Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor.
+ *     @param {string} login.theme.dividerColor - Color línea del separador "o" antes de login social.
  *   @param {Object} login.backgroundImage - Imagen de fondo de pantalla completa.
  *     @param {boolean} login.backgroundImage.enabled - true: usa assetPath; false: assets.background o background.png.
  *     @param {string} login.backgroundImage.assetPath - Archivo en la carpeta de assets de la marca.
  *   @param {Object} login.qrRegister - Registro por QR en Login:
  *     @param {boolean} login.qrRegister.enabled - Habilita/deshabilita el botón/modal de registro QR.
  *     @param {string} login.qrRegister.url - URL destino codificada en el QR.
+ *   @param {Object} login.forgotPassword - Enlace "Olvidé contraseña":
+ *     @param {boolean} login.forgotPassword.enabled - Muestra enlace debajo del campo contraseña.
+ *     @param {string} login.forgotPassword.url - URL destino al hacer clic; vacío = no navega.
  *   @param {Object} login.udid - Login por UDID:
  *     @param {boolean} login.udid.enabled - Habilita/deshabilita el login externo por UDID.
  *     @param {string} login.udid.baseUrl - Base HTTP del backend UDID.
@@ -246,6 +251,8 @@ export const BRANDS = [
         },
         modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
         modalCloseText: "#ffffff", // Texto botón cerrar modal
+        linkColor: null, // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
+        dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
       },
       // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
@@ -256,6 +263,11 @@ export const BRANDS = [
       qrRegister: {
         enabled: true, // Muestra botón y modal de registro con QR
         url: "https://shop.fotelka.tv/?c=customer&p=register", // URL codificada en el QR de registro
+      },
+      // --- Enlace "Olvidé contraseña" ---
+      forgotPassword: {
+        enabled: false, // Muestra enlace debajo del campo contraseña
+        url: "", // URL destino al hacer clic; vacío = no navega
       },
       // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
@@ -553,6 +565,8 @@ export const BRANDS = [
         },
         modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
         modalCloseText: "#ffffff", // Texto botón cerrar modal
+        linkColor: null, // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
+        dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
       },
       // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
@@ -563,6 +577,11 @@ export const BRANDS = [
       qrRegister: {
         enabled: false, // Muestra botón y modal de registro con QR
         url: "", // URL codificada en el QR de registro
+      },
+      // --- Enlace "Olvidé contraseña" ---
+      forgotPassword: {
+        enabled: false, // Muestra enlace debajo del campo contraseña
+        url: "", // URL destino al hacer clic; vacío = no navega
       },
       // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
@@ -872,6 +891,8 @@ export const BRANDS = [
         },
         modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
         modalCloseText: "#ffffff", // Texto botón cerrar modal
+        linkColor: null, // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
+        dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
       },
       // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
@@ -882,6 +903,11 @@ export const BRANDS = [
       qrRegister: {
         enabled: false, // Muestra botón y modal de registro con QR
         url: "https://shop.fotelka.tv/?c=customer&p=register", // URL codificada en el QR de registro
+      },
+      // --- Enlace "Olvidé contraseña" ---
+      forgotPassword: {
+        enabled: false, // Muestra enlace debajo del campo contraseña
+        url: "", // URL destino al hacer clic; vacío = no navega
       },
       // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
@@ -1161,6 +1187,8 @@ export const BRANDS = [
         },
         modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
         modalCloseText: "#ffffff", // Texto botón cerrar modal
+        linkColor: null, // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
+        dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
       },
       // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
@@ -1171,6 +1199,11 @@ export const BRANDS = [
       qrRegister: {
         enabled: false, // Muestra botón y modal de registro con QR
         url: "https://shop.fotelka.tv/?c=customer&p=register", // URL codificada en el QR de registro
+      },
+      // --- Enlace "Olvidé contraseña" ---
+      forgotPassword: {
+        enabled: false, // Muestra enlace debajo del campo contraseña
+        url: "", // URL destino al hacer clic; vacío = no navega
       },
       // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
@@ -1424,31 +1457,33 @@ export const BRANDS = [
     login: {
       // --- Tema visual (colores CSS: hex, rgba, gradiente o var(--primary-color)) ---
       theme: {
-        cardBackground: "rgba(255, 255, 255, 0.05)", // Fondo de la tarjeta central del formulario
-        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo del botón principal "Entrar"
-        submitText: "#ffffff", // Texto del botón "Entrar"
+        cardBackground: "rgba(22, 32, 45, 0.96)", // Fondo de la tarjeta central del formulario
+        submitBg: "#99bbd3", // Fondo del botón principal "Entrar"
+        submitText: "#16202d", // Texto del botón "Entrar"
         registerBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Registrarse" (QR)
         registerText: "#ffffff", // Texto del botón "Registrarse"
         udidBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Login UDID"
         udidText: "#ffffff", // Texto del botón UDID
-        toggleBg: "rgba(255, 255, 255, 0.1)", // Fondo del botón mostrar/ocultar contraseña
-        toggleText: "rgba(255, 255, 255, 0.7)", // Texto del toggle de contraseña
+        toggleBg: "transparent", // Fondo del botón mostrar/ocultar contraseña
+        toggleText: "rgba(255, 255, 255, 0.55)", // Texto del toggle de contraseña
         inputs: {
-          bg: "rgba(255, 255, 255, 0.1)", // Fondo campos usuario/contraseña
-          border: "rgba(255, 255, 255, 0.2)", // Borde de los campos
+          bg: "rgba(12, 18, 28, 0.85)", // Fondo campos usuario/contraseña
+          border: "rgba(255, 255, 255, 0.85)", // Borde de los campos
           text: "#ffffff", // Color del texto escrito
-          placeholder: "rgba(255, 255, 255, 0.4)", // Color del placeholder
-          focusedBg: "rgba(255, 255, 255, 0.15)", // Fondo cuando el campo tiene foco (TV/teclado)
-          focusedBorder: null, // Borde con foco; null = usa ui.primaryColor
+          placeholder: "rgba(255, 255, 255, 0.45)", // Color del placeholder
+          focusedBg: "rgba(12, 18, 28, 0.95)", // Fondo cuando el campo tiene foco (TV/teclado)
+          focusedBorder: "#99bbd3", // Borde con foco; null = usa ui.primaryColor
           focusedShadow: null, // Sombra con foco; null = usa anillo primaryColor
         },
         social: {
-          bg: "rgba(255, 255, 255, 0.08)", // Fondo botones Google/Facebook (fallback custom)
-          border: "rgba(255, 255, 255, 0.22)", // Borde botones sociales
-          text: "rgba(255, 255, 255, 0.92)", // Texto botones sociales
+          bg: "transparent", // Fondo botones Google/Facebook (fallback custom)
+          border: "rgba(153, 187, 211, 0.65)", // Borde botones sociales
+          text: "#ffffff", // Texto botones sociales
         },
         modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
         modalCloseText: "#ffffff", // Texto botón cerrar modal
+        linkColor: "#99bbd3", // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
+        dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
       },
       // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
@@ -1459,6 +1494,11 @@ export const BRANDS = [
       qrRegister: {
         enabled: true, // Muestra botón y modal de registro con QR
         url: "https://backend.wind.do/wind/register/", // URL codificada en el QR de registro
+      },
+      // --- Enlace "Olvidé contraseña" ---
+      forgotPassword: {
+        enabled: true, // Muestra enlace debajo del campo contraseña
+        url: "https://backend.wind.do/wind/forgot-password/", // URL destino al hacer clic; vacío = no navega
       },
       // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
@@ -1767,6 +1807,8 @@ export const BRANDS = [
         },
         modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
         modalCloseText: "#ffffff", // Texto botón cerrar modal
+        linkColor: null, // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
+        dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
       },
       // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
@@ -1777,6 +1819,11 @@ export const BRANDS = [
       qrRegister: {
         enabled: false, // Muestra botón y modal de registro con QR
         url: "https://shop.fotelka.tv/?c=customer&p=register", // URL codificada en el QR de registro
+      },
+      // --- Enlace "Olvidé contraseña" ---
+      forgotPassword: {
+        enabled: false, // Muestra enlace debajo del campo contraseña
+        url: "", // URL destino al hacer clic; vacío = no navega
       },
       // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {

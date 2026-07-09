@@ -45,6 +45,11 @@ export function LoginPage() {
   const qrRegisterEnabled = !!qrRegisterConfig?.enabled;
   const qrRegisterUrl = typeof qrRegisterConfig?.url === 'string' ? qrRegisterConfig.url.trim() : '';
   const canShowQrRegister = qrRegisterEnabled && qrRegisterUrl.length > 0;
+  const forgotPasswordConfig = currentBrand?.login?.forgotPassword;
+  const forgotPasswordUrl =
+    typeof forgotPasswordConfig?.url === 'string' ? forgotPasswordConfig.url.trim() : '';
+  const canShowForgotPassword =
+    forgotPasswordConfig?.enabled === true && forgotPasswordUrl.length > 0;
   // En TV siempre usamos modal (redirigir es peor UX y muchos runtimes no se detectan como LG/Samsung).
   const shouldShowQrModal = isTV;
   const udidLoginConfig = currentBrand?.login?.udid || currentBrand?.udidLogin;
@@ -98,6 +103,7 @@ export function LoginPage() {
     isUdidModalOpen,
     isSubmitting,
     qrRegisterEnabled,
+    forgotPasswordEnabled: canShowForgotPassword,
     udidEnabled: !!effectiveUdidConfig?.enabled,
     googleEnabled: !!currentBrand?.login?.socialLogin?.google?.enabled,
     facebookEnabled: !!currentBrand?.login?.socialLogin?.facebook?.enabled,
@@ -158,6 +164,11 @@ export function LoginPage() {
       cancelled = true;
     };
   }, [appName, isUdidModalOpen, udidFlow.code]);
+
+  const handleOpenForgotPassword = () => {
+    if (!canShowForgotPassword) return;
+    window.location.assign(forgotPasswordUrl);
+  };
 
   const handleOpenQrModal = () => {
     if (!canShowQrRegister) return;
@@ -446,12 +457,10 @@ export function LoginPage() {
     >
       <div className="login-card">
         {logoPath && <img src={logoPath} alt={appName} className="brand-logo" />}
-        <h2>{t('login.title')}</h2>
+        <h2 className="login-welcome">{t('login.title')}</h2>
 
-        <form onSubmit={handleSubmit} ref={loginFormRef}>
-          {/* Username */}
-          <div className="form-group">
-            <label htmlFor={LOGIN_FOCUS_IDS.USERNAME}>{t('login.user')}</label>
+        <form onSubmit={handleSubmit} ref={loginFormRef} className="login-form">
+          <div className="form-group form-group--plain">
             <FocusableInput
               id={LOGIN_FOCUS_IDS.USERNAME}
               type="text"
@@ -461,13 +470,12 @@ export function LoginPage() {
               disabled={isSubmitting}
               autoComplete="username"
               required
+              aria-label={t('login.user')}
             />
           </div>
 
-          {/* Password */}
-          <div className="form-group">
-            <label htmlFor={LOGIN_FOCUS_IDS.PASSWORD}>{t('login.password')}</label>
-            <div className="password-row">
+          <div className="form-group form-group--plain">
+            <div className="password-field">
               <FocusableInput
                 id={LOGIN_FOCUS_IDS.PASSWORD}
                 type={showPassword ? 'text' : 'password'}
@@ -477,23 +485,40 @@ export function LoginPage() {
                 disabled={isSubmitting}
                 autoComplete="current-password"
                 required
+                aria-label={t('login.password')}
               />
               <FocusableButton
                 type="button"
-                className="password-toggle"
+                className="password-toggle password-toggle--inline"
                 onClick={() => setShowPassword(!showPassword)}
                 id={LOGIN_FOCUS_IDS.PASSWORD_TOGGLE}
                 tabIndex={0}
+                aria-label={showPassword ? t('login.hidePassword', { defaultValue: 'Ocultar contraseña' }) : t('login.showPassword', { defaultValue: 'Mostrar contraseña' })}
               >
-                {showPassword ? '🙈' : '👁️'}
+                <span className={`password-toggle__icon${showPassword ? ' is-visible' : ''}`} aria-hidden="true" />
               </FocusableButton>
             </div>
           </div>
 
+          {canShowForgotPassword && (
+            <div className="login-forgot-row">
+              <FocusableButton
+                type="button"
+                className="login-text-link login-forgot-password"
+                onClick={handleOpenForgotPassword}
+                id={LOGIN_FOCUS_IDS.FORGOT_PASSWORD}
+                tabIndex={0}
+                data-tv-nav="login-actions"
+              >
+                {t('login.forgotPassword')}
+              </FocusableButton>
+            </div>
+          )}
+
           {error && <div className="error-message">{error}</div>}
 
-          <FocusableButton 
-            type="submit" 
+          <FocusableButton
+            type="submit"
             disabled={isSubmitting}
             className="login-button"
             id={LOGIN_FOCUS_IDS.SUBMIT}
@@ -503,28 +528,27 @@ export function LoginPage() {
             {isSubmitting ? t('login.submitting') : t('login.submit')}
           </FocusableButton>
 
-          {qrRegisterEnabled && (
-            <div className="register-section">
-              <p className="register-hint">{t('login.registerHint')}</p>
+          {canShowQrRegister && (
+            <p className="login-subscribe-prompt">
+              {t('login.noAccountYet')}{' '}
               <FocusableButton
                 type="button"
-                className="register-button"
+                className="login-text-link login-subscribe-link"
                 onClick={handleOpenQrModal}
-                id={LOGIN_FOCUS_IDS.REGISTER}
+                id={LOGIN_FOCUS_IDS.SUBSCRIBE}
                 tabIndex={0}
                 data-tv-nav="login-actions"
               >
-                {t('login.register')}
+                {t('login.subscribeHere')}
               </FocusableButton>
-            </div>
+            </p>
           )}
 
           {effectiveUdidConfig?.enabled && (
-            <div className="register-section">
-              <p className="register-hint">{t('login.udidHint')}</p>
+            <div className="login-udid-section">
               <FocusableButton
                 type="button"
-                className="udid-button"
+                className="login-secondary-button udid-button"
                 onClick={handleOpenUdidModal}
                 id={LOGIN_FOCUS_IDS.UDID}
                 tabIndex={0}
@@ -536,7 +560,11 @@ export function LoginPage() {
           )}
 
           {showAnySocial && (
-            <div className="social-login">
+            <>
+              <div className="login-divider" aria-hidden="true">
+                <span>{t('login.orDivider')}</span>
+              </div>
+              <div className="social-login">
               {showGoogleOAuth && !preferCustomGoogleButton && (
                 <div
                   className="google-login-host"
@@ -564,7 +592,7 @@ export function LoginPage() {
                   className="google-login-host"
                   style={{
                     position: 'relative',
-                    width: '20rem',
+                    width: '100%',
                     maxWidth: '100%',
                     opacity: isSubmitting ? 0.65 : 1,
                     pointerEvents: isSubmitting ? 'none' : 'auto',
@@ -578,6 +606,7 @@ export function LoginPage() {
                     style={{ width: '100%', pointerEvents: 'none' }}
                     aria-hidden="true"
                   >
+                    <span className="social-button__icon social-button__icon--google" aria-hidden="true" />
                     {t('login.continueWithGoogle')}
                   </FocusableButton>
 
@@ -607,6 +636,7 @@ export function LoginPage() {
                   tabIndex={0}
                   data-tv-nav="login-actions"
                 >
+                  <span className="social-button__icon social-button__icon--google" aria-hidden="true" />
                   {t('login.continueWithGoogle')}
                 </FocusableButton>
               )}
@@ -620,10 +650,12 @@ export function LoginPage() {
                   tabIndex={0}
                   data-tv-nav="login-actions"
                 >
+                  <span className="social-button__icon social-button__icon--facebook" aria-hidden="true" />
                   {t('login.continueWithFacebook')}
                 </FocusableButton>
               )}
-            </div>
+              </div>
+            </>
           )}
         </form>
       </div>
