@@ -1492,7 +1492,7 @@ export const BRANDS = [
       },
       // --- Registro por código QR ---
       qrRegister: {
-        enabled: true, // Muestra botón y modal de registro con QR
+        enabled: false, // Muestra botón y modal de registro con QR
         url: "https://backend.wind.do/wind/register/", // URL codificada en el QR de registro
       },
       // --- Enlace "Olvidé contraseña" ---
