@@ -26,7 +26,8 @@
     "tvRadioPlaceholder": "Module in preparation for TV and radio services.",
     "catchup": "Catch-up",
     "osms": "OSMS",
-    "osmsPlaceholder": "Module in preparation for OSMS."
+    "osmsPlaceholder": "Module in preparation for OSMS.",
+    "account": "Account"
   },
   "osms": {
     "title": "OSMS",

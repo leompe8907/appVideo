@@ -508,6 +508,11 @@ html:-moz-full-screen {
   display: none;
 }
 
+.home-sidebar-group--account {
+  flex-shrink: 0;
+  margin-bottom: 0.35rem;
+}
+
 .home-sidebar-group--nav {
   flex: 1 1 auto;
   min-height: 0;
@@ -764,6 +769,12 @@ html:-moz-full-screen {
   overflow-y: auto;
   overscroll-behavior: contain;
   z-index: 50;
+}
+
+// Submenú anclado bajo el botón de cuenta (crece hacia abajo).
+.home-sidebar-submenu--below {
+  transform: none;
+  max-height: calc(100vh - var(--home-sidebar-submenu-top, 0px) - 1rem);
 }
 
 .home-sidebar-sublink {

@@ -253,4 +253,35 @@ export function getOperatorName(brand) {
   return op != null && String(op).trim() !== '' ? String(op).trim() : '';
 }
 
+/**
+ * Nombre del subscriptor para UI (sidebar, etc.).
+ * Fuente: getClientConfig → subscriber (persistido en userSession tras el login).
+ * Prueba campos habituales de Panaccess; si no hay, cae al username de sesión.
+ * @param {string} [brand]
+ * @returns {string}
+ */
+export function getSubscriberName(brand) {
+  const config = getEffectiveClientConfig(getClientConfig(brand));
+  const sub = config?.subscriber;
+  if (sub && typeof sub === 'object') {
+    const composed = [sub.firstName ?? sub.firstname, sub.lastName ?? sub.lastname]
+      .map((p) => (p != null ? String(p).trim() : ''))
+      .filter(Boolean)
+      .join(' ');
+    const candidates = [
+      sub.name,
+      sub.fullName,
+      sub.displayName,
+      sub.subscriberName,
+      composed,
+    ];
+    for (const c of candidates) {
+      if (c != null && String(c).trim() !== '') return String(c).trim();
+    }
+  }
+  const cred = getCredentials(brand);
+  const username = cred?.username ? String(cred.username).trim() : '';
+  return username || '';
+}
+
 export { STORAGE_KEYS };

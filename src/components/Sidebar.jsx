@@ -7,7 +7,7 @@ import { usePreload } from '../store/usePreload';
 import { useOsmsStore } from '../store/osmsStore';
 import panaccessService from '../services/panaccessService';
 import { hasTvRadioServiceBouquets } from '../services/tvDataService';
-import { setLoggedOut, getActiveLicense, getCredentials } from '../utils/userSession';
+import { setLoggedOut, getActiveLicense, getCredentials, getSubscriberName } from '../utils/userSession';
 import ConfirmModal from './ConfirmModal';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
 import { shouldDeferHomeShellNavigation } from '../utils/homeShellOverlays';
@@ -15,24 +15,25 @@ import { focusElementSafe, scheduleFocusFirstMainContent, scrollElementIntoVisib
 import { requestTvFocusRingSync } from './navigation/TvFocusRing';
 
 /**
- * Orden TV de ítems enfocables del sidebar (nav + ajustes + submenú si está abierto).
+ * Orden TV de ítems enfocables del sidebar (cuenta + nav + submenú si está abierto).
  * @param {HTMLElement} root
  * @param {boolean} settingsOpen
  * @returns {HTMLElement[]}
  */
 function getOrderedSidebarFocusTargets(root, settingsOpen) {
-  const nav = root.querySelector('.home-sidebar-group--nav');
-  if (!(nav instanceof HTMLElement)) return [];
   /** @type {HTMLElement[]} */
   const out = [];
-  nav.querySelectorAll('a.home-sidebar-link').forEach((a) => {
-    if (a instanceof HTMLElement) out.push(a);
-  });
-  const settingsBtn = root.querySelector('button.home-sidebar-settings-btn');
-  if (settingsBtn instanceof HTMLElement) out.push(settingsBtn);
+  const accountBtn = root.querySelector('button.home-sidebar-settings-btn');
+  if (accountBtn instanceof HTMLElement) out.push(accountBtn);
   if (settingsOpen) {
     root.querySelectorAll('.home-sidebar-submenu .home-sidebar-sublink').forEach((b) => {
       if (b instanceof HTMLElement) out.push(b);
+    });
+  }
+  const nav = root.querySelector('.home-sidebar-group--nav');
+  if (nav instanceof HTMLElement) {
+    nav.querySelectorAll('a.home-sidebar-link').forEach((a) => {
+      if (a instanceof HTMLElement) out.push(a);
     });
   }
   return out;
@@ -195,13 +196,14 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   const navigate = useNavigate();
   const location = useLocation();
   const rootRef = useRef(null);
-  const settingsBtnRef = useRef(null);
+  const accountBtnRef = useRef(null);
   const { appName, currentBrand } = useBrand();
   const { vod, catchup, epg } = usePreload();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSubmenuStyle, setSettingsSubmenuStyle] = useState(null);
   const [aboutModal, setAboutModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null); // 'logout' | 'exit' | null
+  const subscriberName = getSubscriberName();
   const blurTimerRef = useRef(null);
   const visibleNavTargetsRef = useRef([]);
   const visibleSublinksRef = useRef([]);
@@ -220,13 +222,13 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     }
 
     const updateSubmenuPosition = () => {
-      const btn = settingsBtnRef.current;
+      const btn = accountBtnRef.current;
       if (!(btn instanceof HTMLElement)) return;
       const rect = btn.getBoundingClientRect();
       const gap = expanded ? 10 : 12;
       setSettingsSubmenuStyle({
-        // Ancla el borde inferior del submenú al borde inferior del botón (crece hacia arriba).
-        '--home-sidebar-submenu-top': `${rect.bottom}px`,
+        // Abre a la derecha y hacia abajo desde el botón de cuenta (arriba del rail).
+        '--home-sidebar-submenu-top': `${rect.bottom + 6}px`,
         '--home-sidebar-submenu-left': `${rect.right + gap}px`,
       });
     };
@@ -600,84 +602,21 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
         onCancel={() => setConfirmAction(null)}
       />
       <div className="home-sidebar-body">
-        <button
-          type="button"
-          className="home-sidebar-toggle"
-          aria-expanded={expanded}
-          aria-label={expanded ? t('sidebar.collapse', { defaultValue: 'Contraer menú' }) : t('sidebar.expand', { defaultValue: 'Expandir menú' })}
-          onClick={() => setExpandedSafe(!expanded)}
-        >
-          <span className="home-sidebar-toggle-icon" aria-hidden="true" />
-        </button>
-
-        <nav className="home-sidebar-group home-sidebar-group--nav" aria-label={t('sidebar.mainNav', { defaultValue: 'Navegación principal' })}>
-          <SidebarLink
-            to="/home/buscador"
-            label={t('sidebar.search', { defaultValue: 'Buscar' })}
-            icon="search"
-            onSelect={collapseAfterNav}
-            currentPathname={location.pathname}
-            navigate={navigate}
-          />
-          <SidebarLink
-            to="/home/inicio"
-            label={t('sidebar.bouquets', { defaultValue: 'Inicio' })}
-            icon="home"
-            onSelect={collapseAfterNav}
-            currentPathname={location.pathname}
-            navigate={navigate}
-          />
-          {showTvRadioServices ? (
-            <SidebarLink
-              to="/home/servicios-tv-radio"
-              label={t('sidebar.tvRadioServices', { defaultValue: 'Canales' })}
-              icon="channels"
-              onSelect={collapseAfterNav}
-              currentPathname={location.pathname}
-              navigate={navigate}
-            />
-          ) : null}
-          {showVod ? (
-            <SidebarLink
-              to="/home/vod"
-              label={t('sidebar.movies', { defaultValue: 'Películas' })}
-              icon="movies"
-              onSelect={collapseAfterNav}
-              currentPathname={location.pathname}
-              navigate={navigate}
-            />
-          ) : null}
-          <SidebarLink
-            to="/home/epg"
-            label={t('sidebar.channelGuide', { defaultValue: 'Guía' })}
-            icon="guide"
-            onSelect={collapseAfterNav}
-            currentPathname={location.pathname}
-            navigate={navigate}
-          />
-          {showCatchup ? (
-            <SidebarLink
-              to="/home/catchup"
-              label={t('sidebar.catchup')}
-              icon="catchup"
-              onSelect={collapseAfterNav}
-              currentPathname={location.pathname}
-              navigate={navigate}
-            />
-          ) : null}
-        </nav>
-
-        <div className="home-sidebar-group home-sidebar-group--settings">
+        <div className="home-sidebar-group home-sidebar-group--account">
           <div className="home-sidebar-settings">
             <button
-              ref={settingsBtnRef}
+              ref={accountBtnRef}
               type="button"
               className={`home-sidebar-link home-sidebar-settings-btn${settingsOpen ? ' active' : ''}`}
+              aria-label={
+                subscriberName ||
+                t('sidebar.account', { defaultValue: 'Cuenta' })
+              }
               onClick={() => setSettingsOpen((v) => !v)}
             >
-              <SidebarIcon name="settings" />
+              <SidebarIcon name="account" />
               <span className="home-sidebar-label">
-                {t('common.settings', { defaultValue: 'Configuración' })}
+                {subscriberName || t('sidebar.account', { defaultValue: 'Cuenta' })}
               </span>
               {currentBrand?.features?.osms && osmsUnreadCount > 0 ? (
                 <span
@@ -693,9 +632,12 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             </button>
             {settingsOpen && (
               <div
-                className="home-sidebar-submenu home-sidebar-submenu--right"
+                className="home-sidebar-submenu home-sidebar-submenu--right home-sidebar-submenu--below"
                 role="group"
-                aria-label={t('common.settings', { defaultValue: 'Configuración' })}
+                aria-label={
+                  subscriberName ||
+                  t('sidebar.account', { defaultValue: 'Cuenta' })
+                }
                 style={settingsSubmenuStyle ?? undefined}
               >
                 {currentBrand?.features?.osms ? (
@@ -765,6 +707,63 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             )}
           </div>
         </div>
+
+        <nav className="home-sidebar-group home-sidebar-group--nav" aria-label={t('sidebar.mainNav', { defaultValue: 'Navegación principal' })}>
+          <SidebarLink
+            to="/home/buscador"
+            label={t('sidebar.search', { defaultValue: 'Buscar' })}
+            icon="search"
+            onSelect={collapseAfterNav}
+            currentPathname={location.pathname}
+            navigate={navigate}
+          />
+          <SidebarLink
+            to="/home/inicio"
+            label={t('sidebar.bouquets', { defaultValue: 'Inicio' })}
+            icon="home"
+            onSelect={collapseAfterNav}
+            currentPathname={location.pathname}
+            navigate={navigate}
+          />
+          {showTvRadioServices ? (
+            <SidebarLink
+              to="/home/servicios-tv-radio"
+              label={t('sidebar.tvRadioServices', { defaultValue: 'Canales' })}
+              icon="channels"
+              onSelect={collapseAfterNav}
+              currentPathname={location.pathname}
+              navigate={navigate}
+            />
+          ) : null}
+          {showVod ? (
+            <SidebarLink
+              to="/home/vod"
+              label={t('sidebar.movies', { defaultValue: 'Películas' })}
+              icon="movies"
+              onSelect={collapseAfterNav}
+              currentPathname={location.pathname}
+              navigate={navigate}
+            />
+          ) : null}
+          <SidebarLink
+            to="/home/epg"
+            label={t('sidebar.channelGuide', { defaultValue: 'Guía' })}
+            icon="guide"
+            onSelect={collapseAfterNav}
+            currentPathname={location.pathname}
+            navigate={navigate}
+          />
+          {showCatchup ? (
+            <SidebarLink
+              to="/home/catchup"
+              label={t('sidebar.catchup')}
+              icon="catchup"
+              onSelect={collapseAfterNav}
+              currentPathname={location.pathname}
+              navigate={navigate}
+            />
+          ) : null}
+        </nav>
       </div>
     </aside>
   );
