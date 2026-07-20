@@ -9,6 +9,8 @@ import {
   resolveInactivityGraceSec,
   resolveInactivityTimeoutSec,
 } from '../../utils/inactivityConfig';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe } from '../../navigation/spatialNavigation';
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -103,6 +105,9 @@ export function InactivityHost() {
   const timerRef = useRef(null);
   const intervalRef = useRef(null);
   const ssIntervalRef = useRef(null);
+  const inactivityRootRef = useRef(null);
+  const inactivityZoneIdRef = useRef(null);
+  if (!inactivityZoneIdRef.current) inactivityZoneIdRef.current = createZoneId('inactivity');
 
   const [inactivitySec, setInactivitySec] = useState(0);
   const [graceSec, setGraceSec] = useState(60);
@@ -145,6 +150,32 @@ export function InactivityHost() {
     setSecondsLeft(graceSec);
     touch(Date.now());
   };
+
+  // Navegación: el diálogo de "¿Sigues ahí?" atrapa el foco (zona de FocusManager)
+  // y coloca el foco inicial en "Seguir viendo" — sin esto, el control remoto no
+  // podía activar el botón porque nada tenía foco dentro del overlay.
+  useEffect(() => {
+    if (!open) return undefined;
+    const zoneId = inactivityZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: inactivityRootRef.current,
+      onBack: () => {
+        closeAll();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const timer = setTimeout(() => {
+      focusElementSafe(inactivityRootRef.current?.querySelector('.inactivity-btn'));
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [open]);
 
   // Captura de actividad global (remote/teclas + pointer).
   useEffect(() => {
@@ -266,7 +297,7 @@ export function InactivityHost() {
   return (
     <>
       {open && (
-        <div className="inactivity-overlay" role="dialog" aria-modal="true" aria-label={title}>
+        <div ref={inactivityRootRef} className="inactivity-overlay" role="dialog" aria-modal="true" aria-label={title}>
           <div className="inactivity-card">
             <div className="inactivity-title">{title}</div>
             <div className="inactivity-message">{message}</div>

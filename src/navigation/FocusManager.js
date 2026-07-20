@@ -1,68 +1,90 @@
 /**
- * Administrador central de la pila (stack) de foco para Smart TVs.
- * Permite que modales, overlays y vistas guarden el foco anterior, capturen
- * la interacción y restauren el foco original automáticamente al cerrarse.
+ * Administrador central de la pila (stack) de foco/zonas para Smart TVs.
+ *
+ * Cada zona representa un "scope" activo de navegación (un modal, un overlay,
+ * el teclado virtual, etc). Mientras haya una zona en el stack:
+ *  - `NavigationRouter` busca candidatos de foco SOLO dentro de `containerEl`
+ *    (si se indica), en vez de en todo el documento — esto "atrapa" LEFT/RIGHT/
+ *    UP/DOWN dentro del modal sin que cada componente escriba su propio
+ *    keydown ni su propio modelo de grilla.
+ *  - BACK invoca `onBack` de la zona si existe; si no, hace `pop()` (cierra la
+ *    zona y restaura el foco anterior).
  */
 class FocusManager {
   constructor() {
-    this.stack = []; // Elementos de la pila: { zoneId, previousActiveElement, defaultFocusId }
+    /** @type {Array<{ zoneId: string, previousActiveElement: Element|null, containerEl: HTMLElement|null, defaultFocusId: string|null, onBack: (() => void)|null }>} */
+    this.stack = [];
   }
 
   /**
    * Empuja un nuevo contexto de foco (ej. un modal que se abre).
-   * Almacena el elemento que tenía el foco antes para poder restaurarlo después.
+   * Guarda el elemento con foco previo para restaurarlo en `pop()`.
    *
-   * @param {string} zoneId Identificador único de la zona (ej. 'parental-pin', 'search-suggest')
-   * @param {string} [defaultFocusId] ID del elemento a enfocar por defecto en esta zona
+   * @param {string} zoneId Identificador único de la zona (ej. 'confirm-modal', 'vod-category-grid')
+   * @param {{ containerEl?: HTMLElement|null, defaultFocusId?: string|null, onBack?: (() => void)|null }} [opts]
    */
-  push(zoneId, defaultFocusId = null) {
+  push(zoneId, opts = {}) {
+    const { containerEl = null, defaultFocusId = null, onBack = null } = opts;
     const prevActive = document.activeElement;
-    
-    // Si la zona ya está en el stack, no la duplicamos
-    this.stack = this.stack.filter(item => item.zoneId !== zoneId);
-    
-    this.stack.push({
-      zoneId,
-      previousActiveElement: prevActive,
-      defaultFocusId
-    });
 
-    console.log(`[FocusManager] Push zone: "${zoneId}". Stack size: ${this.stack.length}`);
+    // Si la zona ya está en el stack, no la duplicamos (evita push repetidos por re-render).
+    this.stack = this.stack.filter((item) => item.zoneId !== zoneId);
+    this.stack.push({ zoneId, previousActiveElement: prevActive, containerEl, defaultFocusId, onBack });
 
     if (defaultFocusId) {
       requestAnimationFrame(() => {
         const el = document.getElementById(defaultFocusId);
         if (el) {
-          try { el.focus({ preventScroll: true }); } catch { /* noop */ }
+          try {
+            el.focus({ preventScroll: true });
+          } catch {
+            /* noop */
+          }
         }
       });
     }
   }
 
   /**
-   * Remueve el contexto de foco superior (ej. al cerrar un modal)
-   * y restaura el foco en el elemento que estaba activo antes.
+   * Remueve la zona indicada (o la superior si no se indica `zoneId`) y
+   * restaura el foco en el elemento que estaba activo antes de su `push`.
    *
+   * @param {string} [zoneId] Si se omite, remueve la zona superior del stack.
    * @returns {object|null} La zona removida
    */
-  pop() {
+  pop(zoneId) {
     if (this.stack.length === 0) return null;
-    const popped = this.stack.pop();
-    console.log(`[FocusManager] Pop zone: "${popped.zoneId}". Stack size: ${this.stack.length}`);
 
-    // Restaurar foco al elemento previo
+    let popped = null;
+    if (zoneId) {
+      const idx = this.stack.findIndex((item) => item.zoneId === zoneId);
+      if (idx === -1) return null;
+      [popped] = this.stack.splice(idx, 1);
+    } else {
+      popped = this.stack.pop();
+    }
+
+    // Restaurar foco al elemento previo si sigue en el documento.
     if (popped.previousActiveElement && document.body.contains(popped.previousActiveElement)) {
       requestAnimationFrame(() => {
-        try { popped.previousActiveElement.focus({ preventScroll: true }); } catch { /* noop */ }
+        try {
+          popped.previousActiveElement.focus({ preventScroll: true });
+        } catch {
+          /* noop */
+        }
       });
     } else {
-      // Fallback: enfocar el primer elemento de la zona activa actual
+      // Fallback: enfocar el elemento por defecto de la zona que queda activa.
       const activeZone = this.getActiveZone();
       if (activeZone?.defaultFocusId) {
         requestAnimationFrame(() => {
           const el = document.getElementById(activeZone.defaultFocusId);
           if (el) {
-            try { el.focus({ preventScroll: true }); } catch { /* noop */ }
+            try {
+              el.focus({ preventScroll: true });
+            } catch {
+              /* noop */
+            }
           }
         });
       }
@@ -71,30 +93,47 @@ class FocusManager {
     return popped;
   }
 
-  /**
-   * Retorna la zona activa actual (la que está en el tope de la pila).
-   */
+  /** Zona activa actual (tope de la pila) o `null` si no hay ninguna. */
   getActiveZone() {
     if (this.stack.length === 0) return null;
     return this.stack[this.stack.length - 1];
   }
 
-  /**
-   * Retorna el identificador de la zona activa o 'global' si la pila está vacía.
-   */
+  /** Identificador de la zona activa, o `'global'` si la pila está vacía. */
   getActiveZoneId() {
     const active = this.getActiveZone();
     return active ? active.zoneId : 'global';
   }
 
   /**
-   * Limpia toda la pila.
+   * Elemento contenedor (scope) de la zona activa, o `null` si no hay zona
+   * o la zona no declaró `containerEl` (en ese caso el scope es todo el documento).
+   * @returns {HTMLElement | null}
    */
+  getActiveScopeEl() {
+    const active = this.getActiveZone();
+    return active?.containerEl instanceof HTMLElement ? active.containerEl : null;
+  }
+
+  /** Limpia toda la pila (ej. al desmontar la app o cambiar de marca). */
   clear() {
     this.stack = [];
-    console.log('[FocusManager] Stack cleared');
   }
 }
 
 export const focusManager = new FocusManager();
 export default focusManager;
+
+let zoneIdCounter = 0;
+
+/**
+ * Genera un `zoneId` único para un componente que puede montarse varias veces
+ * a la vez (ej. varios modales del mismo tipo). Evita colisiones entre
+ * instancias sin que cada componente tenga que inventar su propio contador.
+ * @param {string} prefix
+ * @returns {string}
+ */
+export function createZoneId(prefix) {
+  zoneIdCounter += 1;
+  return `${prefix}-${zoneIdCounter}`;
+}

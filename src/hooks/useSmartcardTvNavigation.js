@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
-import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
+import { TV_ACTION } from '../utils/tvRemote';
 import {
   createBackLongPress,
   exitAppBestEffort,
   findFocusableElements,
   focusById,
   focusElement,
-  focusNextElementInList,
 } from '../utils/tvNavigation';
+import { navigationRouter } from '../navigation/NavigationRouter';
 
 // ---------------------------------------------------------------------------
 // Constantes locales del SmartCard TV
@@ -31,26 +31,25 @@ export const SMARTCARD_FOCUS_IDS = Object.freeze({
 export const SMARTCARD_LIST_SELECTOR = '[data-tv-nav="smartcard-item"]';
 
 const INITIAL_FOCUS_DELAY_MS = 300;
-const MODAL_FOCUS_DELAY_MS = 100;
 
 /**
- * Hook de navegación remota (LRUD + BACK + long-press) para `SmartCardPage`.
+ * Hook de navegación remota para `SmartCardPage`.
  *
- * Responsabilidades:
- *  - Aplicar foco inicial inteligente según el estado de la página
- *    (lista de licencias / error / vacío / modal de confirmación).
- *  - Navegar verticalmente entre items de la lista (incluido el item de logout).
- *  - Atrapar el foco dentro de los modales (confirmación "licencia en uso" y
- *    `MessageModal` de error).
- *  - Mapear BACK a las acciones esperadas:
- *      * Modal abierto → cerrar (cancelar / dismiss).
- *      * Setting license → consumir y no hacer nada (evita salidas accidentales).
- *      * Estado normal → ejecutar logout (equivalente al botón visible).
+ * La navegación entre items de la lista de licencias (UP/DOWN) y entre los
+ * botones Sí/No del modal de confirmación (LEFT/RIGHT) ya no necesita reglas
+ * propias: son elementos planos en su contenedor y el motor de geometría
+ * genérico (`NavigationRouter`) los resuelve solo — el modal de confirmación
+ * y el `MessageModal` de resultado se registran como zonas de `FocusManager`
+ * en el propio `SmartCardPage.jsx` (`push`/`pop`/`onBack`), que además atrapa
+ * el foco dentro de cada uno.
+ *
+ * Lo que este hook sí conserva (porque no es navegación espacial):
+ *  - Foco inicial inteligente según el estado de la página.
+ *  - BACK = logout cuando no hay ningún modal abierto (la zona activa de
+ *    `FocusManager` intercepta BACK antes que esto cuando hay un modal).
+ *  - Bloquear cualquier movimiento mientras se activa una licencia
+ *    (`isSettingLicense`, overlay bloqueante).
  *  - Long-press de BACK para salir de la app (Tizen/webOS).
- *
- * Diseño: el hook orquesta solo foco. La lógica de negocio (activar licencia,
- * cerrar modales, logout) vive en el componente padre y se inyecta como
- * callbacks memoizadas.
  *
  * @param {object} params
  * @param {boolean} params.isTV
@@ -62,8 +61,6 @@ const MODAL_FOCUS_DELAY_MS = 100;
  * @param {boolean} params.isSettingLicense
  * @param {boolean} params.isConfirmInUseOpen
  * @param {boolean} params.isResultModalOpen
- * @param {() => void} params.onCancelConfirmInUse Cerrar confirm sin aceptar.
- * @param {() => void} params.onCloseResultModal Cerrar modal de mensaje.
  * @param {() => void} params.onLogoutBack BACK sin modal → cerrar sesión.
  */
 export function useSmartcardTvNavigation({
@@ -75,8 +72,6 @@ export function useSmartcardTvNavigation({
   isSettingLicense,
   isConfirmInUseOpen,
   isResultModalOpen,
-  onCancelConfirmInUse,
-  onCloseResultModal,
   onLogoutBack,
 }) {
   // -------------------------------------------------------------------------
@@ -121,176 +116,61 @@ export function useSmartcardTvNavigation({
   ]);
 
   // -------------------------------------------------------------------------
-  // 2) Foco al abrir el modal de confirmación "licencia en uso".
-  //    Por defecto el botón "Sí".
+  // 2) BACK sin modal (logout) + bloqueo de movimiento durante la activación.
+  //
+  // Se registra en la zona 'global': el router solo la ejecuta cuando NO hay
+  // ninguna zona de FocusManager activa, es decir, cuando ningún modal está
+  // abierto (el modal de confirmación y `MessageModal` interceptan BACK ellos
+  // mismos vía su propia zona antes de que esto se ejecute).
   // -------------------------------------------------------------------------
   useEffect(() => {
-    if (!isTV || !isConfirmInUseOpen) return undefined;
-    const timer = setTimeout(() => {
-      focusById(SMARTCARD_FOCUS_IDS.CONFIRM_YES);
-    }, MODAL_FOCUS_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [isTV, isConfirmInUseOpen]);
+    if (!isTV) return undefined;
+
+    const unregister = navigationRouter.register('global', (action) => {
+      if (action === TV_ACTION.BACK) {
+        if (isSettingLicense) return true; // consumir: evitar salidas accidentales
+        onLogoutBack?.();
+        return true;
+      }
+      if (isSettingLicense) return true; // overlay bloqueante: no mover foco
+      return false;
+    });
+
+    return unregister;
+  }, [isTV, isSettingLicense, onLogoutBack]);
 
   // -------------------------------------------------------------------------
-  // 3) Listener LRUD + BACK + long-press.
+  // 3) Long-press de BACK para salir de la app (no es navegación espacial).
   // -------------------------------------------------------------------------
   useEffect(() => {
     if (!isTV) return undefined;
 
     const back = createBackLongPress({ onTrigger: exitAppBestEffort });
 
-    const handleBackAction = (e) => {
-      if (!e.repeat) back.arm();
-
-      if (isConfirmInUseOpen) {
-        e.preventDefault();
-        e.stopPropagation();
-        onCancelConfirmInUse?.();
-        return;
-      }
-      if (isResultModalOpen) {
-        e.preventDefault();
-        e.stopPropagation();
-        onCloseResultModal?.();
-        return;
-      }
-      if (isSettingLicense) {
-        // Activación en curso: consumir BACK para evitar salidas accidentales.
-        // El long-press sigue armado para permitir la salida explícita de app.
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-
-      // Estado normal: BACK = logout (equivalente al botón visible).
-      e.preventDefault();
-      e.stopPropagation();
-      onLogoutBack?.();
-    };
-
-    const handleConfirmInUseAction = (action, e) => {
-      if (action === TV_ACTION.LEFT) {
-        e.preventDefault();
-        e.stopPropagation();
-        focusById(SMARTCARD_FOCUS_IDS.CONFIRM_YES);
-        return;
-      }
-      if (action === TV_ACTION.RIGHT) {
-        e.preventDefault();
-        e.stopPropagation();
-        focusById(SMARTCARD_FOCUS_IDS.CONFIRM_NO);
-        return;
-      }
-      if (action === TV_ACTION.UP || action === TV_ACTION.DOWN) {
-        // Mantener el foco dentro del par yes/no.
-        e.preventDefault();
-        e.stopPropagation();
-        const activeId = document.activeElement?.id || '';
-        if (
-          activeId !== SMARTCARD_FOCUS_IDS.CONFIRM_YES &&
-          activeId !== SMARTCARD_FOCUS_IDS.CONFIRM_NO
-        ) {
-          focusById(SMARTCARD_FOCUS_IDS.CONFIRM_YES);
-        }
-      }
-      // ENTER se maneja por el click natural del botón.
-    };
-
-    const handleResultModalAction = (action, e) => {
-      // Único botón "cerrar"; mantener foco en él ante UDLR.
-      if (
-        action === TV_ACTION.UP ||
-        action === TV_ACTION.DOWN ||
-        action === TV_ACTION.LEFT ||
-        action === TV_ACTION.RIGHT
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        focusById(SMARTCARD_FOCUS_IDS.MESSAGE_MODAL_CLOSE);
-      }
-    };
-
-    const handleListAction = (action, e, active) => {
-      const root = containerRef?.current;
-      const items = findFocusableElements(root, SMARTCARD_LIST_SELECTOR);
-
-      if (action === TV_ACTION.UP) {
-        e.preventDefault();
-        e.stopPropagation();
-        focusNextElementInList(active, items, 'up');
-        return;
-      }
-      if (action === TV_ACTION.DOWN) {
-        e.preventDefault();
-        e.stopPropagation();
-        focusNextElementInList(active, items, 'down');
-      }
-      // LEFT/RIGHT/ENTER: dejar comportamiento por defecto.
-    };
-
-    const handleFallbackAction = (action, e) => {
-      // Foco fuera de un destino conocido: llevarlo a un punto seguro.
-      if (action !== TV_ACTION.UP && action !== TV_ACTION.DOWN) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const root = containerRef?.current;
-      const items = findFocusableElements(root, SMARTCARD_LIST_SELECTOR);
-      if (items.length > 0) {
-        focusElement(items[0]);
-      } else {
-        focusById(SMARTCARD_FOCUS_IDS.BACK_BUTTON);
-      }
+    const isBackKey = (e) => {
+      const key = String(e.key || '');
+      const code = String(e.code || '');
+      const keyCode = Number(e.keyCode || e.which || 0);
+      return (
+        key === 'Escape' ||
+        code === 'Escape' ||
+        keyCode === 27 ||
+        key === 'Backspace' ||
+        keyCode === 8 ||
+        key === 'GoBack' ||
+        key === 'BrowserBack' ||
+        keyCode === 10009 ||
+        keyCode === 461
+      );
     };
 
     const onKeyDown = (e) => {
-      const action = getTvActionFromKeyEvent(e);
-      if (!action) return;
-
-      if (action === TV_ACTION.BACK) {
-        handleBackAction(e);
-        return;
-      }
-
-      // Mientras se está activando una licencia, evitar mover foco entre items
-      // (la UI muestra un overlay bloqueante). BACK ya fue tratado arriba.
-      if (isSettingLicense) return;
-
-      if (isConfirmInUseOpen) {
-        handleConfirmInUseAction(action, e);
-        return;
-      }
-
-      if (isResultModalOpen) {
-        handleResultModalAction(action, e);
-        return;
-      }
-
-      const root = containerRef?.current;
-      const active = document.activeElement;
-      const isInList =
-        root &&
-        active &&
-        root.contains(active) &&
-        typeof active.matches === 'function' &&
-        active.matches(SMARTCARD_LIST_SELECTOR);
-
-      if (active?.id === SMARTCARD_FOCUS_IDS.BACK_BUTTON) {
-        // Botón único en estado error/empty: solo ENTER tiene efecto.
-        return;
-      }
-
-      if (isInList) {
-        handleListAction(action, e, active);
-        return;
-      }
-
-      handleFallbackAction(action, e);
+      if (!isBackKey(e)) return;
+      if (!e.repeat) back.arm();
     };
 
     const onKeyUp = (e) => {
-      const action = getTvActionFromKeyEvent(e);
-      if (action !== TV_ACTION.BACK) return;
+      if (!isBackKey(e)) return;
       const triggered = back.didTrigger();
       back.clear();
       if (triggered) {
@@ -310,14 +190,7 @@ export function useSmartcardTvNavigation({
       window.removeEventListener('keyup', onKeyUp, { capture: true });
       back.reset();
     };
-  }, [
-    isTV,
-    isConfirmInUseOpen,
-    isResultModalOpen,
-    isSettingLicense,
-    containerRef,
-    onCancelConfirmInUse,
-    onCloseResultModal,
-    onLogoutBack,
-  ]);
+  }, [isTV]);
 }
+
+export default useSmartcardTvNavigation;

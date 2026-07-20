@@ -9,6 +9,7 @@ import panaccessService from '../services/panaccessService';
 import EpgEventModal from '../components/epg/EpgEventModal';
 import { ChannelsRailsCatchupLayout } from '../components/catchup/ChannelsRailsCatchupLayout';
 import { BrandFallbackImage } from '../components/common/BrandFallbackImage';
+import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import {
   catchupGroupToChannel,
   findCatchupEventInGroups,
@@ -110,6 +111,11 @@ export function CatchupPage() {
   }, [currentBrand, enabled, catchup.status, loadCatchup]);
 
   const groups = useMemo(() => catchup.groups || [], [catchup.groups]);
+
+  // Cobertura nueva: esta página no tenía ninguna navegación por D-pad; el
+  // motor de geometría genérico ya resuelve LRUD entre las tarjetas/rieles,
+  // solo falta colocar el foco inicial al entrar.
+  useTvInitialFocus('.catchup-content', [catchup.status, groups.length]);
 
   const resolveCatchupUrl = (streamCatchupId) => {
     if (streamCatchupId == null || streamCatchupId === '') return null;

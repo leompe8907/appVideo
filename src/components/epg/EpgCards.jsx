@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlayer } from '../../contexts/PlayerContext';
-import { useDevice } from '../../contexts/DeviceContext';
 import { usePreload } from '../../store/usePreload';
 import { useBrand } from '../../contexts/BrandContext';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +9,7 @@ import EpgEventModal from './EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useEpgReminderStore } from '../../store/epgReminderStore';
 import { getChannelStableId, dedupeStreams } from '../../utils/channelId';
-import { useEpgCardsTvNav } from '../../hooks/useEpgCardsTvNav';
+import { useTvInitialFocus } from '../../hooks/useTvInitialFocus';
 import '../epg/epg-common.scss';
 
 function asMs(dateLike) {
@@ -150,11 +149,11 @@ export function EpgCards({ onSelect }) {
     return [...streams].sort((a, b) => Number(a.lcn ?? 0) - Number(b.lcn ?? 0));
   }, [epg?.streams]);
 
-  useEpgCardsTvNav({
-    modalOpen: Boolean(detail),
-    epgPastEnabled,
-    channelsCount: channels.length,
-  });
+  // Navegación LEFT/RIGHT/UP/DOWN por geometría (motor central); las tarjetas
+  // deshabilitadas (tabIndex=-1) quedan fuera de los candidatos automáticamente.
+  // El modal de detalle, al abrirse, se registra como su propia zona en
+  // FocusManager y escopa el foco dentro de sí mismo.
+  useTvInitialFocus('.epg-cards-page .epg-cards-grid', [channels.length]);
 
   const resolveChannelLiveUrl = (channel) => {
     if (!channel) return null;

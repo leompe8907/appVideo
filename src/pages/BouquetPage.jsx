@@ -16,7 +16,7 @@ import { useHomeHeaderDispatch } from '../contexts/homeHeaderContext';
 import { usePreload } from '../store/usePreload';
 import { AdZone } from '../components/ads/AdZone';
 import { createAdActivateHandler } from '../utils/adActivate';
-import { useInicioBouquetTvNav } from '../hooks/useInicioBouquetTvNav';
+import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import '../styles/pages/_bouquet.scss';
 
 export function BouquetPage() {
@@ -32,7 +32,11 @@ export function BouquetPage() {
   const { currentBrand } = useBrand();
   const { epg, ads } = usePreload();
 
-  useInicioBouquetTvNav();
+  // Navegación TV: el motor genérico (NavigationRouter + spatialNavigation) ya
+  // mueve el foco por geometría entre tarjetas de canal, rieles de ads y VOD
+  // recomendado sin ningún puente manual — solo hace falta colocar el foco
+  // inicial cuando el muro ya tiene canales.
+  useTvInitialFocus('.bouquet-inicio-scroll', [epg.status, (epg.bouquetsWithChannels || []).length]);
 
   const topInBouquets = Boolean(currentBrand?.homeShell?.ads?.topInBouquets ?? false);
   const shouldRenderTopInside = topInBouquets === false;

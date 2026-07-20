@@ -575,20 +575,20 @@ export const BRANDS = [
       },
       // --- Registro por código QR ---
       qrRegister: {
-        enabled: false, // Muestra botón y modal de registro con QR
-        url: "", // URL codificada en el QR de registro
+        enabled: true, // Muestra botón y modal de registro con QR
+        url: "https://portal.in.tv.br/#/login", // URL codificada en el QR de registro
       },
       // --- Enlace "Olvidé contraseña" ---
       forgotPassword: {
-        enabled: false, // Muestra enlace debajo del campo contraseña
-        url: "", // URL destino al hacer clic; vacío = no navega
+        enabled: true, // Muestra enlace debajo del campo contraseña
+        url: "https://portal.in.tv.br/#/forgot-password", // URL destino al hacer clic; vacío = no navega
       },
       // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
-        enabled: false, // Muestra botón y flujo UDID
-        baseUrl: "", // Base HTTP del backend UDID
-        requestPath: "", // Endpoint POST para solicitar código UDID
-        wsUrl: "", // WebSocket para recibir credenciales cifradas
+        enabled: true, // Muestra botón y flujo UDID
+        baseUrl: "https://intv-payment.in.tv.br/", // Base HTTP del backend UDID
+        requestPath: "/api/devices/request-access/", // Endpoint POST para solicitar código UDID
+        wsUrl: "wss://intv-payment.in.tv.br/ws/device-access/", // WebSocket para recibir credenciales cifradas
         appType: "10foot", // Tipo de app enviado al backend
         appVersion: "1.0", // Versión enviada al backend
         maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
@@ -600,16 +600,16 @@ export const BRANDS = [
       socialLogin: {
         backendBaseUrl: "http://127.0.0.1:8000", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
         google: {
-          enabled: false, // Muestra botón Google (solo escritorio)
+          enabled: true, // Muestra botón Google (solo escritorio)
           redirectUrl: "", // Path relativo a backendBaseUrl o URL absoluta del POST OAuth
-          accessToken: "", // Google OAuth client_id
+          accessToken: "184856008395-25a3h9o078l4rch61236f45t8qg8f04d.apps.googleusercontent.com", // Google OAuth client_id
           preferCustomButton: true, // true: botón custom con theme.social; false: widget GIS nativo
           backendBaseUrl: "", // Base específica Google; vacío = usa socialLogin.backendBaseUrl
         },
         facebook: {
-          enabled: false, // Muestra botón Facebook (solo escritorio)
+          enabled: true, // Muestra botón Facebook (solo escritorio)
           redirectUrl: "", // Path relativo o URL absoluta del POST OAuth
-          accessToken: "", // Facebook App ID
+          accessToken: "7198627023533757", // Facebook App ID
           backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
       },

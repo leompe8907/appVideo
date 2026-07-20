@@ -4,7 +4,7 @@
  * Formulario: nombre, avatar (imageId). La licencia y el PIN vienen de la tarjeta seleccionada.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 
@@ -14,6 +14,8 @@ import AppIcon from '../AppIcon';
 
 import panaccessService from '../../services/panaccessService';
 import Img from '../../constants/images';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe } from '../../navigation/spatialNavigation';
 
 const DEFAULT_IMAGE_ID = Img && Img.length > 0 ? Img[0].id : null;
 
@@ -27,17 +29,35 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const rootRef = useRef(null);
+  const zoneIdRef = useRef(null);
+  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('create-profile-modal');
 
   const availableCard = smartCards.find(
     (card) => !profiles.some((profile) => profile.sn === getCardKey(card))
   );
 
+  // Navegación (LEFT/RIGHT/UP/DOWN por geometría, BACK cancela) delegada a una
+  // zona de FocusManager, igual que otros modales.
+  useEffect(() => {
+    const zoneId = zoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
+        onClose?.();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Focus inicial en TV
   useEffect(() => {
     if (isTV) {
       const timer = setTimeout(() => {
-        const input = document.getElementById('create-profile-name');
-        if (input) input.focus();
+        focusElementSafe(document.getElementById('create-profile-name'));
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -85,7 +105,7 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
   };
 
   return (
-    <div className="create-profile-overlay" role="dialog" aria-modal="true" aria-labelledby="create-profile-title">
+    <div ref={rootRef} className="create-profile-overlay" role="dialog" aria-modal="true" aria-labelledby="create-profile-title">
       <div className="create-profile-modal">
         <h2 id="create-profile-title" className="create-profile-title">{t('profile.createTitle')}</h2>
 

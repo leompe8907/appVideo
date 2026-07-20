@@ -14,6 +14,8 @@ import { useBrand } from '../../contexts/BrandContext';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';
 import { requestTvFocusRingSync } from '../navigation/TvFocusRing';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe } from '../../navigation/spatialNavigation';
 
 const DESCRIPTION_MAX_LENGTH = 180;
 
@@ -24,6 +26,9 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay, infoOnl
   const { state: playerState } = usePlayer();
   const playerActiveRef = useRef(Boolean(playerState?.url));
   const wasPlayerActiveRef = useRef(Boolean(playerState?.url));
+  const rootRef = useRef(null);
+  const zoneIdRef = useRef(null);
+  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('vod-detail-modal');
   const baseUrl = currentBrand?.drm || '';
   const [seriesInfo, setSeriesInfo] = useState(null);
   const [loading, setLoading] = useState(!!item?.isSeries);
@@ -47,36 +52,29 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay, infoOnl
     playerActiveRef.current = Boolean(playerState?.url);
   }, [playerState?.url]);
 
+  // Navegación (LEFT/RIGHT/UP/DOWN por geometría, BACK) delegada al motor central:
+  // esta zona se registra en FocusManager en vez de tener su propio listener de keydown.
   useEffect(() => {
     if (!item) return undefined;
-    const onKeyDown = (e) => {
-      // Player activo: BACK lo gestiona PlayerHud (mismo criterio que botón volver en pantalla).
-      if (playerActiveRef.current) return;
-
-      const key = String(e.key || '');
-      const code = String(e.code || '');
-      const keyCode = Number(e.keyCode || e.which || 0);
-      const isEscape = key === 'Escape' || code === 'Escape' || keyCode === 27;
-      const isBackspace = key === 'Backspace' || code === 'Backspace' || keyCode === 8;
-      const isReturnLike = key === 'Return' || key === 'GoBack' || key === 'BrowserBack';
-      const isTvBackCodes = keyCode === 10009 || keyCode === 461;
-      if (isEscape || isBackspace || isReturnLike || isTvBackCodes) {
-        e.preventDefault();
-        e.stopPropagation();
+    const zoneId = zoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
+        // Player activo: BACK lo gestiona PlayerHud (mismo criterio que botón volver en pantalla).
+        if (playerActiveRef.current) return false;
         onClose?.();
-      }
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
     };
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [item, onClose]);
 
   useEffect(() => {
     if (!isTV || loading) return undefined;
     const t = setTimeout(() => {
-      const btn = document.getElementById(
-        infoOnly ? 'player-vod-info-close' : 'vod-detail-play',
-      );
-      if (btn) btn.focus();
+      const id = infoOnly ? 'player-vod-info-close' : 'vod-detail-play';
+      focusElementSafe(document.getElementById(id));
     }, 400);
     return () => clearTimeout(t);
   }, [isTV, loading, infoOnly]);
@@ -247,7 +245,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay, infoOnl
   };
 
   return (
-    <div className="vod-detail-overlay" role="dialog" aria-modal="true" aria-labelledby="vod-detail-title">
+    <div ref={rootRef} className="vod-detail-overlay" role="dialog" aria-modal="true" aria-labelledby="vod-detail-title">
       <div className="vod-detail-backdrop" onClick={onClose} aria-hidden="true" />
       <div className="vod-detail-modal vod-detail-hero-layout">
         {/* Hero background */}

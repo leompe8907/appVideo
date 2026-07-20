@@ -1,28 +1,41 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';
 import { formatFullDate } from '../../utils/osmsFormat';
-import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe } from '../../navigation/spatialNavigation';
 
 export function OsmsMessageModal({ open, message, locale, onClose, onMarkRead }) {
   const { t } = useTranslation();
+  const rootRef = useRef(null);
+  const zoneIdRef = useRef(null);
+  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('osms-message-modal');
+
+  // Navegación (LEFT/RIGHT/UP/DOWN por geometría entre "Volver"/"Marcar leído",
+  // BACK cierra) delegada a una zona de FocusManager, igual que otros modales.
+  useEffect(() => {
+    if (!open) return undefined;
+    const zoneId = zoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
+        onClose?.();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [open, onClose]);
 
   useEffect(() => {
     if (!open) return undefined;
-    const onKeyDown = (e) => {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      const action = getTvActionFromKeyEvent(e);
-      if (action === TV_ACTION.BACK || e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose?.();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [open, onClose]);
+    const timer = setTimeout(() => {
+      focusElementSafe(document.getElementById('osms-modal-back'));
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [open]);
 
   if (!open || !message) return null;
 
@@ -31,6 +44,7 @@ export function OsmsMessageModal({ open, message, locale, onClose, onMarkRead })
 
   return createPortal(
     <div
+      ref={rootRef}
       className="osms-modal-overlay"
       role="dialog"
       aria-modal="true"

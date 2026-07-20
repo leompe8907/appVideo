@@ -1,51 +1,14 @@
 /**
- * Utilidades de foco para navegación shell Home (TV): sidebar ↔ contenido.
+ * Utilidades de foco compartidas del shell Home (TV).
+ *
+ * El posicionamiento de foco inicial al navegar entre secciones (sidebar →
+ * contenido) ahora lo resuelve el motor de navegación espacial genérico
+ * (`focusFirstIn` en `src/navigation/spatialNavigation.js`), no este módulo.
+ * Lo que queda acá son utilidades de bajo nivel (foco seguro, scroll de
+ * elementos enfocados dentro de contenedores con overflow) que todavía usa
+ * `homeShellLastContentFocus.js` para restaurar el foco tras cerrar el
+ * reproductor.
  */
-
-import { requestTvFocusRingSync } from '../components/navigation/TvFocusRing';
-import { buildVodBouquetRows } from './vodTvGrid';
-
-const FOCUSABLE_SELECTOR =
-  'a[href]:not([href=""]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-/**
- * @param {Element | null | undefined} el
- * @returns {boolean}
- */
-function isRoughlyVisible(el) {
-  if (!el || !(el instanceof HTMLElement)) return false;
-  try {
-    if (el.hasAttribute('disabled')) return false;
-    const style = window.getComputedStyle(el);
-    if (style.visibility === 'hidden' || style.display === 'none' || style.pointerEvents === 'none') {
-      return false;
-    }
-    const r = el.getBoundingClientRect();
-    return r.width >= 2 && r.height >= 2;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * @param {Element | null | undefined} container
- * @returns {HTMLElement[]}
- */
-export function getVisibleFocusablesInContainer(container) {
-  if (!container || !(container instanceof HTMLElement)) return [];
-  try {
-    const nodes = Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR));
-    const out = [];
-    for (const n of nodes) {
-      if (!(n instanceof HTMLElement)) continue;
-      if (!isRoughlyVisible(n)) continue;
-      out.push(n);
-    }
-    return out;
-  } catch {
-    return [];
-  }
-}
 
 /**
  * @param {HTMLElement} el
@@ -59,110 +22,6 @@ export function focusElementSafe(el) {
   } catch {
     return false;
   }
-}
-
-/**
- * Primer foco según la ruta activa (evita enfocar la sección anterior tras sidebar).
- * @param {HTMLElement} mainEl
- * @param {string} [pathname]
- * @returns {{ target: HTMLElement, scrollRoot: HTMLElement } | null}
- */
-function resolveFirstMainFocusTarget(mainEl, pathname) {
-  const path = pathname || window.location.pathname || '';
-
-  if (path === '/home/vod') {
-    const content = mainEl.querySelector('.vod-page .vod-content');
-    if (content instanceof HTMLElement) {
-      const rows = buildVodBouquetRows(content);
-      const first = rows[0]?.[0];
-      if (first instanceof HTMLElement && isRoughlyVisible(first)) {
-        return { target: first, scrollRoot: content };
-      }
-      const errBtn = mainEl.querySelector('.vod-page .vod-error-refresh-button');
-      if (errBtn instanceof HTMLElement && isRoughlyVisible(errBtn)) {
-        return { target: errBtn, scrollRoot: content };
-      }
-    }
-    return null;
-  }
-
-  if (path === '/home/inicio' || path === '/home/servicios-tv-radio') {
-    const scroll = mainEl.querySelector('.bouquet-inicio-scroll');
-    if (scroll instanceof HTMLElement) {
-      const list = getVisibleFocusablesInContainer(scroll);
-      if (list[0] instanceof HTMLElement) {
-        return { target: list[0], scrollRoot: scroll };
-      }
-    }
-  }
-
-  if (path === '/home/buscador') {
-    const search = mainEl.querySelector('.search-page');
-    if (search instanceof HTMLElement) {
-      const list = getVisibleFocusablesInContainer(search);
-      if (list[0] instanceof HTMLElement) {
-        return { target: list[0], scrollRoot: search };
-      }
-    }
-  }
-
-  const list = getVisibleFocusablesInContainer(mainEl);
-  const target = list[0];
-  if (!(target instanceof HTMLElement)) return null;
-
-  const bouquetScroll = target.closest('.bouquet-inicio-scroll');
-  if (bouquetScroll instanceof HTMLElement) {
-    return { target, scrollRoot: bouquetScroll };
-  }
-  const vodContent = target.closest('.vod-page .vod-content');
-  if (vodContent instanceof HTMLElement) {
-    return { target, scrollRoot: vodContent };
-  }
-  const stack = mainEl.querySelector('.home-content-stack');
-  return { target, scrollRoot: stack instanceof HTMLElement ? stack : mainEl };
-}
-
-/**
- * Tras elegir una sección en el sidebar (TV): primer foco visible del `main`.
- * Reintenta hasta que la ruta nueva haya montado el contenido.
- *
- * @param {{ maxAttempts?: number, pathname?: string }} [opts]
- * @returns {() => void}
- */
-export function scheduleFocusFirstMainContent(opts = {}) {
-  const maxAttempts = typeof opts.maxAttempts === 'number' ? opts.maxAttempts : 48;
-  const pathname = typeof opts.pathname === 'string' ? opts.pathname : window.location.pathname || '';
-  let cancelled = false;
-  let attempt = 0;
-
-  const tryOnce = () => {
-    if (cancelled) return;
-    const mainEl = document.querySelector('main.home-content[data-home-scope="content"]');
-    if (!(mainEl instanceof HTMLElement)) {
-      attempt += 1;
-      if (attempt < maxAttempts) requestAnimationFrame(tryOnce);
-      return;
-    }
-
-    const resolved = resolveFirstMainFocusTarget(mainEl, pathname);
-    if (resolved?.target instanceof HTMLElement && focusElementSafe(resolved.target)) {
-      scrollElementIntoVisibleScrollAncestors(resolved.target, resolved.scrollRoot);
-      requestTvFocusRingSync();
-      return;
-    }
-
-    attempt += 1;
-    if (attempt < maxAttempts) requestAnimationFrame(tryOnce);
-  };
-
-  const id = requestAnimationFrame(() => {
-    requestAnimationFrame(tryOnce);
-  });
-
-  return () => {
-    cancelled = true;
-    cancelAnimationFrame(id);
-  };
 }
 
 /**

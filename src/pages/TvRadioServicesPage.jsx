@@ -11,7 +11,7 @@ import { hasTvRadioServiceBouquets } from '../services/tvDataService';
 import panaccessService from '../services/panaccessService';
 import { useCallback } from 'react';
 import { useHomeHeaderDispatch } from '../contexts/homeHeaderContext';
-import { useBouquetMuroTvNav } from '../hooks/useBouquetMuroTvNav';
+import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import '../styles/pages/_bouquet.scss';
 
 export function TvRadioServicesPage() {
@@ -24,7 +24,7 @@ export function TvRadioServicesPage() {
     [setFocusedChannel]
   );
 
-  useBouquetMuroTvNav({ route: 'serviciosTvRadio' });
+  useTvInitialFocus('.bouquet-inicio-scroll', [epg.status, (epg.bouquetsWithChannels || []).length]);
 
   const handleChannelSelect = (channel) => {
     if (import.meta.env?.DEV) {

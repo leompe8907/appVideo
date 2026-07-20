@@ -7,6 +7,7 @@ import { useParentalGate } from '../hooks/useParentalGate';
 import ParentalChannelCard from '../components/parental/ParentalChannelCard';
 import ParentalPinGate from '../components/parental/ParentalPinGate';
 import ConfirmModal from '../components/ConfirmModal';
+import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import '../styles/pages/_parental.scss';
 
 export function ParentalSettingsPage() {
@@ -27,6 +28,12 @@ export function ParentalSettingsPage() {
   useEffect(() => {
     setPinMsg('');
   }, [parental.enabled]);
+
+  // Cobertura nueva: página sin ninguna navegación por D-pad previa; el motor
+  // de geometría genérico ya resuelve LRUD entre todos los controles, solo
+  // falta colocar el foco inicial al entrar (los modales de PIN/confirmación
+  // atrapan el foco ellos mismos vía FocusManager cuando están abiertos).
+  useTvInitialFocus('.parental-page', [channels.length]);
 
   const openChangePinFlow = () => {
     setPinMsg('');

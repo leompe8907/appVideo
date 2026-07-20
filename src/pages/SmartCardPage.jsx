@@ -17,6 +17,8 @@ import {
   SMARTCARD_FOCUS_IDS,
   useSmartcardTvNavigation,
 } from '../hooks/useSmartcardTvNavigation';
+import { focusManager, createZoneId } from '../navigation/FocusManager';
+import { focusElementSafe } from '../navigation/spatialNavigation';
 import '../styles/pages/_smartcard.scss';
 
 import {
@@ -65,6 +67,9 @@ export function SmartCardPage() {
   const autoActivateAttemptedRef = useRef(false);
   const allValidLicensesRef = useRef([]);
   const containerRef = useRef(null);
+  const confirmInUseRootRef = useRef(null);
+  const confirmInUseZoneIdRef = useRef(null);
+  if (!confirmInUseZoneIdRef.current) confirmInUseZoneIdRef.current = createZoneId('smartcard-confirm-in-use');
   const { isTV } = useDevice();
 
   const backgroundPath = currentBrand?.assets?.background || getImage('background.png');
@@ -164,10 +169,32 @@ export function SmartCardPage() {
     isSettingLicense,
     isConfirmInUseOpen: !!confirmLicenseInUse,
     isResultModalOpen: !!resultModal,
-    onCancelConfirmInUse: handleCancelConfirmInUse,
-    onCloseResultModal: handleCloseResultModal,
     onLogoutBack: handleBack,
   });
+
+  // Modal inline "licencia en uso": zona de FocusManager — atrapa LEFT/RIGHT/UP/DOWN
+  // (motor de geometría genérico, escopado a este overlay) y BACK lo cancela.
+  useEffect(() => {
+    if (!confirmLicenseInUse) return undefined;
+    const zoneId = confirmInUseZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: confirmInUseRootRef.current,
+      onBack: () => {
+        handleCancelConfirmInUse();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [confirmLicenseInUse, handleCancelConfirmInUse]);
+
+  useEffect(() => {
+    if (!isTV || !confirmLicenseInUse) return undefined;
+    const timer = setTimeout(() => {
+      focusElementSafe(document.getElementById(SMARTCARD_FOCUS_IDS.CONFIRM_YES));
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [isTV, confirmLicenseInUse]);
 
   const handleLicenseSelect = async (license, failIfInUse = true) => {
     if (isSettingLicense) return;
@@ -231,7 +258,7 @@ export function SmartCardPage() {
       )}
 
       {confirmLicenseInUse && (
-        <div className="confirm-in-use-overlay" role="dialog" aria-modal="true">
+        <div className="confirm-in-use-overlay" role="dialog" aria-modal="true" ref={confirmInUseRootRef}>
           <div className="confirm-in-use-modal">
             <h4 className="confirm-in-use-title">{t('smartcard.licenseInUseConfirm')}</h4>
             <div className="confirm-in-use-actions">

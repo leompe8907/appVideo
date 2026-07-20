@@ -1,16 +1,37 @@
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';
 import CatchupCard from './CatchupCard';
 import { getCatchupGroupKey, getCatchupRailItemKey } from '../../utils/catchupEvent';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusFirstIn } from '../../navigation/spatialNavigation';
 
 export function CatchupGroupModal({ groupTitle, group, events = [], onSelectEvent, onClose }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
+  const rootRef = useRef(null);
+  const zoneIdRef = useRef(null);
+  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('catchup-group-modal');
+
+  useEffect(() => {
+    const zoneId = zoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => onClose?.(),
+    });
+    const cancelFocus = focusFirstIn('.catchup-group-grid');
+    return () => {
+      cancelFocus?.();
+      focusManager.pop(zoneId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div
+      ref={rootRef}
       className="catchup-group-overlay"
       role="dialog"
       aria-modal="true"

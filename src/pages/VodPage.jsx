@@ -12,15 +12,7 @@ import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import { usePreload } from '../store/usePreload';
 import { useParentalGate } from '../hooks/useParentalGate';
-import { useVodPageTvNav } from '../hooks/useVodPageTvNav';
-import { useVodOverlayTvNav } from '../hooks/useVodOverlayTvNav';
-import {
-  rememberVodPageFocus,
-  rememberVodCategoryFocus,
-  clearVodCategoryFocusMemory,
-  restoreVodFocusAfterDetailClose,
-  restoreVodPageFocusAfterCategoryClose,
-} from '../utils/vodShellLastFocus';
+import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import VodCard from '../components/vod/VodCard';
 import VodSeeMoreCard from '../components/vod/VodSeeMoreCard';
 import VodDetailModal from '../components/vod/VodDetailModal';
@@ -43,27 +35,16 @@ export function VodPage() {
   const [categoryModal, setCategoryModal] = useState(null);
   const vodRetryOnEnterRef = useRef(false);
 
-  useVodPageTvNav();
-  useVodOverlayTvNav({
-    detailOpen: Boolean(detailItem),
-    categoryOpen: Boolean(categoryModal),
-    onCloseDetail: () => {
-      const catOpen = Boolean(categoryModal);
-      setDetailItem(null);
-      restoreVodFocusAfterDetailClose(catOpen);
-    },
-    onCloseCategory: () => {
-      setCategoryModal(null);
-      restoreVodPageFocusAfterCategoryClose();
-    },
-  });
-
   const baseUrl = currentBrand?.drm || '';
   const vodLayout = currentBrand?.vod?.layout === 'classic' ? 'classic' : 'hero';
   const status = vod.status;
   const categories = vod.categories || [];
   const allVods = useMemo(() => vod.allVods || [], [vod.allVods]);
   const error = vod.error || '';
+
+  // Foco inicial en TV al llegar a la página: el modal (categoría/detalle), cuando está
+  // abierto, gestiona su propio foco vía FocusManager (push/pop restaura al cerrar).
+  useTvInitialFocus('.vod-page .vod-content', [status, categories.length]);
 
   useEffect(() => {
     if (!currentBrand) return;
@@ -96,11 +77,6 @@ export function VodPage() {
   /** Desde la fila principal: cerrar modal de género si estuviera abierto (p. ej. web). */
   const handleVodSelectFromRow = (item) => {
     if (!item?.id) return;
-    const active = document.activeElement;
-    if (active instanceof HTMLElement) {
-      rememberVodPageFocus(active, '.vod-page .vod-content');
-    }
-    clearVodCategoryFocusMemory();
     setCategoryModal(null);
     setDetailItem(item);
   };
@@ -108,19 +84,10 @@ export function VodPage() {
   /** Desde "Ver más" / modal de categoría: mantener el modal para volver al grid del género al cerrar el detalle. */
   const handleVodSelectFromCategoryModal = (item) => {
     if (!item?.id) return;
-    const active = document.activeElement;
-    if (active instanceof HTMLElement) {
-      const card = active.closest('.vod-card');
-      rememberVodCategoryFocus(card instanceof HTMLElement ? card : active);
-    }
     setDetailItem(item);
   };
 
   const openCategoryModal = (name, vods) => {
-    const active = document.activeElement;
-    if (active instanceof HTMLElement) {
-      rememberVodPageFocus(active, '.vod-page .vod-content');
-    }
     setCategoryModal({ name, vods: vods || [] });
   };
 
@@ -211,10 +178,7 @@ export function VodPage() {
           categoryName={categoryModal.name}
           vods={categoryModal.vods}
           onSelectItem={handleVodSelectFromCategoryModal}
-          onClose={() => {
-            setCategoryModal(null);
-            restoreVodPageFocusAfterCategoryClose();
-          }}
+          onClose={() => setCategoryModal(null)}
         />
       )}
 
@@ -222,11 +186,7 @@ export function VodPage() {
         <VodDetailModalClassic
           item={detailItem}
           categories={categories}
-          onClose={() => {
-            const catOpen = Boolean(categoryModal);
-            setDetailItem(null);
-            restoreVodFocusAfterDetailClose(catOpen);
-          }}
+          onClose={() => setDetailItem(null)}
           onPlay={handlePlayFromModal}
         />
       )}
@@ -234,11 +194,7 @@ export function VodPage() {
         <VodDetailModal
           item={detailItem}
           categories={categories}
-          onClose={() => {
-            const catOpen = Boolean(categoryModal);
-            setDetailItem(null);
-            restoreVodFocusAfterDetailClose(catOpen);
-          }}
+          onClose={() => setDetailItem(null)}
           onPlay={handlePlayFromModal}
         />
       )}

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableInput } from '../navigation/FocusableInput';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe } from '../../navigation/spatialNavigation';
 
 export function ParentalPinGate({
   open,
@@ -16,6 +18,9 @@ export function ParentalPinGate({
   const [error, setError] = useState('');
   const pinInputRef = useRef(null);
   const okBtnRef = useRef(null);
+  const rootRef = useRef(null);
+  const zoneIdRef = useRef(null);
+  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('parental-pin-gate');
 
   const digits = useMemo(() => ['1','2','3','4','5','6','7','8','9','0'], []);
 
@@ -34,52 +39,59 @@ export function ParentalPinGate({
     }
   }, [open, pin, onSubmit, t]);
 
+  // Navegación (LEFT/RIGHT/UP/DOWN por geometría entre los dígitos y las
+  // acciones, BACK cancela) delegada al motor central vía FocusManager, igual
+  // que cualquier otro modal — reemplaza el listener de teclado propio que
+  // este gate tenía antes (sin cobertura real de D-pad: nada movía el foco
+  // entre los botones del teclado numérico).
   useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
+    const zoneId = zoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
+        onCancel?.();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [open, onCancel]);
+
+  useEffect(() => {
+    if (!open) return undefined;
     setPin('');
     setError('');
     const tm = setTimeout(() => {
-      try {
-        pinInputRef.current?.focus?.();
-      } catch { /* noop */ }
+      // En TV el input queda fuera del orden de foco (tabIndex=-1): el PIN se
+      // ingresa con el teclado numérico en pantalla, así que el primer dígito
+      // recibe el foco inicial en su lugar.
+      if (isTV) {
+        focusElementSafe(rootRef.current?.querySelector('.parental-pin-digit'));
+      } else {
+        focusElementSafe(pinInputRef.current);
+      }
     }, 0);
     return () => clearTimeout(tm);
-  }, [open]);
+  }, [open, isTV]);
 
+  // Algunos remotos reportan OK con un keyCode no estándar (29443) que el
+  // navegador no traduce a un click nativo del botón enfocado: sin esto, ese
+  // control específico no podría confirmar nada en este teclado numérico.
   useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
     const onKey = (e) => {
-      if (document.querySelector('.osd-keyboard-container')) {
-        return;
-      }
-      const key = e.key || e.code;
       const code = e.keyCode || e.which;
-      const keyStr = String(key || '');
-      const isReturnLike =
-        keyStr === 'Return' || keyStr === 'GoBack' || keyStr === 'BrowserBack';
-      const isTvBackCodes = code === 10009 || code === 461;
-      const isBack =
-        keyStr === 'Backspace' ||
-        keyStr === 'Back' ||
-        keyStr === 'Escape' ||
-        code === 8 ||
-        code === 27 ||
-        isReturnLike ||
-        isTvBackCodes;
-      const isEnter = key === 'Enter' || code === 13 || code === 29443;
-      if (isBack) {
+      if (code !== 29443) return;
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && rootRef.current?.contains(active)) {
         e.preventDefault();
-        onCancel?.();
-        return;
-      }
-      if (isEnter) {
-        e.preventDefault();
-        handleSubmit();
+        active.click();
       }
     };
     window.addEventListener('keydown', onKey, { capture: true });
     return () => window.removeEventListener('keydown', onKey, { capture: true });
-  }, [open, handleSubmit, onCancel]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -87,7 +99,7 @@ export function ParentalPinGate({
   const effectiveMessage = message || t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para continuar' });
 
   return (
-    <div className="parental-pin-overlay" role="dialog" aria-modal="true" aria-label={effectiveTitle}>
+    <div ref={rootRef} className="parental-pin-overlay" role="dialog" aria-modal="true" aria-label={effectiveTitle}>
       <div className="parental-pin-card">
         <div className="parental-pin-title">{effectiveTitle}</div>
         <div className="parental-pin-message">{effectiveMessage}</div>

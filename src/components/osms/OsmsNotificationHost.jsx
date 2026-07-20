@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -6,9 +6,10 @@ import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useOsmsStore } from '../../store/osmsStore';
 import { previewText } from '../../utils/osmsFormat';
-import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe } from '../../navigation/spatialNavigation';
 import '../../styles/pages/_osms.scss';
 
 export function OsmsNotificationHost() {
@@ -17,6 +18,9 @@ export function OsmsNotificationHost() {
   const { isTV } = useDevice();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const rootRef = useRef(null);
+  const zoneIdRef = useRef(null);
+  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('osms-notification');
 
   const enabled = Boolean(currentBrand?.features?.osms);
   const pendingNotification = useOsmsStore((s) => s.pendingNotification);
@@ -27,26 +31,26 @@ export function OsmsNotificationHost() {
     Boolean(pendingNotification) &&
     pathname !== '/home/osms';
 
+  // Navegación (LEFT/RIGHT por geometría entre "Ver"/"Descartar", BACK descarta)
+  // delegada a una zona de FocusManager, igual que otros modales.
   useEffect(() => {
     if (!open) return undefined;
-    const onKeyDown = (e) => {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      const action = getTvActionFromKeyEvent(e);
-      if (action === TV_ACTION.BACK || e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
+    const zoneId = zoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
         dismissOsmsNotification();
-      }
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
     };
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [open, dismissOsmsNotification]);
 
   useEffect(() => {
     if (!open || !isTV) return undefined;
     const tm = setTimeout(() => {
-      const btn = document.getElementById('osms-notification-view');
-      if (btn) btn.focus();
+      focusElementSafe(document.getElementById('osms-notification-view'));
     }, 50);
     return () => clearTimeout(tm);
   }, [open, isTV, pendingNotification?.id]);
@@ -63,6 +67,7 @@ export function OsmsNotificationHost() {
 
   return createPortal(
     <div
+      ref={rootRef}
       className="osms-notification-overlay"
       role="dialog"
       aria-modal="true"

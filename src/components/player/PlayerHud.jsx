@@ -18,6 +18,8 @@ import { buildZappingChannelList } from '../../utils/channelZappingList';
 import {
   usePlayerHudTvNavigation,
   PLAYER_FOCUS_IDS,
+  PLAYER_CHANNEL_SELECTOR,
+  PLAYER_TRACK_SELECTOR,
 } from '../../hooks/usePlayerHudTvNavigation';
 import { usePlayerChannelZapping } from '../../hooks/usePlayerChannelZapping';
 import {
@@ -27,7 +29,8 @@ import {
   getNativeFullscreenElement,
   isAppFullscreenActive,
 } from '../../utils/playerFullscreen';
-import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe, scrollIntoViewWithinAncestors } from '../../navigation/spatialNavigation';
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
@@ -121,16 +124,59 @@ function ChannelSidebar({
   onClose,
   onSelectChannel,
 }) {
+  const rootRef = useRef(null);
+  const listRef = useRef(null);
+  const zoneIdRef = useRef(null);
+  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('player-channel-sidebar');
+
+  // Navegación (UP/DOWN por geometría escopada a este panel, BACK cierra)
+  // delegada a una zona de FocusManager, igual que cualquier otro modal.
+  useEffect(() => {
+    if (!open) return undefined;
+    const zoneId = zoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
+        onClose?.();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const timer = setTimeout(() => {
+      const first = listRef.current?.querySelector(PLAYER_CHANNEL_SELECTOR);
+      focusElementSafe(first);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [open]);
+
+  // Scroll-into-view defensivo (cubre foco por click; por teclado ya lo hace `moveFocus`).
+  useEffect(() => {
+    if (!open) return undefined;
+    const onFocusIn = (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement) || !t.matches(PLAYER_CHANNEL_SELECTOR)) return;
+      const list = listRef.current;
+      if (list instanceof HTMLElement) scrollIntoViewWithinAncestors(t, list);
+    };
+    document.addEventListener('focusin', onFocusIn, true);
+    return () => document.removeEventListener('focusin', onFocusIn, true);
+  }, [open]);
+
   if (!open) return null;
 
   return createPortal(
-    <div className="player-channel-sidebar-overlay" role="dialog" aria-modal="true" onClick={() => onClose?.()}>
+    <div ref={rootRef} className="player-channel-sidebar-overlay" role="dialog" aria-modal="true" onClick={() => onClose?.()}>
       <div className="player-channel-sidebar" onClick={(e) => e.stopPropagation()}>
         <div className="player-channel-sidebar__header">
           <div className="player-channel-sidebar__title">{title}</div>
         </div>
 
-        <div className="player-channel-sidebar__list" role="list">
+        <div className="player-channel-sidebar__list" role="list" ref={listRef}>
           {(channels || []).slice(0, 400).map((ch) => {
             const chLogo = ch?.img || ch?.imageUrl || ch?.logoUrl || ch?.logo || ch?.icon || null;
             const id = ch?.id ?? ch?.lcn ?? ch?.name;
@@ -208,50 +254,38 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   const hudRootRef = useRef(null);
   const errorRetryBtnRef = useRef(null);
   const errorCloseBtnRef = useRef(null);
+  const errorRootRef = useRef(null);
+  const errorZoneIdRef = useRef(null);
+  if (!errorZoneIdRef.current) errorZoneIdRef.current = createZoneId('player-error');
 
   const hasPlaybackError = Boolean(state?.error);
+
+  // Navegación del overlay de error (BACK cierra; LEFT/RIGHT entre "Reintentar"
+  // y "Cerrar" ya lo resuelve el motor de geometría genérico, escopado a este
+  // overlay) delegada a una zona de FocusManager, igual que cualquier otro modal.
+  useEffect(() => {
+    if (!hasPlaybackError) return undefined;
+    const zoneId = errorZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: errorRootRef.current,
+      onBack: () => {
+        close();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [hasPlaybackError, close]);
 
   // Foco inicial del overlay de error: sin esto el usuario queda con pantalla
   // negra y ningún elemento enfocable tras un fallo de reproducción.
   useEffect(() => {
     if (!hasPlaybackError) return undefined;
     const timer = setTimeout(() => {
-      errorRetryBtnRef.current?.focus();
+      focusElementSafe(errorRetryBtnRef.current);
     }, 50);
     return () => clearTimeout(timer);
   }, [hasPlaybackError]);
-
-  // Navegación del overlay de error: BACK/Escape cierra, LEFT/RIGHT alterna
-  // entre "Reintentar" y "Cerrar" (mismo patrón que ConfirmModal).
-  useEffect(() => {
-    if (!hasPlaybackError) return undefined;
-    const onErrorOverlayKeyDown = (e) => {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      const action = getTvActionFromKeyEvent(e);
-
-      if (action === TV_ACTION.BACK || e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        close();
-        return;
-      }
-
-      if (action === TV_ACTION.LEFT || action === TV_ACTION.RIGHT) {
-        const order = [errorRetryBtnRef.current, errorCloseBtnRef.current].filter(Boolean);
-        if (order.length < 2) return;
-        const idx = order.indexOf(document.activeElement);
-        if (idx === -1) return;
-        const next = order[action === TV_ACTION.RIGHT ? idx + 1 : idx - 1];
-        if (next) {
-          e.preventDefault();
-          e.stopPropagation();
-          next.focus();
-        }
-      }
-    };
-    window.addEventListener('keydown', onErrorOverlayKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onErrorOverlayKeyDown, { capture: true });
-  }, [hasPlaybackError, close]);
 
   const debugEnabled = useMemo(() => {
     if (import.meta.env.DEV) return true;
@@ -305,6 +339,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     if (!state?.item?.epgItems) return { now: null, next: null };
     return resolveNowNextFromEpgItems(state.item.epgItems, liveNowTickMs);
   }, [state?.item, liveNowTickMs]);
+  const shouldUseEpgInfoModal = state?.type === 'service' && !!state?.item && !!nowNext?.now;
   const channelMeta = useMemo(() => {
     const item = state?.item || null;
     if (!item) return null;
@@ -683,16 +718,73 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     isTV,
     hasContent,
     visible,
-    overlay,
     hudRootRef,
     onWakeHud: wakeHud,
-    onClosePlayerOverlay: closePlayerOverlay,
     onClosePlayer: close,
     showPlaybackButtons,
     channelChangeWithArrows,
     isLiveService,
     isPlaybackMaximized: isPlaybackMaximized && hasContent,
   });
+
+  // Overlay de "info" sin modal EPG/VOD (VOD/catchup, o vivo sin evento actual):
+  // solo el placeholder + botón "Cerrar" — zona de FocusManager propia.
+  const infoBoxRootRef = useRef(null);
+  const infoBoxZoneIdRef = useRef(null);
+  if (!infoBoxZoneIdRef.current) infoBoxZoneIdRef.current = createZoneId('player-info-box');
+  const showInfoBox = overlay === 'info' && !shouldUseEpgInfoModal;
+
+  useEffect(() => {
+    if (!showInfoBox) return undefined;
+    const zoneId = infoBoxZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: infoBoxRootRef.current,
+      onBack: () => {
+        closePlayerOverlay();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [showInfoBox, closePlayerOverlay]);
+
+  useEffect(() => {
+    if (!showInfoBox) return undefined;
+    const timer = setTimeout(() => {
+      focusElementSafe(document.getElementById(PLAYER_FOCUS_IDS.OVERLAY_CLOSE));
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [showInfoBox]);
+
+  // Overlay de pistas (audio/subtítulos): zona de FocusManager escopada al popover.
+  const tracksPopoverRef = useRef(null);
+  const tracksZoneIdRef = useRef(null);
+  if (!tracksZoneIdRef.current) tracksZoneIdRef.current = createZoneId('player-tracks');
+  const showTracksPopover = overlay === 'tracks' && !!tracksPopoverPos;
+
+  useEffect(() => {
+    if (!showTracksPopover) return undefined;
+    const zoneId = tracksZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: tracksPopoverRef.current,
+      onBack: () => {
+        closePlayerOverlay();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [showTracksPopover, closePlayerOverlay]);
+
+  useEffect(() => {
+    if (!showTracksPopover) return undefined;
+    const timer = setTimeout(() => {
+      const root = tracksPopoverRef.current;
+      const firstAudio = root?.querySelector(PLAYER_TRACK_SELECTOR);
+      focusElementSafe(firstAudio || document.getElementById(PLAYER_FOCUS_IDS.TRACKS_CLOSE));
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [showTracksPopover]);
 
   if (!hasContent) return null;
 
@@ -762,8 +854,6 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     state?.type === 'catchup' ||
     (state?.type === 'service' && currentBrand?.player?.showSeekbarOnLive === true);
 
-  const shouldUseEpgInfoModal = state?.type === 'service' && !!state?.item && !!nowNext?.now;
-
   const toggleFullscreen = useCallback(async () => {
     try {
       if (isAppFullscreenActive()) {
@@ -790,7 +880,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   return (
     <>
       {hasPlaybackError && (
-        <div className="player-error-overlay" role="alert" aria-live="assertive">
+        <div ref={errorRootRef} className="player-error-overlay" role="alert" aria-live="assertive">
           <div className="player-error-overlay__box">
             <AppIcon name="warning" size="2em" />
             <p className="player-error-overlay__message">
@@ -1042,7 +1132,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
 
       {overlay ? (
         overlay === 'tracks' ? null : overlay === 'info' && shouldUseEpgInfoModal ? null : (
-        <div className="player-hud__overlay">
+        <div ref={infoBoxRootRef} className="player-hud__overlay">
           <div className="player-hud__overlay-title">
             {overlay === 'channels'
               ? t('player.channelList', { defaultValue: 'Listado de canales' })
@@ -1147,6 +1237,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
         createPortal(
           <div className="player-hud__tracks-popover-overlay" onClick={closePlayerOverlay}>
             <div
+              ref={tracksPopoverRef}
               className="player-hud__tracks-popover"
               style={{ top: `${tracksPopoverPos.top}px`, left: `${tracksPopoverPos.left}px`, width: `${tracksPopoverPos.width}px` }}
               onClick={(e) => e.stopPropagation()}

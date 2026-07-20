@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect } from 'react';
+import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useDevice } from '../../contexts/DeviceContext';
-import { getTvActionFromKeyEvent, isEditableTextInputElement, isTextInputElement, TV_ACTION } from '../../utils/tvRemote';
+import { navigationRouter } from '../../navigation/NavigationRouter';
+import { TV_ACTION, isEditableTextInputElement } from '../../utils/tvRemote';
 import {
   dismissEpgReminderOverlayFromDom,
   dismissOsdKeyboardOverlayFromDom,
@@ -9,187 +9,56 @@ import {
   isOsdKeyboardOverlayInDom,
   shouldDeferHomeShellNavigation,
 } from '../../utils/homeShellOverlays';
-import {
-  focusElementSafe,
-  getVisibleFocusablesInContainer,
-  scrollElementIntoVisibleScrollAncestors,
-} from '../../utils/homeShellNavigation';
-import {
-  clearMainShellFocusMemory,
-  getRestoredMainFocusTargetIfValid,
-  rememberMainShellFocus,
-} from '../../utils/homeShellLastContentFocus';
-import { isLeftmostChannelCardInInicioWall } from '../../utils/inicioBouquetTvGrid';
-import { isLeftmostVodRecommendedRailFocusable } from '../../utils/inicioVodRecommendedHomeRail';
-import { isLeftmostVodCardInVodPage } from '../../utils/vodTvGrid';
 
 /**
- * Dispatcher shell Home (Fase 1 + cruce TV sidebar↔contenido + BACK en rutas /home/*).
- * Montar como **primer hijo** de `HomePage` para `capture: true` antes que `PlayerHud`.
+ * Dispatcher de BACK para el shell Home (rutas /home/*).
  *
- * @param {{ isPlayerActive: boolean }} props
+ * El cruce de foco Sidebar ↔ contenido (antes manejado aquí con LRUD manual y
+ * varias funciones "isLeftmost*" por pantalla) ya NO hace falta: el motor de
+ * navegación espacial genérico (`NavigationRouter` + `spatialNavigation.js`)
+ * mueve el foco por geometría real — como el sidebar está visualmente a la
+ * izquierda del contenido, LEFT/RIGHT cruza entre ambos automáticamente sin
+ * ningún puente manual, sin importar qué pantalla esté activa.
+ *
+ * Lo único que sigue siendo semántico (no espacial) es BACK: cerrar overlays
+ * específicos (recordatorio EPG, teclado OSD) antes que nada, o navegar hacia
+ * atrás en las subrutas de /home/*. Se registra como handler 'global' del
+ * router central en vez de mantener su propio listener de `keydown` aparte.
  */
 export function HomeInputDispatcher({ isPlayerActive }) {
-  const { isTV } = useDevice();
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    clearMainShellFocusMemory();
-  }, [location.pathname]);
+    const unregister = navigationRouter.register('global', (action, e) => {
+      if (action !== TV_ACTION.BACK) return false;
+      if (e.repeat) return false;
 
-  useLayoutEffect(() => {
-    const onKeyDown = (e) => {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-
-      const action = getTvActionFromKeyEvent(e);
-
-      // --- BACK ---
-      if (action === TV_ACTION.BACK) {
-        if (e.repeat) return;
-
-        // Recordatorio EPG (puede mostrarse con player activo): debe procesarse antes de delegar al HUD.
-        if (isEpgEventModalOverlayInDom()) {
-          const dismissed = dismissEpgReminderOverlayFromDom();
-          if (dismissed) {
-            e.preventDefault();
-            e.stopPropagation();
-            return;
-          }
-        }
-
-        // Teclado virtual OSD: cerrar overlay y bloquear BACK nativo del WebView (evita history.back).
-        if (isOsdKeyboardOverlayInDom()) {
-          const dismissed = dismissOsdKeyboardOverlayFromDom();
-          if (dismissed) {
-            e.preventDefault();
-            e.stopPropagation();
-            return;
-          }
-        }
-
-        if (isPlayerActive) return;
-
-        if (shouldDeferHomeShellNavigation()) {
-          e.preventDefault();
-          e.stopPropagation();
-          return;
-        }
-
-        if (isEditableTextInputElement(document.activeElement)) return;
-
-        const path = location.pathname || '';
-        if (path.startsWith('/home/') && path !== '/home/inicio') {
-          e.preventDefault();
-          e.stopPropagation();
-          navigate(-1);
-          return;
-        }
-
-        // /home/inicio: no consumir BACK (permite salida SO / historial real del WebView).
-        return;
+      // Recordatorio EPG (puede mostrarse con player activo): antes que delegar al HUD.
+      if (isEpgEventModalOverlayInDom()) {
+        if (dismissEpgReminderOverlayFromDom()) return true;
       }
 
-      // --- LRUD sidebar ↔ main (solo TV, sin player ni overlays bloqueantes) ---
-      if (!isTV || isPlayerActive) return;
-      if (shouldDeferHomeShellNavigation()) return;
-      if (isTextInputElement(document.activeElement)) return;
-
-      if (action !== TV_ACTION.RIGHT && action !== TV_ACTION.LEFT) return;
-
-      const active = document.activeElement;
-      if (!active || !(active instanceof HTMLElement)) return;
-
-      const sidebar = document.querySelector('aside.home-sidebar[data-home-scope="sidebar"]');
-      const mainEl = document.querySelector('main.home-content[data-home-scope="content"]');
-      if (!sidebar || !mainEl) return;
-
-      if (action === TV_ACTION.RIGHT) {
-        if (!sidebar.contains(active)) return;
-        if (active.matches('button.home-sidebar-settings-btn')) return;
-        if (active.matches('.home-sidebar-sublink')) {
-          const submenu = active.closest('.home-sidebar-submenu');
-          if (submenu) {
-            const subs = Array.from(submenu.querySelectorAll('.home-sidebar-sublink'));
-            const idx = subs.indexOf(active);
-            if (idx >= 0 && idx < subs.length - 1) return;
-          }
-        }
-        e.preventDefault();
-        e.stopPropagation();
-        const restored = getRestoredMainFocusTargetIfValid(mainEl);
-        if (restored && focusElementSafe(restored)) {
-          const bouquetScroll = restored.closest('.bouquet-inicio-scroll');
-          if (bouquetScroll instanceof HTMLElement) {
-            scrollElementIntoVisibleScrollAncestors(restored, bouquetScroll);
-          } else {
-            const stack = mainEl.querySelector('.home-content-stack');
-            if (stack instanceof HTMLElement) {
-              scrollElementIntoVisibleScrollAncestors(restored, stack);
-            }
-          }
-          clearMainShellFocusMemory();
-          return;
-        }
-        clearMainShellFocusMemory();
-        const list = getVisibleFocusablesInContainer(mainEl);
-        const target = list[0];
-        if (target) focusElementSafe(target);
-        return;
+      // Teclado virtual OSD: cerrar overlay y bloquear BACK nativo del WebView.
+      if (isOsdKeyboardOverlayInDom()) {
+        if (dismissOsdKeyboardOverlayFromDom()) return true;
       }
 
-      if (action === TV_ACTION.LEFT) {
-        if (active.closest('.home-ad-zone')) return;
-        if (active.closest('[data-home-spatial-delegate="true"]')) return;
-        if (!mainEl.contains(active)) return;
+      if (isPlayerActive) return false;
+      if (shouldDeferHomeShellNavigation()) return true;
+      if (isEditableTextInputElement(document.activeElement)) return false;
 
-        const path = location.pathname || '';
-        // Buscador: LRUD del header y grilla de resultados lo gestiona useSearchPageTvNav.
-        if (path === '/home/buscador' && active.closest('.search-page')) {
-          return;
-        }
-        const bouquetScrollRoot =
-          path === '/home/inicio' || path === '/home/servicios-tv-radio'
-            ? document.querySelector('.bouquet-inicio-scroll')
-            : null;
-        const fromBouquetRowLeftEdge =
-          bouquetScrollRoot instanceof HTMLElement &&
-          isLeftmostChannelCardInInicioWall(active, bouquetScrollRoot);
-        const fromVodRailLeftEdge =
-          path === '/home/inicio' &&
-          bouquetScrollRoot instanceof HTMLElement &&
-          isLeftmostVodRecommendedRailFocusable(active, bouquetScrollRoot);
-        const vodContent = path === '/home/vod' ? document.querySelector('.vod-page .vod-content') : null;
-        const fromVodPageRowLeftEdge =
-          vodContent instanceof HTMLElement && isLeftmostVodCardInVodPage(active, vodContent);
-
-        const list = getVisibleFocusablesInContainer(mainEl);
-        const fromFirstMainFocusable = list.length > 0 && list[0] === active;
-
-        if (
-          !fromBouquetRowLeftEdge &&
-          !fromVodRailLeftEdge &&
-          !fromVodPageRowLeftEdge &&
-          !fromFirstMainFocusable
-        ) {
-          return;
-        }
-
-        e.preventDefault();
-        e.stopPropagation();
-        rememberMainShellFocus(active);
-        const activeLink =
-          sidebar.querySelector('a.home-sidebar-link.active') ||
-          sidebar.querySelector('a.home-sidebar-link');
-        const settingsBtn = sidebar.querySelector('button.home-sidebar-settings-btn');
-        const target = activeLink || settingsBtn;
-        if (target instanceof HTMLElement) focusElementSafe(target);
+      const path = location.pathname || '';
+      if (path.startsWith('/home/') && path !== '/home/inicio') {
+        navigate(-1);
+        return true;
       }
-    };
 
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [isPlayerActive, isTV, location.pathname, navigate]);
+      // /home/inicio: no consumir BACK (permite salida SO / historial real del WebView).
+      return false;
+    });
+    return unregister;
+  }, [isPlayerActive, location.pathname, navigate]);
 
   return null;
 }

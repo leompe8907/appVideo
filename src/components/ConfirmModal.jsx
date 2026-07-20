@@ -1,10 +1,18 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
+import { focusManager, createZoneId } from '../navigation/FocusManager';
+import { focusElementSafe } from '../navigation/spatialNavigation';
 
 /** Delay antes de aplicar el foco inicial: da tiempo a que el portal termine de montarse. */
 const INITIAL_FOCUS_DELAY_MS = 50;
 
+/**
+ * Modal de confirmación genérico. La navegación (LEFT/RIGHT entre botones,
+ * BACK para cancelar) ya no la maneja este componente directamente: se
+ * registra como zona en `FocusManager` y deja que el `NavigationRouter`
+ * central (motor de navegación espacial) mueva el foco por geometría real
+ * entre los botones, y que `onBack` decida qué hacer con BACK/Escape.
+ */
 export function ConfirmModal({
   open,
   title,
@@ -14,76 +22,38 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
 }) {
-  const cancelBtnRef = useRef(null);
+  const rootRef = useRef(null);
   const confirmBtnRef = useRef(null);
+  const cancelBtnRef = useRef(null);
+  const zoneIdRef = useRef(null);
+  if (!zoneIdRef.current) {
+    zoneIdRef.current = createZoneId('confirm-modal');
+  }
 
-  // Foco inicial: sin esto, con control remoto el foco del documento queda en el
-  // elemento que abrió el modal (oculto tras el overlay) y solo BACK responde.
   useEffect(() => {
     if (!open) return undefined;
+    const zoneId = zoneIdRef.current;
+    const hasCancel = typeof onCancel === 'function';
+    const hasConfirm = typeof onConfirm === 'function';
+
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
+        if (hasCancel) onCancel();
+        else if (hasConfirm) onConfirm();
+      },
+    });
+
+    // Foco inicial: sin esto, con control remoto el foco del documento queda en el
+    // elemento que abrió el modal (oculto tras el overlay) y solo BACK responde.
     const timer = setTimeout(() => {
-      const target = cancelBtnRef.current || confirmBtnRef.current;
-      target?.focus();
+      focusElementSafe(cancelBtnRef.current || confirmBtnRef.current);
     }, INITIAL_FOCUS_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [open]);
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKeyDown = (e) => {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      const action = getTvActionFromKeyEvent(e);
-      const hasCancel = typeof onCancel === 'function';
-      const hasConfirm = typeof onConfirm === 'function';
-
-      if (action === TV_ACTION.BACK) {
-        if (hasCancel) {
-          e.preventDefault();
-          e.stopPropagation();
-          onCancel();
-          return;
-        }
-        if (hasConfirm) {
-          e.preventDefault();
-          e.stopPropagation();
-          onConfirm();
-        }
-        return;
-      }
-
-      if (e.key === 'Escape') {
-        if (hasCancel) {
-          e.preventDefault();
-          e.stopPropagation();
-          onCancel();
-          return;
-        }
-        if (hasConfirm) {
-          e.preventDefault();
-          e.stopPropagation();
-          onConfirm();
-        }
-        return;
-      }
-
-      // Navegación LEFT/RIGHT entre Confirmar/Cancelar (mismo orden visual que el DOM).
-      if (action === TV_ACTION.LEFT || action === TV_ACTION.RIGHT) {
-        const order = [confirmBtnRef.current, cancelBtnRef.current].filter(Boolean);
-        if (order.length < 2) return;
-        const active = document.activeElement;
-        const idx = order.indexOf(active);
-        if (idx === -1) return;
-        const nextIdx = action === TV_ACTION.RIGHT ? idx + 1 : idx - 1;
-        const next = order[nextIdx];
-        if (next) {
-          e.preventDefault();
-          e.stopPropagation();
-          next.focus();
-        }
-      }
+    return () => {
+      clearTimeout(timer);
+      focusManager.pop(zoneId);
     };
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [open, onCancel, onConfirm]);
 
   if (!open) return null;
@@ -91,7 +61,7 @@ export function ConfirmModal({
   const showCancel = typeof onCancel === 'function';
 
   return createPortal(
-    <div className="confirm-modal-overlay" role="dialog" aria-modal="true">
+    <div ref={rootRef} className="confirm-modal-overlay" role="dialog" aria-modal="true">
       <div className="confirm-modal">
         {title ? <h4 className="confirm-modal__title">{title}</h4> : null}
         {message ? <p className="confirm-modal__message">{message}</p> : null}
@@ -122,4 +92,3 @@ export function ConfirmModal({
 }
 
 export default ConfirmModal;
-

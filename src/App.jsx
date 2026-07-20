@@ -9,6 +9,7 @@ import { PlayerProvider } from './contexts/PlayerContext';
 import { TvFocusRing } from './components/navigation/TvFocusRing';
 import { OsdKeyboardProvider } from './contexts/OsdKeyboardContext';
 import { navigationRouter } from './navigation/NavigationRouter';
+import { useDevice } from './contexts/DeviceContext';
 import HomePage from './pages/HomePage';
 import BouquetPage from './pages/BouquetPage';
 import {
@@ -70,6 +71,7 @@ function App() {
   useTranslation();
   const navigate = useNavigate();
   const { currentBrand } = useBrand();
+  const { isTV } = useDevice();
 
   useEffect(() => {
     try {
@@ -80,9 +82,12 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // El router siempre corre (BACK/Escape de modales debe funcionar en cualquier
+    // dispositivo). El movimiento de foco por geometría (LRUD) solo se habilita en TV.
+    navigationRouter.setSpatialNavEnabled(isTV);
     navigationRouter.start();
     return () => navigationRouter.stop();
-  }, []);
+  }, [isTV]);
 
   useEffect(() => {
     setOnSessionInvalid(() => {

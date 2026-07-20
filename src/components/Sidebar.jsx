@@ -9,56 +9,10 @@ import panaccessService from '../services/panaccessService';
 import { hasTvRadioServiceBouquets } from '../services/tvDataService';
 import { setLoggedOut, getActiveLicense, getCredentials, getSubscriberName } from '../utils/userSession';
 import ConfirmModal from './ConfirmModal';
-import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
-import { shouldDeferHomeShellNavigation } from '../utils/homeShellOverlays';
-import { focusElementSafe, scheduleFocusFirstMainContent, scrollElementIntoVisibleScrollAncestors } from '../utils/homeShellNavigation';
+import { TV_ACTION } from '../utils/tvRemote';
+import { navigationRouter } from '../navigation/NavigationRouter';
+import { focusElementSafe, focusFirstIn, scrollIntoViewWithinAncestors } from '../navigation/spatialNavigation';
 import { requestTvFocusRingSync } from './navigation/TvFocusRing';
-
-/**
- * Orden TV de ítems enfocables del sidebar (cuenta + nav + submenú si está abierto).
- * @param {HTMLElement} root
- * @param {boolean} settingsOpen
- * @returns {HTMLElement[]}
- */
-function getOrderedSidebarFocusTargets(root, settingsOpen) {
-  /** @type {HTMLElement[]} */
-  const out = [];
-  const accountBtn = root.querySelector('button.home-sidebar-settings-btn');
-  if (accountBtn instanceof HTMLElement) out.push(accountBtn);
-  if (settingsOpen) {
-    root.querySelectorAll('.home-sidebar-submenu .home-sidebar-sublink').forEach((b) => {
-      if (b instanceof HTMLElement) out.push(b);
-    });
-  }
-  const nav = root.querySelector('.home-sidebar-group--nav');
-  if (nav instanceof HTMLElement) {
-    nav.querySelectorAll('a.home-sidebar-link').forEach((a) => {
-      if (a instanceof HTMLElement) out.push(a);
-    });
-  }
-  return out;
-}
-
-/** Visibilidad sin `getComputedStyle` (evita layout thrash en cada keydown). */
-function isSidebarFocusTargetVisible(el) {
-  if (!(el instanceof HTMLElement) || el.hasAttribute('disabled')) return false;
-  try {
-    const r = el.getBoundingClientRect();
-    return r.width >= 2 && r.height >= 2;
-  } catch {
-    return false;
-  }
-}
-
-function buildVisibleSidebarNavTargets(root, settingsOpen) {
-  return getOrderedSidebarFocusTargets(root, settingsOpen).filter(isSidebarFocusTargetVisible);
-}
-
-function buildVisibleSidebarSublinks(root) {
-  return Array.from(root.querySelectorAll('.home-sidebar-submenu .home-sidebar-sublink')).filter(
-    isSidebarFocusTargetVisible
-  );
-}
 
 function SidebarIcon({ name }) {
   const common = {
@@ -205,9 +159,6 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   const [confirmAction, setConfirmAction] = useState(null); // 'logout' | 'exit' | null
   const subscriberName = getSubscriberName();
   const blurTimerRef = useRef(null);
-  const visibleNavTargetsRef = useRef([]);
-  const visibleSublinksRef = useRef([]);
-  const rebuildSidebarFocusCacheRef = useRef(() => {});
   const tvMainFocusCancelRef = useRef(null);
   const pendingTvNavFocusRef = useRef(false);
   /** Evita colapsar el rail cuando hay modal en portal (foco fuera del aside). */
@@ -335,10 +286,13 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       tvMainFocusCancelRef.current();
       tvMainFocusCancelRef.current = null;
     }
-    tvMainFocusCancelRef.current = scheduleFocusFirstMainContent({
-      pathname: location.pathname,
-      maxAttempts: 48,
-    });
+    // Primer foco visible del contenido principal: el motor genérico de
+    // navegación espacial ya no necesita saber qué ruta es (VOD/Inicio/etc);
+    // basta con el primer elemento enfocable dentro del <main>.
+    tvMainFocusCancelRef.current = focusFirstIn(
+      'main.home-content[data-home-scope="content"]',
+      { maxAttempts: 48 }
+    );
   };
 
   const scheduleCollapseIfOutside = () => {
@@ -397,20 +351,6 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, location.key, isTV]);
 
-  // TV: cache de ítems enfocables (recalcula al cambiar ruta o submenú, no en cada keydown).
-  useLayoutEffect(() => {
-    if (!isTV) return undefined;
-    const rebuild = () => {
-      const root = rootRef.current;
-      if (!root) return;
-      visibleNavTargetsRef.current = buildVisibleSidebarNavTargets(root, settingsOpen);
-      visibleSublinksRef.current = buildVisibleSidebarSublinks(root);
-    };
-    rebuildSidebarFocusCacheRef.current = rebuild;
-    rebuild();
-    return undefined;
-  }, [isTV, settingsOpen, location.pathname]);
-
   // Al expandir el rail (overlay), reposicionar scroll + anillo sobre el ítem activo.
   useLayoutEffect(() => {
     if (!expanded) return undefined;
@@ -418,138 +358,52 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     const active = document.activeElement;
     if (!(root instanceof HTMLElement)) return undefined;
     if (!(active instanceof HTMLElement) || !root.contains(active)) return undefined;
-    scrollElementIntoVisibleScrollAncestors(active, root);
+    scrollIntoViewWithinAncestors(active, root);
     requestTvFocusRingSync();
     return undefined;
   }, [expanded, settingsOpen]);
 
-  // TV: UP/DOWN entre ítems; ENTER en enlaces / ajustes / submenú; scroll del rail al mover foco.
-  useLayoutEffect(() => {
+  // TV: únicas dos excepciones NO puramente espaciales del sidebar (abrir/cerrar
+  // el submenú de ajustes). Todo lo demás — UP/DOWN entre links, UP/DOWN dentro
+  // del submenú, RIGHT hacia el contenido, LEFT desde el contenido — lo resuelve
+  // el motor genérico de navegación espacial (`NavigationRouter`) por geometría,
+  // sin necesidad de un handler ni de un modelo de índices por pantalla.
+  useEffect(() => {
     if (!isTV) return undefined;
-    const onKeyDown = (e) => {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      if (shouldDeferHomeShellNavigation()) return;
-      const action = getTvActionFromKeyEvent(e);
-
+    const unregister = navigationRouter.register('global', (action) => {
       const root = rootRef.current;
-      if (!root) return;
+      if (!(root instanceof HTMLElement)) return false;
       const active = document.activeElement;
-      if (!active || !(active instanceof HTMLElement) || !root.contains(active)) return;
+      if (!(active instanceof HTMLElement) || !root.contains(active)) return false;
 
-      const rebuildCache = () => rebuildSidebarFocusCacheRef.current?.();
-
-      if (action === TV_ACTION.RIGHT) {
-        if (active.matches('button.home-sidebar-settings-btn')) {
-          e.preventDefault();
-          e.stopPropagation();
-          const focusFirstSub = () => {
-            rebuildCache();
-            const subs = visibleSublinksRef.current;
-            const first = subs[0];
-            if (first instanceof HTMLElement) {
-              focusElementSafe(first);
-              scrollElementIntoVisibleScrollAncestors(first, root);
-            }
-          };
-          if (!settingsOpen) {
-            setSettingsOpen(true);
-            requestAnimationFrame(() => requestAnimationFrame(focusFirstSub));
-          } else {
-            requestAnimationFrame(focusFirstSub);
+      if (action === TV_ACTION.RIGHT && active.matches('button.home-sidebar-settings-btn')) {
+        if (settingsOpen) return false; // ya abierto: el motor genérico mueve el foco al sublink más cercano
+        setSettingsOpen(true);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const first = rootRef.current?.querySelector('.home-sidebar-sublink');
+          if (first instanceof HTMLElement) {
+            focusElementSafe(first);
+            requestTvFocusRingSync();
           }
-          return;
-        }
-        if (active.matches('.home-sidebar-sublink')) {
-          const subs = visibleSublinksRef.current;
-          const i = subs.indexOf(active);
-          if (i >= 0 && i < subs.length - 1) {
-            e.preventDefault();
-            e.stopPropagation();
-            const next = subs[i + 1];
-            focusElementSafe(next);
-            scrollElementIntoVisibleScrollAncestors(next, root);
-            return;
-          }
-          return;
-        }
+        }));
+        return true;
       }
 
-      if (action === TV_ACTION.LEFT) {
-        if (active.matches('.home-sidebar-sublink')) {
-          e.preventDefault();
-          e.stopPropagation();
-          setSettingsOpen(false);
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              const r = rootRef.current;
-              if (!r) return;
-              const btn = r.querySelector('button.home-sidebar-settings-btn');
-              if (btn instanceof HTMLElement) {
-                focusElementSafe(btn);
-                scrollElementIntoVisibleScrollAncestors(btn, r);
-              }
-            });
-          });
-          return;
-        }
-      }
-
-      if (action === TV_ACTION.ENTER) {
-        if (active.matches('button.home-sidebar-settings-btn')) {
-          e.preventDefault();
-          e.stopPropagation();
-          if (!settingsOpen) {
-            setSettingsOpen(true);
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                const r = rootRef.current;
-                if (!r) return;
-                rebuildSidebarFocusCacheRef.current?.();
-                const first = visibleSublinksRef.current[0];
-                if (first instanceof HTMLElement) {
-                  focusElementSafe(first);
-                  scrollElementIntoVisibleScrollAncestors(first, r);
-                }
-              });
-            });
-          } else {
-            setSettingsOpen(false);
+      if (action === TV_ACTION.LEFT && active.matches('.home-sidebar-sublink')) {
+        setSettingsOpen(false);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const btn = rootRef.current?.querySelector('button.home-sidebar-settings-btn');
+          if (btn instanceof HTMLElement) {
+            focusElementSafe(btn);
+            requestTvFocusRingSync();
           }
-          return;
-        }
-        if (active.matches('a.home-sidebar-link')) {
-          e.preventDefault();
-          e.stopPropagation();
-          active.click();
-          return;
-        }
-        if (active.matches('.home-sidebar-sublink')) {
-          e.preventDefault();
-          e.stopPropagation();
-          active.click();
-          return;
-        }
-        return;
+        }));
+        return true;
       }
 
-      if (action !== TV_ACTION.UP && action !== TV_ACTION.DOWN) return;
-
-      const visible = visibleNavTargetsRef.current;
-      const idx = visible.indexOf(active);
-      if (idx < 0) return;
-
-      const nextIdx = action === TV_ACTION.UP ? idx - 1 : idx + 1;
-      if (nextIdx < 0 || nextIdx >= visible.length) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-      const nextEl = visible[nextIdx];
-      focusElementSafe(nextEl);
-      scrollElementIntoVisibleScrollAncestors(nextEl, root);
-    };
-
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+      return false;
+    });
+    return unregister;
   }, [isTV, settingsOpen]);
 
   return (

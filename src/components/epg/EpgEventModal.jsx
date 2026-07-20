@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
@@ -7,6 +7,8 @@ import { getCatchupStreamId, getEventDescription, getEventTitle } from '../../ut
 import '../epg/epg-common.scss';
 import AppIcon from '../AppIcon';
 import { BrandFallbackImage } from '../common/BrandFallbackImage';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe } from '../../navigation/spatialNavigation';
 
 function fmtHHmm(ms) {
   if (!ms || Number.isNaN(ms)) return '';
@@ -40,26 +42,24 @@ export function EpgEventModal({
 }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
+  const rootRef = useRef(null);
+  const zoneIdRef = useRef(null);
+  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('epg-event-modal');
 
+  // Navegación (LEFT/RIGHT/UP/DOWN por geometría, escopada al modal, y BACK)
+  // delegada al motor central en vez de un listener de keydown propio.
   useEffect(() => {
     if (!open) return undefined;
-    const onKeyDown = (e) => {
-      const key = String(e.key || '');
-      const code = String(e.code || '');
-      const keyCode = Number(e.keyCode || e.which || 0);
-      const isEscape = key === 'Escape' || code === 'Escape' || keyCode === 27;
-      const isBackspace = key === 'Backspace' || code === 'Backspace' || keyCode === 8;
-      const isReturnLike = key === 'Return' || key === 'GoBack' || key === 'BrowserBack';
-      const isTvBackCodes = keyCode === 10009 || keyCode === 461; // Tizen Back / LG Back (comunes)
-      if (isEscape || isBackspace || isReturnLike || isTvBackCodes) {
-        e.preventDefault();
-        e.stopPropagation();
+    const zoneId = zoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
         onClose?.();
-      }
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
     };
-    // capture=true para ejecutarse antes que handlers globales de teclado
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [open, onClose]);
 
   const eventTitle = getEventTitle(event);
@@ -134,8 +134,7 @@ export function EpgEventModal({
                   : showCatchupAction
                     ? 'epg-event-watch-catchup'
                     : 'epg-event-close';
-        const el = document.getElementById(id);
-        if (el) el.focus();
+        focusElementSafe(document.getElementById(id));
       }, 400);
       return () => clearTimeout(t);
     }
@@ -152,6 +151,7 @@ export function EpgEventModal({
 
   return createPortal(
     <div
+      ref={rootRef}
       className="epg-event-modal-overlay"
       role="dialog"
       aria-modal="true"

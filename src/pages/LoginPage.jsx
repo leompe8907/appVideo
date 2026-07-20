@@ -12,6 +12,7 @@ import { clearSessionBeforeNewLogin, loginAndActivateLicense } from '../services
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
 import { useUdidLoginFlow } from '../hooks/useUdidLoginFlow';
 import { LOGIN_FOCUS_IDS, useLoginTvNavigation } from '../hooks/useLoginTvNavigation';
+import { focusManager, createZoneId } from '../navigation/FocusManager';
 import { getFacebookSocialPostUrl, getGoogleSocialPostUrl } from '../utils/socialAuthUrls';
 import { exchangeGoogleCredentialWithBackend } from '../services/googleSocialLogin';
 import {
@@ -41,6 +42,12 @@ export function LoginPage() {
   const [isLoginBgReady, setIsLoginBgReady] = useState(false);
 
   const loginFormRef = useRef(null);
+  const qrModalRootRef = useRef(null);
+  const udidModalRootRef = useRef(null);
+  const qrZoneIdRef = useRef(null);
+  const udidZoneIdRef = useRef(null);
+  if (!qrZoneIdRef.current) qrZoneIdRef.current = createZoneId('login-qr-modal');
+  if (!udidZoneIdRef.current) udidZoneIdRef.current = createZoneId('login-udid-modal');
 
   const qrRegisterConfig = currentBrand?.login?.qrRegister || currentBrand?.qrRegister;
   const qrRegisterEnabled = !!qrRegisterConfig?.enabled;
@@ -97,20 +104,57 @@ export function LoginPage() {
     setIsUdidModalOpen(false);
   }, [udidFlow]);
 
-  useLoginTvNavigation({
-    isTV,
-    loginFormRef,
-    isQrModalOpen,
-    isUdidModalOpen,
-    isSubmitting,
-    qrRegisterEnabled,
-    forgotPasswordEnabled: canShowForgotPassword,
-    udidEnabled: !!effectiveUdidConfig?.enabled,
-    googleEnabled: !!currentBrand?.login?.socialLogin?.google?.enabled,
-    facebookEnabled: !!currentBrand?.login?.socialLogin?.facebook?.enabled,
-    onCloseQrModal: handleCloseQrModal,
-    onCloseUdidModal: handleCloseUdidModal,
-  });
+  useLoginTvNavigation({ isTV, loginFormRef });
+
+  // Modal QR: zona de FocusManager — atrapa LEFT/RIGHT/UP/DOWN dentro del modal
+  // (motor de geometría genérico) y BACK lo cierra; al cerrar, restaura el foco
+  // al elemento que lo abrió (típicamente "Suscríbete aquí").
+  useEffect(() => {
+    if (!isQrModalOpen) return undefined;
+    const zoneId = qrZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: qrModalRootRef.current,
+      onBack: () => {
+        handleCloseQrModal();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [isQrModalOpen, handleCloseQrModal]);
+
+  useEffect(() => {
+    if (!isUdidModalOpen) return undefined;
+    const zoneId = udidZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: udidModalRootRef.current,
+      onBack: () => {
+        handleCloseUdidModal();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [isUdidModalOpen, handleCloseUdidModal]);
+
+  // Foco inicial al abrir los modales QR/UDID (TV): sin esto, el foco se queda
+  // en el botón que abrió el modal y el usuario no puede alcanzar "Cerrar" con
+  // el control remoto hasta la primera flecha arriba/abajo.
+  useEffect(() => {
+    if (!isTV || !isQrModalOpen) return undefined;
+    const timer = setTimeout(() => {
+      document.getElementById(LOGIN_FOCUS_IDS.MODAL_CLOSE_QR)?.focus();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isTV, isQrModalOpen]);
+
+  useEffect(() => {
+    if (!isTV || !isUdidModalOpen) return undefined;
+    const timer = setTimeout(() => {
+      document.getElementById(LOGIN_FOCUS_IDS.MODAL_CLOSE_UDID)?.focus();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isTV, isUdidModalOpen]);
 
   useEffect(() => {
     if (!isQrModalOpen) return;
@@ -677,7 +721,7 @@ export function LoginPage() {
       </div>
 
       {isQrModalOpen && (
-        <div className="register-modal-backdrop">
+        <div className="register-modal-backdrop" ref={qrModalRootRef}>
           <div className="register-modal">
             <h3>{t('login.registerTitle')}</h3>
             <p>{t('login.registerHint')}</p>
@@ -702,7 +746,7 @@ export function LoginPage() {
       )}
 
       {isUdidModalOpen && (
-        <div className="register-modal-backdrop">
+        <div className="register-modal-backdrop" ref={udidModalRootRef}>
           <div className="register-modal">
             <h3>{t('login.udidTitle')}</h3>
             <p>{t('login.udidHint')}</p>

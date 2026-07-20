@@ -13,6 +13,7 @@ import { DeleteProfileModal } from '../components/Profile/DeleteProfileModal';
 import { MessageModal } from '../components/MessageModal';
 import { FocusableButton } from '../components/navigation/FocusableButton';
 import AppIcon from '../components/AppIcon';
+import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import panaccessService from '../services/panaccessService';
 import { setLoggedOut } from '../utils/userSession';
 import { filterProfileSmartCards } from '../utils/licenseProducts';
@@ -111,16 +112,10 @@ export function ProfilePage() {
     fetchProfiles();
   }, [fetchProfiles]);
 
-  // Establecer focus inicial en TV
-  useEffect(() => {
-    if (isTV && (profiles.length > 0 || smartCards.length > 0)) {
-      const timer = setTimeout(() => {
-        const firstProfile = document.getElementById('profile-0');
-        if (firstProfile) firstProfile.focus();
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isTV, profiles.length, smartCards.length]);
+  // Foco inicial en TV: el motor de geometría genérico resuelve el resto de la
+  // navegación entre tarjetas (los modales de crear/eliminar perfil y mensajes
+  // atrapan el foco ellos mismos vía FocusManager cuando están abiertos).
+  useTvInitialFocus('.profiles-grid', [profiles.length, smartCards.length, isLoading]);
 
   const handleProfileSelect = async (profile) => {
     if (isActivating) return;
@@ -285,7 +280,7 @@ function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled 
 
   const handleKeyDown = (e) => {
     if (disabled) return;
-    if (!isTV && (e.key === 'Enter' || e.key === ' ')) {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onSelect();
     }
@@ -373,7 +368,7 @@ function AddProfileCard({ onAdd }) {
   };
 
   const handleKeyDown = (e) => {
-    if (!isTV && (e.key === 'Enter' || e.key === ' ')) {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onAdd();
     }
