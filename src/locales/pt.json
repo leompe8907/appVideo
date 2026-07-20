@@ -231,7 +231,8 @@
     "selectChannelFirst": "Selecione um canal primeiro",
     "play": "Reproduzir",
     "pause": "Pausar",
-    "playbackError": "Erro na reprodução"
+    "playbackError": "Erro na reprodução",
+    "retry": "Tentar novamente"
   },
   "catchup": {
     "title": "Catchup",

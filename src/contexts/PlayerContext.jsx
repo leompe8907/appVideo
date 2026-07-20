@@ -558,6 +558,20 @@ export function PlayerProvider({ children }) {
     });
   };
 
+  /**
+   * Reintenta la reproducción actual tras un error visible en el HUD.
+   * A diferencia de llamar `play()` con los mismos parámetros, esto limpia
+   * `playbackRef` primero para forzar el camino de recarga completa
+   * (`engine.load()`), no el atajo de "mismo contenido -> engine.play()",
+   * que no sirve si la carga original fue la que falló.
+   */
+  const retry = () => {
+    const { type, id, url, item, mediaOption, drmConfig } = state;
+    if (!url) return;
+    playbackRef.current = { type: null, id: null, url: null, item: null };
+    play({ type, id, url, item, mediaOption, drmConfig, autoPlay: true });
+  };
+
   const pause = () => {
     engineRef.current?.pause();
   };
@@ -718,6 +732,7 @@ export function PlayerProvider({ children }) {
     state,
     tracks,
     play,
+    retry,
     pause,
     stop,
     close,

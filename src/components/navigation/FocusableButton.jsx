@@ -12,14 +12,17 @@ import React from 'react';
  * @param {string} props.type - Tipo de botón: 'button', 'submit', 'reset' (default: 'button')
  * @param {boolean} props.disabled - Si el botón está deshabilitado
  */
-function FocusableButton({
-  children,
-  onClick,
-  className = '',
-  type = 'button',
-  disabled = false,
-  ...restProps
-}) {
+const FocusableButton = React.forwardRef(function FocusableButton(
+  {
+    children,
+    onClick,
+    className = '',
+    type = 'button',
+    disabled = false,
+    ...restProps
+  },
+  ref
+) {
   // Handler para click
   const handleClick = (e) => {
     if (onClick && !disabled) {
@@ -37,6 +40,7 @@ function FocusableButton({
 
   return (
     <button
+      ref={ref}
       type={type}
       className={buttonClasses}
       onClick={handleClick}
@@ -46,7 +50,7 @@ function FocusableButton({
       {children}
     </button>
   );
-}
+});
 
 // Memoizado para evitar re-renders cuando las props no cambian
 // (importante en listas de botones navegables)

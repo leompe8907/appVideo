@@ -27,6 +27,7 @@ import {
   getNativeFullscreenElement,
   isAppFullscreenActive,
 } from '../../utils/playerFullscreen';
+import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
@@ -188,6 +189,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     setSubtitlesEnabled,
     pause,
     play,
+    retry,
     close,
     forward,
     backward,
@@ -204,6 +206,52 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   const [tracksPopoverPos, setTracksPopoverPos] = useState(null); // { top, left, width } | null
   const hideTimeoutRef = useRef(null);
   const hudRootRef = useRef(null);
+  const errorRetryBtnRef = useRef(null);
+  const errorCloseBtnRef = useRef(null);
+
+  const hasPlaybackError = Boolean(state?.error);
+
+  // Foco inicial del overlay de error: sin esto el usuario queda con pantalla
+  // negra y ningún elemento enfocable tras un fallo de reproducción.
+  useEffect(() => {
+    if (!hasPlaybackError) return undefined;
+    const timer = setTimeout(() => {
+      errorRetryBtnRef.current?.focus();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [hasPlaybackError]);
+
+  // Navegación del overlay de error: BACK/Escape cierra, LEFT/RIGHT alterna
+  // entre "Reintentar" y "Cerrar" (mismo patrón que ConfirmModal).
+  useEffect(() => {
+    if (!hasPlaybackError) return undefined;
+    const onErrorOverlayKeyDown = (e) => {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const action = getTvActionFromKeyEvent(e);
+
+      if (action === TV_ACTION.BACK || e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        close();
+        return;
+      }
+
+      if (action === TV_ACTION.LEFT || action === TV_ACTION.RIGHT) {
+        const order = [errorRetryBtnRef.current, errorCloseBtnRef.current].filter(Boolean);
+        if (order.length < 2) return;
+        const idx = order.indexOf(document.activeElement);
+        if (idx === -1) return;
+        const next = order[action === TV_ACTION.RIGHT ? idx + 1 : idx - 1];
+        if (next) {
+          e.preventDefault();
+          e.stopPropagation();
+          next.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', onErrorOverlayKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onErrorOverlayKeyDown, { capture: true });
+  }, [hasPlaybackError, close]);
 
   const debugEnabled = useMemo(() => {
     if (import.meta.env.DEV) return true;
@@ -740,10 +788,39 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   }, [syncPlayerFullscreenLayout]);
 
   return (
-    <div
-      ref={hudRootRef}
-      className={`player-hud ${visible ? 'player-hud--visible' : 'player-hud--hidden'} ${className}`.trim()}
-    >
+    <>
+      {hasPlaybackError && (
+        <div className="player-error-overlay" role="alert" aria-live="assertive">
+          <div className="player-error-overlay__box">
+            <AppIcon name="warning" size="2em" />
+            <p className="player-error-overlay__message">
+              {t('player.playbackError')}
+            </p>
+            <div className="player-error-overlay__actions">
+              <FocusableButton
+                type="button"
+                ref={errorRetryBtnRef}
+                className="player-error-overlay__btn player-error-overlay__btn--primary"
+                onClick={() => retry()}
+              >
+                {t('player.retry')}
+              </FocusableButton>
+              <FocusableButton
+                type="button"
+                ref={errorCloseBtnRef}
+                className="player-error-overlay__btn"
+                onClick={() => close()}
+              >
+                {t('common.close', { defaultValue: 'Cerrar' })}
+              </FocusableButton>
+            </div>
+          </div>
+        </div>
+      )}
+      <div
+        ref={hudRootRef}
+        className={`player-hud ${visible ? 'player-hud--visible' : 'player-hud--hidden'} ${className}`.trim()}
+      >
       <div className="player-hud__topbar">
         <div className="player-hud__topbar-left" data-tv-nav-zone="player-top-left">
           <FocusableButton
@@ -1198,6 +1275,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
         />
       ) : null}
     </div>
+    </>
   );
 }
 

@@ -20,6 +20,75 @@
   pointer-events: none;
 }
 
+// Overlay de error de reproducción: independiente del auto-hide del HUD
+// (`.player-hud--hidden`), debe permanecer visible aunque el usuario no
+// interactúe, porque el video está detenido/roto detrás de él.
+.player-error-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.72);
+  pointer-events: auto;
+}
+
+.player-error-overlay__box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  max-width: 420px;
+  padding: 1.75rem 2rem;
+  border-radius: 12px;
+  background: rgba(30, 30, 30, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  text-align: center;
+}
+
+.player-error-overlay__message {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.player-error-overlay__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.player-error-overlay__btn {
+  padding: 0.6rem 1.4rem;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.45);
+  }
+}
+
+.player-error-overlay__btn--primary {
+  background: rgba(var(--primary-color-rgb, 102, 126, 234), 0.85);
+  border-color: var(--primary-color, #667eea);
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(var(--secondary-color-rgb, 118, 75, 162), 0.9);
+  }
+}
+
 .player-hud__topbar {
   pointer-events: auto;
   display: flex;

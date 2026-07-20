@@ -6,6 +6,34 @@ import { TV_ACTION } from './tvRemote';
 export const VOD_ROW_CARDS_SELECTOR = '.vod-row-cards';
 
 /**
+ * Cache de filas por contenedor raíz, igual patrón que `inicioBouquetTvGrid.js`.
+ * Evita recalcular querySelectorAll + getBoundingClientRect en cada tecla
+ * cuando el layout no cambió entre una pulsación y la siguiente.
+ * @type {WeakMap<HTMLElement, { rows: HTMLElement[][], signature: string }>}
+ */
+const vodRowsCache = new WeakMap();
+
+/** @type {WeakMap<HTMLElement, { rows: HTMLElement[][], signature: string }>} */
+const vodCategoryGridRowsCache = new WeakMap();
+
+function getVodLayoutSignature(root) {
+  const cardCount = root.querySelectorAll('.vod-card').length;
+  // No incluir scrollTop/scrollLeft: invalidar por scroll forzaría rebuild en cada flecha.
+  return `${cardCount}|${root.offsetHeight}|${root.offsetWidth}`;
+}
+
+/**
+ * Fuerza recomputo de filas en el próximo `buildVodBouquetRows`/`buildVodCategoryGridRows`.
+ * @param {HTMLElement | null | undefined} root
+ */
+export function invalidateVodRowsCache(root) {
+  if (root instanceof HTMLElement) {
+    vodRowsCache.delete(root);
+    vodCategoryGridRowsCache.delete(root);
+  }
+}
+
+/**
  * @param {HTMLElement | null | undefined} rowEl
  * @returns {HTMLElement[]}
  */
@@ -16,11 +44,20 @@ export function getVodRowFocusables(rowEl) {
 
 /**
  * Filas de bouquets VOD: cada `.vod-row-cards` = una fila horizontal.
+ * Resultado cacheado por `root` mientras no cambie el conteo de tarjetas
+ * ni el tamaño del contenedor (mismo patrón que el muro de Inicio).
  * @param {HTMLElement | null | undefined} root
  * @returns {HTMLElement[][]}
  */
 export function buildVodBouquetRows(root) {
   if (!root) return [];
+
+  const signature = getVodLayoutSignature(root);
+  const cached = vodRowsCache.get(root);
+  if (cached && cached.signature === signature) {
+    return cached.rows;
+  }
+
   const rows = [];
   try {
     root.querySelectorAll(VOD_ROW_CARDS_SELECTOR).forEach((rowEl) => {
@@ -30,6 +67,8 @@ export function buildVodBouquetRows(root) {
   } catch {
     /* noop */
   }
+
+  vodRowsCache.set(root, { rows, signature });
   return rows;
 }
 
@@ -72,12 +111,24 @@ export function isLeftmostVodCardInVodPage(activeElement, root) {
   return isLeftmostVodCardInRow(activeElement, rowEl);
 }
 
-/** Filas visuales del grid del modal de categoría (`.vod-category-grid`). */
+/**
+ * Filas visuales del grid del modal de categoría (`.vod-category-grid`).
+ * Cacheado por `gridEl` con el mismo criterio de invalidación que las filas del muro.
+ */
 export function buildVodCategoryGridRows(gridEl) {
   if (!(gridEl instanceof HTMLElement)) return [];
+
+  const signature = getVodLayoutSignature(gridEl);
+  const cached = vodCategoryGridRowsCache.get(gridEl);
+  if (cached && cached.signature === signature) {
+    return cached.rows;
+  }
+
   const cards = getVodRowFocusables(gridEl);
-  if (!cards.length) return [];
-  return groupChannelCardsIntoVisualRows(cards);
+  const rows = cards.length ? groupChannelCardsIntoVisualRows(cards) : [];
+
+  vodCategoryGridRowsCache.set(gridEl, { rows, signature });
+  return rows;
 }
 
 /**

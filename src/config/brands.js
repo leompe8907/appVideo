@@ -1446,7 +1446,7 @@ export const BRANDS = [
   {
     brand: "wind",
     appName: "WindTV",
-    drm: "https://middleware.wind.do/",//drm: "https://cv01.panaccess.com/",
+    drm: "https://middleware.wind.do/",
     token: '',
     os: 'HTML5',
     appVersion: '1',    
