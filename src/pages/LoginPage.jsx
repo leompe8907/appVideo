@@ -37,16 +37,22 @@ export function LoginPage() {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrImageSrc, setQrImageSrc] = useState('');
   const [qrError, setQrError] = useState('');
+  const [isForgotQrModalOpen, setIsForgotQrModalOpen] = useState(false);
+  const [forgotQrImageSrc, setForgotQrImageSrc] = useState('');
+  const [forgotQrError, setForgotQrError] = useState('');
   const [isUdidModalOpen, setIsUdidModalOpen] = useState(false);
   const [udidQrImageSrc, setUdidQrImageSrc] = useState('');
   const [isLoginBgReady, setIsLoginBgReady] = useState(false);
 
   const loginFormRef = useRef(null);
   const qrModalRootRef = useRef(null);
+  const forgotQrModalRootRef = useRef(null);
   const udidModalRootRef = useRef(null);
   const qrZoneIdRef = useRef(null);
+  const forgotQrZoneIdRef = useRef(null);
   const udidZoneIdRef = useRef(null);
   if (!qrZoneIdRef.current) qrZoneIdRef.current = createZoneId('login-qr-modal');
+  if (!forgotQrZoneIdRef.current) forgotQrZoneIdRef.current = createZoneId('login-forgot-qr-modal');
   if (!udidZoneIdRef.current) udidZoneIdRef.current = createZoneId('login-udid-modal');
 
   const qrRegisterConfig = currentBrand?.login?.qrRegister || currentBrand?.qrRegister;
@@ -69,6 +75,10 @@ export function LoginPage() {
 
   const handleCloseQrModal = useCallback(() => {
     setIsQrModalOpen(false);
+  }, []);
+
+  const handleCloseForgotQrModal = useCallback(() => {
+    setIsForgotQrModalOpen(false);
   }, []);
 
   const handleUdidCredentials = async (credentials) => {
@@ -137,6 +147,20 @@ export function LoginPage() {
     };
   }, [isUdidModalOpen, handleCloseUdidModal]);
 
+  useEffect(() => {
+    if (!isForgotQrModalOpen) return undefined;
+    const zoneId = forgotQrZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: forgotQrModalRootRef.current,
+      onBack: () => {
+        handleCloseForgotQrModal();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [isForgotQrModalOpen, handleCloseForgotQrModal]);
+
   // Foco inicial al abrir los modales QR/UDID (TV): sin esto, el foco se queda
   // en el botón que abrió el modal y el usuario no puede alcanzar "Cerrar" con
   // el control remoto hasta la primera flecha arriba/abajo.
@@ -155,6 +179,14 @@ export function LoginPage() {
     }, 50);
     return () => clearTimeout(timer);
   }, [isTV, isUdidModalOpen]);
+
+  useEffect(() => {
+    if (!isTV || !isForgotQrModalOpen) return undefined;
+    const timer = setTimeout(() => {
+      document.getElementById(LOGIN_FOCUS_IDS.MODAL_CLOSE_FORGOT_QR)?.focus();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isTV, isForgotQrModalOpen]);
 
   useEffect(() => {
     if (!isQrModalOpen) return;
@@ -188,6 +220,37 @@ export function LoginPage() {
   }, [isQrModalOpen, canShowQrRegister, qrRegisterUrl, t]);
 
   useEffect(() => {
+    if (!isForgotQrModalOpen) return;
+    if (!canShowForgotPassword) {
+      setForgotQrError(t('login.registerUnavailable'));
+      setForgotQrImageSrc('');
+      return;
+    }
+
+    let cancelled = false;
+    const buildQr = async () => {
+      try {
+        const dataUrl = await QRCode.toDataURL(forgotPasswordUrl, {
+          width: 256,
+          margin: 1,
+        });
+        if (cancelled) return;
+        setForgotQrImageSrc(dataUrl);
+        setForgotQrError('');
+      } catch {
+        if (cancelled) return;
+        setForgotQrImageSrc('');
+        setForgotQrError(t('login.registerUnavailable'));
+      }
+    };
+
+    buildQr();
+    return () => {
+      cancelled = true;
+    };
+  }, [isForgotQrModalOpen, canShowForgotPassword, forgotPasswordUrl, t]);
+
+  useEffect(() => {
     if (!isUdidModalOpen || !udidFlow.code) {
       setUdidQrImageSrc('');
       return;
@@ -212,13 +275,23 @@ export function LoginPage() {
 
   const handleOpenForgotPassword = () => {
     if (!canShowForgotPassword) return;
+    // En TV, redirigir (perder la app en la misma "pestaña") es mala UX y muchos
+    // runtimes no navegan bien a una URL externa: mostramos un QR para que el
+    // usuario continúe desde su teléfono. En PC se mantiene el link directo.
+    if (isTV) {
+      setForgotQrError('');
+      setForgotQrImageSrc('');
+      setIsForgotQrModalOpen(true);
+      return;
+    }
     window.location.assign(forgotPasswordUrl);
   };
 
   const handleOpenQrModal = () => {
     if (!canShowQrRegister) return;
     if (!shouldShowQrModal) {
-      window.location.assign(qrRegisterUrl);
+      // PC: abrir en una pestaña/ventana nueva para no perder la sesión de login actual.
+      window.open(qrRegisterUrl, '_blank', 'noopener,noreferrer');
       return;
     }
     setQrError('');
@@ -546,10 +619,10 @@ export function LoginPage() {
           </div>
 
           {canShowForgotPassword && (
-            <div className="login-forgot-row">
+            <div className={`login-forgot-row${isTV ? ' login-forgot-row--tv' : ''}`}>
               <FocusableButton
                 type="button"
-                className="login-text-link login-forgot-password"
+                className={`login-forgot-password${isTV ? ' login-tv-action-button' : ' login-text-link'}`}
                 onClick={handleOpenForgotPassword}
                 id={LOGIN_FOCUS_IDS.FORGOT_PASSWORD}
                 tabIndex={0}
@@ -574,19 +647,35 @@ export function LoginPage() {
           </FocusableButton>
 
           {canShowQrRegister && (
-            <p className="login-subscribe-prompt">
-              {t('login.noAccountYet')}{' '}
-              <FocusableButton
-                type="button"
-                className="login-text-link login-subscribe-link"
-                onClick={handleOpenQrModal}
-                id={LOGIN_FOCUS_IDS.SUBSCRIBE}
-                tabIndex={0}
-                data-tv-nav="login-actions"
-              >
-                {t('login.subscribeHere')}
-              </FocusableButton>
-            </p>
+            isTV ? (
+              <div className="login-subscribe-row">
+                <span className="login-subscribe-hint">{t('login.noAccountYet')}</span>
+                <FocusableButton
+                  type="button"
+                  className="login-tv-action-button login-subscribe-link"
+                  onClick={handleOpenQrModal}
+                  id={LOGIN_FOCUS_IDS.SUBSCRIBE}
+                  tabIndex={0}
+                  data-tv-nav="login-actions"
+                >
+                  {t('login.subscribeHere')}
+                </FocusableButton>
+              </div>
+            ) : (
+              <p className="login-subscribe-prompt">
+                {t('login.noAccountYet')}{' '}
+                <FocusableButton
+                  type="button"
+                  className="login-text-link login-subscribe-link"
+                  onClick={handleOpenQrModal}
+                  id={LOGIN_FOCUS_IDS.SUBSCRIBE}
+                  tabIndex={0}
+                  data-tv-nav="login-actions"
+                >
+                  {t('login.subscribeHere')}
+                </FocusableButton>
+              </p>
+            )
           )}
 
           {effectiveUdidConfig?.enabled && (
@@ -737,6 +826,31 @@ export function LoginPage() {
               className="register-close-button"
               onClick={handleCloseQrModal}
               id={LOGIN_FOCUS_IDS.MODAL_CLOSE_QR}
+              tabIndex={0}
+            >
+              {t('common.close')}
+            </FocusableButton>
+          </div>
+        </div>
+      )}
+
+      {isForgotQrModalOpen && (
+        <div className="register-modal-backdrop" ref={forgotQrModalRootRef}>
+          <div className="register-modal">
+            <h3>{t('login.forgotPasswordTitle')}</h3>
+            <p>{t('login.forgotPasswordHint')}</p>
+
+            {forgotQrImageSrc ? (
+              <img src={forgotQrImageSrc} alt={t('login.forgotPassword')} className="register-qr-image" />
+            ) : (
+              <div className="register-qr-placeholder">{forgotQrError || t('common.loading')}</div>
+            )}
+
+            <FocusableButton
+              type="button"
+              className="register-close-button"
+              onClick={handleCloseForgotQrModal}
+              id={LOGIN_FOCUS_IDS.MODAL_CLOSE_FORGOT_QR}
               tabIndex={0}
             >
               {t('common.close')}

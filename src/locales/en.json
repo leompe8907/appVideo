@@ -101,6 +101,8 @@
     "passwordPlaceholder": "Your password",
     "submit": "Sign in",
     "forgotPassword": "Forgot password",
+    "forgotPasswordTitle": "Reset password",
+    "forgotPasswordHint": "Scan this QR code with your phone to reset your password.",
     "noAccountYet": "Don't have an account yet?",
     "subscribeHere": "Subscribe here",
     "orDivider": "or",

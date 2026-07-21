@@ -300,6 +300,19 @@
       display: flex;
       justify-content: flex-start;
       margin: -0.15rem 0 0.85rem;
+
+      // El margen negativo (diseño PC) hace que el motor de navegación espacial
+      // vea este elemento "superpuesto" con el campo de contraseña de arriba
+      // (la distancia primaria en esa dirección da negativa) y lo descarte como
+      // candidato válido para DOWN — quedando inalcanzable por control remoto.
+      // En TV neutralizamos el solape sin tocar el diseño de PC.
+      .device-tv & {
+        margin-top: 0.35rem;
+      }
+
+      &--tv {
+        justify-content: center;
+      }
     }
 
     .login-text-link {
@@ -340,6 +353,63 @@
       .login-text-link {
         display: inline;
         vertical-align: baseline;
+      }
+    }
+
+    // Variante TV de "olvidé contraseña" / "suscríbete aquí": en pantallas de
+    // 10 pies un texto plano se lee peor y da menos pista de que es enfocable;
+    // en TV los mostramos como botón (misma acción, look distinto). En PC se
+    // mantiene el link de texto de siempre.
+    .login-subscribe-row {
+      margin: 1rem 0 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      text-align: center;
+    }
+
+    .login-subscribe-hint {
+      font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .login-tv-action-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.65rem 1.5rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font: inherit;
+      font-size: 0.92rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      min-height: auto;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+
+      &:hover:not(:disabled),
+      &.focused,
+      &:focus-visible {
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.18);
+        border-color: var(--primary-color, #667eea);
+        transform: none;
+        box-shadow: none;
+        filter: none;
+      }
+
+      .device-tv & {
+        &.focused {
+          border-width: 3px;
+          background: rgba(255, 255, 255, 0.25);
+          box-shadow:
+            0 0 0 4px rgba(var(--primary-color-rgb, 102, 126, 234), 0.6),
+            0 0 0 8px rgba(var(--primary-color-rgb, 102, 126, 234), 0.3);
+        }
       }
     }
 

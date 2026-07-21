@@ -834,7 +834,13 @@ html:-moz-full-screen {
   font-size: 11px;
 }
 
+// Nota: usamos `:focus` (no solo `:focus-visible`) porque el foco se coloca
+// programáticamente (`el.focus()`) al navegar con el control remoto, y varios
+// WebViews de TV (Tizen/webOS 2019) no aplican el heurístico de `:focus-visible`
+// a foco puesto por script — sin `:focus` el anillo/resaltado nunca aparecía
+// dentro del submenú de configuración/cuenta.
 .home-sidebar-sublink:hover,
+.home-sidebar-sublink:focus,
 .home-sidebar-sublink:focus-visible {
   color: #fff;
   background: rgba(255, 255, 255, 0.14);
@@ -847,6 +853,7 @@ html:-moz-full-screen {
 }
 
 .home-sidebar-sublink--danger:hover,
+.home-sidebar-sublink--danger:focus,
 .home-sidebar-sublink--danger:focus-visible {
   background: rgba(229, 9, 20, 0.32);
 }

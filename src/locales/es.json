@@ -101,6 +101,8 @@
     "passwordPlaceholder": "Contraseña",
     "submit": "Ingresar",
     "forgotPassword": "Olvidé contraseña",
+    "forgotPasswordTitle": "Recuperar contraseña",
+    "forgotPasswordHint": "Escanea este código QR desde tu teléfono para recuperar tu contraseña.",
     "noAccountYet": "¿Aún no tienes cuenta?",
     "subscribeHere": "Suscríbete aquí",
     "orDivider": "o",

@@ -177,6 +177,46 @@ function isScrollableContainer(el) {
   }
 }
 
+function getScrollableAncestorsChain(el, topAncestor) {
+  const chain = [];
+  if (!(el instanceof HTMLElement)) return chain;
+  const top = topAncestor instanceof HTMLElement ? topAncestor : document.body;
+  if (!top.contains(el)) return chain;
+  let p = el.parentElement;
+  while (p) {
+    if (isScrollableContainer(p)) chain.push(p);
+    if (p === top) break;
+    p = p.parentElement;
+  }
+  return chain;
+}
+
+/**
+ * Guarda scrollTop/scrollLeft de los contenedores scrolleables entre `el` y
+ * `topAncestor`, para poder deshacer un auto-scroll no deseado.
+ * @param {HTMLElement} el
+ * @param {HTMLElement} [topAncestor]
+ */
+function snapshotScrollPositions(el, topAncestor) {
+  return getScrollableAncestorsChain(el, topAncestor).map((container) => ({
+    container,
+    top: container.scrollTop,
+    left: container.scrollLeft,
+  }));
+}
+
+/** @param {Array<{container: HTMLElement, top: number, left: number}>} snapshots */
+function restoreScrollPositions(snapshots) {
+  for (const { container, top, left } of snapshots) {
+    try {
+      container.scrollTop = top;
+      container.scrollLeft = left;
+    } catch {
+      /* noop */
+    }
+  }
+}
+
 /**
  * Desplaza los ancestros scrolleables entre `el` y `topAncestor` para que `el`
  * quede visible. Genérico: no asume estructura de fila/columna.
@@ -239,8 +279,16 @@ export function moveFocus(direction, root) {
     // Sin foco real puesto todavía: colocar el primero disponible en vez de no hacer nada.
     const candidates = getFocusableCandidates(root);
     if (!candidates.length) return false;
+    const scopeRoot = root instanceof HTMLElement ? root : undefined;
+    const snapshots = snapshotScrollPositions(candidates[0], scopeRoot);
     const placed = focusElementSafe(candidates[0]);
-    if (placed) scrollIntoViewWithinAncestors(candidates[0], root instanceof HTMLElement ? root : undefined);
+    // Algunos WebViews de TV (Tizen/webOS 2019) no respetan `{ preventScroll: true }`
+    // y hacen su propio auto-scroll "a ciegas" al enfocar — se ve como un pequeño
+    // scroll de más antes de que el foco "asiente" en la posición correcta.
+    // Deshacer ese auto-scroll ANTES de aplicar el nuestro (síncrono, mismo tick,
+    // sin repintar de por medio) evita ese salto visible.
+    restoreScrollPositions(snapshots);
+    if (placed) scrollIntoViewWithinAncestors(candidates[0], scopeRoot);
     return placed;
   }
 
@@ -249,7 +297,9 @@ export function moveFocus(direction, root) {
 
   const next = findNextFocusable(current, direction, scopeRoot);
   if (!next) return false;
+  const snapshots = snapshotScrollPositions(next, scopeRoot);
   if (!focusElementSafe(next)) return false;
+  restoreScrollPositions(snapshots);
   scrollIntoViewWithinAncestors(next, scopeRoot);
   try {
     requestTvFocusRingSync?.();
@@ -279,7 +329,10 @@ export function focusFirstIn(root, opts = {}) {
     if (scopeRoot instanceof HTMLElement) {
       const candidates = getFocusableCandidates(scopeRoot);
       if (candidates.length > 0) {
-        if (focusElementSafe(candidates[0])) {
+        const snapshots = snapshotScrollPositions(candidates[0], scopeRoot);
+        const placed = focusElementSafe(candidates[0]);
+        restoreScrollPositions(snapshots);
+        if (placed) {
           scrollIntoViewWithinAncestors(candidates[0], scopeRoot);
           try {
             requestTvFocusRingSync?.();

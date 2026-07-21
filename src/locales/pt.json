@@ -101,6 +101,8 @@
     "passwordPlaceholder": "Sua senha",
     "submit": "Entrar",
     "forgotPassword": "Esqueci a senha",
+    "forgotPasswordTitle": "Recuperar senha",
+    "forgotPasswordHint": "Escaneie este código QR no seu celular para recuperar sua senha.",
     "noAccountYet": "Ainda não tem conta?",
     "subscribeHere": "Assine aqui",
     "orDivider": "ou",

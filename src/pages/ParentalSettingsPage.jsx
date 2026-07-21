@@ -2,16 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePreload } from '../store/usePreload';
 import { useParental } from '../store/useParental';
+import { useDevice } from '../contexts/DeviceContext';
 import { getChannelStableId } from '../utils/channelId';
 import { useParentalGate } from '../hooks/useParentalGate';
 import ParentalChannelCard from '../components/parental/ParentalChannelCard';
 import ParentalPinGate from '../components/parental/ParentalPinGate';
 import ConfirmModal from '../components/ConfirmModal';
 import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
+import { navigationRouter } from '../navigation/NavigationRouter';
+import { TV_ACTION } from '../utils/tvRemote';
+import { findNextFocusable, focusElementSafe } from '../navigation/spatialNavigation';
 import '../styles/pages/_parental.scss';
 
 export function ParentalSettingsPage() {
   const { t } = useTranslation();
+  const { isTV } = useDevice();
   const { epg } = usePreload();
   const parental = useParental();
   const { requestPlayChannel } = useParentalGate();
@@ -34,6 +39,44 @@ export function ParentalSettingsPage() {
   // falta colocar el foco inicial al entrar (los modales de PIN/confirmación
   // atrapan el foco ellos mismos vía FocusManager cuando están abiertos).
   useTvInitialFocus('.parental-page', [channels.length]);
+
+  // El grid de canales y el segmento de clasificación por edad viven en
+  // tarjetas separadas; la fila de "Bloquear ahora" (más arriba, alineada a
+  // la derecha) queda geométricamente más cerca de la última columna del
+  // grid que el propio segmento (más a la izquierda, pero en la fila
+  // inmediatamente superior al grid) — por eso UP desde el grid "se cruzaba"
+  // con el bloque de PIN en vez de llegar al segmento, y viceversa.
+  useEffect(() => {
+    if (!isTV) return undefined;
+    const unregister = navigationRouter.register('global', (action) => {
+      const active = document.activeElement;
+      if (!(active instanceof HTMLElement)) return false;
+      if (!active.closest('.parental-page')) return false;
+
+      if (action === TV_ACTION.UP) {
+        const grid = active.closest('.parental-channel-grid');
+        if (grid && !findNextFocusable(active, 'up', grid)) {
+          const target =
+            document.querySelector('.parental-rating-segbtn.active') ||
+            document.querySelector('.parental-rating-segbtn');
+          if (target instanceof HTMLElement) return focusElementSafe(target);
+        }
+        return false;
+      }
+
+      if (
+        action === TV_ACTION.DOWN &&
+        active.matches('.parental-rating-segbtn, .parental-rating-checkbox input')
+      ) {
+        const firstCard = document.querySelector('.parental-channel-grid .parental-channel-card');
+        if (firstCard instanceof HTMLElement) return focusElementSafe(firstCard);
+        return false;
+      }
+
+      return false;
+    });
+    return unregister;
+  }, [isTV]);
 
   const openChangePinFlow = () => {
     setPinMsg('');

@@ -119,24 +119,37 @@ export function EpgEventModal({
 
   useEffect(() => {
     if (isTV && open) {
-      const t = setTimeout(() => {
-        const id =
-          !showActions
-            ? 'epg-event-close'
-            : isCatchupContext
-              ? showCatchupAction
-                ? 'epg-event-watch-catchup'
-                : 'epg-event-close'
-              : canPlayLive
-                ? 'epg-event-play-live'
-                : isFuture
-                  ? 'epg-event-remind'
-                  : showCatchupAction
-                    ? 'epg-event-watch-catchup'
-                    : 'epg-event-close';
-        focusElementSafe(document.getElementById(id));
-      }, 400);
-      return () => clearTimeout(t);
+      // El botón detrás de la card EPG originalmente seleccionada retiene el foco
+      // real del navegador hasta que lo movemos acá. Con un delay largo (antes
+      // 400ms) el anillo de foco se queda flotando sobre esa card, ya tapada por
+      // el overlay del modal, y recién "viaja" al botón cuando expira el timer —
+      // se percibe como que el foco salta entre los dos. Un par de rAF alcanza
+      // para que el modal (portal) ya esté montado, sin ese hueco perceptible.
+      let rafId1 = null;
+      let rafId2 = null;
+      rafId1 = requestAnimationFrame(() => {
+        rafId2 = requestAnimationFrame(() => {
+          const id =
+            !showActions
+              ? 'epg-event-close'
+              : isCatchupContext
+                ? showCatchupAction
+                  ? 'epg-event-watch-catchup'
+                  : 'epg-event-close'
+                : canPlayLive
+                  ? 'epg-event-play-live'
+                  : isFuture
+                    ? 'epg-event-remind'
+                    : showCatchupAction
+                      ? 'epg-event-watch-catchup'
+                      : 'epg-event-close';
+          focusElementSafe(document.getElementById(id));
+        });
+      });
+      return () => {
+        if (rafId1) cancelAnimationFrame(rafId1);
+        if (rafId2) cancelAnimationFrame(rafId2);
+      };
     }
   }, [isTV, open, canPlayLive, showActions, isFuture, showCatchupAction, isCatchupContext]);
 

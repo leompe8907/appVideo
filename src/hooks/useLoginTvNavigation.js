@@ -21,6 +21,7 @@ export const LOGIN_FOCUS_IDS = Object.freeze({
   UDID: 'login-udid',
   MODAL_CLOSE_QR: 'login-modal-close-qr',
   MODAL_CLOSE_UDID: 'login-modal-close-udid',
+  MODAL_CLOSE_FORGOT_QR: 'login-modal-close-forgot-qr',
 });
 
 const INITIAL_FOCUS_DELAY_MS = 0;

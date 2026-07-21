@@ -11,7 +11,7 @@ import { setLoggedOut, getActiveLicense, getCredentials, getSubscriberName } fro
 import ConfirmModal from './ConfirmModal';
 import { TV_ACTION } from '../utils/tvRemote';
 import { navigationRouter } from '../navigation/NavigationRouter';
-import { focusElementSafe, focusFirstIn, scrollIntoViewWithinAncestors } from '../navigation/spatialNavigation';
+import { focusElementSafe, focusFirstIn, moveFocus, scrollIntoViewWithinAncestors } from '../navigation/spatialNavigation';
 import { requestTvFocusRingSync } from './navigation/TvFocusRing';
 
 function SidebarIcon({ name }) {
@@ -398,6 +398,18 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             requestTvFocusRingSync();
           }
         }));
+        return true;
+      }
+
+      // UP/DOWN nunca deben "escapar" del sidebar hacia el contenido principal:
+      // si se delega al motor genérico con scope=document (sin zona activa), y
+      // no hay más elementos en esa dirección dentro del sidebar (ej. parado en
+      // "Cuenta", el primer ítem), el candidato más cercano en todo el documento
+      // puede terminar siendo una tarjeta del muro de bouquets. Al escopar
+      // explícitamente al propio `root`, o se mueve dentro del sidebar o no pasa
+      // nada — nunca se filtra hacia afuera. RIGHT sigue saliendo al contenido.
+      if (action === TV_ACTION.UP || action === TV_ACTION.DOWN) {
+        moveFocus(action, root);
         return true;
       }
 

@@ -302,18 +302,15 @@ $bouquet-items-gap: 2rem;
     overflow-y: hidden;
     --bouquet-cell-width: 14em;
 
-    // TV (WebKit antiguo): no depender de `gap` para separar tarjetas.
-    // Usamos márgenes en los hijos para que el layout sea estable.
-    .device-tv & {
-      .bouquet-horizontal-grid-track {
-        gap: 0 !important;
-
-        > .channel-card {
-          margin-inline-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
-          margin-block-end: var(--bouquet-items-gap, #{$bouquet-items-gap});
-        }
-      }
-    }
+    // Nota: a diferencia de los raíles flex (`bouquet-rail-horizontal-items`,
+    // que sí necesitan márgenes porque el `gap` en flexbox llegó tarde a los
+    // WebKit de TV 2019), `.bouquet-horizontal-grid-track` es un CSS Grid, y
+    // `gap` en Grid es compatible desde mucho antes — no hace falta el mismo
+    // parche. Forzar `gap:0` + márgenes acá causaba que el margen se sumara
+    // al ancho fijo de cada celda (`grid-auto-columns`), y las tarjetas
+    // terminaban superpuestas/demasiado juntas en TV (además de afectar los
+    // cálculos de distancia del motor de navegación espacial). Se usa el
+    // `gap` nativo del grid (línea de abajo) tanto en TV como en PC.
 
     &--logo-with-number {
       --bouquet-cell-width: 12.5rem;
