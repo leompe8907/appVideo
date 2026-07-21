@@ -5,7 +5,12 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores([
+    'dist',
+    // Código de terceros vendorizado (minificado, no formateado a mano): lintearlo
+    // solo genera ruido y puede ocultar warnings reales del resto del proyecto.
+    'src/player/vendor/**',
+  ]),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

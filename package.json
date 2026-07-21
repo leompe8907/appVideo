@@ -38,6 +38,8 @@
     "preview:delancertv": "cross-env VITE_BRAND=cableatlantico VITE_DEFAULT_BRAND=cableatlantico vite preview --outDir dist/cableatlantico",
     "preview:delancertv:full": "pnpm run build:delancertv && pnpm run preview:delancertv",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "check:secrets": "node scripts/check-brand-secrets.js",
     "check:es-compat": "node scripts/check-es-compat.js",
     "build:verify-tv": "pnpm run build && node scripts/postbuild-es-check.js",
@@ -101,9 +103,11 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "jsdom": "^29.1.1",
     "regenerator-runtime": "^0.14.1",
     "terser": "^5.46.1",
     "update-browserslist-db": "^1.2.3",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vitest": "^4.1.10"
   }
 }

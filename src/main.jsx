@@ -12,8 +12,14 @@ import { AppQueryProvider } from './query/QueryProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import App from './App';
 import { runCompatCheck, showCompatError } from './utils/compatCheck';
+import { installGlobalErrorReporting } from './utils/errorReporting';
 
 import './styles/main.scss';
+
+// Errores fuera del render de React (handlers, timeouts, promesas sin catch:
+// player, EPG, etc). En TV no hay devtools accesibles, así que esta es la
+// única forma de enterarse de que algo rompió en producción.
+installGlobalErrorReporting();
 
 // Foco visible (PC + 10-foot): aplica/quita clase `.focused` automáticamente.
 // Controlado por bandera: html[data-focus="on|off"] (setea BrandTheme).

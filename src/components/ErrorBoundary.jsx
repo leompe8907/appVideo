@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import i18n from '../locales/i18n';
+import { reportError } from '../utils/errorReporting';
 
 /**
  * Captura fallos de render en TV/navegadores sin consola accesible.
@@ -18,7 +19,12 @@ export class ErrorBoundary extends Component {
     if (import.meta.env.DEV) {
       console.error('[ErrorBoundary]', error, info?.componentStack);
     }
-    
+
+    reportError(error, {
+      context: 'ErrorBoundary',
+      extra: { componentStack: info?.componentStack?.slice(0, 2000) },
+    });
+
     // Auto-reload si es un error de carga de chunk (típico post-deploy en Vercel por caché vieja)
     const isChunkError = error && error.message && (
       error.message.includes('fetch dynamically imported module') ||
