@@ -58,16 +58,73 @@ async function loadPrivateKeyDer(privateKeyUrl) {
   return der;
 }
 
+function bytesToBase64(bytes) {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function derToPemPublicKey(derBuffer) {
+  const b64 = bytesToBase64(new Uint8Array(derBuffer));
+  const lines = b64.match(/.{1,64}/g) || [b64];
+  return `-----BEGIN PUBLIC KEY-----\n${lines.join('\n')}\n-----END PUBLIC KEY-----\n`;
+}
+
+/**
+ * Genera un par de llaves RSA-OAEP efímero, propio de este pareo (ver
+ * auditoría del backend: la llave privada estática que antes se descargaba
+ * de un archivo público -- `loadPrivateKeyDer()` arriba -- es extraíble por
+ * cualquiera que se baje la app, sea cual sea la ofuscación de build que se
+ * le aplique, porque el propio JS del cliente la necesita en runtime).
+ *
+ * La llave privada generada acá NUNCA se exporta/serializa -- vive solo
+ * como CryptoKey opaco en memoria del navegador mientras dura el pareo
+ * (~5 min) y se descarta al terminar (no hay ninguna referencia que
+ * persista más allá del cierre/objeto que la contiene). Solo la pública se
+ * exporta (SPKI/PEM) para mandarla al backend al pedir el UDID.
+ */
+export async function generateEphemeralKeyPair() {
+  const keyPair = await crypto.subtle.generateKey(
+    {
+      name: 'RSA-OAEP',
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: 'SHA-256',
+    },
+    true,
+    ['encrypt', 'decrypt'],
+  );
+  const spki = await crypto.subtle.exportKey('spki', keyPair.publicKey);
+  const publicKeyPem = derToPemPublicKey(spki);
+  udidLog('UDID crypto: ephemeral key pair generated');
+  return { privateKey: keyPair.privateKey, publicKeyPem };
+}
+
+/** Base64 de la llave pública PEM completa, listo para el header X-Device-Public-Key. */
+export function encodePublicKeyForHeader(publicKeyPem) {
+  return btoa(String(publicKeyPem));
+}
+
 /**
  * Descifra `encrypted_credentials` usando WebCrypto:
  * - RSA-OAEP SHA-256 (decrypt encrypted_key)
  * - AES-CBC (decrypt encrypted_data)
  * - plaintext es JSON (backend hizo json.dumps(...))
  */
-export async function decryptEncryptedCredentials(encryptedUdid, privateKeyUrl) {
+export async function decryptEncryptedCredentials(encryptedUdid, privateKeyOrUrl) {
   if (!encryptedUdid || typeof encryptedUdid !== 'object') {
     throw new Error('encryptedUdid is required');
   }
+
+  // Acepta tanto la forma nueva ({ privateKey } -- CryptoKey efímero ya en
+  // memoria, generado por generateEphemeralKeyPair()) como la vieja
+  // (string con privateKeyUrl, esquema estático por app_type que se
+  // conserva para no romper backends que todavía no mandan una llave
+  // efímera al aceptar el pareo).
+  const isEphemeralKeyObject =
+    privateKeyOrUrl && typeof privateKeyOrUrl === 'object' && privateKeyOrUrl.privateKey;
+  const ephemeralPrivateKey = isEphemeralKeyObject ? privateKeyOrUrl.privateKey : null;
+  const privateKeyUrl = isEphemeralKeyObject ? '' : privateKeyOrUrl;
 
   const creds =
     encryptedUdid && encryptedUdid.encrypted_credentials ? encryptedUdid.encrypted_credentials : {};
@@ -90,8 +147,6 @@ export async function decryptEncryptedCredentials(encryptedUdid, privateKeyUrl) 
     throw new Error('Payload incompleto');
   }
 
-  const privateKeyDer = await loadPrivateKeyDer(privateKeyUrl);
-
   // Decodifica inputs base64 (base64/base64url)
   const encryptedKeyBytes = base64ToBytes(encryptedAESKeyB64);
   const ivBytes = base64ToBytes(ivB64);
@@ -104,40 +159,65 @@ export async function decryptEncryptedCredentials(encryptedUdid, privateKeyUrl) 
   // 1) RSA-OAEP -> AES key raw 32 bytes
   udidLog('UDID crypto: WebCrypto RSA-OAEP decrypt start', {
     encryptedKeyBytesLen: encryptedKeyBytes.length,
+    usingEphemeralKey: !!ephemeralPrivateKey,
   });
   let aesKeyRaw = null;
-  const rsaAttempts = [
-    { name: 'RSA-OAEP', hash: 'SHA-256', label: undefined },
-    { name: 'RSA-OAEP', hash: 'SHA-1', label: undefined },
-  ];
-
   let lastRsaErr = null;
-  for (const attempt of rsaAttempts) {
-    try {
-      udidLog('UDID crypto: WebCrypto importKey', { hash: attempt.hash });
-      const rsaPrivateKey = await crypto.subtle.importKey(
-        'pkcs8',
-        privateKeyDer,
-        { name: 'RSA-OAEP', hash: attempt.hash },
-        false,
-        ['decrypt'],
-      );
 
-      // Nota: algunos navegadores soportan {name:'RSA-OAEP', label: Uint8Array}
-      // pero el backend indica label=None (equivalente a vacío), y por defecto es vacío.
-      aesKeyRaw = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, rsaPrivateKey, encryptedKeyBytes);
-      udidLog('UDID crypto: WebCrypto RSA-OAEP decrypt success', {
-        hash: attempt.hash,
+  if (ephemeralPrivateKey) {
+    // Llave efímera generada por este mismo dispositivo para este pareo --
+    // ya está en memoria como CryptoKey, no hace falta cargar/importar nada
+    // de un archivo estático.
+    try {
+      aesKeyRaw = await crypto.subtle.decrypt(
+        { name: 'RSA-OAEP' },
+        ephemeralPrivateKey,
+        encryptedKeyBytes,
+      );
+      udidLog('UDID crypto: WebCrypto RSA-OAEP decrypt success (ephemeral key)', {
         aesKeyLen: aesKeyRaw?.byteLength,
       });
-      break;
     } catch (e) {
       lastRsaErr = e;
-      udidLog('UDID crypto: WebCrypto RSA-OAEP decrypt failed', {
-        hash: attempt.hash,
+      udidLog('UDID crypto: WebCrypto RSA-OAEP decrypt failed (ephemeral key)', {
         name: e?.name,
         message: e?.message,
       });
+    }
+  } else {
+    const privateKeyDer = await loadPrivateKeyDer(privateKeyUrl);
+    const rsaAttempts = [
+      { name: 'RSA-OAEP', hash: 'SHA-256', label: undefined },
+      { name: 'RSA-OAEP', hash: 'SHA-1', label: undefined },
+    ];
+
+    for (const attempt of rsaAttempts) {
+      try {
+        udidLog('UDID crypto: WebCrypto importKey', { hash: attempt.hash });
+        const rsaPrivateKey = await crypto.subtle.importKey(
+          'pkcs8',
+          privateKeyDer,
+          { name: 'RSA-OAEP', hash: attempt.hash },
+          false,
+          ['decrypt'],
+        );
+
+        // Nota: algunos navegadores soportan {name:'RSA-OAEP', label: Uint8Array}
+        // pero el backend indica label=None (equivalente a vacío), y por defecto es vacío.
+        aesKeyRaw = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, rsaPrivateKey, encryptedKeyBytes);
+        udidLog('UDID crypto: WebCrypto RSA-OAEP decrypt success', {
+          hash: attempt.hash,
+          aesKeyLen: aesKeyRaw?.byteLength,
+        });
+        break;
+      } catch (e) {
+        lastRsaErr = e;
+        udidLog('UDID crypto: WebCrypto RSA-OAEP decrypt failed', {
+          hash: attempt.hash,
+          name: e?.name,
+          message: e?.message,
+        });
+      }
     }
   }
 

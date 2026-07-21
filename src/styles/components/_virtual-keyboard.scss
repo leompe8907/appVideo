@@ -18,9 +18,9 @@
 }
 
 .osd-keyboard-box {
-  width: min(96vw, 92vmin);
+  width: 90%;
   max-height: 94vh;
-  overflow-y: auto;
+  overflow-y: hidden;
   background: linear-gradient(
     165deg,
     rgba(32, 34, 42, 0.97) 0%,

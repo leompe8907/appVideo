@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getUdid } from '../cv/udid';
-import { decryptEncryptedCredentials } from '../services/udidCrypto';
+import {
+  decryptEncryptedCredentials,
+  generateEphemeralKeyPair,
+  encodePublicKeyForHeader,
+} from '../services/udidCrypto';
 import { setBrandItem } from '../utils/brandStorage';
 
 const DEFAULT_RECONNECT_MS = [3000, 6000, 10000];
@@ -80,6 +84,7 @@ async function processAuthResultPayload(
     setErrorFn,
     t,
     privateKeyUrl,
+    ephemeralPrivateKey,
   }
 ) {
   if (UDID_DEBUG) {
@@ -110,7 +115,11 @@ async function processAuthResultPayload(
     return;
   }
 
-  if (!privateKeyUrl) {
+  // Llave efímera generada por este dispositivo (nueva, ver auditoría) --
+  // si no hay una, cae al esquema viejo de llave estática por app_type
+  // (privateKeyUrl), que sigue soportado para no romper backends que
+  // todavía no la entienden.
+  if (!ephemeralPrivateKey && !privateKeyUrl) {
     handleErrorFn(t('login.udidErrorDecryptKeyMissing'));
     return;
   }
@@ -122,7 +131,10 @@ async function processAuthResultPayload(
         ? payload
         : { encrypted_credentials: encryptedCredentials };
 
-    const decryptedData = await decryptEncryptedCredentials(encryptedUdid, privateKeyUrl);
+    const decryptedData = await decryptEncryptedCredentials(
+      encryptedUdid,
+      ephemeralPrivateKey ? { privateKey: ephemeralPrivateKey } : privateKeyUrl,
+    );
     const decryptedCredentials = extractCredentialsFn(decryptedData);
     if (!decryptedCredentials) {
       handleErrorFn(t('login.udidErrorDecrypt'));
@@ -143,6 +155,7 @@ export function useUdidLoginFlow({ config, appName, onCredentials, t }) {
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
   const [code, setCode] = useState('');
+  const [tempToken, setTempToken] = useState('');
   const [expiresAt, setExpiresAt] = useState(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
 
@@ -155,6 +168,15 @@ export function useUdidLoginFlow({ config, appName, onCredentials, t }) {
   const doneRef = useRef(false);
   const activeCodeRef = useRef('');
   const expiresAtRef = useRef(null);
+  // temp_token: secreto real del pareo (el udid de 8 caracteres ya no
+  // alcanza por sí solo -- ver auditoría del backend). Debe viajar junto al
+  // udid en el QR y en cada mensaje siguiente del flujo.
+  const tempTokenRef = useRef('');
+  // Llave RSA efímera generada por este dispositivo para este pareo (ver
+  // auditoría: reemplaza la llave estática por app_type que antes se
+  // descargaba de un archivo público). Vive solo en memoria mientras dura
+  // el pareo -- nunca se exporta ni se persiste.
+  const ephemeralPrivateKeyRef = useRef(null);
 
   const cleanup = useCallback(() => {
     if (abortRef.current) {
@@ -173,6 +195,13 @@ export function useUdidLoginFlow({ config, appName, onCredentials, t }) {
       clearTimeout(reconnectRef.current);
       reconnectRef.current = null;
     }
+    // La llave efímera solo debe vivir mientras dura la sesión de pareo
+    // activa -- cleanup() no se llama nunca a mitad de una reconexión de la
+    // MISMA sesión (ver connectWs/scheduleReconnect), solo al empezar una
+    // nueva (start()) o al terminar (cancel()/desmontaje), así que es
+    // seguro descartarla acá.
+    ephemeralPrivateKeyRef.current = null;
+    tempTokenRef.current = '';
     if (wsRef.current) {
       try {
         wsRef.current.close();
@@ -251,9 +280,18 @@ export function useUdidLoginFlow({ config, appName, onCredentials, t }) {
         const payload = {
           type: 'auth_with_udid',
           udid: normalizedUdidForWs,
-          app_type: config?.appType || '10foot',
+          app_type: config?.appType || 'web',
           app_version: config?.appVersion || '1.0',
         };
+        // temp_token solo se agrega para brands que explícitamente lo piden
+        // (`tempTokenRequired: true`, ver brands.js) -- este hook es
+        // compartido con brands que apuntan a backends completamente
+        // distintos (p.ej. "intv"), que no conocen este campo y podrían
+        // tener deserializers estrictos que rechacen keys inesperadas. Sin
+        // el flag, el payload queda idéntico al de antes de este cambio.
+        if (config?.tempTokenRequired) {
+          payload.temp_token = tempTokenRef.current;
+        }
         try {
           wsRef.current?.send(JSON.stringify(payload));
         } catch {
@@ -361,6 +399,7 @@ export function useUdidLoginFlow({ config, appName, onCredentials, t }) {
                 setErrorFn: setError,
                 t,
                 privateKeyUrl: config?.privateKeyUrl,
+                ephemeralPrivateKey: ephemeralPrivateKeyRef.current,
               });
             } else {
               setStatus('waiting_confirmation');
@@ -401,6 +440,7 @@ export function useUdidLoginFlow({ config, appName, onCredentials, t }) {
             setErrorFn: setError,
             t,
             privateKeyUrl: config?.privateKeyUrl,
+            ephemeralPrivateKey: ephemeralPrivateKeyRef.current,
           });
         }
       };
@@ -446,14 +486,45 @@ export function useUdidLoginFlow({ config, appName, onCredentials, t }) {
     abortRef.current = controller;
     const deviceFingerprint = getUdid();
 
+    // Llave efímera por pareo (ver auditoría): se genera una por cada
+    // start(), nunca se exporta la privada, solo se manda la pública al
+    // backend. Solo se intenta si el brand la pidió explícitamente
+    // (`tempTokenRequired: true` en brands.js) -- este hook es compartido
+    // por brands que apuntan a otros backends (p.ej. "intv") que no
+    // entienden `X-Device-Public-Key` ni `temp_token`; sin el flag, el
+    // request queda idéntico al de antes de este cambio (solo
+    // X-Device-Fingerprint, sin header nuevo). Si WebCrypto no soporta esto
+    // en el engine (no debería pasar en LG/Samsung 2019+, pero por si
+    // acaso), se sigue el flujo sin ella y el backend cae de vuelta al
+    // esquema estático legado (compatibilidad).
+    let ephemeralPublicKeyPem = null;
+    if (config?.tempTokenRequired) {
+      try {
+        const { privateKey, publicKeyPem } = await generateEphemeralKeyPair();
+        ephemeralPrivateKeyRef.current = privateKey;
+        ephemeralPublicKeyPem = publicKeyPem;
+      } catch (e) {
+        ephemeralPrivateKeyRef.current = null;
+        udidWarn('UDID: ephemeral key generation failed, falling back to static key scheme', {
+          name: e?.name,
+          message: e?.message,
+        });
+      }
+    }
+
     try {
       udidLog('HTTP: request UDID manual', {
         requestUrl,
         udidFingerprintTail: String(deviceFingerprint || '').slice(-6),
+        hasEphemeralPublicKey: !!ephemeralPublicKeyPem,
       });
+      const headers = { 'X-Device-Fingerprint': deviceFingerprint };
+      if (ephemeralPublicKeyPem) {
+        headers['X-Device-Public-Key'] = encodePublicKeyForHeader(ephemeralPublicKeyPem);
+      }
       const response = await fetch(requestUrl, {
         method: 'GET',
-        headers: { 'X-Device-Fingerprint': deviceFingerprint },
+        headers,
         signal: controller.signal,
       });
       if (!response.ok) {
@@ -486,6 +557,13 @@ export function useUdidLoginFlow({ config, appName, onCredentials, t }) {
       if (!udidCode) {
         throw new Error(t('login.udidErrorRequest'));
       }
+
+      // temp_token real (secreto del pareo, ver auditoría) -- si el backend
+      // no lo manda (versión vieja del backend) queda vacío y el WS lo
+      // enviará igual como '' (el backend legado no lo exige).
+      const receivedTempToken = String(data?.temp_token || '').trim();
+      tempTokenRef.current = receivedTempToken;
+      setTempToken(receivedTempToken);
 
       activeCodeRef.current = udidCode;
       setBrandItem(null, 'external_login_udid', udidCode);
@@ -545,6 +623,7 @@ export function useUdidLoginFlow({ config, appName, onCredentials, t }) {
     status,
     error,
     code,
+    tempToken,
     remainingSeconds,
     appName: appName || 'App',
     isActive: ['requesting_code', 'waiting_confirmation', 'reconnecting', 'logging_in'].includes(status),

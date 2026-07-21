@@ -266,8 +266,8 @@ export const BRANDS = [
       },
       // --- Enlace "Olvidé contraseña" ---
       forgotPassword: {
-        enabled: false, // Muestra enlace debajo del campo contraseña
-        url: "", // URL destino al hacer clic; vacío = no navega
+        enabled: true, // Muestra enlace debajo del campo contraseña
+        url: "https://shop.fotelka.tv/?c=customer&p=reset_password", // URL destino al hacer clic; vacío = no navega
       },
       // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
@@ -275,12 +275,13 @@ export const BRANDS = [
         baseUrl: "http://127.0.0.1:8001", // Base HTTP del backend UDID
         requestPath: "/udid/request-udid-manual/", // Endpoint POST para solicitar código UDID
         wsUrl: "ws://127.0.0.1:8001/ws/auth/", // WebSocket para recibir credenciales cifradas
-        appType: "10foot", // Tipo de app enviado al backend
+        appType: "web", // Tipo de app enviado al backend (valor genérico seguro; TODO: usar resolveEnginePlatform() para lg/samsung cuando corresponda)
         appVersion: "1.0", // Versión enviada al backend
         maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
         reconnectMs: [3000, 6000, 10000], // Delays entre reintentos (ms)
         heartbeatMs: 30000, // Intervalo de ping WebSocket (ms)
-        privateKeyUrl: "/cableatlantico/keys/private_key.pem", // Ruta pública PEM para descifrar encrypted_credentials
+        privateKeyUrl: "/cableatlantico/keys/private_key.pem", // Ruta pública PEM para descifrar encrypted_credentials (fallback si WebCrypto no soporta llave efímera)
+        tempTokenRequired: true, // Este backend (Wind) exige temp_token + soporta llave efímera por pareo -- NO activar en brands que apunten a otros backends (ver "intv")
       },
       // --- Login social (Google / Facebook); oculto en TV ---
       socialLogin: {
@@ -1211,12 +1212,13 @@ export const BRANDS = [
         baseUrl: "http://127.0.0.1:8000", // Base HTTP del backend UDID
         requestPath: "/udid/request-udid-manual/", // Endpoint POST para solicitar código UDID
         wsUrl: "ws://127.0.0.1:8000/ws/auth/", // WebSocket para recibir credenciales cifradas
-        appType: "10foot", // Tipo de app enviado al backend
+        appType: "web", // Tipo de app enviado al backend (valor genérico seguro; TODO: usar resolveEnginePlatform() para lg/samsung cuando corresponda)
         appVersion: "1.0", // Versión enviada al backend
         maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
         reconnectMs: [3000, 6000, 10000], // Delays entre reintentos (ms)
         heartbeatMs: 30000, // Intervalo de ping WebSocket (ms)
-        privateKeyUrl: "/cableatlantico/keys/private_key.pem", // Ruta pública PEM para descifrar encrypted_credentials
+        privateKeyUrl: "/cableatlantico/keys/private_key.pem", // Ruta pública PEM para descifrar encrypted_credentials (fallback si WebCrypto no soporta llave efímera)
+        tempTokenRequired: true, // Este backend (Wind) exige temp_token + soporta llave efímera por pareo -- NO activar en brands que apunten a otros backends (ver "intv")
       },
       // --- Login social (Google / Facebook); oculto en TV ---
       socialLogin: {

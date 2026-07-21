@@ -258,7 +258,14 @@ export function LoginPage() {
     let cancelled = false;
     const buildUdidQr = async () => {
       try {
-        const payload = `${appName}:${udidFlow.code}`;
+        // temp_token va en el QR junto al code -- es el secreto real del
+        // pareo (ver auditoría del backend: el code de 8 caracteres ya no
+        // alcanza por sí solo). Si el backend todavía no lo manda (versión
+        // vieja), udidFlow.tempToken queda '' y el QR sigue funcionando
+        // igual que antes contra ese backend.
+        const payload = udidFlow.tempToken
+          ? `${appName}:${udidFlow.code}:${udidFlow.tempToken}`
+          : `${appName}:${udidFlow.code}`;
         const dataUrl = await QRCode.toDataURL(payload, { width: 200, margin: 1 });
         if (cancelled) return;
         setUdidQrImageSrc(dataUrl);
@@ -271,7 +278,7 @@ export function LoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [appName, isUdidModalOpen, udidFlow.code]);
+  }, [appName, isUdidModalOpen, udidFlow.code, udidFlow.tempToken]);
 
   const handleOpenForgotPassword = () => {
     if (!canShowForgotPassword) return;
