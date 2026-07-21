@@ -7,6 +7,7 @@ import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { FocusableInput } from '../components/navigation/FocusableInput';
 import { FocusableButton } from '../components/navigation/FocusableButton';
+import { MessageModal } from '../components/MessageModal';
 import { resolvePostLoginRoute } from '../utils/navigation';
 import { clearSessionBeforeNewLogin, loginAndActivateLicense } from '../services/loginFlow';
 import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
@@ -640,7 +641,13 @@ export function LoginPage() {
             </div>
           )}
 
-          {error && <div className="error-message">{error}</div>}
+          {error && (
+            <MessageModal
+              type="error"
+              message={error}
+              onClose={() => setError('')}
+            />
+          )}
 
           <FocusableButton
             type="submit"

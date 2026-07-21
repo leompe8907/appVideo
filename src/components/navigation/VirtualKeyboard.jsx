@@ -52,6 +52,7 @@ export function VirtualKeyboard({
 }) {
   const { t, i18n } = useTranslation();
   const [value, setValue] = useState(initialValue);
+  const [cursorPosition, setCursorPosition] = useState(initialValue.length);
   const [layoutLanguage, setLayoutLanguage] = useState(() => resolveLayoutLanguage(i18n.language));
   const [isUppercase, setIsUppercase] = useState(false);
 
@@ -119,19 +120,32 @@ export function VirtualKeyboard({
   }, [layoutLanguage, isUppercase, isNumericMode]);
 
   const handleCharPress = (char) => {
+    const nextChar = isUppercase ? char.toUpperCase() : char.toLowerCase();
     setValue((prev) => {
-      const nextChar = isUppercase ? char.toUpperCase() : char.toLowerCase();
-      return prev + nextChar;
+      return prev.slice(0, cursorPosition) + nextChar + prev.slice(cursorPosition);
     });
+    setCursorPosition((prev) => prev + 1);
   };
 
   const handleActionPress = (action) => {
     if (action === 'shift') {
       setIsUppercase((prev) => !prev);
     } else if (action === 'space') {
-      setValue((prev) => prev + ' ');
+      setValue((prev) => {
+        return prev.slice(0, cursorPosition) + ' ' + prev.slice(cursorPosition);
+      });
+      setCursorPosition((prev) => prev + 1);
     } else if (action === 'backspace') {
-      setValue((prev) => prev.slice(0, -1));
+      if (cursorPosition > 0) {
+        setValue((prev) => {
+          return prev.slice(0, cursorPosition - 1) + prev.slice(cursorPosition);
+        });
+        setCursorPosition((prev) => prev - 1);
+      }
+    } else if (action === 'left') {
+      setCursorPosition((prev) => Math.max(0, prev - 1));
+    } else if (action === 'right') {
+      setCursorPosition((prev) => Math.min(value.length, prev + 1));
     } else if (action === 'cancel') {
       onCancel?.();
     } else if (action === 'ok') {
@@ -211,7 +225,8 @@ export function VirtualKeyboard({
         } else if (numKey === 'OK') {
           onConfirm?.(value);
         } else {
-          setValue((prev) => prev + numKey);
+          setValue((prev) => prev.slice(0, cursorPosition) + numKey + prev.slice(cursorPosition));
+          setCursorPosition((prev) => prev + 1);
         }
       }
     } else {
@@ -220,7 +235,7 @@ export function VirtualKeyboard({
         e.preventDefault();
         e.stopPropagation();
         if (row === 4) {
-          const actions = ['shift', 'space', 'backspace', 'cancel', 'ok'];
+          const actions = ['shift', 'space', 'left', 'right', 'backspace', 'cancel', 'ok'];
           const currentIdx = actions.indexOf(actionKey);
           if (currentIdx < actions.length - 1) {
             nextAction = actions[currentIdx + 1];
@@ -234,7 +249,7 @@ export function VirtualKeyboard({
         e.preventDefault();
         e.stopPropagation();
         if (row === 4) {
-          const actions = ['shift', 'space', 'backspace', 'cancel', 'ok'];
+          const actions = ['shift', 'space', 'left', 'right', 'backspace', 'cancel', 'ok'];
           const currentIdx = actions.indexOf(actionKey);
           if (currentIdx > 0) {
             nextAction = actions[currentIdx - 1];
@@ -252,9 +267,11 @@ export function VirtualKeyboard({
         } else if (row === 3) {
           nextRow = 4;
           if (col <= 1) nextAction = 'shift';
-          else if (col <= 4) nextAction = 'space';
-          else if (col <= 6) nextAction = 'backspace';
-          else if (col <= 8) nextAction = 'cancel';
+          else if (col <= 3) nextAction = 'space';
+          else if (col === 4) nextAction = 'left';
+          else if (col === 5) nextAction = 'right';
+          else if (col <= 7) nextAction = 'backspace';
+          else if (col === 8) nextAction = 'cancel';
           else nextAction = 'ok';
         }
       } else if (key === 'ArrowUp') {
@@ -264,6 +281,8 @@ export function VirtualKeyboard({
           nextRow = 3;
           if (actionKey === 'shift') nextCol = 1;
           else if (actionKey === 'space') nextCol = 3;
+          else if (actionKey === 'left') nextCol = 4;
+          else if (actionKey === 'right') nextCol = 5;
           else if (actionKey === 'backspace') nextCol = 6;
           else if (actionKey === 'cancel') nextCol = 8;
           else nextCol = 9;
@@ -324,16 +343,18 @@ export function VirtualKeyboard({
 
         {/* Input Preview */}
         <div className="osd-keyboard-input-preview-wrapper">
-          <input
-            className="osd-keyboard-input-preview"
-            type={type === 'password' ? 'password' : 'text'}
-            value={value}
-            readOnly
-          />
+          <div className="osd-keyboard-input-preview-custom">
+            <span>{type === 'password' ? '•'.repeat(value.slice(0, cursorPosition).length) : value.slice(0, cursorPosition)}</span>
+            <span className="osd-keyboard-caret"></span>
+            <span>{type === 'password' ? '•'.repeat(value.slice(cursorPosition).length) : value.slice(cursorPosition)}</span>
+          </div>
           {value.length > 0 && (
             <span
               className="osd-keyboard-clear-preview"
-              onClick={() => setValue('')}
+              onClick={() => {
+                setValue('');
+                setCursorPosition(0);
+              }}
             >
               ×
             </span>
@@ -367,7 +388,8 @@ export function VirtualKeyboard({
                         } else if (btnLabel === 'OK') {
                           onConfirm?.(value);
                         } else {
-                          setValue((prev) => prev + btnLabel);
+                          setValue((prev) => prev.slice(0, cursorPosition) + btnLabel + prev.slice(cursorPosition));
+                          setCursorPosition((prev) => prev + 1);
                         }
                       }}
                       tabIndex={0}
@@ -443,6 +465,40 @@ export function VirtualKeyboard({
                   tabIndex={0}
                 >
                   [ {t('keyboard.space', { defaultValue: 'Espacio' })} ]
+                </button>
+
+                <button
+                  id="key-action-left"
+                  className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--arrow"
+                  onFocus={() => {
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'left';
+                  }}
+                  onClick={() => {
+                    handleActionPress('left');
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'left';
+                  }}
+                  tabIndex={0}
+                >
+                  ◄
+                </button>
+
+                <button
+                  id="key-action-right"
+                  className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--arrow"
+                  onFocus={() => {
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'right';
+                  }}
+                  onClick={() => {
+                    handleActionPress('right');
+                    coordsRef.current.row = 4;
+                    coordsRef.current.actionKey = 'right';
+                  }}
+                  tabIndex={0}
+                >
+                  ►
                 </button>
 
                 <button

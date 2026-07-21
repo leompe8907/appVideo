@@ -53,7 +53,8 @@
   margin-bottom: clamp(1.25rem, 3.5vmin, 2.5rem);
 }
 
-.osd-keyboard-input-preview {
+.osd-keyboard-input-preview,
+.osd-keyboard-input-preview-custom {
   width: 100%;
   height: clamp(4rem, 8.5vmin, 6.5rem);
   background: rgba(0, 0, 0, 0.45);
@@ -68,6 +69,9 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   letter-spacing: 0.08em;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:focus {
     border-color: var(--focus-color, #ffffff);
@@ -75,6 +79,20 @@
       inset 0 2px 8px rgba(0, 0, 0, 0.35),
       0 0 0 2px rgba(255, 255, 255, 0.12);
   }
+}
+
+.osd-keyboard-caret {
+  display: inline-block;
+  width: 3px;
+  height: clamp(1.8rem, 5vmin, 3rem);
+  background-color: var(--focus-color, #3a86ff);
+  margin: 0 1px;
+  animation: osd-caret-blink 1s step-end infinite;
+}
+
+@keyframes osd-caret-blink {
+  from, to { background-color: transparent }
+  50% { background-color: var(--focus-color, #3a86ff) }
 }
 
 .osd-keyboard-clear-preview {
@@ -226,6 +244,11 @@
 
   &--space {
     flex: 3;
+  }
+
+  &--arrow {
+    flex: 1;
+    font-size: clamp(1.45rem, 4vmin, 2.5rem);
   }
 
   &--backspace {
