@@ -82,6 +82,10 @@ export function useLoginTvNavigation({ isTV, loginFormRef }) {
         return false; // caret no está al final: dejar que mueva el cursor nativamente
       }
 
+      if (activeId === LOGIN_FOCUS_IDS.PASSWORD_TOGGLE && action === TV_ACTION.LEFT) {
+        return focusElementSafe(document.getElementById(LOGIN_FOCUS_IDS.PASSWORD));
+      }
+
       if (
         isTextInputElement(active) &&
         (action === TV_ACTION.UP || action === TV_ACTION.DOWN)
