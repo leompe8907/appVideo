@@ -1008,6 +1008,7 @@ $vod-poster-height: calc(#{$vod-card-width} * 3 / 2);
     @include flex-center;
     width: 100%;
     flex-shrink: 0;
+    height: 100%;
     // Borde, fondo, aspect-ratio y min-height: heredados de .vod-card-poster.
   }
 

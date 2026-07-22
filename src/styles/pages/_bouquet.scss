@@ -247,7 +247,7 @@ $bouquet-items-gap: 2rem;
         .embla-slide {
           height: 100%;
           display: flex;
-          align-items: center;
+          align-items: stretch;
         }
       }
 
@@ -623,7 +623,7 @@ $bouquet-items-gap: 2rem;
           position: absolute;
           top: 0;
           left: 0;
-          object-fit: cover;
+          object-fit: fill;
         }
 
         .channel-card-event-info {
@@ -868,7 +868,7 @@ $bouquet-items-gap: 2rem;
           width: 100%;
           flex: 1;
           min-height: 0;
-          object-fit: cover;
+          object-fit: fill;
         }
 
         .channel-card-event-info {
@@ -1133,7 +1133,7 @@ $bouquet-items-gap: 2rem;
   }
 
   .bouquet-horizontal-grid-track {
-    gap: 0 !important;
+    gap: 2rem !important;
 
     > .channel-card,
     > .vod-card,

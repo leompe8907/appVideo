@@ -9,10 +9,7 @@ import {
   PLAYER_ENGINE_STATES,
 } from '../contracts';
 import { isHlsUrl } from './hlsSupport';
-import {
-  applyStreamrootHlsSessionConfig,
-  buildStreamrootHlsPluginOptions,
-} from './sessionHlsXhr';
+import { applyStreamrootHlsSessionConfig } from './sessionHlsXhr';
 
 let videoElementIdSeq = 0;
 
@@ -179,7 +176,6 @@ export class WebEngine extends BaseEngine {
       preload: 'auto',
       fluid: false,
       inactivityTimeout: 0,
-      ...buildStreamrootHlsPluginOptions(),
     });
     applyStreamrootHlsSessionConfig(this.player);
 

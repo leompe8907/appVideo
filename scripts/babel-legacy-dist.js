@@ -38,8 +38,7 @@ function collectLegacyJs(dir, out = []) {
     if (
       extname(entry) === '.js' &&
       entry.includes('legacy') &&
-      !entry.includes('polyfills-legacy') &&
-      !entry.includes('videojs-hlsjs-plugin')
+      !entry.includes('polyfills-legacy')
     ) {
       out.push(full);
     }

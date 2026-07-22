@@ -14,7 +14,6 @@ const root = process.argv[2] || 'dist';
 /** Chunks de terceros donde ?? puede ser polyfill intencional */
 const IGNORE_FILE_PATTERNS = [
   /polyfills-legacy/i,
-  /videojs-hlsjs-plugin/i,
 ];
 
 function hasOptionalChaining(code) {
