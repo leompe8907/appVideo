@@ -194,7 +194,6 @@
  *
  * @param {Object} EPG - Configuración de EPG por marca (guía + cards):
  *   @param {number} EPG.daysOffset
- *   @param {number} EPG.rowsOnInit
  *   @param {number} EPG.hoursLimit
  *   @param {string} EPG.epgLineColorTime - Color guía (alineado con ui.epgLineColorTime de la marca).
  *   @param {number} EPG.reminderLeadSeconds - Segundos antes de start para popup de recordatorio. Default: 60.
@@ -305,7 +304,6 @@ export const BRANDS = [
     // EPG: configuración unificada (guía + cards)
     EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
-      rowsOnInit: 200, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#2CE308",
       reminderLeadSeconds: 60,
@@ -619,7 +617,6 @@ export const BRANDS = [
     // EPG: configuración unificada (guía + cards)
     EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
-      rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#3333FF",
       reminderLeadSeconds: 60,
@@ -945,7 +942,6 @@ export const BRANDS = [
     // EPG: configuración unificada (guía + cards)
     EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
-      rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#2CE308",
       reminderLeadSeconds: 60,
@@ -1242,7 +1238,6 @@ export const BRANDS = [
     // EPG: configuración unificada (guía + cards)
     EPG: {
       daysOffset: 3, // Días de offset para la API de guía de programación
-      rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#3333FF",
       reminderLeadSeconds: 60,
@@ -1537,7 +1532,6 @@ export const BRANDS = [
     // EPG: configuración unificada (guía + cards)
     EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
-      rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#3333FF", //Color de la linea que indica la hora actual en la guia
       reminderLeadSeconds: 60,
@@ -1862,7 +1856,6 @@ export const BRANDS = [
     // EPG: configuración unificada (guía + cards)
     EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
-      rowsOnInit: 7, // Número de filas iniciales para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#3333FF",
       reminderLeadSeconds: 60,

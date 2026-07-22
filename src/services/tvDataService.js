@@ -340,7 +340,7 @@ export async function getBouquetsWithChannels(options = {}) {
  * Carga EPG para una lista de streams (canales) usando la config de marca.
  * Migrado del proyecto EPG (getEPGByBouquet). Asigna channel.epgItems a cada canal.
  * @param {Array} streams - Lista de canales (con epgStreamId).
- * @param {Object} brandConfig - Config de marca (epgApiKey/epgApiToken en brandConfig; EPG: { daysOffset, rowsOnInit, hoursLimit } en marca).
+ * @param {Object} brandConfig - Config de marca (epgApiKey/epgApiToken en brandConfig; EPG: { daysOffset, hoursLimit } en marca).
  * @param {Object} options - maxChannels, onProgress(index, total).
  * @returns {Promise<Array>} La misma lista con epgItems asignados.
  */

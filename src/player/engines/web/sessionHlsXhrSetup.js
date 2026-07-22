@@ -11,6 +11,16 @@ function middlewareNeedsSession(url) {
   return /(?:^|[?&])m3u8(?:=|&|$)/i.test(url);
 }
 
+/**
+ * URI de clave AES-128 servida por este middleware (`index.php?requestMode=
+ * mekey&...&chunk=N...`) — una key DISTINTA por cada segmento (`chunk=`
+ * cambia por .ts). Se usa para detectar cuándo aplicar el workaround de IV
+ * fijo en `HlsPlaybackController` (ver ahí el porqué).
+ */
+export function isPanaccessRotatingKeyUri(url) {
+  return typeof url === 'string' && /requestmode=mekey/i.test(url);
+}
+
 function withSessionId(url, sessionId) {
   if (!middlewareNeedsSession(url)) {
     return url;

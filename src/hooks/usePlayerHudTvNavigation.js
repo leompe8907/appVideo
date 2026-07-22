@@ -43,9 +43,9 @@ const INITIAL_FOCUS_DELAY_MS = 280;
  *    él mismo vía su propia zona de FocusManager antes de que esto se ejecute).
  *  - Dejar pasar intacto el zapping por flechas (`channelChangeWithArrows`):
  *    mientras está activo, este hook NO debe mover el foco ni la geometría
- *    genérica debe correr para UP/DOWN — se marcan como "manejadas" sin hacer
- *    nada para que el listener dedicado de `usePlayerChannelZapping` (que sí
- *    corre, independiente de este router) sea el único que reaccione.
+ *    genérica debe correr para UP/DOWN — retorna `false` (no lo manejé) para
+ *    que el propio handler de `usePlayerChannelZapping`, registrado en la
+ *    misma zona 'global' de `NavigationRouter`, sea quien lo consuma.
  */
 export function usePlayerHudTvNavigation({
   isTV,
@@ -83,12 +83,12 @@ export function usePlayerHudTvNavigation({
     if (!isTV || !hasContent) return undefined;
 
     const unregister = navigationRouter.register('global', (action) => {
-      // Zapping por flechas: no tocar el foco, dejar que el listener dedicado
-      // de usePlayerChannelZapping reaccione solo (nunca llama preventDefault
-      // desde acá para no interferir con su propia lógica).
+      // Zapping por flechas: no tocar el foco ni consumir la tecla — se deja
+      // pasar (`false`) para que el handler de `usePlayerChannelZapping`,
+      // registrado en esta misma zona 'global', sea quien la maneje.
       const arrowZappingActive = channelChangeWithArrows && isLiveService && isPlaybackMaximized;
       if (arrowZappingActive && (action === TV_ACTION.UP || action === TV_ACTION.DOWN)) {
-        return true;
+        return false;
       }
 
       if (action === TV_ACTION.BACK) {

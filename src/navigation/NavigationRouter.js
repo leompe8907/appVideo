@@ -208,8 +208,22 @@ class NavigationRouter {
       return;
     }
 
-    // ENTER y el resto de acciones: comportamiento nativo del elemento enfocado
-    // (un <button>/<a> ya dispara su onClick con OK/Enter del control remoto).
+    // --- CHANNEL_UP/CHANNEL_DOWN (CH+/CH-): sin geometría propia, se delegan
+    // por completo a handlers de zona registrados (ej. zapping de canal del
+    // reproductor). Antes cada consumidor de estas teclas necesitaba su propio
+    // listener de `keydown` en `window`; ahora comparten el único listener
+    // central igual que BACK/LRUD. Si ningún handler la consume, se deja pasar.
+    if (action === TV_ACTION.CHANNEL_UP || action === TV_ACTION.CHANNEL_DOWN) {
+      const activeZoneId = focusManager.getActiveZoneId();
+      if (this.runZoneHandlers(activeZoneId, action, e)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      return;
+    }
+
+    // ENTER: comportamiento nativo del elemento enfocado (un <button>/<a> ya
+    // dispara su onClick con OK/Enter del control remoto).
   }
 }
 

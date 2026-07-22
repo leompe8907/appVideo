@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { findZappingChannelIndex } from '../utils/channelZappingList';
-import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
+import { TV_ACTION } from '../utils/tvRemote';
+import { navigationRouter } from '../navigation/NavigationRouter';
 
 /**
  * Zapping en vivo (paridad 10foot, sin excepción fotelka en flechas).
@@ -8,6 +9,13 @@ import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
  * - CH+ / CH−: siempre con live y reproductor maximizado (como scene.js PUP/PDOWN).
  * - ↑/↓: solo si `arrowKeysEnabled` (player.channelChangeWithArrows).
  * - channelUp → +1 en lista; channelDown → −1 (LCN ascendente, lcn 0 al final).
+ *
+ * Se registra como handler de zona 'global' en `NavigationRouter` en vez de
+ * instalar su propio `window.addEventListener('keydown')` — antes este hook,
+ * `usePlayerHudTvNavigation` y el router central competían por la misma tecla
+ * con un `stopImmediatePropagation()` propio que dependía del orden de montaje
+ * para "ganarle" a los demás. Ahora hay un único listener de `keydown` en toda
+ * la app; este hook solo aporta un handler más a la cola de esa zona.
  */
 export function usePlayerChannelZapping({
   arrowKeysEnabled = false,
@@ -56,9 +64,12 @@ export function usePlayerChannelZapping({
       (arrowKeysEnabled || channelKeysEnabled);
     if (!canZap) return undefined;
 
-    const onKeyDown = (e) => {
-      if (overlay) return;
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
+    // Handler de zona: `NavigationRouter` ya filtró altKey/ctrlKey/metaKey y
+    // resolvió `action` antes de invocar esto. Retornar `true` consume la
+    // tecla (el router hace preventDefault/stopPropagation por nosotros);
+    // `false` la deja pasar sin necesidad de stopImmediatePropagation.
+    const handler = (action) => {
+      if (overlay) return false;
 
       const active = document.activeElement;
       if (
@@ -66,12 +77,10 @@ export function usePlayerChannelZapping({
         active instanceof HTMLTextAreaElement ||
         active instanceof HTMLSelectElement
       ) {
-        return;
+        return false;
       }
 
-      const action = getTvActionFromKeyEvent(e);
       let direction = null;
-
       if (channelKeysEnabled && action === TV_ACTION.CHANNEL_UP) {
         direction = 'up';
       } else if (channelKeysEnabled && action === TV_ACTION.CHANNEL_DOWN) {
@@ -82,16 +91,12 @@ export function usePlayerChannelZapping({
         direction = 'down';
       }
 
-      if (!direction) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation?.();
+      if (!direction) return false;
       zapByDirection(direction);
+      return true;
     };
 
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+    return navigationRouter.register('global', handler);
   }, [
     arrowKeysEnabled,
     channelKeysEnabled,

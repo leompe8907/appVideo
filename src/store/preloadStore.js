@@ -5,6 +5,7 @@ import panaccessService from '../services/panaccessService';
 import { processAdsFromApi } from '../utils/adsData';
 import { mergeEpgIntoChannels } from '../utils/epgMerge';
 import { dedupeStreams } from '../utils/channelId';
+import { normalizeList, prepareRecorded, toMs } from './catchupRecorded';
 
 // FIX #1: Evaluar IS_DEV a nivel de módulo, fuera de cualquier closure asíncrono.
 // En closures de setTimeout/catch, `import.meta` puede ser undefined en WebKit 2019 (producción).
@@ -377,25 +378,6 @@ export const usePreloadStore = create(function (set, get) {
         };
       });
 
-      var toMs = function (v) {
-        if (v == null) return null;
-        if (typeof v === 'number') return isFinite(v) ? v : null;
-        var ms = new Date(v).getTime();
-        return isFinite(ms) ? ms : null;
-      };
-
-      var normalizeList = function (resp, keys) {
-        if (Array.isArray(resp)) return resp;
-        if (resp && typeof resp === 'object') {
-          for (var i = 0; i < keys.length; i++) {
-            var k = keys[i];
-            var value = resp[k];
-            if (Array.isArray(value)) return value;
-          }
-        }
-        return [];
-      };
-
       var buildGroupsWithEvents = async function (enableRetry) {
         var groupsResp = await panaccessService.getCatchupGroups({ enableRetry: enableRetry });
         var groupsList = normalizeList(groupsResp, ['catchupGroups', 'groups', 'items', 'answer']);
@@ -488,65 +470,9 @@ export const usePreloadStore = create(function (set, get) {
         return groupsWithEvents;
       };
 
-      var prepareRecorded = function (tasksList, groupsWithEvents) {
-        var validTasks = normalizeList(tasksList, ['recordingTasks', 'items', 'tasks', 'answer']).filter(function (t) {
-          var mode = Number(t.mode || 0);
-          var catchupId = Number(t.catchupId != null ? t.catchupId : (t.catchup_id != null ? t.catchup_id : (t.id != null ? t.id : 0)));
-          var deleted = !!t.deleted;
-          return mode === 4 && catchupId > 0 && !deleted;
-        });
-
-        var recorded = validTasks
-          .map(function (task) {
-            var taskCatchupId = task.catchupId != null ? task.catchupId : (task.catchup_id != null ? task.catchup_id : (task.id != null ? task.id : null));
-            if (taskCatchupId == null) return null;
-
-            var taskCatchupIdStr = String(taskCatchupId);
-            var group = null;
-            for (var gi = 0; gi < groupsWithEvents.length; gi++) {
-              var g = groupsWithEvents[gi];
-              if (!Array.isArray(g.events)) continue;
-              var found = false;
-              for (var ei = 0; ei < g.events.length; ei++) {
-                var ev = g.events[ei];
-                var evId = String(ev && ev.id != null ? ev.id : (ev && ev.eventId != null ? ev.eventId : (ev && ev.catchupId != null ? ev.catchupId : '')));
-                if (evId === taskCatchupIdStr) { found = true; break; }
-              }
-              if (found) { group = g; break; }
-            }
-            if (!group) return null;
-
-            var event = null;
-            for (var ei2 = 0; ei2 < group.events.length; ei2++) {
-              var evCheck = group.events[ei2];
-              var evCheckId = String(evCheck && evCheck.id != null ? evCheck.id : (evCheck && evCheck.eventId != null ? evCheck.eventId : (evCheck && evCheck.catchupId != null ? evCheck.catchupId : '')));
-              if (evCheckId === taskCatchupIdStr) { event = evCheck; break; }
-            }
-            if (!event) return null;
-
-            var startMs = toMs(task.startDate != null ? task.startDate : (task.start != null ? task.start : null));
-
-            var rec = {};
-            Object.keys(task).forEach(function(k) { rec[k] = task[k]; });
-            rec.catchupId = Number(taskCatchupIdStr);
-            rec.startDate = startMs != null ? new Date(startMs) : null;
-            rec.event = event;
-            rec.image = group.img != null ? group.img : (group.imageUrl != null ? group.imageUrl : (group.posterUrl != null ? group.posterUrl : null));
-            rec.lcn = group.lcn != null ? group.lcn : null;
-            rec.catchupName = group.name != null ? group.name : null;
-            return rec;
-          })
-          .filter(Boolean);
-
-        recorded.sort(function (a, b) {
-          var aa = a.startDate ? a.startDate.valueOf() : 0;
-          var bb = b.startDate ? b.startDate.valueOf() : 0;
-          return aa - bb;
-        });
-
-        return recorded;
-      };
-
+      // `prepareRecorded`/`normalizeList`/`toMs` viven en `./catchupRecorded`
+      // (import de arriba) — lógica pura movida ahí para poder testearla sin
+      // instanciar este store.
       var runLoad = async function (enableRetry) {
         var groupsWithEvents = await buildGroupsWithEvents(enableRetry);
         var recordedResp = await panaccessService.getRecordingTasks({ enableRetry: enableRetry });
