@@ -8,82 +8,92 @@ import {
   tryNextWindLevel,
 } from './windLevelSelect';
 
-const ZERO_IV = new Uint8Array(16);
-
+/**
+ * Chequea sync bytes TS (0x47 cada 188 bytes) en varios paquetes seguidos en
+ * vez de solo 3 puntos fijos: con la key correcta, aunque el IV estuviera
+ * mal, en CBC solo se corrompe el primer bloque (16 bytes) — el resto se
+ * encadena contra el ciphertext, no contra el IV — así que exigir que casi
+ * todos los paquetes muestreados den 0x47 es mucho más robusto contra falsos
+ * positivos que mirar solo 3 puntos fijos.
+ */
 function hasTsSyncPattern(bytes) {
-  return bytes.length >= 377 && bytes[0] === 0x47 && bytes[188] === 0x47 && bytes[376] === 0x47;
-}
-
-function sequenceNumberIv(sn) {
-  const iv = new Uint8Array(16);
-  const n = sn >>> 0;
-  iv[12] = (n >>> 24) & 0xff;
-  iv[13] = (n >>> 16) & 0xff;
-  iv[14] = (n >>> 8) & 0xff;
-  iv[15] = n & 0xff;
-  return iv;
+  const PACKET_SIZE = 188;
+  const packetCount = Math.floor(bytes.length / PACKET_SIZE);
+  if (packetCount < 4) return false;
+  const sampleCount = Math.min(packetCount, 16);
+  let mismatches = 0;
+  for (let i = 0; i < sampleCount; i++) {
+    if (bytes[i * PACKET_SIZE] !== 0x47) mismatches += 1;
+  }
+  return mismatches <= 1;
 }
 
 /**
- * Diagnóstico definitivo (una sola vez por carga, solo DEV): reproduce el
- * descifrado AES-128-CBC de forma independiente (WebCrypto directo) contra
- * TODAS las variantes plausibles, en vez de pedirle al usuario que corra un
- * script aparte. Confirmado en vivo (log previo): la "key" que sirve este
- * middleware (`requestMode=mekey`) para un AES-128 (que debería ser de 16
- * bytes) llega con 32 bytes — por eso se prueban también las dos formas de
- * partir esos 32 bytes en key(16)+iv(16), además de los casos de 16 bytes
- * puros con IV=0/IV=sn por si algún stream sí trae el tamaño correcto.
+ * FIX REAL (confirmado contra un player de referencia del MISMO operador —
+ * `brand: "multiplustv"`, que coincide con el CDN `multiplustvhncdn.ddns.net`
+ * de este bug — que reproduce este middleware correctamente): los 32 bytes
+ * que manda `requestMode=mekey` NO son key+IV concatenados ni una key AES-256
+ * suelta. Son la key AES-128 real de 16 bytes, cifrada con AES-128-CBC usando
+ * una key/IV "wrapper" fijas hardcodeadas en el cliente, con padding PKCS7 —
+ * un plaintext de 16 bytes con PKCS7 siempre agrega un bloque completo de
+ * padding, dando exactamente 32 bytes de vuelta. Por eso ninguna de las
+ * variantes de "partir los 32 bytes a la mitad" funcionaba: hay que
+ * DESCIFRAR esos 32 bytes (no partirlos) para obtener la key real.
+ *
+ * El IV del segmento en sí NO se toca: se deja el default estándar de hls.js
+ * (spec HLS: cuando el manifiesto no declara `IV=`, usa el número de
+ * secuencia del fragmento) — en el player de referencia tampoco hay ninguna
+ * lógica de IV custom, solo este "unwrap" de la key.
  */
-async function diagnoseCbcDecryption(frag, payloadBuffer, originalKeyBytes) {
-  const rawKey = originalKeyBytes || frag?.decryptdata?.key;
-  if (!rawKey || !(rawKey instanceof Uint8Array)) {
-    console.log('[HlsPlayback][diag] sn', frag?.sn, 'sin key todavía');
+const PANACCESS_KEY_WRAP_KEY = new Uint8Array([
+  0xb2, 0xc2, 0x3a, 0x00, 0xff, 0xfe, 0x86, 0x90, 0x17, 0x87, 0x05, 0xae, 0x19, 0xed, 0x08, 0xb8,
+]);
+const PANACCESS_KEY_WRAP_IV = new Uint8Array([
+  0x91, 0x0f, 0x03, 0xa9, 0x67, 0x6d, 0x2b, 0xf4, 0xe8, 0x22, 0x43, 0x37, 0xe7, 0x1a, 0x87, 0xd3,
+]);
+
+async function unwrapPanaccessKey(rawKeyBytes) {
+  if (!(rawKeyBytes instanceof Uint8Array) || rawKeyBytes.length <= 16) {
+    return rawKeyBytes;
+  }
+  const wrapKey = await crypto.subtle.importKey('raw', PANACCESS_KEY_WRAP_KEY, { name: 'AES-CBC' }, false, ['decrypt']);
+  const plain = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: PANACCESS_KEY_WRAP_IV }, wrapKey, rawKeyBytes);
+  return new Uint8Array(plain);
+}
+
+/**
+ * Diagnóstico solo-DEV (una vez por carga): confirma en consola que, para
+ * ESTE stream/operador puntual, desenvolver la key con el wrapper de arriba
+ * más el IV por defecto de hls.js efectivamente da un TS válido. Si algún día
+ * aparece un operador con un wrapper distinto, este log lo va a mostrar
+ * (`pareceTS: false`) para saber que hace falta un wrapper nuevo, en vez de
+ * fallar en silencio.
+ */
+async function diagnoseKeyUnwrap(frag, payloadBuffer) {
+  const rawKey = frag?.decryptdata?.key;
+  if (!(rawKey instanceof Uint8Array) || rawKey.length <= 16) {
+    console.log('[HlsPlayback][diag] sn', frag?.sn, 'key ya es de 16 bytes o menos, nada que desenvolver');
     return;
   }
-
-  const rawBytes = new Uint8Array(payloadBuffer);
-  const rawLooksLikeTs = hasTsSyncPattern(rawBytes);
-  const seqIv = sequenceNumberIv(frag.sn);
-
-  const candidates = [];
-  if (rawKey.length === 16) {
-    candidates.push({ label: 'key(16 bytes tal cual), IV=0', key: rawKey, iv: new Uint8Array(16) });
-    candidates.push({ label: 'key(16 bytes tal cual), IV=sn', key: rawKey, iv: seqIv });
+  try {
+    const realKey = await unwrapPanaccessKey(rawKey);
+    const cryptoKey = await crypto.subtle.importKey('raw', realKey, { name: 'AES-CBC' }, false, ['decrypt']);
+    const iv = frag?.decryptdata?.iv;
+    const plain = await crypto.subtle.decrypt({ name: 'AES-CBC', iv }, cryptoKey, payloadBuffer);
+    const pareceTS = hasTsSyncPattern(new Uint8Array(plain));
+    console.log(
+      '[HlsPlayback][diag unwrap] sn',
+      frag.sn,
+      'key original',
+      rawKey.length,
+      'bytes → desenvuelta',
+      realKey.length,
+      'bytes — ¿TS válido tras desencriptar con IV por defecto de hls.js?',
+      pareceTS,
+    );
+  } catch (err) {
+    console.error('[HlsPlayback][diag unwrap] sn', frag?.sn, 'fallo desenvolviendo/descifrando', err);
   }
-  if (rawKey.length === 32) {
-    candidates.push({ label: 'key=primeros16, IV=últimos16', key: rawKey.slice(0, 16), iv: rawKey.slice(16, 32) });
-    candidates.push({ label: 'key=últimos16, IV=primeros16', key: rawKey.slice(16, 32), iv: rawKey.slice(0, 16) });
-    candidates.push({ label: 'key=32 bytes como AES-256, IV=0', key: rawKey, iv: new Uint8Array(16) });
-    candidates.push({ label: 'key=32 bytes como AES-256, IV=sn', key: rawKey, iv: seqIv });
-  }
-
-  const results = [];
-  for (const c of candidates) {
-    try {
-      const cryptoKey = await crypto.subtle.importKey('raw', c.key, { name: 'AES-CBC' }, false, ['decrypt']);
-      const plain = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: c.iv }, cryptoKey, payloadBuffer);
-      const bytes = new Uint8Array(plain);
-      results.push({
-        variante: c.label,
-        descifroOk: true,
-        pareceTS: hasTsSyncPattern(bytes),
-        primeros4Bytes: Array.from(bytes.slice(0, 4)),
-      });
-    } catch (err) {
-      results.push({ variante: c.label, descifroOk: false, error: err?.message });
-    }
-  }
-
-  console.log(
-    '[HlsPlayback][DIAGNOSTICO DEFINITIVO decrypt] sn',
-    frag.sn,
-    'key original length',
-    rawKey.length,
-    '— ¿payload SIN descifrar ya parece TS válido?',
-    rawLooksLikeTs,
-    '— resultados:',
-    results,
-  );
 }
 
 function toPlaybackError(data) {
@@ -246,21 +256,34 @@ export class HlsPlaybackController {
       const keyUri = decryptdata?.uri || '';
       // Este middleware (Panaccess: `requestMode=mekey`) rota la key AES-128
       // en CADA segmento (una key nueva por `chunk=`), sin declarar `IV=` en
-      // el `#EXT-X-KEY` del manifiesto. Por spec HLS, sin IV explícito hls.js
-      // usa el número de secuencia del fragmento como IV (comportamiento
-      // correcto y estándar) — pero este middleware en particular cifra con
-      // IV fijo en cero (no rota el IV junto con la key), así que ese default
-      // "correcto" produce bytes descifrados inválidos y el segmento
-      // NUNCA parsea como TS (`fragParsingError` en el 100% de los
-      // fragmentos, confirmado en vivo: el fragmento se descarga y
-      // desencripta bien, pero el demux siempre falla). Forzamos IV=0 solo
-      // para este patrón de URL de key, sin tocar el resto de middlewares.
-      if (decryptdata && isPanaccessRotatingKeyUri(keyUri)) {
-        decryptdata.iv = ZERO_IV;
-        if (import.meta.env.DEV) {
-          console.log('[HlsPlayback] IV forzado a 0 (key rotativa por chunk, sin IV en manifiesto)', frag?.sn);
-        }
+      // el `#EXT-X-KEY` del manifiesto — eso lo deja hls.js manejar con su
+      // default estándar (IV = número de secuencia del fragmento), sin tocar
+      // nada acá. Lo que SÍ hay que arreglar es la key: este middleware no
+      // manda los 16 bytes de la key AES-128 en texto plano, la manda
+      // ENVUELTA (cifrada con AES-128-CBC + PKCS7 usando una key/IV wrapper
+      // fijas) — ver `unwrapPanaccessKey` para el detalle completo.
+      if (!decryptdata || !isPanaccessRotatingKeyUri(keyUri)) return;
+      if (!(decryptdata.key instanceof Uint8Array) || decryptdata.key.length <= 16) return;
+
+      const wrappedKey = decryptdata.key;
+      if (import.meta.env.DEV) {
+        // El diagnóstico de FRAG_LOADED corre después de esto y necesita la
+        // key ENVUELTA original (la de acá abajo la vamos a pisar) para
+        // poder probar el unwrap de forma independiente contra el payload real.
+        decryptdata._diagWrappedKey = wrappedKey;
       }
+      unwrapPanaccessKey(wrappedKey)
+        .then((realKey) => {
+          decryptdata.key = realKey;
+          if (import.meta.env.DEV) {
+            console.log('[HlsPlayback] key Panaccess desenvuelta', wrappedKey.length, '→', realKey.length, 'bytes', frag?.sn);
+          }
+        })
+        .catch((err) => {
+          if (import.meta.env.DEV) {
+            console.error('[HlsPlayback] fallo desenvolviendo key Panaccess', frag?.sn, err);
+          }
+        });
     });
 
     hls.on(Hls.Events.ERROR, (_event, data) => {
@@ -295,18 +318,24 @@ export class HlsPlaybackController {
       hls.on(Hls.Events.FRAG_LOADING, (_e, d) => console.log('[HlsPlayback] FRAG_LOADING', d?.frag?.url));
       hls.on(Hls.Events.FRAG_LOADED, (_e, d) => console.log('[HlsPlayback] FRAG_LOADED', d?.frag?.sn));
 
-      // Diagnóstico de una sola vez: reproduce el descifrado AES-128-CBC de
-      // forma independiente (WebCrypto directo) para el primer fragmento
-      // cifrado de este middleware, probando IV=0 e IV=sn a la vez. Ver
-      // `diagnoseCbcDecryption` arriba para el detalle de qué prueba y por
-      // qué (evita pedirle al usuario que corra un script aparte).
+      // Diagnóstico de una sola vez: confirma de forma independiente
+      // (WebCrypto directo, contra el payload cifrado real del primer
+      // fragmento de este middleware) que el unwrap de key + IV por defecto
+      // de hls.js da un TS válido. Ver `diagnoseKeyUnwrap` arriba.
       let diagDone = false;
       hls.on(Hls.Events.FRAG_LOADED, (_e, d) => {
         if (diagDone) return;
-        const keyUri = d?.frag?.decryptdata?.uri || '';
+        const decryptdata = d?.frag?.decryptdata;
+        const keyUri = decryptdata?.uri || '';
         if (!d?.payload || !isPanaccessRotatingKeyUri(keyUri)) return;
         diagDone = true;
-        diagnoseCbcDecryption(d.frag, d.payload).catch((err) =>
+        // Usar la key ENVUELTA original si ya fue pisada por el unwrap de
+        // producción (ver KEY_LOADED arriba); si no llegó a pisarse todavía,
+        // decryptdata.key sigue siendo la envuelta.
+        const fragForDiag = decryptdata._diagWrappedKey
+          ? { ...d.frag, decryptdata: { ...decryptdata, key: decryptdata._diagWrappedKey } }
+          : d.frag;
+        diagnoseKeyUnwrap(fragForDiag, d.payload).catch((err) =>
           console.error('[HlsPlayback][diag] fallo corriendo diagnóstico', err),
         );
       });
