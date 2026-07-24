@@ -211,11 +211,52 @@ function filterAndEnrichEvents(data, epgHoursLimit) {
   return eventsFiltered;
 }
 
+/** Cuántos canales se piden en paralelo por tanda (ver `loadEPGForChannels`). */
+export const DEFAULT_EPG_BATCH_SIZE = 5;
+
 /**
- * Carga EPG para una lista de canales (streams) de forma secuencial, como getEPGByBouquet.
- * Mutación: asigna channel.epgItems a cada canal.
+ * Resuelve la EPG de UN canal (fetch + normalización) y le asigna `epgItems`.
+ * No hace red si el canal ya tiene EPG cargada o no tiene epgStreamId válido.
+ * @returns {Promise<boolean>} true si hizo un fetch de red real (para telemetría/yield).
+ */
+async function loadSingleChannelEpg(channel, opts, { epgHoursLimit, requestTimeoutMs }) {
+  if (!channel) return false;
+  if (channel.epgItems != null && channel.epgItems.length > 0) return false;
+
+  const epgStreamId = channel.epgStreamId ?? channel.epgStreamid;
+  if (epgStreamId === 0 || epgStreamId === null || epgStreamId === '0' || epgStreamId === undefined || epgStreamId === '') {
+    channel.epgItems = [];
+    return false;
+  }
+
+  const url = getEPGURL(epgStreamId, opts);
+  if (!url) {
+    channel.epgItems = [];
+    return false;
+  }
+
+  const data = await fetchEPG(url, { timeoutMs: requestTimeoutMs });
+  if (!data.length && import.meta.env?.DEV) {
+    console.warn('[epgService] EPG vacía o timeout para epgStreamId:', epgStreamId);
+  }
+  // Optimización TV: normalización en Worker si está disponible. El worker
+  // (`epgWorkerClient.js`) ya soporta múltiples pedidos concurrentes (los
+  // correlaciona por id interno), así que no hace falta serializar esto.
+  const nowMs = Date.now();
+  const fromWorker = await normalizeEpgInWorker(data, { epgHoursLimit, nowMs }).catch(() => null);
+  channel.epgItems = fromWorker || filterAndEnrichEvents(data, epgHoursLimit);
+  return true;
+}
+
+/**
+ * Carga EPG para una lista de canales (streams) en tandas paralelas (hasta
+ * `batchSize` canales en simultáneo, en vez de uno por uno como antes) —
+ * cada canal es una request HTTP independiente al mismo backend, así que no
+ * hay ningún estado compartido que obligue a serializar. Mutación: asigna
+ * channel.epgItems a cada canal.
  * @param {Array} channels - Lista de canales (cada uno con id, epgStreamId, ...).
- * @param {Object} options - epgApiKey, epgApiToken, epgDaysOffset, epgHoursLimit, maxChannels, requestTimeoutMs, onProgress(channelIndex, total).
+ * @param {Object} options - epgApiKey, epgApiToken, epgDaysOffset, epgHoursLimit,
+ *   maxChannels, requestTimeoutMs, batchSize (default 5), onProgress(completedCount, total).
  * @returns {Promise<Array>} La misma lista de canales con epgItems asignados.
  */
 export async function loadEPGForChannels(channels, options = {}) {
@@ -226,6 +267,7 @@ export async function loadEPGForChannels(channels, options = {}) {
   const epgHoursLimit = options.epgHoursLimit ?? DEFAULT_EPG_HOURS_LIMIT;
   const maxChannels = options.maxChannels ?? list.length;
   const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_EPG_REQUEST_TIMEOUT_MS;
+  const batchSize = Math.max(1, Number(options.batchSize) || DEFAULT_EPG_BATCH_SIZE);
   const onProgress = options.onProgress ?? (() => {});
 
   const epgCdnUrl = options.epgCdnUrl ?? getEpgCdnUrl();
@@ -250,35 +292,31 @@ export async function loadEPGForChannels(channels, options = {}) {
     epgDaysOffset,
   };
 
-  for (let index = 0; index < toProcess; index++) {
-    const channel = list[index];
-    if (!channel) continue;
-    if (channel.epgItems != null && channel.epgItems.length > 0) continue;
+  // `completedCount` (no el índice del canal) es lo que se reporta: al ser
+  // paralelo, los canales de una misma tanda no terminan necesariamente en
+  // orden, y los consumidores de onProgress (barra de carga) solo necesitan
+  // un conteo que nunca retroceda, no saber CUÁL canal terminó.
+  let completedCount = 0;
+  const tv = isTvDevice();
 
-    const epgStreamId = channel.epgStreamId ?? channel.epgStreamid;
-    if (epgStreamId === 0 || epgStreamId === null || epgStreamId === '0' || epgStreamId === undefined || epgStreamId === '') {
-      channel.epgItems = [];
-      onProgress(index + 1, toProcess);
-      continue;
+  for (let batchStart = 0; batchStart < toProcess; batchStart += batchSize) {
+    const batchEnd = Math.min(batchStart + batchSize, toProcess);
+    const batch = [];
+    for (let index = batchStart; index < batchEnd; index++) {
+      batch.push(
+        loadSingleChannelEpg(list[index], opts, { epgHoursLimit, requestTimeoutMs }).finally(() => {
+          completedCount += 1;
+          onProgress(completedCount, toProcess);
+        }),
+      );
     }
+    await Promise.all(batch);
 
-    const url = getEPGURL(epgStreamId, opts);
-    if (!url) {
-      channel.epgItems = [];
-      onProgress(index + 1, toProcess);
-      continue;
-    }
-
-    const data = await fetchEPG(url, { timeoutMs: requestTimeoutMs });
-    if (!data.length && import.meta.env?.DEV) {
-      console.warn('[epgService] EPG vacía o timeout para epgStreamId:', epgStreamId);
-    }
-    // Optimización TV: normalización en Worker si está disponible.
-    const nowMs = Date.now();
-    const fromWorker = await normalizeEpgInWorker(data, { epgHoursLimit, nowMs }).catch(() => null);
-    channel.epgItems = fromWorker || filterAndEnrichEvents(data, epgHoursLimit);
-    onProgress(index + 1, toProcess);
-    if (isTvDevice()) {
+    // Ceder el hilo principal entre tandas (no por canal): con hasta 5
+    // requests en simultáneo, esperar su propio I/O ya le da aire a la UI;
+    // este yield extra evita que tandas muy rápidas (EPG vacía/cacheada)
+    // saturen el hilo principal en TVs de gama baja.
+    if (tv && batchEnd < toProcess) {
       await yieldToMain(8);
     }
   }

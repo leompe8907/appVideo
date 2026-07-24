@@ -94,7 +94,7 @@ export function BouquetHorizontalGrid({
     { isPC }
   );
   const useEmbla = isPC && gridMode.scrollX;
-  const items = useChunkedList(rawItems, { enabled: !useEmbla });
+  const { entries, reportFocusIndex } = useChunkedList(rawItems, { enabled: !useEmbla });
   const { root: rootClass, track: trackClass } = getBouquetHorizontalGridClasses(layoutType);
   const trackStyle = { '--bouquet-grid-rows': gridMode.rows };
 
@@ -105,7 +105,10 @@ export function BouquetHorizontalGrid({
       layoutType={layoutType}
       logoIndex={logoIndex}
       onSelect={() => onChannelSelect?.(channel, bouquet)}
-      onFocus={() => onChannelFocus?.(channel, bouquet)}
+      onFocus={() => {
+        reportFocusIndex(index);
+        onChannelFocus?.(channel, bouquet);
+      }}
     />
   );
 
@@ -118,7 +121,10 @@ export function BouquetHorizontalGrid({
 
   const renderTrackContent = () => {
     if (useEmbla && gridMode.rows > 1) {
-      const columns = groupItemsIntoColumnMajorColumns(items, gridMode.rows);
+      // Path Embla (PC con scroll horizontal): sin virtualización — `enabled:
+      // false` en el hook de arriba ya deja `entries` con la lista completa,
+      // pero acá usamos `rawItems` directo para no depender de esa ventana.
+      const columns = groupItemsIntoColumnMajorColumns(rawItems, gridMode.rows);
       return columns.map((column, colIndex) => (
         <div key={`col-${colIndex}`} className="bouquet-horizontal-grid-column">
           {column.map(({ item, index }) => renderChannelCard(item, index))}
@@ -126,7 +132,7 @@ export function BouquetHorizontalGrid({
       ));
     }
 
-    return items.map((channel, index) => renderChannelCard(channel, index));
+    return entries.map(({ item, index }) => renderChannelCard(item, index));
   };
 
   return (
@@ -470,7 +476,7 @@ export function BouquetGridVertical({
     t('bouquet.unknown');
 
   const rawItems = Array.isArray(bouquet?.items) ? bouquet.items : [];
-  const items = useChunkedList(rawItems);
+  const { entries, reportFocusIndex } = useChunkedList(rawItems);
   if (rawItems.length === 0) return null;
 
   const { root: gridClass, track: trackClass } = getBouquetGridVerticalClasses(layoutType);
@@ -491,14 +497,17 @@ export function BouquetGridVertical({
     >
       <h4 className="bouquet-heading">{title}</h4>
       <div className={trackClass} style={trackStyle} data-grid-columns={columnCount}>
-        {items.map((channel, index) => (
+        {entries.map(({ item: channel, index }) => (
           <ChannelCard
             key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
             channel={channel}
             layoutType={layoutType}
             logoIndex={logoIndex}
             onSelect={() => onChannelSelect?.(channel, bouquet)}
-            onFocus={() => onChannelFocus?.(channel, bouquet)}
+            onFocus={() => {
+              reportFocusIndex(index);
+              onChannelFocus?.(channel, bouquet);
+            }}
           />
         ))}
       </div>
