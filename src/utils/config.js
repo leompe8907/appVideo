@@ -247,6 +247,10 @@ export function applyTheme(brandConfig) {
     epgCards.epgCardsChannelActiveBg || '#0A4385'
   );
   root.style.setProperty(
+    '--epg-cards-table-header-bg',
+    epgCards.epgCardsHeaderBg || 'rgb(0, 0, 0)'
+  );
+  root.style.setProperty(
     '--epg-cards-program-live-bg',
     epgCards.epgCardsProgramLiveBg || '#6C8EB6'
   );

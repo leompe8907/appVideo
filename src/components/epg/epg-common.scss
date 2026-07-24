@@ -334,7 +334,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background: rgb(0, 0, 0);
+  background: var(--epg-cards-table-header-bg, rgb(0, 0, 0));
   backdrop-filter: blur(4px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   height: 5em;

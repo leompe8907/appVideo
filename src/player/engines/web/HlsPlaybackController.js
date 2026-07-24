@@ -1,4 +1,4 @@
-import Hls from 'hls.js';
+import Hls, { XhrLoader } from 'hls.js';
 import { buildHlsPlaybackConfig } from './hlsPlaybackConfig';
 import { isWindMiddlewareHost, windDirectM3u8FromAny } from './windHlsManifest';
 import { isPanaccessRotatingKeyUri } from './sessionHlsXhrSetup';
@@ -7,26 +7,6 @@ import {
   pickWindCompatibleLevel,
   tryNextWindLevel,
 } from './windLevelSelect';
-
-/**
- * Chequea sync bytes TS (0x47 cada 188 bytes) en varios paquetes seguidos en
- * vez de solo 3 puntos fijos: con la key correcta, aunque el IV estuviera
- * mal, en CBC solo se corrompe el primer bloque (16 bytes) — el resto se
- * encadena contra el ciphertext, no contra el IV — así que exigir que casi
- * todos los paquetes muestreados den 0x47 es mucho más robusto contra falsos
- * positivos que mirar solo 3 puntos fijos.
- */
-function hasTsSyncPattern(bytes) {
-  const PACKET_SIZE = 188;
-  const packetCount = Math.floor(bytes.length / PACKET_SIZE);
-  if (packetCount < 4) return false;
-  const sampleCount = Math.min(packetCount, 16);
-  let mismatches = 0;
-  for (let i = 0; i < sampleCount; i++) {
-    if (bytes[i * PACKET_SIZE] !== 0x47) mismatches += 1;
-  }
-  return mismatches <= 1;
-}
 
 /**
  * FIX REAL (confirmado contra un player de referencia del MISMO operador —
@@ -62,37 +42,86 @@ async function unwrapPanaccessKey(rawKeyBytes) {
 }
 
 /**
- * Diagnóstico solo-DEV (una vez por carga): confirma en consola que, para
- * ESTE stream/operador puntual, desenvolver la key con el wrapper de arriba
- * más el IV por defecto de hls.js efectivamente da un TS válido. Si algún día
- * aparece un operador con un wrapper distinto, este log lo va a mostrar
- * (`pareceTS: false`) para saber que hace falta un wrapper nuevo, en vez de
- * fallar en silencio.
+ * `instanceof ArrayBuffer` puede fallar aunque el valor SEA un ArrayBuffer
+ * real: si viene de un realm/contexto distinto (otro iframe, un Worker, o —
+ * confirmado en tests contra jsdom — el resultado de `crypto.subtle.*` que en
+ * algunos entornos se construye en el realm nativo de Node en vez del realm
+ * del `window`/VM actual), `instanceof` compara identidad del constructor y
+ * da `false` pese a que `Object.prototype.toString` sí lo reconoce como tal.
+ * Este chequeo es el estándar para "es un ArrayBuffer" sin depender de en qué
+ * realm se creó.
  */
-async function diagnoseKeyUnwrap(frag, payloadBuffer) {
-  const rawKey = frag?.decryptdata?.key;
-  if (!(rawKey instanceof Uint8Array) || rawKey.length <= 16) {
-    console.log('[HlsPlayback][diag] sn', frag?.sn, 'key ya es de 16 bytes o menos, nada que desenvolver');
-    return;
-  }
-  try {
-    const realKey = await unwrapPanaccessKey(rawKey);
-    const cryptoKey = await crypto.subtle.importKey('raw', realKey, { name: 'AES-CBC' }, false, ['decrypt']);
-    const iv = frag?.decryptdata?.iv;
-    const plain = await crypto.subtle.decrypt({ name: 'AES-CBC', iv }, cryptoKey, payloadBuffer);
-    const pareceTS = hasTsSyncPattern(new Uint8Array(plain));
-    console.log(
-      '[HlsPlayback][diag unwrap] sn',
-      frag.sn,
-      'key original',
-      rawKey.length,
-      'bytes → desenvuelta',
-      realKey.length,
-      'bytes — ¿TS válido tras desencriptar con IV por defecto de hls.js?',
-      pareceTS,
-    );
-  } catch (err) {
-    console.error('[HlsPlayback][diag unwrap] sn', frag?.sn, 'fallo desenvolviendo/descifrando', err);
+function isArrayBufferLike(value) {
+  return Object.prototype.toString.call(value) === '[object ArrayBuffer]';
+}
+
+/**
+ * FIX RACE CONDITION (2026-07): el enfoque anterior desenvolvía la key en el
+ * handler de `Hls.Events.KEY_LOADED` con un `.then()` "fire-and-forget" que
+ * pisaba `decryptdata.key` cuando la promesa resolvía. El problema: hls.js
+ * dispara `KEY_LOADED` de forma SÍNCRONA y sigue con la carga/descifrado del
+ * fragmento en el mismo tick (ver `StreamController._doFragLoad` en
+ * hls.js/dist — no espera a los listeners del evento), así que había una
+ * carrera real entre "la key ya se desenvolvió" y "hls.js ya intentó
+ * descifrar con ella". Cuando se perdía la carrera, resultaba en el error
+ * observado en consola: "WebCrypto and softwareDecrypt: failed to decrypt
+ * data" / fragParsingError (no fatal → hls.js reintenta el mismo fragmento,
+ * y en el reintento la key YA está corregida, por eso el contenido
+ * "reproduce igual, pero con errores en consola"). En operadores/streams
+ * donde esta carrera se pierde de forma consistente (no solo ocasional), el
+ * resultado es directamente "no reproduce": se agota el único intento de
+ * `recoverMediaError()` con la key todavía envuelta y el error termina fatal.
+ *
+ * La solución correcta es desenvolver la key en la CAPA DE RED, antes de que
+ * hls.js construya `decryptdata.key` — así el evento `KEY_LOADED` nunca llega
+ * a dispararse con la key equivocada. hls.js no expone un "key loader"
+ * separado: tanto manifest/level como la key de un fragmento pasan por
+ * `config.loader` (confirmado en el código fuente de hls.js, `KeyLoader.
+ * loadKeyHTTP` usa `config.loader` directamente, no un loader propio). Por
+ * eso este Loader debe delegar CUALQUIER request que no sea una key
+ * ('keyInfo' in context la identifica sin ambigüedad, es el campo propio del
+ * contexto de key de hls.js) a `super.load()` sin tocar nada.
+ */
+export class PanaccessKeyUnwrapLoader extends XhrLoader {
+  load(context, config, callbacks) {
+    const isKeyRequest = 'keyInfo' in context && isPanaccessRotatingKeyUri(context.url || '');
+    if (!isKeyRequest) {
+      super.load(context, config, callbacks);
+      return;
+    }
+
+    const originalOnSuccess = callbacks.onSuccess;
+    const interceptedCallbacks = {
+      ...callbacks,
+      onSuccess: (response, stats, ctx, networkDetails) => {
+        const raw = response?.data;
+        if (!isArrayBufferLike(raw) || raw.byteLength <= 16) {
+          originalOnSuccess(response, stats, ctx, networkDetails);
+          return;
+        }
+        unwrapPanaccessKey(new Uint8Array(raw))
+          .then((realKey) => {
+            originalOnSuccess({ ...response, data: realKey.buffer }, stats, ctx, networkDetails);
+          })
+          .catch((err) => {
+            // Este catch ya no es un "fire and forget" silencioso: si el
+            // unwrap falla acá, la key JAMÁS le llega a hls.js (a diferencia
+            // del bug anterior, donde la key corrupta se filtraba igual).
+            // Se loguea SIEMPRE (no solo DEV) porque para el usuario esto es
+            // indistinguible de "no reproduce", y sin este log en producción
+            // no hay forma de saber si un operador nuevo usa un wrapper de
+            // key distinto al reverse-engineered (ver comentario en
+            // PANACCESS_KEY_WRAP_KEY más arriba).
+            console.error(
+              '[HlsPlayback] no se pudo desenvolver la key de contenido — el operador podría usar un wrapper distinto al conocido',
+              { url: context.url, keyBytes: raw.byteLength, err },
+            );
+            originalOnSuccess(response, stats, ctx, networkDetails);
+          });
+      },
+    };
+
+    super.load(context, config, interceptedCallbacks);
   }
 }
 
@@ -216,7 +245,12 @@ export class HlsPlaybackController {
   }
 
   _loadWithHlsJs(videoEl, src, { autoPlay, generation }) {
-    const hls = new Hls(buildHlsPlaybackConfig(src));
+    const hlsConfig = buildHlsPlaybackConfig(src);
+    // Ver PanaccessKeyUnwrapLoader arriba: desenvuelve la key AES-128 rotativa
+    // de este middleware en la capa de red, antes de que hls.js la use —
+    // reemplaza al viejo unwrap en KEY_LOADED (con condición de carrera real).
+    hlsConfig.loader = PanaccessKeyUnwrapLoader;
+    const hls = new Hls(hlsConfig);
     this._hls = hls;
 
     const wind = isWindMiddlewareHost(src);
@@ -249,42 +283,10 @@ export class HlsPlaybackController {
       if (autoPlay) this._ensurePlay(videoEl);
     });
 
-    hls.on(Hls.Events.KEY_LOADED, (_event, data) => {
-      if (generation !== this._loadGeneration) return;
-      const frag = data?.frag;
-      const decryptdata = frag?.decryptdata;
-      const keyUri = decryptdata?.uri || '';
-      // Este middleware (Panaccess: `requestMode=mekey`) rota la key AES-128
-      // en CADA segmento (una key nueva por `chunk=`), sin declarar `IV=` en
-      // el `#EXT-X-KEY` del manifiesto — eso lo deja hls.js manejar con su
-      // default estándar (IV = número de secuencia del fragmento), sin tocar
-      // nada acá. Lo que SÍ hay que arreglar es la key: este middleware no
-      // manda los 16 bytes de la key AES-128 en texto plano, la manda
-      // ENVUELTA (cifrada con AES-128-CBC + PKCS7 usando una key/IV wrapper
-      // fijas) — ver `unwrapPanaccessKey` para el detalle completo.
-      if (!decryptdata || !isPanaccessRotatingKeyUri(keyUri)) return;
-      if (!(decryptdata.key instanceof Uint8Array) || decryptdata.key.length <= 16) return;
-
-      const wrappedKey = decryptdata.key;
-      if (import.meta.env.DEV) {
-        // El diagnóstico de FRAG_LOADED corre después de esto y necesita la
-        // key ENVUELTA original (la de acá abajo la vamos a pisar) para
-        // poder probar el unwrap de forma independiente contra el payload real.
-        decryptdata._diagWrappedKey = wrappedKey;
-      }
-      unwrapPanaccessKey(wrappedKey)
-        .then((realKey) => {
-          decryptdata.key = realKey;
-          if (import.meta.env.DEV) {
-            console.log('[HlsPlayback] key Panaccess desenvuelta', wrappedKey.length, '→', realKey.length, 'bytes', frag?.sn);
-          }
-        })
-        .catch((err) => {
-          if (import.meta.env.DEV) {
-            console.error('[HlsPlayback] fallo desenvolviendo key Panaccess', frag?.sn, err);
-          }
-        });
-    });
+    // NOTA: el unwrap de la key AES-128 rotativa de este middleware (`mekey`)
+    // ya NO se hace acá en KEY_LOADED (ver PanaccessKeyUnwrapLoader arriba,
+    // que la resuelve a nivel de red antes de que hls.js la reciba). Para
+    // cuando este evento se dispara, `decryptdata.key` ya viene desenvuelta.
 
     hls.on(Hls.Events.ERROR, (_event, data) => {
       if (generation !== this._loadGeneration) return;
@@ -317,28 +319,6 @@ export class HlsPlaybackController {
       );
       hls.on(Hls.Events.FRAG_LOADING, (_e, d) => console.log('[HlsPlayback] FRAG_LOADING', d?.frag?.url));
       hls.on(Hls.Events.FRAG_LOADED, (_e, d) => console.log('[HlsPlayback] FRAG_LOADED', d?.frag?.sn));
-
-      // Diagnóstico de una sola vez: confirma de forma independiente
-      // (WebCrypto directo, contra el payload cifrado real del primer
-      // fragmento de este middleware) que el unwrap de key + IV por defecto
-      // de hls.js da un TS válido. Ver `diagnoseKeyUnwrap` arriba.
-      let diagDone = false;
-      hls.on(Hls.Events.FRAG_LOADED, (_e, d) => {
-        if (diagDone) return;
-        const decryptdata = d?.frag?.decryptdata;
-        const keyUri = decryptdata?.uri || '';
-        if (!d?.payload || !isPanaccessRotatingKeyUri(keyUri)) return;
-        diagDone = true;
-        // Usar la key ENVUELTA original si ya fue pisada por el unwrap de
-        // producción (ver KEY_LOADED arriba); si no llegó a pisarse todavía,
-        // decryptdata.key sigue siendo la envuelta.
-        const fragForDiag = decryptdata._diagWrappedKey
-          ? { ...d.frag, decryptdata: { ...decryptdata, key: decryptdata._diagWrappedKey } }
-          : d.frag;
-        diagnoseKeyUnwrap(fragForDiag, d.payload).catch((err) =>
-          console.error('[HlsPlayback][diag] fallo corriendo diagnóstico', err),
-        );
-      });
       hls.on(Hls.Events.FRAG_PARSING_METADATA, () => console.log('[HlsPlayback] FRAG_PARSING_METADATA'));
       hls.on(Hls.Events.BUFFER_APPENDING, (_e, d) => console.log('[HlsPlayback] BUFFER_APPENDING', d?.type));
       hls.on(Hls.Events.BUFFER_APPENDED, (_e, d) => console.log('[HlsPlayback] BUFFER_APPENDED', d?.type));

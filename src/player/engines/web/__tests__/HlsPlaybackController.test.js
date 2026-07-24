@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
-import Hls from 'hls.js';
-import { HlsPlaybackController } from '../HlsPlaybackController.js';
+import Hls, { XhrLoader } from 'hls.js';
+import { HlsPlaybackController, PanaccessKeyUnwrapLoader } from '../HlsPlaybackController.js';
 
 /**
  * jsdom no implementa `MediaSource`, así que `Hls.isSupported()` da `false` y
@@ -193,12 +193,16 @@ describe('HlsPlaybackController - backoff de red', () => {
  * segmento en sí NO se toca: se deja el default estándar de hls.js (spec
  * HLS: IV = número de secuencia del fragmento cuando el manifiesto no
  * declara `IV=`).
+ *
+ * NOTA (2026-07): el unwrap se movió de un handler de `KEY_LOADED`
+ * (fire-and-forget, con condición de carrera real confirmada contra un bug
+ * en vivo: hls.js sigue usando `decryptdata.key` en el mismo tick, sin
+ * esperar la promesa) a `PanaccessKeyUnwrapLoader`, que intercepta la
+ * respuesta HTTP de la key ANTES de que hls.js la reciba. Estos tests ahora
+ * ejercitan el Loader directamente, mockeando `XhrLoader.prototype.load`
+ * (la clase de la que hereda) para no depender de una petición de red real.
  */
-describe('HlsPlaybackController - key Panaccess envuelta (requestMode=mekey)', () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
+describe('PanaccessKeyUnwrapLoader - key Panaccess envuelta (requestMode=mekey)', () => {
   const MEKEY_URI =
     'https://mw.cabledelancer.com/index.php?requestMode=mekey&streamId=29&substream=1&chunk=1246338';
 
@@ -215,66 +219,97 @@ describe('HlsPlaybackController - key Panaccess envuelta (requestMode=mekey)', (
     return new Uint8Array(wrapped);
   }
 
-  it('desenvuelve una key de 32 bytes (KEY_LOADED) y deja pisada decryptdata.key con la key real de 16 bytes, sin tocar el IV', async () => {
-    const videoEl = makeVideoEl();
-    const controller = new HlsPlaybackController({ onError: () => {} });
-    await controller.load(videoEl, 'https://mw.cabledelancer.com/index.php?requestMode=m3u8&streamId=29');
-    const hls = controller.instance;
+  /** Simula lo que haría la XHR real: invoca onSuccess con la respuesta dada. */
+  function stubSuperLoadWith(responseData) {
+    return vi.spyOn(XhrLoader.prototype, 'load').mockImplementation(function stub(context, config, callbacks) {
+      callbacks.onSuccess({ url: context.url, data: responseData }, {}, context, null);
+    });
+  }
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('desenvuelve una key de 32 bytes ANTES de que onSuccess la reciba, sin tocar el IV (responsabilidad de hls.js)', async () => {
     const realKey = crypto.getRandomValues(new Uint8Array(16));
     const wrapped32 = await wrapKey(realKey);
-    const originalIv = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
-    const data = {
-      frag: { sn: 1246338, decryptdata: { uri: MEKEY_URI, key: wrapped32, iv: originalIv } },
-    };
+    const superLoad = stubSuperLoadWith(wrapped32.buffer);
 
-    hls.trigger(Hls.Events.KEY_LOADED, data);
+    const loader = new PanaccessKeyUnwrapLoader({});
+    const onSuccess = vi.fn();
+    const context = { keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' };
+    loader.load(context, {}, { onSuccess });
+
     // El unwrap usa WebCrypto (async): esperar a que resuelva.
     await new Promise((resolve) => setTimeout(resolve, 0));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(Array.from(data.frag.decryptdata.key)).toEqual(Array.from(realKey));
-    // El IV es responsabilidad del propio hls.js (default de spec): no se toca acá.
-    expect(data.frag.decryptdata.iv).toBe(originalIv);
-
-    controller.destroy();
+    expect(superLoad).toHaveBeenCalledTimes(1);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    const [response] = onSuccess.mock.calls[0];
+    expect(Array.from(new Uint8Array(response.data))).toEqual(Array.from(realKey));
   });
 
   it('no toca una key que ya viene de 16 bytes (no hace falta desenvolver)', async () => {
-    const videoEl = makeVideoEl();
-    const controller = new HlsPlaybackController({ onError: () => {} });
-    await controller.load(videoEl, 'https://mw.cabledelancer.com/index.php?requestMode=m3u8&streamId=29');
-    const hls = controller.instance;
-
     const key16 = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
-    const data = {
-      frag: { sn: 1246338, decryptdata: { uri: MEKEY_URI, key: key16, iv: new Uint8Array(16) } },
-    };
-    hls.trigger(Hls.Events.KEY_LOADED, data);
+    stubSuperLoadWith(key16.buffer);
+
+    const loader = new PanaccessKeyUnwrapLoader({});
+    const onSuccess = vi.fn();
+    const context = { keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' };
+    loader.load(context, {}, { onSuccess });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(data.frag.decryptdata.key).toBe(key16);
-
-    controller.destroy();
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    const [response] = onSuccess.mock.calls[0];
+    expect(new Uint8Array(response.data)).toEqual(key16);
   });
 
-  it('no toca keys que no matchean el patrón mekey (otros middlewares)', async () => {
-    const videoEl = makeVideoEl();
-    const controller = new HlsPlaybackController({ onError: () => {} });
-    await controller.load(videoEl, 'https://example.invalid/master.m3u8');
-    const hls = controller.instance;
+  it('no intercepta requests que no son de key (sin campo keyInfo)', () => {
+    const superLoad = stubSuperLoadWith(new ArrayBuffer(32));
 
-    const originalIv = new Uint8Array([9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9]);
+    const loader = new PanaccessKeyUnwrapLoader({});
+    const onSuccess = vi.fn();
+    const context = { url: 'https://mw.cabledelancer.com/index.php?requestMode=m3u8&streamId=29' };
+    const callbacks = { onSuccess };
+    loader.load(context, {}, callbacks);
+
+    // Sin 'keyInfo' en el contexto, debe delegar directo a super.load con
+    // los callbacks originales, sin envolver onSuccess.
+    expect(superLoad).toHaveBeenCalledWith(context, {}, callbacks);
+  });
+
+  it('no intercepta keys de otros middlewares (URL sin requestMode=mekey)', () => {
     const originalKey = crypto.getRandomValues(new Uint8Array(32));
-    const data = {
-      frag: { sn: 5, decryptdata: { uri: 'https://example.invalid/key/5.key', key: originalKey, iv: originalIv } },
-    };
-    hls.trigger(Hls.Events.KEY_LOADED, data);
+    const superLoad = stubSuperLoadWith(originalKey.buffer);
+
+    const loader = new PanaccessKeyUnwrapLoader({});
+    const onSuccess = vi.fn();
+    const context = { keyInfo: {}, url: 'https://example.invalid/key/5.key', responseType: 'arraybuffer' };
+    const callbacks = { onSuccess };
+    loader.load(context, {}, callbacks);
+
+    expect(superLoad).toHaveBeenCalledWith(context, {}, callbacks);
+  });
+
+  it('si el unwrap falla (operador con wrapper distinto), loguea el error y deja pasar la respuesta original sin colgarse', async () => {
+    // Último byte 0xFF: como longitud de padding PKCS7 es inválida (debe
+    // estar entre 1 y 16) para CUALQUIER key/IV — garantiza el rechazo de
+    // crypto.subtle.decrypt de forma determinística (no depende de azar).
+    const bogus = new Uint8Array(32).fill(0xff);
+    stubSuperLoadWith(bogus.buffer);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const loader = new PanaccessKeyUnwrapLoader({});
+    const onSuccess = vi.fn();
+    const context = { keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' };
+    loader.load(context, {}, { onSuccess });
+    await new Promise((resolve) => setTimeout(resolve, 0));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(data.frag.decryptdata.iv).toBe(originalIv);
-    expect(data.frag.decryptdata.key).toBe(originalKey);
-
-    controller.destroy();
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    // Sigue habiendo un log (siempre, no solo DEV) para poder diagnosticar
+    // operadores nuevos con un wrapper distinto al conocido.
+    expect(errorSpy).toHaveBeenCalled();
   });
 });

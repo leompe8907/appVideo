@@ -201,6 +201,7 @@
  *   @param {boolean} EPG.epgPast
  *   @param {boolean} EPG.epgPagesPastEnabled
  *   @param {string} EPG.epgCardsChannelActiveBg
+ *   @param {string} [EPG.epgCardsHeaderBg]
  *   @param {string} EPG.epgCardsProgramLiveBg
  *   @param {string} EPG.epgCardsProgramLiveProgressBg
  *   @param {boolean} EPG.epgCardsLaterGlobal
@@ -311,6 +312,7 @@ export const BRANDS = [
       epgPast: true,
       epgPagesPastEnabled: false,
       epgCardsChannelActiveBg: "#0A4385",
+      epgCardsHeaderBg: "#5880afff", // Color de fondo de la cabecera de la guía de canales
       epgCardsProgramLiveBg: "#6C8EB6",
       // Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsProgramLiveProgressBg: "#6C8EB6",
@@ -623,8 +625,9 @@ export const BRANDS = [
       reminderShowWhilePlaying: false,
       epgPast: true,
       epgPagesPastEnabled: true,
-      epgCardsChannelActiveBg: "rgb(0 0 0)",
-      epgCardsProgramLiveBg: "#6C8EB6",
+      epgCardsChannelActiveBg: "#6C8EB6", // Color de fondo del canal activo
+      epgCardsHeaderBg: "#104c91ff", // Color de fondo de la cabecera de la guía de canales
+      epgCardsProgramLiveBg: "#2d79d1ff", // Color de fondo del programa en vivo
       // Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsProgramLiveProgressBg: "#6C8EB6",
       epgCardsLaterGlobal: true,
@@ -949,6 +952,7 @@ export const BRANDS = [
       epgPast: true,
       epgPagesPastEnabled: true,
       epgCardsChannelActiveBg: "#0A4385",
+      epgCardsHeaderBg: "rgb(0 0 0)", // Color de fondo de la cabecera de la guía de canales
       epgCardsProgramLiveBg: "#6C8EB6",
       // Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsProgramLiveProgressBg: "#6C8EB6",
@@ -1245,6 +1249,7 @@ export const BRANDS = [
       epgPast: true,
       epgPagesPastEnabled: true,
       epgCardsChannelActiveBg: "rgb(0 0 0)", // Color de fondo del canal activo
+      epgCardsHeaderBg: "rgb(0 0 0)", // Color de fondo de la cabecera de la guía de canales
       epgCardsProgramLiveBg: "#6C8EB6",
       // Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsProgramLiveProgressBg: "#6C8EB6",
@@ -1540,6 +1545,7 @@ export const BRANDS = [
       epgPast: false,
       epgPagesPastEnabled: true,
       epgCardsChannelActiveBg: "rgb(0 0 0)", //Color de fondo de la tarjeta cuando esta seleccionada
+      epgCardsHeaderBg: "rgb(0 0 0)", // Color de fondo de la cabecera de la guía de canales
       epgCardsProgramLiveBg: "#6C8EB6", //Color de fondo del programa en vivo
       epgCardsProgramLiveProgressBg: "#6C8EB6",// Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsLaterGlobal: true,
@@ -1864,6 +1870,7 @@ export const BRANDS = [
       epgPast: false,
       epgPagesPastEnabled: true,
       epgCardsChannelActiveBg: "rgb(0 0 0)",
+      epgCardsHeaderBg: "rgb(0 0 0)", // Color de fondo de la cabecera de la guía de canales
       epgCardsProgramLiveBg: "#6C8EB6",
       epgCardsProgramLiveProgressBg: "#6C8EB6",// Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsLaterGlobal: true,

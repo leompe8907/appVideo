@@ -219,6 +219,19 @@ export function EpgCards({ onSelect }) {
             epgPastEnabled,
           });
 
+          // Canal sin datos de EPG (`now` es null: backend caído, canal nuevo
+          // sin programación cargada, etc.): antes esto dejaba las 4 tarjetas
+          // (antes/ahora/siguiente/más tarde) deshabilitadas y el canal
+          // quedaba completamente inaccesible — ni un clic en PC ni el mando
+          // de TV podían hacer nada, porque ambos dependen del mismo
+          // `disabled`/`tabIndex` de la tarjeta. Un canal en vivo no necesita
+          // metadata de programación para poder reproducirse, así que la
+          // tarjeta "Ahora" se habilita igual si el canal resuelve una URL de
+          // stream, mostrando el detalle sin información de programa (el
+          // modal ya soporta `event=null`) en vez de dejar la fila muerta.
+          const channelPlayable = !now && !!resolveChannelLiveUrl(channel);
+          const nowIsLive = isLive || channelPlayable;
+
           const channelImg =
             channel?.img ||
             channel?.imageUrl ||
@@ -259,7 +272,7 @@ export function EpgCards({ onSelect }) {
               <div
                 className="epg-cards-channel"
                 style={
-                  isLive
+                  nowIsLive
                     ? {
                         backgroundColor:
                           epgCardsCfg.epgCardsChannelActiveBg || 'rgba(10, 67, 133, 0.3)',
@@ -303,14 +316,19 @@ export function EpgCards({ onSelect }) {
                 )}
                 <Card
                   id={`epg-card-${rowIdx}-${epgPastEnabled ? 1 : 0}`}
-                  disabled={!now}
+                  disabled={!now && !channelPlayable}
                   onEnter={() => {
-                    setDetail({ channel, event: now, isLive });
-                    onSelect?.({ channel, event: now, isLive });
+                    setDetail({ channel, event: now || null, isLive: nowIsLive });
+                    onSelect?.({ channel, event: now || null, isLive: nowIsLive });
                   }}
-                  title={nowTitle}
+                  title={
+                    nowTitle ||
+                    (channelPlayable
+                      ? channel.name || t('epg.playLiveChannel', { defaultValue: 'Reproducir canal (en vivo)' })
+                      : '')
+                  }
                   timeText={nowTime}
-                  isLive={isLive}
+                  isLive={nowIsLive}
                   progressStartMs={nowStart}
                   progressEndMs={nowEnd}
                 />
