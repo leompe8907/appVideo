@@ -182,10 +182,7 @@ export function MiCuentaPage() {
         onCancel={() => setConfirmAction(null)}
       />
 
-      <div className="mi-cuenta-breadcrumb">{t('account.title', { defaultValue: 'Mi Cuenta' })}</div>
-
-      <div className="mi-cuenta-shell">
-        <nav className="mi-cuenta-sidebar" aria-label={t('account.title', { defaultValue: 'Mi cuenta' })}>
+      <nav className="mi-cuenta-sidebar" aria-label={t('account.title', { defaultValue: 'Mi cuenta' })}>
           <h2 className="mi-cuenta-sidebar__title">{t('account.title', { defaultValue: 'Mi cuenta' })}</h2>
 
           <div className="mi-cuenta-sidebar__group">
@@ -283,7 +280,6 @@ export function MiCuentaPage() {
             </>
           )}
         </div>
-      </div>
     </section>
   );
 }

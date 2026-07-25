@@ -1,31 +1,18 @@
 @use '../mixins' as *;
 
 .mi-cuenta-page {
+  display: flex;
+  align-items: stretch;
   min-height: 100%;
-  padding: 18px 18px 28px;
-  background: var(--account-page-bg, #e9f2fc);
+  width: 100%;
   max-width: 100%;
+  overflow: hidden;
+  background: var(--account-panel-bg, #0b2a4a);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
   overflow-x: hidden;
   overflow-y: auto;
   max-height: 100vh;
   @include scrollbar-hidden;
-}
-
-.mi-cuenta-breadcrumb {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: rgba(10, 30, 50, 0.55);
-  margin-bottom: 14px;
-}
-
-.mi-cuenta-shell {
-  display: flex;
-  align-items: stretch;
-  min-height: 34em;
-  border-radius: 20px;
-  overflow: hidden;
-  background: var(--account-panel-bg, #0b2a4a);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
 }
 
 .mi-cuenta-sidebar {
@@ -211,7 +198,7 @@
 
 /* Ajustes responsivos: apilar sidebar + contenido en pantallas angostas */
 @media (max-width: 920px) {
-  .mi-cuenta-shell {
+  .mi-cuenta-page {
     flex-direction: column;
   }
 
