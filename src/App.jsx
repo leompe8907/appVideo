@@ -31,6 +31,7 @@ const EpgCardsPage = lazy(() => import('./pages/EpgCardsPage'));
 const CatchupPage = lazy(() => import('./pages/CatchupPage'));
 const ParentalSettingsPage = lazy(() => import('./pages/ParentalSettingsPage'));
 const OsmsPage = lazy(() => import('./pages/OsmsPage'));
+const MiCuentaPage = lazy(() => import('./pages/MiCuentaPage'));
 const HomePlaceholderPage = lazy(() =>
   import('./pages/HomePage').then((m) => ({ default: m.HomePlaceholderPage }))
 );
@@ -135,6 +136,7 @@ function App() {
                   <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>} />
                   <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>} />
                   <Route path="osms" element={<Suspense fallback={<Loading />}><OsmsPage /></Suspense>} />
+                  <Route path="mi-cuenta" element={<Suspense fallback={<Loading />}><MiCuentaPage /></Suspense>} />
                   <Route path="*" element={<Navigate to="/home/inicio" replace />} />
                 </Route>
                 {/* Fallback */}

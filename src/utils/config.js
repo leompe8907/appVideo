@@ -186,6 +186,29 @@ function applySearchTheme(root, ui, setOptional) {
 }
 
 /**
+ * Variables CSS de "Mi cuenta" (/home/mi-cuenta) desde `account.theme`.
+ * Todas opcionales: si la marca no define un valor, el SCSS trae un fallback
+ * fiel al diseño de referencia (fondo claro + panel oscuro + acento celeste).
+ * @param {HTMLElement} root
+ * @param {Object} brandConfig
+ * @param {(name: string, value: unknown) => void} setOptional
+ */
+function applyAccountTheme(root, brandConfig, setOptional) {
+  const theme = brandConfig?.account?.theme || {};
+  setOptional('--account-page-bg', theme.pageBg);
+  setOptional('--account-panel-bg', theme.panelBg);
+  setOptional('--account-panel-text', theme.panelText);
+  setOptional('--account-active-bg', theme.activeItemBg);
+  setOptional('--account-active-text', theme.activeItemText);
+  setOptional('--account-divider', theme.dividerColor);
+  setOptional('--account-content-title', theme.contentTitleColor);
+  setOptional('--account-qr-bg', theme.qrBackground);
+  setOptional('--account-step-number-bg', theme.stepNumberBg);
+  setOptional('--account-step-number-text', theme.stepNumberText);
+  setOptional('--account-danger-text', theme.dangerText);
+}
+
+/**
  * Aplica tema dinámicamente al documento
  * @param {Object} brandConfig - Configuración de la marca
  */
@@ -324,6 +347,9 @@ export function applyTheme(brandConfig) {
 
   // Buscador (/home/buscador): `ui.search`
   applySearchTheme(root, ui, setOptional);
+
+  // Mi cuenta (/home/mi-cuenta): `account.theme`
+  applyAccountTheme(root, brandConfig, setOptional);
 
   // Fondo home: una sola imagen (ver `scheduleHomeBackgroundResolution`).
   scheduleHomeBackgroundResolution(brandConfig);

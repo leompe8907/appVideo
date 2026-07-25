@@ -1,17 +1,15 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { usePreload } from '../store/usePreload';
 import { useOsmsStore } from '../store/osmsStore';
-import panaccessService from '../services/panaccessService';
 import { hasTvRadioServiceBouquets } from '../services/tvDataService';
-import { setLoggedOut, getActiveLicense, getCredentials, getSubscriberName } from '../utils/userSession';
-import ConfirmModal from './ConfirmModal';
+import { getSubscriberName } from '../utils/userSession';
 import { TV_ACTION } from '../utils/tvRemote';
 import { navigationRouter } from '../navigation/NavigationRouter';
-import { focusElementSafe, focusFirstIn, moveFocus, scrollIntoViewWithinAncestors } from '../navigation/spatialNavigation';
+import { focusFirstIn, moveFocus, scrollIntoViewWithinAncestors } from '../navigation/spatialNavigation';
 import { requestTvFocusRingSync } from './navigation/TvFocusRing';
 
 function SidebarIcon({ name }) {
@@ -115,31 +113,6 @@ function SidebarLink({ to, label, icon, onSelect, currentPathname, navigate }) {
   );
 }
 
-function SidebarNavSublink({ to, label, badge, onSelect, currentPathname, navigate }) {
-  return (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `home-sidebar-sublink home-sidebar-sublink--nav${isActive ? ' active' : ''}`
-      }
-      onClick={(e) => {
-        if (currentPathname === to) {
-          e.preventDefault();
-          navigate?.(to, { replace: true, state: { _navNonce: Date.now() } });
-        }
-        onSelect?.();
-      }}
-    >
-      <span className="home-sidebar-sublink-label">{label}</span>
-      {badge != null && badge !== 0 ? (
-        <span className="home-sidebar-badge home-sidebar-badge--sub" aria-label={String(badge)}>
-          {badge}
-        </span>
-      ) : null}
-    </NavLink>
-  );
-}
-
 /**
  * Sidebar izquierda del módulo Home.
  * Mantiene diseño + labels traducidos y navegación por rutas hijas (/home/...).
@@ -150,48 +123,13 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   const navigate = useNavigate();
   const location = useLocation();
   const rootRef = useRef(null);
-  const accountBtnRef = useRef(null);
-  const { appName, currentBrand } = useBrand();
+  const { currentBrand } = useBrand();
   const { vod, catchup, epg } = usePreload();
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsSubmenuStyle, setSettingsSubmenuStyle] = useState(null);
-  const [aboutModal, setAboutModal] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(null); // 'logout' | 'exit' | null
   const subscriberName = getSubscriberName();
   const blurTimerRef = useRef(null);
   const tvMainFocusCancelRef = useRef(null);
   const pendingTvNavFocusRef = useRef(false);
-  /** Evita colapsar el rail cuando hay modal en portal (foco fuera del aside). */
-  const blockCollapseForOverlayRef = useRef(false);
   const sidebarFixed = currentBrand?.ui?.sidebar?.fixed !== false;
-  blockCollapseForOverlayRef.current = Boolean(aboutModal || confirmAction);
-
-  useLayoutEffect(() => {
-    if (!settingsOpen) {
-      setSettingsSubmenuStyle(null);
-      return undefined;
-    }
-
-    const updateSubmenuPosition = () => {
-      const btn = accountBtnRef.current;
-      if (!(btn instanceof HTMLElement)) return;
-      const rect = btn.getBoundingClientRect();
-      const gap = expanded ? 10 : 12;
-      setSettingsSubmenuStyle({
-        // Abre a la derecha y hacia abajo desde el botón de cuenta (arriba del rail).
-        '--home-sidebar-submenu-top': `${rect.bottom + 6}px`,
-        '--home-sidebar-submenu-left': `${rect.right + gap}px`,
-      });
-    };
-
-    updateSubmenuPosition();
-    window.addEventListener('resize', updateSubmenuPosition);
-    window.addEventListener('scroll', updateSubmenuPosition, true);
-    return () => {
-      window.removeEventListener('resize', updateSubmenuPosition);
-      window.removeEventListener('scroll', updateSubmenuPosition, true);
-    };
-  }, [settingsOpen, expanded]);
 
   const vodIsEmptyAfterLoad =
     vod.status === 'ready' &&
@@ -212,60 +150,6 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     epg.status === 'ready' && hasTvRadioServiceBouquets(epg.bouquetsWithChannels || []);
 
   const osmsUnreadCount = useOsmsStore((s) => s.unreadCount);
-
-  const aboutMessage = useMemo(() => {
-    const cred = getCredentials();
-    const username = cred?.username ? String(cred.username) : '';
-    const active = getActiveLicense();
-    const card = active?.licenseKey ? String(active.licenseKey) : '';
-    const brand = currentBrand?.name || currentBrand?.id || '';
-    const version = currentBrand?.version || import.meta.env?.VITE_APP_VERSION || import.meta.env?.VITE_VERSION || '';
-    const developedBy = currentBrand?.developedBy ? String(currentBrand.developedBy) : '';
-    const timezone = Intl.DateTimeFormat().resolvedOptions?.().timeZone || '';
-    const parts = [
-      appName || t('settings.about.app', { defaultValue: 'App' }),
-      brand ? `${t('settings.about.brand', { defaultValue: 'Marca' })}: ${brand}` : null,
-      version ? `${t('settings.about.version', { defaultValue: 'Versión' })}: ${version}` : null,
-      username ? `${t('settings.about.username', { defaultValue: 'Usuario' })}: ${username}` : null,
-      card ? `${t('settings.about.smartcard', { defaultValue: 'Smartcard' })}: ${card}` : null,
-      developedBy ? `${t('settings.about.developedBy', { defaultValue: 'Desarrollado por' })}: ${developedBy}` : null,
-      timezone ? `${t('settings.about.timezone', { defaultValue: 'Zona horaria' })}: ${timezone}` : null,
-    ].filter(Boolean);
-    return parts.join(' · ');
-  }, [appName, currentBrand, t]);
-
-  const handleRefresh = () => {
-    const redirect = location.pathname?.startsWith('/home/') ? location.pathname : '/home/inicio';
-    navigate(`/preload?redirect=${encodeURIComponent(redirect)}`);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await panaccessService.logout?.();
-    } catch {
-      // noop
-    }
-    setLoggedOut();
-    navigate('/login', { replace: true });
-  };
-
-  const handleExit = () => {
-    // Best-effort. En TVs, el shell nativo puede interceptar/ignorar.
-    try {
-      const tizenApp = window?.tizen?.application?.getCurrentApplication?.();
-      if (tizenApp?.exit) {
-        tizenApp.exit();
-        return;
-      }
-    } catch {
-      // noop
-    }
-    try {
-      window.close();
-    } catch {
-      // noop
-    }
-  };
 
   const setExpandedSafe = (next) => {
     if (typeof onExpandedChange === 'function') {
@@ -298,7 +182,6 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   const scheduleCollapseIfOutside = () => {
     if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
     blurTimerRef.current = setTimeout(() => {
-      if (blockCollapseForOverlayRef.current) return;
       const root = rootRef.current;
       const active = document.activeElement;
       if (!root || !active) {
@@ -323,12 +206,6 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       }
     };
   }, []);
-
-  // Si el sidebar se colapsa, cerrar el submenú (los modales van en portal: no tocarlos).
-  useEffect(() => {
-    if (expanded) return;
-    setSettingsOpen(false);
-  }, [expanded]);
 
   // Si la ruta cambia (navegación desde cualquier origen), colapsar el sidebar.
   useEffect(() => {
@@ -361,13 +238,12 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     scrollIntoViewWithinAncestors(active, root);
     requestTvFocusRingSync();
     return undefined;
-  }, [expanded, settingsOpen]);
+  }, [expanded]);
 
-  // TV: únicas dos excepciones NO puramente espaciales del sidebar (abrir/cerrar
-  // el submenú de ajustes). Todo lo demás — UP/DOWN entre links, UP/DOWN dentro
-  // del submenú, RIGHT hacia el contenido, LEFT desde el contenido — lo resuelve
-  // el motor genérico de navegación espacial (`NavigationRouter`) por geometría,
-  // sin necesidad de un handler ni de un modelo de índices por pantalla.
+  // TV: única excepción NO puramente espacial del sidebar. Todo lo demás —
+  // UP/DOWN entre links, RIGHT hacia el contenido, LEFT desde el contenido —
+  // lo resuelve el motor genérico de navegación espacial (`NavigationRouter`)
+  // por geometría, sin necesidad de un handler ni de un modelo de índices por pantalla.
   useEffect(() => {
     if (!isTV) return undefined;
     const unregister = navigationRouter.register('global', (action) => {
@@ -375,31 +251,6 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       if (!(root instanceof HTMLElement)) return false;
       const active = document.activeElement;
       if (!(active instanceof HTMLElement) || !root.contains(active)) return false;
-
-      if (action === TV_ACTION.RIGHT && active.matches('button.home-sidebar-settings-btn')) {
-        if (settingsOpen) return false; // ya abierto: el motor genérico mueve el foco al sublink más cercano
-        setSettingsOpen(true);
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          const first = rootRef.current?.querySelector('.home-sidebar-sublink');
-          if (first instanceof HTMLElement) {
-            focusElementSafe(first);
-            requestTvFocusRingSync();
-          }
-        }));
-        return true;
-      }
-
-      if (action === TV_ACTION.LEFT && active.matches('.home-sidebar-sublink')) {
-        setSettingsOpen(false);
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          const btn = rootRef.current?.querySelector('button.home-sidebar-settings-btn');
-          if (btn instanceof HTMLElement) {
-            focusElementSafe(btn);
-            requestTvFocusRingSync();
-          }
-        }));
-        return true;
-      }
 
       // UP/DOWN nunca deben "escapar" del sidebar hacia el contenido principal:
       // si se delega al motor genérico con scope=document (sin zona activa), y
@@ -416,7 +267,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       return false;
     });
     return unregister;
-  }, [isTV, settingsOpen]);
+  }, [isTV]);
 
   return (
     <aside
@@ -434,144 +285,36 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       onMouseEnter={() => setExpandedSafe(true)}
       onMouseLeave={() => scheduleCollapseIfOutside()}
     >
-      <ConfirmModal
-        open={aboutModal}
-        title={t('settings.about.title', { defaultValue: 'Acerca de' })}
-        message={aboutMessage}
-        confirmText={t('common.close', { defaultValue: 'Cerrar' })}
-        onConfirm={() => setAboutModal(false)}
-      />
-
-      <ConfirmModal
-        open={confirmAction === 'logout'}
-        title={t('settings.logoutConfirmTitle', { defaultValue: 'Cerrar sesión' })}
-        message={t('settings.logoutConfirmMessage', { defaultValue: '¿Deseas cerrar sesión en este dispositivo?' })}
-        confirmText={t('settings.confirm', { defaultValue: 'Confirmar' })}
-        cancelText={t('settings.cancel', { defaultValue: 'Cancelar' })}
-        onConfirm={() => {
-          setConfirmAction(null);
-          handleLogout();
-        }}
-        onCancel={() => setConfirmAction(null)}
-      />
-
-      <ConfirmModal
-        open={confirmAction === 'exit'}
-        title={t('settings.exitConfirmTitle', { defaultValue: 'Salir' })}
-        message={t('settings.exitConfirmMessage', { defaultValue: '¿Deseas salir de la aplicación?' })}
-        confirmText={t('settings.confirm', { defaultValue: 'Confirmar' })}
-        cancelText={t('settings.cancel', { defaultValue: 'Cancelar' })}
-        onConfirm={() => {
-          setConfirmAction(null);
-          handleExit();
-        }}
-        onCancel={() => setConfirmAction(null)}
-      />
       <div className="home-sidebar-body">
         <div className="home-sidebar-group home-sidebar-group--account">
-          <div className="home-sidebar-settings">
-            <button
-              ref={accountBtnRef}
-              type="button"
-              className={`home-sidebar-link home-sidebar-settings-btn${settingsOpen ? ' active' : ''}`}
-              aria-label={
-                subscriberName ||
-                t('sidebar.account', { defaultValue: 'Cuenta' })
+          <NavLink
+            to="/home/mi-cuenta"
+            className={({ isActive }) => `home-sidebar-link home-sidebar-settings-btn${isActive ? ' active' : ''}`}
+            aria-label={subscriberName || t('sidebar.account', { defaultValue: 'Cuenta' })}
+            onClick={(e) => {
+              if (location.pathname === '/home/mi-cuenta') {
+                e.preventDefault();
+                navigate('/home/mi-cuenta', { replace: true, state: { _navNonce: Date.now() } });
               }
-              onClick={() => setSettingsOpen((v) => !v)}
-            >
-              <SidebarIcon name="account" />
-              <span className="home-sidebar-label">
-                {subscriberName || t('sidebar.account', { defaultValue: 'Cuenta' })}
-              </span>
-              {currentBrand?.features?.osms && osmsUnreadCount > 0 ? (
-                <span
-                  className="home-sidebar-badge home-sidebar-badge--settings"
-                  aria-label={t('osms.unreadBadge', {
-                    count: osmsUnreadCount,
-                    defaultValue: `${osmsUnreadCount} sin leer`,
-                  })}
-                >
-                  {osmsUnreadCount}
-                </span>
-              ) : null}
-            </button>
-            {settingsOpen && (
-              <div
-                className="home-sidebar-submenu home-sidebar-submenu--right home-sidebar-submenu--below"
-                role="group"
-                aria-label={
-                  subscriberName ||
-                  t('sidebar.account', { defaultValue: 'Cuenta' })
-                }
-                style={settingsSubmenuStyle ?? undefined}
+              collapseAfterNav();
+            }}
+          >
+            <SidebarIcon name="account" />
+            <span className="home-sidebar-label">
+              {subscriberName || t('sidebar.account', { defaultValue: 'Cuenta' })}
+            </span>
+            {currentBrand?.features?.osms && osmsUnreadCount > 0 ? (
+              <span
+                className="home-sidebar-badge home-sidebar-badge--settings"
+                aria-label={t('osms.unreadBadge', {
+                  count: osmsUnreadCount,
+                  defaultValue: `${osmsUnreadCount} sin leer`,
+                })}
               >
-                {currentBrand?.features?.osms ? (
-                  <SidebarNavSublink
-                    to="/home/osms"
-                    label={t('sidebar.osms')}
-                    badge={osmsUnreadCount}
-                    onSelect={collapseAfterNav}
-                    currentPathname={location.pathname}
-                    navigate={navigate}
-                  />
-                ) : null}
-                {currentBrand?.features?.osms ? (
-                  <div className="home-sidebar-submenu-divider" role="separator" aria-hidden="true" />
-                ) : null}
-                <button
-                  type="button"
-                  className="home-sidebar-sublink"
-                  onClick={() => {
-                    navigate('/home/control-parental');
-                    collapseAfterNav();
-                  }}
-                >
-                  {t('parental.title', { defaultValue: 'Control parental' })}
-                </button>
-                <button
-                  type="button"
-                  className="home-sidebar-sublink"
-                  onClick={() => {
-                    setAboutModal(true);
-                    collapseAfterNav();
-                  }}
-                >
-                  {t('common.about', { defaultValue: 'Acerca de' })}
-                </button>
-                <button
-                  type="button"
-                  className="home-sidebar-sublink"
-                  onClick={() => {
-                    handleRefresh();
-                    collapseAfterNav();
-                  }}
-                >
-                  {t('common.refresh', { defaultValue: 'Refrescar' })}
-                </button>
-                <button
-                  type="button"
-                  className="home-sidebar-sublink"
-                  onClick={() => {
-                    setConfirmAction('logout');
-                    collapseAfterNav();
-                  }}
-                >
-                  {t('common.logout', { defaultValue: 'Cerrar sesión' })}
-                </button>
-                <button
-                  type="button"
-                  className="home-sidebar-sublink home-sidebar-sublink--danger"
-                  onClick={() => {
-                    setConfirmAction('exit');
-                    collapseAfterNav();
-                  }}
-                >
-                  {t('common.exit', { defaultValue: 'Salir' })}
-                </button>
-              </div>
-            )}
-          </div>
+                {osmsUnreadCount}
+              </span>
+            ) : null}
+          </NavLink>
         </div>
 
         <nav className="home-sidebar-group home-sidebar-group--nav" aria-label={t('sidebar.mainNav', { defaultValue: 'Navegación principal' })}>
