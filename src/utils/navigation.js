@@ -30,5 +30,14 @@ export function resolvePostLoginRoute(brandConfig) {
     return getInitialRoute(brandConfig);
   }
 
+  try {
+    const savedRoute = localStorage.getItem('app_last_active_route');
+    if (savedRoute && (savedRoute.startsWith('/home') || savedRoute.startsWith('/smartcard'))) {
+      return savedRoute;
+    }
+  } catch {
+    // fallback
+  }
+
   return '/home/inicio';
 }

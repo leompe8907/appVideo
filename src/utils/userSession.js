@@ -163,6 +163,11 @@ export function getCredentialsWithFallback(fallbackKey, brand) {
  */
 export function setLoggedOut(options = {}) {
   const id = brandId(options.brandId);
+  try {
+    localStorage.removeItem('app_last_active_route');
+  } catch {
+    // noop
+  }
   clearBrandStorage(id);
   clearLegacyGlobalSessionKeys();
   resetBrandStoresOnLogout();

@@ -68,6 +68,46 @@ const clearVodTimeout = () => {
   }
 };
 
+/** Tiempo de vida del caché EPG en disco (30 minutos) */
+const EPG_CACHE_TTL_MS = 30 * 60 * 1000;
+
+function getEpgCacheKey(brandConfig) {
+  const bId = brandConfig?.brand || 'default';
+  return `app_epg_cache_${bId}`;
+}
+
+function getStoredEpgCache(brandConfig) {
+  try {
+    const key = getEpgCacheKey(brandConfig);
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !data.timestamp || !Array.isArray(data.bouquetsWithChannels)) return null;
+
+    const age = Date.now() - data.timestamp;
+    if (age < EPG_CACHE_TTL_MS) {
+      return data;
+    }
+  } catch {
+    // noop
+  }
+  return null;
+}
+
+function saveEpgCache(brandConfig, bouquetsWithChannels, streams) {
+  try {
+    const key = getEpgCacheKey(brandConfig);
+    const payload = {
+      timestamp: Date.now(),
+      bouquetsWithChannels: bouquetsWithChannels || [],
+      streams: Array.isArray(streams) ? streams : [],
+    };
+    localStorage.setItem(key, JSON.stringify(payload));
+  } catch (err) {
+    if (IS_DEV) console.warn('[PreloadStore] Error al guardar caché EPG:', err);
+  }
+}
+
 export const usePreloadStore = create(function (set, get) {
   return {
     epg: epgInitialState,
@@ -89,6 +129,30 @@ export const usePreloadStore = create(function (set, get) {
         epg0.bouquetsWithChannels.length > 0
       ) {
         return;
+      }
+
+      // Intentar restaurar desde caché persistente en disco si no se fuerza recarga
+      if (!force) {
+        const cached = getStoredEpgCache(brandConfig);
+        if (cached && cached.bouquetsWithChannels && cached.bouquetsWithChannels.length > 0) {
+          if (IS_DEV) console.log('⚡ [PreloadStore] Restaurado EPG desde caché local persistente (TTL < 30m)');
+          set(function (s) {
+            return {
+              epg: {
+                status: 'ready',
+                streams: cached.streams || [],
+                bouquetsWithChannels: cached.bouquetsWithChannels || [],
+                progress: { current: (cached.streams || []).length, total: (cached.streams || []).length, percent: 100 },
+                error: null,
+                lastLoadedAt: cached.timestamp,
+              },
+              vod: s.vod,
+              ads: s.ads,
+              catchup: s.catchup,
+            };
+          });
+          return;
+        }
       }
 
       set(function (s) {
@@ -177,6 +241,8 @@ export const usePreloadStore = create(function (set, get) {
             });
           },
         });
+
+        saveEpgCache(brandConfig, bouquets, allStreams);
 
         set(function (s) {
           return {

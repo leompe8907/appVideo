@@ -30,11 +30,11 @@ export function PreloadDataPage() {
   useEffect(() => {
     if (!currentBrand) return;
 
-    loadEPG(currentBrand, { force: true });
+    loadEPG(currentBrand);
     if (currentBrand?.catchup?.enabled !== false) {
-      loadCatchup(currentBrand, { force: true });
+      loadCatchup(currentBrand);
     }
-    loadAds({ force: true });
+    loadAds();
   }, [currentBrand, location.search, loadEPG, loadCatchup, loadAds]);
 
   useEffect(() => {

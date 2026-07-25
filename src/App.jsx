@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { HomeEpgRoutesLayout } from './components/preload/HomeEpgRoutesLayout';
 import { useAuthValidator } from './hooks/useAuthValidator';
+import { useAppLifecycle } from './hooks/useAppLifecycle';
 import { useBrand } from './contexts/BrandContext';
 import { isAuthenticated } from './utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
@@ -68,6 +69,11 @@ function ProtectedRoute({ children }) {
   );
 }
 
+function AppLifecycleHost() {
+  useAppLifecycle();
+  return null;
+}
+
 function App() {
   useTranslation();
   const navigate = useNavigate();
@@ -111,6 +117,7 @@ function App() {
   return (
     <>
       <PlayerProvider>
+        <AppLifecycleHost />
         <OsdKeyboardProvider>
           <TvFocusRing />
           <div className="App">
