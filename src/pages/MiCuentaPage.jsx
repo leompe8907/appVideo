@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import QRCode from 'qrcode';
 import { useBrand } from '../contexts/BrandContext';
+import { useDevice } from '../contexts/DeviceContext';
 import { useDeviceTime } from '../hooks/useDeviceTime';
 import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import ConfirmModal from '../components/ConfirmModal';
 import panaccessService from '../services/panaccessService';
+import { exitAppBestEffort } from '../utils/tvNavigation';
 import { setLoggedOut, getActiveLicense, getCredentials } from '../utils/userSession';
 import '../styles/pages/_mi-cuenta.scss';
 
@@ -22,6 +24,7 @@ export function MiCuentaPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { appName, currentBrand } = useBrand();
+  const { isTV } = useDevice();
   const { text: clockText } = useDeviceTime({ locale: currentBrand?.ui?.locale, format: 'HH:mm' });
 
   const osmsEnabled = currentBrand?.features?.osms === true;
@@ -138,21 +141,7 @@ export function MiCuentaPage() {
   };
 
   const handleExit = () => {
-    // Best-effort. En TVs, el shell nativo puede interceptar/ignorar.
-    try {
-      const tizenApp = window?.tizen?.application?.getCurrentApplication?.();
-      if (tizenApp?.exit) {
-        tizenApp.exit();
-        return;
-      }
-    } catch {
-      // noop
-    }
-    try {
-      window.close();
-    } catch {
-      // noop
-    }
+    exitAppBestEffort();
   };
 
   return (
@@ -226,9 +215,11 @@ export function MiCuentaPage() {
             <button type="button" className="mi-cuenta-item" onClick={() => setConfirmAction('logout')}>
               {t('common.logout', { defaultValue: 'Cerrar sesión' })}
             </button>
-            <button type="button" className="mi-cuenta-item danger" onClick={() => setConfirmAction('exit')}>
-              {t('common.exit', { defaultValue: 'Salir' })}
-            </button>
+            {isTV && (
+              <button type="button" className="mi-cuenta-item danger" onClick={() => setConfirmAction('exit')}>
+                {t('common.exit', { defaultValue: 'Salir' })}
+              </button>
+            )}
           </div>
         </nav>
 

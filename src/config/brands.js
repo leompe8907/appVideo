@@ -305,6 +305,8 @@ export const BRANDS = [
     // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
     account: {
       theme: {
+        sidebarBg: "#0b2a4a",
+        contentBg: "#061a2e",
         panelBg: "#0b2a4a",
         panelText: "rgba(255, 255, 255, 0.88)",
         activeItemBg: "#5c8fc4",
@@ -638,6 +640,29 @@ export const BRANDS = [
       },
     },
 
+        // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
+    account: {
+      theme: {
+        sidebarBg: "#0b2a4a",
+        contentBg: "#061a2e",
+        panelText: "rgba(255, 255, 255, 0.88)",
+        activeItemBg: "#5c8fc4",
+        activeItemText: "#ffffff",
+        dividerColor: "rgba(255, 255, 255, 0.18)",
+        contentTitleColor: "#8fb9e8",
+        qrBackground: "#9dc3ec",
+        stepNumberBg: "#12365c",
+        stepNumberText: "#ffffff",
+        dangerText: "#ff8080",
+      },
+      links: {
+        changePassword: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=reset_password" },
+        linkedDevices: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=devices" },
+        subscription: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=subscription" },
+        deleteAccount: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=delete_account" },
+      },
+    },
+
     // EPG: configuración unificada (guía + cards)
     EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
@@ -964,6 +989,29 @@ export const BRANDS = [
       },
     },
 
+        // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
+    account: {
+      theme: {
+        sidebarBg: "#0b2a4a",
+        contentBg: "#061a2e",
+        panelText: "rgba(255, 255, 255, 0.88)",
+        activeItemBg: "#5c8fc4",
+        activeItemText: "#ffffff",
+        dividerColor: "rgba(255, 255, 255, 0.18)",
+        contentTitleColor: "#8fb9e8",
+        qrBackground: "#9dc3ec",
+        stepNumberBg: "#12365c",
+        stepNumberText: "#ffffff",
+        dangerText: "#ff8080",
+      },
+      links: {
+        changePassword: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=reset_password" },
+        linkedDevices: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=devices" },
+        subscription: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=subscription" },
+        deleteAccount: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=delete_account" },
+      },
+    },
+
     // EPG: configuración unificada (guía + cards)
     EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
@@ -1261,6 +1309,29 @@ export const BRANDS = [
       },
     },
 
+        // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
+    account: {
+      theme: {
+        sidebarBg: "#0b2a4a",
+        contentBg: "#061a2e",
+        panelText: "rgba(255, 255, 255, 0.88)",
+        activeItemBg: "#5c8fc4",
+        activeItemText: "#ffffff",
+        dividerColor: "rgba(255, 255, 255, 0.18)",
+        contentTitleColor: "#8fb9e8",
+        qrBackground: "#9dc3ec",
+        stepNumberBg: "#12365c",
+        stepNumberText: "#ffffff",
+        dangerText: "#ff8080",
+      },
+      links: {
+        changePassword: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=reset_password" },
+        linkedDevices: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=devices" },
+        subscription: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=subscription" },
+        deleteAccount: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=delete_account" },
+      },
+    },
+
     // EPG: configuración unificada (guía + cards)
     EPG: {
       daysOffset: 3, // Días de offset para la API de guía de programación
@@ -1553,6 +1624,29 @@ export const BRANDS = [
           accessToken: "823584907447149", // Facebook App ID
           backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
+      },
+    },
+
+        // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
+    account: {
+      theme: {
+        sidebarBg: "#0b2a4a",
+        contentBg: "#061a2e",
+        panelText: "rgba(255, 255, 255, 0.88)",
+        activeItemBg: "#5c8fc4",
+        activeItemText: "#ffffff",
+        dividerColor: "rgba(255, 255, 255, 0.18)",
+        contentTitleColor: "#8fb9e8",
+        qrBackground: "#9dc3ec",
+        stepNumberBg: "#12365c",
+        stepNumberText: "#ffffff",
+        dangerText: "#ff8080",
+      },
+      links: {
+        changePassword: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=reset_password" },
+        linkedDevices: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=devices" },
+        subscription: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=subscription" },
+        deleteAccount: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=delete_account" },
       },
     },
 
@@ -1878,6 +1972,29 @@ export const BRANDS = [
           accessToken: "", // Facebook App ID
           backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
+      },
+    },
+
+        // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
+    account: {
+      theme: {
+        sidebarBg: "#0b2a4a",
+        contentBg: "#061a2e",
+        panelText: "rgba(255, 255, 255, 0.88)",
+        activeItemBg: "#5c8fc4",
+        activeItemText: "#ffffff",
+        dividerColor: "rgba(255, 255, 255, 0.18)",
+        contentTitleColor: "#8fb9e8",
+        qrBackground: "#9dc3ec",
+        stepNumberBg: "#12365c",
+        stepNumberText: "#ffffff",
+        dangerText: "#ff8080",
+      },
+      links: {
+        changePassword: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=reset_password" },
+        linkedDevices: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=devices" },
+        subscription: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=subscription" },
+        deleteAccount: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=delete_account" },
       },
     },
 

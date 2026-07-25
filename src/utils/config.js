@@ -195,6 +195,8 @@ function applySearchTheme(root, ui, setOptional) {
  */
 function applyAccountTheme(root, brandConfig, setOptional) {
   const theme = brandConfig?.account?.theme || {};
+  setOptional('--account-sidebar-bg', theme.sidebarBg);
+  setOptional('--account-content-bg', theme.contentBg);
   setOptional('--account-panel-bg', theme.panelBg);
   setOptional('--account-panel-text', theme.panelText);
   setOptional('--account-active-bg', theme.activeItemBg);
