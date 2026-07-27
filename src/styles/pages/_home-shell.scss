@@ -611,6 +611,7 @@ html:-moz-full-screen {
   white-space: nowrap;
   max-width: 14rem;
   line-height: 1.2;
+  text-overflow: ellipsis;
 }
 
 .home-sidebar-badge {
@@ -706,12 +707,11 @@ html:-moz-full-screen {
     opacity: 1;
     max-width: calc(var(--sidebar-overlay-width) - var(--sidebar-rail-width));
     pointer-events: auto;
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
+    display: inline-block;
     width: fit-content;
     justify-self: start;
     color: #fff;
+    text-align: left;
   }
 
   .home-sidebar-link.active .home-sidebar-label::after,

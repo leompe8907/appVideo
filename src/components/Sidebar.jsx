@@ -92,7 +92,59 @@ function SidebarIcon({ name }) {
   }
 }
 
-function SidebarLink({ to, label, icon, onSelect, currentPathname, navigate }) {
+function SidebarLabel({ text, expanded }) {
+  const ref = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    if (!expanded) {
+      el.style.fontSize = '';
+      return;
+    }
+
+    const adjust = () => {
+      const parent = el.parentElement;
+      if (!parent) return;
+
+      el.style.fontSize = '';
+
+      const parentWidth = parent.getBoundingClientRect().width;
+      if (parentWidth === 0) return;
+
+      // offsetLeft nos da el espacio ocupado por el riel de iconos (columna 1 del grid/flex)
+      const offsetLeft = el.offsetLeft || 0;
+
+      const padding = 20; // Margen de seguridad para no tocar los bordes
+      const availableWidth = parentWidth - offsetLeft - padding;
+
+      if (availableWidth <= 0) return;
+
+      const textWidth = el.scrollWidth;
+      const currentFontSize = parseFloat(window.getComputedStyle(el).fontSize);
+
+      if (textWidth > availableWidth && currentFontSize > 11) {
+        const ratio = availableWidth / textWidth;
+        const targetSize = Math.max(11, currentFontSize * ratio);
+        el.style.fontSize = `${targetSize}px`;
+      }
+    };
+
+    adjust();
+    const timer = setTimeout(adjust, 250);
+
+    return () => clearTimeout(timer);
+  }, [text, expanded]);
+
+  return (
+    <span ref={ref} className="home-sidebar-label">
+      {text}
+    </span>
+  );
+}
+
+function SidebarLink({ to, label, icon, onSelect, currentPathname, navigate, expanded }) {
   return (
     <NavLink
       to={to}
@@ -108,7 +160,7 @@ function SidebarLink({ to, label, icon, onSelect, currentPathname, navigate }) {
       }}
     >
       {icon ? <SidebarIcon name={icon} /> : null}
-      <span className="home-sidebar-label">{label}</span>
+      <SidebarLabel text={label} expanded={expanded} />
     </NavLink>
   );
 }
@@ -300,9 +352,10 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             }}
           >
             <SidebarIcon name="account" />
-            <span className="home-sidebar-label">
-              {subscriberName || t('sidebar.account', { defaultValue: 'Cuenta' })}
-            </span>
+            <SidebarLabel
+              text={subscriberName || t('sidebar.account', { defaultValue: 'Cuenta' })}
+              expanded={expanded}
+            />
             {currentBrand?.features?.osms && osmsUnreadCount > 0 ? (
               <span
                 className="home-sidebar-badge home-sidebar-badge--settings"
@@ -325,6 +378,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             onSelect={collapseAfterNav}
             currentPathname={location.pathname}
             navigate={navigate}
+            expanded={expanded}
           />
           <SidebarLink
             to="/home/inicio"
@@ -333,6 +387,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             onSelect={collapseAfterNav}
             currentPathname={location.pathname}
             navigate={navigate}
+            expanded={expanded}
           />
           {showTvRadioServices ? (
             <SidebarLink
@@ -342,6 +397,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
               onSelect={collapseAfterNav}
               currentPathname={location.pathname}
               navigate={navigate}
+              expanded={expanded}
             />
           ) : null}
           {showVod ? (
@@ -352,6 +408,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
               onSelect={collapseAfterNav}
               currentPathname={location.pathname}
               navigate={navigate}
+              expanded={expanded}
             />
           ) : null}
           <SidebarLink
@@ -361,6 +418,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
             onSelect={collapseAfterNav}
             currentPathname={location.pathname}
             navigate={navigate}
+            expanded={expanded}
           />
           {showCatchup ? (
             <SidebarLink
@@ -370,6 +428,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
               onSelect={collapseAfterNav}
               currentPathname={location.pathname}
               navigate={navigate}
+              expanded={expanded}
             />
           ) : null}
         </nav>

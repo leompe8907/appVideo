@@ -120,7 +120,8 @@
       flex: 0 1 auto;
       width: fit-content;
       max-width: calc(var(--sidebar-overlay-width) - var(--sidebar-rail-width));
-      align-items: center;
+      display: inline-block;
+      text-align: left;
     }
 
     .home-sidebar-badge--settings {
