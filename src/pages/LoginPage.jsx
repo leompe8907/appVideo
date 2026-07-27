@@ -351,6 +351,10 @@ export function LoginPage() {
             activationRecursive: true,
             storeClientConfig: true,
             storeLicenses: true,
+            // El JWT ya vino en esta misma respuesta del backend Wind
+            // (login social) -- se pasa para que loginAndActivateLicense
+            // no repita un login manual innecesario (Fase 3, ver loginFlow.js).
+            deviceSessionAuth: { access: data.access, refresh: data.refresh, user: data.user },
           },
         );
 
@@ -546,6 +550,8 @@ export function LoginPage() {
             activationRecursive: true,
             storeClientConfig: true,
             storeLicenses: true,
+            // Ver comentario equivalente en handleGoogleCredentialSuccess.
+            deviceSessionAuth: { access: data.access, refresh: data.refresh, user: data.user },
           },
         );
 

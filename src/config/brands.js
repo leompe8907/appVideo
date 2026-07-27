@@ -128,6 +128,19 @@
  *       @param {boolean} login.socialLogin.google.preferCustomButton - true: botón custom con theme.social; false: widget GIS nativo.
  *       @param {string} login.socialLogin.google.backendBaseUrl - Base solo para Google; vacío = socialLogin.backendBaseUrl.
  *     @param {Object} login.socialLogin.facebook - Misma forma que google (enabled, redirectUrl, accessToken, backendBaseUrl).
+ *   @param {Object} [login.deviceSession] - "Dispositivos vinculados" (Fase 3) -- opt-in, ver
+ *     `services/deviceAuthService.js` y `services/deviceSessionService.js`. Nombre genérico a
+ *     propósito: hoy solo lo implementa el backend Wind, pero cualquier brand podría apuntarlo
+ *     a otro backend que hable el mismo contrato.
+ *     @param {boolean} login.deviceSession.enabled - true: además de `clientLogin` (PanAccess), el
+ *       login (manual, social o TV pareada) también autentica contra `{base}/api/auth/login/`
+ *       del backend configurado para obtener un JWT, y registra este dispositivo por WebSocket
+ *       (`/ws/device/`) para que aparezca en el panel de "dispositivos vinculados" del usuario.
+ *       Si es false (default), ningún archivo de este módulo hace una llamada de red.
+ *     @param {string} [login.deviceSession.baseUrl] - Base HTTP del backend; si se omite, se
+ *       reutiliza `login.socialLogin.backendBaseUrl` y luego `login.udid.baseUrl`.
+ *     @param {string} [login.deviceSession.wsUrl] - `wss://.../ws/device/` explícita; si se omite,
+ *       se deriva de la base HTTP resuelta arriba (http->ws, https->wss) + `/ws/device/`.
  *
  * @param {boolean} hashPasswordBeforeLogin - true: hashear contraseña en cliente antes de enviar (ej. Panaccess);
  *   false: enviar contraseña en claro (ej. backends como intv).
@@ -299,6 +312,12 @@ export const BRANDS = [
           accessToken: "823584907447149", // Facebook App ID
           backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
+      },
+      // --- "Dispositivos vinculados" (Fase 3, hoy backend Wind) -- opt-in, ver deviceAuthService.js ---
+      deviceSession: {
+        enabled: false, // true: login manual/social/TV-pareada también autentica contra /api/auth/login/ y registra el dispositivo por WS (/ws/device/). Activar explícitamente cuando el equipo confirme el rollout en este brand.
+        baseUrl: "", // vacío = reutiliza socialLogin.backendBaseUrl ("http://backend.wind.do") y luego udid.baseUrl
+        wsUrl: "", // vacío = se deriva de la base resuelta arriba + /ws/device/
       },
     },
 
@@ -638,9 +657,15 @@ export const BRANDS = [
           backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
       },
+      // --- "Dispositivos vinculados" (Fase 3, hoy backend Wind) -- opt-in, ver deviceAuthService.js ---
+      deviceSession: {
+        enabled: false, // Este brand apunta a un backend distinto (intv-payment.in.tv.br), no a Wind -- dejar deshabilitado.
+        baseUrl: "",
+        wsUrl: "",
+      },
     },
 
-        // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
+    // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
     account: {
       theme: {
         sidebarBg: "#0b2a4a",
@@ -987,9 +1012,15 @@ export const BRANDS = [
           backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
       },
+      // --- "Dispositivos vinculados" (Fase 3, hoy backend Wind) -- opt-in, ver deviceAuthService.js ---
+      deviceSession: {
+        enabled: false,
+        baseUrl: "",
+        wsUrl: "",
+      },
     },
 
-        // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
+    // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
     account: {
       theme: {
         sidebarBg: "#0b2a4a",
@@ -1306,6 +1337,12 @@ export const BRANDS = [
           accessToken: "", // Facebook App ID
           backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
+      },
+      // --- "Dispositivos vinculados" (Fase 3, hoy backend Wind) -- opt-in, ver deviceAuthService.js ---
+      deviceSession: {
+        enabled: false, // true: login manual/social/TV-pareada también autentica contra /api/auth/login/ y registra el dispositivo por WS (/ws/device/). Este brand ya apunta a un backend Wind local (udid.baseUrl) -- candidato natural para pilotear esto primero.
+        baseUrl: "", // vacío = no hay socialLogin.backendBaseUrl configurada acá -> cae a udid.baseUrl ("http://127.0.0.1:8000")
+        wsUrl: "", // vacío = se deriva de la base resuelta arriba + /ws/device/
       },
     },
 
@@ -1625,9 +1662,15 @@ export const BRANDS = [
           backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
       },
+      // --- "Dispositivos vinculados" (Fase 3, hoy backend Wind) -- opt-in, ver deviceAuthService.js ---
+      deviceSession: {
+        enabled: true, // ACTIVADO para pruebas locales (2026-07-27) -- apunta a localhost:8000, NO a producción (backend.wind.do). Antes de desplegar a producción real, volver a "" (vacío, reutiliza socialLogin.backendBaseUrl) y confirmar con el equipo que /api/auth/login/ y /ws/device/ ya están desplegados en backend.wind.do.
+        baseUrl: "http://localhost:8000", // backend Wind local para pruebas -- pisa socialLogin.backendBaseUrl a propósito
+        wsUrl: "ws://localhost:8000/ws/device/", // endpoint de "dispositivos vinculados" (Fase 3) contra el mismo backend local
+      },
     },
 
-        // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
+    // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
     account: {
       theme: {
         sidebarBg: "#0b2a4a",
@@ -1972,6 +2015,12 @@ export const BRANDS = [
           accessToken: "", // Facebook App ID
           backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
+      },
+      // --- "Dispositivos vinculados" (Fase 3, hoy backend Wind) -- opt-in, ver deviceAuthService.js ---
+      deviceSession: {
+        enabled: false,
+        baseUrl: "",
+        wsUrl: "",
       },
     },
 

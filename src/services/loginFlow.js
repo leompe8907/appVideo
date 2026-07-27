@@ -11,6 +11,8 @@ import {
   getLicenseProducts,
   getLicensesForAutoActivation,
 } from '../utils/licenseProducts';
+import * as deviceAuthService from './deviceAuthService';
+import { closeActiveDeviceSession, registerDeviceSession } from './deviceSessionService';
 
 /**
  * Limpia sesión, storage de marca y caché en memoria antes de un login manual
@@ -22,7 +24,73 @@ export function clearSessionBeforeNewLogin() {
   } catch {
     // noop
   }
+  try {
+    closeActiveDeviceSession();
+  } catch {
+    // noop
+  }
   userSession.setLoggedOut();
+}
+
+/**
+ * "Dispositivos vinculados" (Fase 3 del backend externo) -- opt-in por brand
+ * (`login.deviceSession.enabled`, ver `brands.js` y `deviceAuthService.js`).
+ * El nombre es genérico a propósito: hoy solo lo usa el backend Wind, pero
+ * cualquier brand podría apuntarlo a otro backend que implemente el mismo
+ * contrato (`/api/auth/login/`, `/ws/device/`).
+ *
+ * Nunca debe bloquear ni poder tumbar el login principal contra PanAccess,
+ * que para cuando esto se llama ya tuvo éxito: se llama sin `await` desde
+ * `loginAndActivateLicense` (fire-and-forget) y cualquier error interno se
+ * traga en silencio (solo se loguea en DEV).
+ *
+ * @param {Object} brandConfig
+ * @param {{username: string, password: string}} credentials - Mismas
+ *   credenciales ya usadas para `clientLogin` (login1/password reales).
+ * @param {{access: string, refresh: string, user: Object}} [precomputedSession]
+ *   Si el caller ya obtuvo un JWT de este backend por otra vía (login
+ *   social, que lo recibe en la misma respuesta de `/wind/auth/google|facebook/`),
+ *   pasarlo acá evita repetir un login manual innecesario contra `/api/auth/login/`.
+ */
+async function maybeEstablishDeviceSession(brandConfig, credentials, precomputedSession) {
+  if (!deviceAuthService.isDeviceSessionEnabled(brandConfig)) return;
+
+  try {
+    let session = precomputedSession;
+    if (!session?.access) {
+      session = await deviceAuthService.loginManualForDeviceSession(brandConfig, credentials);
+    }
+    if (!session?.access) return;
+
+    deviceAuthService.persistDeviceSessionAuth(session, brandConfig?.brand);
+
+    const result = await registerDeviceSession(brandConfig, session.access, {
+      onRevoked: (reason) => {
+        // Push en vivo (revocado desde el panel, o en bloque por cambio de
+        // contraseña/cierre de cuenta hecho desde OTRO dispositivo/canal).
+        // De momento solo se limpia el device_token local (ya lo hace
+        // deviceSessionService) y se loguea -- forzar un logout/redirect
+        // real de la sesión de PanAccess en este dispositivo requiere
+        // acceso al router de React, que este módulo (servicio plano, sin
+        // React) no tiene; queda para quien integre esto a nivel de UI
+        // (p.ej. `useAppLifecycle`) suscribirse si quiere reaccionar en
+        // vivo. Sin esa integración adicional, el efecto igual se aplica
+        // solo: el JWT/device_token viejo deja de servir en el siguiente
+        // intento de refresco.
+        if (import.meta.env.DEV) {
+          console.warn('[loginFlow] device_revoked recibido:', reason);
+        }
+      },
+    });
+
+    if (import.meta.env.DEV) {
+      console.log('[loginFlow] Device session:', result);
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.warn('[loginFlow] maybeEstablishDeviceSession falló (no afecta el login):', e?.message);
+    }
+  }
 }
 
 const DEFAULT_OPTIONS = {
@@ -123,6 +191,9 @@ async function activateLicenseWithContentCheck(service, license, options = {}) {
  * @param {boolean} [options.failIfInUse] - Pasar a setStreamingLicense.
  * @param {boolean} [options.storeClientConfig] - Guardar getClientConfig en userSession.
  * @param {boolean} [options.storeLicenses] - Guardar licencias en userSession.
+ * @param {{access: string, refresh: string, user: Object}} [options.deviceSessionAuth] - JWT ya
+ *   obtenido del backend externo (login social, ver auth_views.py) -- evita repetir el login
+ *   manual contra `/api/auth/login/` para el registro de dispositivo vinculado (Fase 3).
  * @returns {Promise<{ success: true, clientConfig?: Object, licenses?: Array }>}
  */
 export async function loginAndActivateLicense(brandConfig, credentials, options = {}) {
@@ -153,6 +224,14 @@ export async function loginAndActivateLicense(brandConfig, credentials, options 
     sessionId: Array.isArray(sessionId) ? sessionId[0] : sessionId,
     udid,
   });
+
+  // "Dispositivos vinculados" (Fase 3 del backend externo) -- fire-and-forget,
+  // no se espera ni puede afectar el resultado de esta función (ver
+  // maybeEstablishDeviceSession). Cubre, sin cambios adicionales en cada
+  // caller, los 4 caminos que llegan hasta acá: login manual, login social
+  // (Google/Facebook, vía `opts.deviceSessionAuth` si ya viene el JWT), TV pareada
+  // por QR (credenciales ya descifradas) y reactivación de sesión en splash.
+  maybeEstablishDeviceSession(brandConfig, credentials, opts.deviceSessionAuth);
 
   // Evita "licencia vieja" en storage si la activación falla (ej. license in use).
   // Esto es clave para rutas automáticas (splash/login) que dependen de si hay licencia activa.
