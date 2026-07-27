@@ -91,11 +91,14 @@ export function removeBrandItem(brandId, key) {
 export function clearBrandStorage(brandId) {
   const storage = safeLocalStorage();
   if (!storage) return;
-  const prefix = `${resolveBrandId(brandId)}.`;
+  const bId = resolveBrandId(brandId);
+  const prefix = `${bId}.`;
   const toRemove = [];
   for (let i = 0; i < storage.length; i += 1) {
     const key = storage.key(i);
-    if (key && key.startsWith(prefix)) toRemove.push(key);
+    if (key && (key.startsWith(prefix) || key === `app_epg_cache_${bId}`)) {
+      toRemove.push(key);
+    }
   }
   toRemove.forEach((key) => storage.removeItem(key));
 }
