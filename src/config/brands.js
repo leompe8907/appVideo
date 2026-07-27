@@ -1665,8 +1665,8 @@ export const BRANDS = [
       // --- "Dispositivos vinculados" (Fase 3, hoy backend Wind) -- opt-in, ver deviceAuthService.js ---
       deviceSession: {
         enabled: true, // ACTIVADO para pruebas locales (2026-07-27) -- apunta a localhost:8000, NO a producción (backend.wind.do). Antes de desplegar a producción real, volver a "" (vacío, reutiliza socialLogin.backendBaseUrl) y confirmar con el equipo que /api/auth/login/ y /ws/device/ ya están desplegados en backend.wind.do.
-        baseUrl: "http://localhost:8000", // backend Wind local para pruebas -- pisa socialLogin.backendBaseUrl a propósito
-        wsUrl: "ws://localhost:8000/ws/device/", // endpoint de "dispositivos vinculados" (Fase 3) contra el mismo backend local
+        baseUrl: "https://backend.wind.do/", // backend Wind local para pruebas -- pisa socialLogin.backendBaseUrl a propósito
+        wsUrl: "wss://backend.wind.do/ws/device/", // endpoint de "dispositivos vinculados" (Fase 3) contra el mismo backend local
       },
     },
 
