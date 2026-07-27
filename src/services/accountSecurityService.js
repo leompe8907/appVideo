@@ -1,0 +1,122 @@
+/**
+ * Cambio de contraseña, solicitud de recuperación y cierre de cuenta,
+ * contra el mismo backend externo de "dispositivos vinculados" (ver
+ * `deviceAuthService.js`). Paneles nativos solo en PC/web cuando
+ * `login.deviceSession.enabled`; en TV se sigue usando el QR existente
+ * (`brand.account.links.*` / `brand.login.forgotPassword`), sin cambios.
+ *
+ * IMPORTANTE -- efectos secundarios reales del backend (Wind, ver
+ * wind/services/password_reset.py::sync_password_locally):
+ *   - Cambiar contraseña invalida TODOS los JWT emitidos antes del cambio
+ *     y revoca en bloque todos los `DeviceSession` (dispositivos
+ *     vinculados) de este suscriptor. La contraseña PanAccess vieja que
+ *     esta app guarda localmente (para reactivar sesión sin pedirla de
+ *     nuevo, ver `userSession.js`) deja de servir de inmediato. Por eso
+ *     `ChangePasswordPanel.jsx` fuerza un logout completo tras un éxito --
+ *     no hay forma de "actualizar" la sesión local, hay que iniciar sesión
+ *     de nuevo con la contraseña nueva.
+ *   - Cerrar cuenta desaprovisiona el suscriptor en PanAccess -- es
+ *     irreversible.
+ *
+ * NOTA -- reCAPTCHA: `closeAccount` acepta backend-side un `recaptcha_token`
+ * opcional (solo lo exige el backend si tiene `RECAPTCHA_SECRET_KEY`
+ * configurado, ver `wind/utils/recaptcha.py`). Este módulo NO integra el
+ * SDK de reCAPTCHA v3 (cargar script de Google, generar token por acción) --
+ * si el entorno de destino lo exige, `closeAccount` fallará con
+ * `RecaptchaFailed` hasta que se agregue esa pieza por separado.
+ */
+import {
+  authorizedDeviceRequest,
+  getDeviceSessionSubscriberCode,
+  resolveDeviceAuthBaseUrl,
+} from './deviceAuthService';
+
+async function parseJsonResponse(res, fallbackMessage) {
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    const err = new Error('Respuesta del servidor no es JSON válido.');
+    err.status = res.status;
+    throw err;
+  }
+
+  if (!res.ok) {
+    const detail =
+      (typeof data.detail === 'string' && data.detail) ||
+      (Array.isArray(data.non_field_errors) && data.non_field_errors[0]) ||
+      (typeof data.message === 'string' && data.message) ||
+      (data.errors && JSON.stringify(data.errors)) ||
+      res.statusText ||
+      fallbackMessage;
+    const err = new Error(detail);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+
+  return data;
+}
+
+/**
+ * Solicita el email de recuperación de contraseña. Usuario NO autenticado
+ * (se llama desde LoginPage, antes de tener ningún JWT) -- por eso usa
+ * `fetch` directo, no `authorizedDeviceRequest`. Respuesta siempre
+ * genérica del lado del backend (no revela si el email existe).
+ */
+export async function requestPasswordReset(brandConfig, email) {
+  const base = resolveDeviceAuthBaseUrl(brandConfig);
+  if (!base) {
+    throw new Error('Falta configurar la base del backend (login.deviceSession.baseUrl).');
+  }
+  const res = await fetch(`${base}/api/auth/password/forgot/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: String(email || '').trim() }),
+  });
+  return parseJsonResponse(res, 'No se pudo solicitar la recuperación de contraseña.');
+}
+
+/**
+ * Cambia la contraseña PanAccess del suscriptor autenticado. `code`
+ * (subscriber_code) se resuelve del storage local -- ya lo persiste el
+ * login (ver `deviceAuthService.persistDeviceSessionAuth`), el usuario
+ * nunca tiene que escribirlo para esto.
+ */
+export async function changePassword(brandConfig, brand, newPass) {
+  const code = getDeviceSessionSubscriberCode(brand);
+  if (!code) {
+    throw new Error('No se encontró el código de suscriptor de esta sesión.');
+  }
+  return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/password/', {
+    method: 'POST',
+    body: JSON.stringify({ code, newPass }),
+  });
+}
+
+/**
+ * Cierra la cuenta del suscriptor autenticado. Irreversible.
+ *
+ * @param {Object} brandConfig
+ * @param {string} brand
+ * @param {{confirm?: string, reason?: string}} [opts] - `confirm` se manda
+ *   tal cual al backend (que exige que sea igual al `code` real, y lo
+ *   revalida server-side); si se omite se usa el propio `code`. La UI
+ *   (`CloseAccountPanel.jsx`) es la que decide qué fricción pedirle al
+ *   usuario antes de llamar a esto (no este servicio).
+ */
+export async function closeAccount(brandConfig, brand, { confirm, reason } = {}) {
+  const code = getDeviceSessionSubscriberCode(brand);
+  if (!code) {
+    throw new Error('No se encontró el código de suscriptor de esta sesión.');
+  }
+  return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/account/close/', {
+    method: 'POST',
+    body: JSON.stringify({
+      code,
+      confirm: confirm ?? code,
+      reason: reason || 'user_app_close',
+    }),
+  });
+}

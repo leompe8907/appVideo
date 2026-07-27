@@ -7,7 +7,11 @@ import { useDevice } from '../contexts/DeviceContext';
 import { useDeviceTime } from '../hooks/useDeviceTime';
 import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import ConfirmModal from '../components/ConfirmModal';
+import LinkedDevicesPanel from '../components/account/LinkedDevicesPanel';
+import ChangePasswordPanel from '../components/account/ChangePasswordPanel';
+import CloseAccountPanel from '../components/account/CloseAccountPanel';
 import panaccessService from '../services/panaccessService';
+import { isDeviceSessionEnabled } from '../services/deviceAuthService';
 import { exitAppBestEffort } from '../utils/tvNavigation';
 import { setLoggedOut, getActiveLicense, getCredentials } from '../utils/userSession';
 import '../styles/pages/_mi-cuenta.scss';
@@ -19,7 +23,21 @@ import '../styles/pages/_mi-cuenta.scss';
  * misma forma { enabled, url } que `login.qrRegister`): cada uno se resuelve
  * como un QR (igual patrón que Login) para completar el flujo desde el móvil,
  * ya que en TV no hay forma práctica de abrir un link arbitrario.
+ *
+ * EXCEPCIÓN nativa: si el brand tiene `login.deviceSession.enabled` (backend
+ * propio de "dispositivos vinculados"/cuenta, ver `deviceAuthService.js`) Y
+ * no estamos en TV, "Cambiar contraseña", "Dispositivos vinculados" y
+ * "Eliminar cuenta" se resuelven con un panel nativo dentro de la misma app
+ * en vez del QR -- en TV escribir una contraseña con el control remoto es
+ * mala UX, así que ahí se sigue usando el QR sin cambios. "Suscripción" no
+ * tiene contrapartida nativa (no forma parte del contrato de este backend)
+ * y siempre usa QR.
  */
+const NATIVE_ACCOUNT_PANELS = {
+  changePassword: ChangePasswordPanel,
+  linkedDevices: LinkedDevicesPanel,
+  deleteAccount: CloseAccountPanel,
+};
 export function MiCuentaPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -28,6 +46,7 @@ export function MiCuentaPage() {
   const { text: clockText } = useDeviceTime({ locale: currentBrand?.ui?.locale, format: 'HH:mm' });
 
   const osmsEnabled = currentBrand?.features?.osms === true;
+  const useNativeAccountFlow = !isTV && isDeviceSessionEnabled(currentBrand);
 
   const qrItems = useMemo(() => {
     const accountLinks = currentBrand?.account?.links || {};
@@ -229,33 +248,40 @@ export function MiCuentaPage() {
           {activeItem ? (
             <>
               <h1 className="mi-cuenta-content__title">{activeItem.label}</h1>
-              <div className="mi-cuenta-qr-row">
-                <div className="mi-cuenta-qr-box">
-                  {activeUrl ? (
-                    qrImageSrc ? (
-                      <img src={qrImageSrc} alt={activeItem.label} className="mi-cuenta-qr-img" />
-                    ) : null
-                  ) : (
-                    <div className="mi-cuenta-qr-empty">
-                      {t('account.notConfigured', { defaultValue: 'Esta marca aún no configuró este enlace.' })}
-                    </div>
-                  )}
+              {useNativeAccountFlow && NATIVE_ACCOUNT_PANELS[activeItem.key] ? (
+                (() => {
+                  const NativePanel = NATIVE_ACCOUNT_PANELS[activeItem.key];
+                  return <NativePanel brandConfig={currentBrand} brand={currentBrand?.brand} />;
+                })()
+              ) : (
+                <div className="mi-cuenta-qr-row">
+                  <div className="mi-cuenta-qr-box">
+                    {activeUrl ? (
+                      qrImageSrc ? (
+                        <img src={qrImageSrc} alt={activeItem.label} className="mi-cuenta-qr-img" />
+                      ) : null
+                    ) : (
+                      <div className="mi-cuenta-qr-empty">
+                        {t('account.notConfigured', { defaultValue: 'Esta marca aún no configuró este enlace.' })}
+                      </div>
+                    )}
+                  </div>
+                  <ol className="mi-cuenta-steps">
+                    <li className="mi-cuenta-step">
+                      <span className="mi-cuenta-step__num">1</span>
+                      <span>{t('account.step1', { defaultValue: 'Abra la cámara de su smartphone o tablet.' })}</span>
+                    </li>
+                    <li className="mi-cuenta-step">
+                      <span className="mi-cuenta-step__num">2</span>
+                      <span>{t('account.step2', { defaultValue: 'Escanea el código QR que aparece en pantalla.' })}</span>
+                    </li>
+                    <li className="mi-cuenta-step">
+                      <span className="mi-cuenta-step__num">3</span>
+                      <span>{activeItem.step3}</span>
+                    </li>
+                  </ol>
                 </div>
-                <ol className="mi-cuenta-steps">
-                  <li className="mi-cuenta-step">
-                    <span className="mi-cuenta-step__num">1</span>
-                    <span>{t('account.step1', { defaultValue: 'Abra la cámara de su smartphone o tablet.' })}</span>
-                  </li>
-                  <li className="mi-cuenta-step">
-                    <span className="mi-cuenta-step__num">2</span>
-                    <span>{t('account.step2', { defaultValue: 'Escanea el código QR que aparece en pantalla.' })}</span>
-                  </li>
-                  <li className="mi-cuenta-step">
-                    <span className="mi-cuenta-step__num">3</span>
-                    <span>{activeItem.step3}</span>
-                  </li>
-                </ol>
-              </div>
+              )}
             </>
           ) : (
             <>

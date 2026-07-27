@@ -44,7 +44,7 @@ import {
   setBrandItem,
 } from '../utils/brandStorage';
 import { detectTvVendorFromApis } from '../utils/tvPlatformApis';
-import { resolveDeviceAuthBaseUrl } from './deviceAuthService';
+import { refreshDeviceSessionAccessToken, resolveDeviceAuthBaseUrl } from './deviceAuthService';
 
 const STORAGE_KEYS = {
   deviceToken: 'deviceSession.deviceToken',
@@ -170,153 +170,193 @@ export function closeActiveDeviceSession() {
  * @returns {Promise<{ok: boolean, deviceToken?: string, isNew?: boolean, error?: string}>}
  */
 export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) {
-  return new Promise((resolve) => {
-    const wsUrl = buildDeviceWsUrl(brandConfig);
-    if (!wsUrl || !accessToken) {
-      resolve({ ok: false, error: 'missing_config' });
-      return;
-    }
+  const wsUrl = buildDeviceWsUrl(brandConfig);
+  const brand = brandConfig?.brand;
 
-    const brand = brandConfig?.brand;
-    // Evita acumular conexiones si esta función se llama más de una vez
-    // sin un logout explícito de por medio (p.ej. reactivación de sesión
-    // en splash, o revalidación al volver de background -- ver
-    // `useAppLifecycle`/`splashAuthFlow.js` -- ambas pueden reinvocar
-    // `loginAndActivateLicense` sin pasar por `clearSessionBeforeNewLogin`).
-    closeActiveDeviceSession();
+  // Evita acumular conexiones si esta función se llama más de una vez sin
+  // un logout explícito de por medio (p.ej. reactivación de sesión en
+  // splash, o revalidación al volver de background -- ver
+  // `useAppLifecycle`/`splashAuthFlow.js` -- ambas pueden reinvocar
+  // `loginAndActivateLicense` sin pasar por `clearSessionBeforeNewLogin`).
+  // Se hace una sola vez acá afuera, no en cada intento/reintento.
+  closeActiveDeviceSession();
 
-    const deviceType = resolveDeviceType();
-    const deviceModel = resolveDeviceModel(deviceType);
-    const existingToken = getStoredDeviceToken(brand);
-
-    let settled = false;
-    let heartbeat = null;
-    let ws;
-
-    const finish = (result) => {
-      if (settled) return;
-      settled = true;
-      resolve(result);
-    };
-
-    const stopHeartbeat = () => {
-      if (heartbeat) {
-        clearInterval(heartbeat);
-        heartbeat = null;
-      }
-    };
-
-    try {
-      ws = new WebSocket(`${wsUrl}?token=${encodeURIComponent(accessToken)}`);
-    } catch {
-      resolve({ ok: false, error: 'ws_create_failed' });
-      return;
-    }
-
-    ws.onopen = () => {
-      try {
-        const payload = {
-          type: 'register_device',
-          device_type: deviceType,
-          device_model: deviceModel,
-        };
-        if (existingToken) payload.device_token = existingToken;
-        ws.send(JSON.stringify(payload));
-      } catch {
-        finish({ ok: false, error: 'send_failed' });
-        try {
-          ws.close();
-        } catch {
-          // noop
-        }
+  /**
+   * Un intento de conexión con un access token dado. Devuelve una promesa
+   * que SIEMPRE resuelve (nunca rechaza) con `{ok, ...}` o con
+   * `{ok:false, error:'retry_with_refreshed_token', ...}` -- este último
+   * valor especial es interno, lo consume `registerDeviceSession` para
+   * decidir si reintenta una vez con un token refrescado (ver abajo);
+   * nunca llega al caller final de `registerDeviceSession`.
+   */
+  function attempt(token) {
+    return new Promise((resolve) => {
+      if (!wsUrl || !token) {
+        resolve({ ok: false, error: 'missing_config' });
         return;
       }
-      heartbeat = setInterval(() => {
+
+      const deviceType = resolveDeviceType();
+      const deviceModel = resolveDeviceModel(deviceType);
+      const existingToken = getStoredDeviceToken(brand);
+
+      let settled = false;
+      let heartbeat = null;
+      let hasOpened = false;
+      let ws;
+
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
+
+      const stopHeartbeat = () => {
+        if (heartbeat) {
+          clearInterval(heartbeat);
+          heartbeat = null;
+        }
+      };
+
+      try {
+        ws = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
+      } catch {
+        resolve({ ok: false, error: 'ws_create_failed' });
+        return;
+      }
+
+      ws.onopen = () => {
+        hasOpened = true;
         try {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'pong' }));
+          const payload = {
+            type: 'register_device',
+            device_type: deviceType,
+            device_model: deviceModel,
+          };
+          if (existingToken) payload.device_token = existingToken;
+          ws.send(JSON.stringify(payload));
+        } catch {
+          finish({ ok: false, error: 'send_failed' });
+          try {
+            ws.close();
+          } catch {
+            // noop
           }
-        } catch {
-          // noop
+          return;
         }
-      }, HEARTBEAT_MS);
-    };
+        heartbeat = setInterval(() => {
+          try {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'pong' }));
+            }
+          } catch {
+            // noop
+          }
+        }, HEARTBEAT_MS);
+      };
 
-    ws.onmessage = (event) => {
-      let message = null;
-      try {
-        message = JSON.parse(event.data);
-      } catch {
-        return;
-      }
-
-      const type = message?.type;
-
-      if (type === 'ping') {
+      ws.onmessage = (event) => {
+        let message = null;
         try {
-          ws.send(JSON.stringify({ type: 'pong' }));
+          message = JSON.parse(event.data);
         } catch {
-          // noop
+          return;
         }
-        return;
-      }
 
-      if (type === 'device_registered') {
-        setStoredDeviceToken(message.device_token, brand);
-        activeDeviceSocket = ws;
-        finish({ ok: true, deviceToken: message.device_token, isNew: !!message.is_new });
-        // A propósito no se cierra acá: la conexión queda viva para poder
-        // recibir `device_revoked` en vivo (ver doc de la función). El
-        // caller la cierra explícitamente vía `closeActiveDeviceSession()`
-        // al hacer logout (`clearSessionBeforeNewLogin`, loginFlow.js).
-        return;
-      }
+        const type = message?.type;
 
-      if (type === 'device_revoked') {
-        clearStoredDeviceToken(brand);
-        stopHeartbeat();
-        activeDeviceSocket = null;
-        try {
-          callbacks.onRevoked?.(message.reason || 'revoked_by_subscriber');
-        } catch {
-          // noop -- un callback roto del caller no debe impedir cerrar el socket
+        if (type === 'ping') {
+          try {
+            ws.send(JSON.stringify({ type: 'pong' }));
+          } catch {
+            // noop
+          }
+          return;
         }
-        try {
-          ws.close();
-        } catch {
-          // noop
-        }
-        return;
-      }
 
-      if (type === 'error') {
-        // `device_token_invalid`: el token guardado ya no sirve (revocado,
-        // o de otra cuenta) -- se limpia para que el próximo intento
-        // registre uno nuevo en vez de reintentar en loop con el mismo.
-        if (message.code === 'device_token_invalid') {
+        if (type === 'device_registered') {
+          setStoredDeviceToken(message.device_token, brand);
+          activeDeviceSocket = ws;
+          finish({ ok: true, deviceToken: message.device_token, isNew: !!message.is_new });
+          // A propósito no se cierra acá: la conexión queda viva para poder
+          // recibir `device_revoked` en vivo (ver doc de la función). El
+          // caller la cierra explícitamente vía `closeActiveDeviceSession()`
+          // al hacer logout (`clearSessionBeforeNewLogin`, loginFlow.js).
+          return;
+        }
+
+        if (type === 'device_revoked') {
           clearStoredDeviceToken(brand);
+          stopHeartbeat();
+          activeDeviceSocket = null;
+          try {
+            callbacks.onRevoked?.(message.reason || 'revoked_by_subscriber');
+          } catch {
+            // noop -- un callback roto del caller no debe impedir cerrar el socket
+          }
+          try {
+            ws.close();
+          } catch {
+            // noop
+          }
+          return;
         }
+
+        if (type === 'error') {
+          // `device_token_invalid`: el token guardado ya no sirve (revocado,
+          // o de otra cuenta) -- se limpia para que el próximo intento
+          // registre uno nuevo en vez de reintentar en loop con el mismo.
+          if (message.code === 'device_token_invalid') {
+            clearStoredDeviceToken(brand);
+          }
+          stopHeartbeat();
+          finish({ ok: false, error: message.code || 'error' });
+          try {
+            ws.close();
+          } catch {
+            // noop
+          }
+        }
+      };
+
+      ws.onerror = () => {
+        finish({ ok: false, error: 'ws_error' });
+      };
+
+      ws.onclose = () => {
+        // Si ya se resolvió con éxito (`device_registered`) este cierre es de
+        // una conexión que estuvo viva un rato y luego se cayó/cerró -- no
+        // hay nada más que resolver. `finish()` ya es un no-op en ese caso.
         stopHeartbeat();
-        finish({ ok: false, error: message.code || 'error' });
-        try {
-          ws.close();
-        } catch {
-          // noop
+        if (activeDeviceSocket === ws) activeDeviceSocket = null;
+        // El backend valida el JWT solo en el `connect()` inicial (ver
+        // `wind/utils/ws_auth.py` / `device_consumers.py`): si el token ya
+        // expiró, cierra ANTES de aceptar la conexión (código 4001/4004) --
+        // el navegador nunca dispara `onopen`. Se distingue de un cierre
+        // normal (tras haber llegado a abrir) para no reintentar en casos
+        // donde el problema es de red y no de JWT.
+        if (!hasOpened) {
+          finish({ ok: false, error: 'auth_failed_before_open' });
+          return;
         }
-      }
-    };
+        finish({ ok: false, error: 'closed_before_ack' });
+      };
+    });
+  }
 
-    ws.onerror = () => {
-      finish({ ok: false, error: 'ws_error' });
-    };
-
-    ws.onclose = () => {
-      // Si ya se resolvió con éxito (`device_registered`) este cierre es de
-      // una conexión que estuvo viva un rato y luego se cayó/cerró -- no
-      // hay nada más que resolver. `finish()` ya es un no-op en ese caso.
-      stopHeartbeat();
-      if (activeDeviceSocket === ws) activeDeviceSocket = null;
-      finish({ ok: false, error: 'closed_before_ack' });
-    };
+  return attempt(accessToken).then(async (result) => {
+    if (result.ok || result.error !== 'auth_failed_before_open') {
+      return result;
+    }
+    // Único reintento: refresca el access token con el refresh guardado
+    // (`refreshDeviceSessionAccessToken`, antes código muerto) y reabre la
+    // conexión una vez más. Si el refresh también falla (refresh vencido o
+    // inexistente), se rinde -- el caller ya no puede hacer nada más sin
+    // pasar por un login manual/social nuevo.
+    const refreshedToken = await refreshDeviceSessionAccessToken(brandConfig, brand);
+    if (!refreshedToken) {
+      return { ok: false, error: 'auth_failed' };
+    }
+    return attempt(refreshedToken);
   });
 }

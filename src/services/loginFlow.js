@@ -29,6 +29,19 @@ export function clearSessionBeforeNewLogin() {
   } catch {
     // noop
   }
+  try {
+    // Bug real (no solo cosmético): sin esto, el JWT/refresh de
+    // "dispositivos vinculados" del usuario anterior quedaba en storage
+    // tras el logout -- si otro usuario inicia sesión en el mismo
+    // navegador/dispositivo antes de que ese JWT expire por sí solo, el
+    // registro de dispositivo de la sesión nueva se hacía arrastrando
+    // credenciales del usuario anterior. `clearDeviceSessionAuth()` sin
+    // argumento resuelve el brand activo (ver `resolveBrandId` en
+    // `brandStorage.js`), igual que `closeActiveDeviceSession()` arriba.
+    deviceAuthService.clearDeviceSessionAuth();
+  } catch {
+    // noop
+  }
   userSession.setLoggedOut();
 }
 

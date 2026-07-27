@@ -1,0 +1,145 @@
+/**
+ * Paneles nativos de cuenta (dispositivos vinculados, cambiar contraseña,
+ * eliminar cuenta) -- solo se muestran en PC/web cuando el brand tiene
+ * `login.deviceSession.enabled` (ver MiCuentaPage.jsx). Reutiliza las
+ * variables de tema ya definidas por _mi-cuenta.scss.
+ */
+
+.account-security-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 30em;
+}
+
+.account-security-panel__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
+.account-security-hint {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+.account-security-hint--danger {
+  background: rgba(255, 138, 138, 0.12);
+  color: var(--account-danger-text, #ff8a8a);
+}
+
+.account-security-label {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.account-security-input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--account-panel-text, #ffffff);
+  font-size: 0.95rem;
+}
+
+.account-security-input:focus-visible {
+  outline: 2px solid var(--account-active-bg, #5c8fc4);
+}
+
+.account-security-btn {
+  align-self: flex-start;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--account-panel-text, #ffffff);
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.account-security-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.account-security-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.account-security-btn--primary {
+  background: var(--account-active-bg, #5c8fc4);
+}
+
+.account-security-btn--ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.account-security-btn--danger {
+  background: var(--account-danger-text, #ff8a8a);
+  color: #1a1a1a;
+}
+
+.account-security-loading,
+.account-security-empty {
+  padding: 16px;
+  opacity: 0.8;
+}
+
+.account-security-error {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 138, 138, 0.15);
+  color: var(--account-danger-text, #ff8a8a);
+  font-size: 0.88rem;
+}
+
+.account-security-success {
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(140, 220, 160, 0.15);
+  color: #8cdca0;
+  line-height: 1.4;
+}
+
+.linked-devices-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.linked-devices-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.linked-devices-row__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.linked-devices-row__type {
+  font-weight: 600;
+}
+
+.linked-devices-row__model,
+.linked-devices-row__meta {
+  font-size: 0.82rem;
+  opacity: 0.75;
+}

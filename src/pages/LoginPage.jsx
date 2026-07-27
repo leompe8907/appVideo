@@ -20,6 +20,8 @@ import {
   exchangeFacebookAccessTokenWithBackend,
   getFacebookAccessToken,
 } from '../services/facebookSocialLogin';
+import { isDeviceSessionEnabled } from '../services/deviceAuthService';
+import { requestPasswordReset } from '../services/accountSecurityService';
 import { preloadImage } from '../utils/assetLoader';
 import { LOGIN_SOCIAL_LOGOS } from '../constants/login/socialLogos.js';
 import '../styles/components/_login.scss';
@@ -41,6 +43,11 @@ export function LoginPage() {
   const [isForgotQrModalOpen, setIsForgotQrModalOpen] = useState(false);
   const [forgotQrImageSrc, setForgotQrImageSrc] = useState('');
   const [forgotQrError, setForgotQrError] = useState('');
+  const [isForgotNativeModalOpen, setIsForgotNativeModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+  const [forgotNativeError, setForgotNativeError] = useState('');
+  const [forgotNativeSuccess, setForgotNativeSuccess] = useState(false);
   const [isUdidModalOpen, setIsUdidModalOpen] = useState(false);
   const [udidQrImageSrc, setUdidQrImageSrc] = useState('');
   const [isLoginBgReady, setIsLoginBgReady] = useState(false);
@@ -63,8 +70,14 @@ export function LoginPage() {
   const forgotPasswordConfig = currentBrand?.login?.forgotPassword;
   const forgotPasswordUrl =
     typeof forgotPasswordConfig?.url === 'string' ? forgotPasswordConfig.url.trim() : '';
+  // Nativo: si el brand tiene el backend de "dispositivos vinculados"/cuenta
+  // (`login.deviceSession.enabled`, ver `deviceAuthService.js`) y no estamos
+  // en TV, se resuelve con un formulario dentro de la misma app en vez de
+  // mandar al usuario a un link/QR externo (que ni siquiera hace falta que
+  // el brand tenga configurado para que esto aparezca).
+  const canUseNativeForgotPassword = !isTV && isDeviceSessionEnabled(currentBrand);
   const canShowForgotPassword =
-    forgotPasswordConfig?.enabled === true && forgotPasswordUrl.length > 0;
+    canUseNativeForgotPassword || (forgotPasswordConfig?.enabled === true && forgotPasswordUrl.length > 0);
   // En TV siempre usamos modal (redirigir es peor UX y muchos runtimes no se detectan como LG/Samsung).
   const shouldShowQrModal = isTV;
   const udidLoginConfig = currentBrand?.login?.udid || currentBrand?.udidLogin;
@@ -283,9 +296,17 @@ export function LoginPage() {
 
   const handleOpenForgotPassword = () => {
     if (!canShowForgotPassword) return;
+    if (canUseNativeForgotPassword) {
+      setForgotEmail('');
+      setForgotNativeError('');
+      setForgotNativeSuccess(false);
+      setIsForgotNativeModalOpen(true);
+      return;
+    }
     // En TV, redirigir (perder la app en la misma "pestaña") es mala UX y muchos
     // runtimes no navegan bien a una URL externa: mostramos un QR para que el
-    // usuario continúe desde su teléfono. En PC se mantiene el link directo.
+    // usuario continúe desde su teléfono. En PC (sin backend nativo) se mantiene
+    // el link directo.
     if (isTV) {
       setForgotQrError('');
       setForgotQrImageSrc('');
@@ -293,6 +314,27 @@ export function LoginPage() {
       return;
     }
     window.location.assign(forgotPasswordUrl);
+  };
+
+  const handleCloseForgotNativeModal = useCallback(() => {
+    setIsForgotNativeModalOpen(false);
+  }, []);
+
+  const handleForgotNativeSubmit = async (e) => {
+    e.preventDefault();
+    if (forgotSubmitting || !currentBrand) return;
+    setForgotSubmitting(true);
+    setForgotNativeError('');
+    try {
+      await requestPasswordReset(currentBrand, forgotEmail);
+      setForgotNativeSuccess(true);
+    } catch (err) {
+      setForgotNativeError(
+        err?.message || t('login.forgotPasswordNativeError', { defaultValue: 'No se pudo procesar la solicitud. Intenta de nuevo.' }),
+      );
+    } finally {
+      setForgotSubmitting(false);
+    }
   };
 
   const handleOpenQrModal = () => {
@@ -875,6 +917,69 @@ export function LoginPage() {
             >
               {t('common.close')}
             </FocusableButton>
+          </div>
+        </div>
+      )}
+
+      {isForgotNativeModalOpen && (
+        <div className="register-modal-backdrop">
+          <div className="register-modal">
+            <h3>{t('login.forgotPasswordTitle')}</h3>
+
+            {forgotNativeSuccess ? (
+              <>
+                <p>
+                  {t('login.forgotPasswordNativeSuccess', {
+                    defaultValue:
+                      'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña. Revisa también la carpeta de spam.',
+                  })}
+                </p>
+                <FocusableButton
+                  type="button"
+                  className="register-close-button"
+                  onClick={handleCloseForgotNativeModal}
+                >
+                  {t('common.close')}
+                </FocusableButton>
+              </>
+            ) : (
+              <form onSubmit={handleForgotNativeSubmit} className="login-form">
+                <p>
+                  {t('login.forgotPasswordNativeHint', {
+                    defaultValue: 'Ingresa el correo de tu cuenta y te enviaremos instrucciones para recuperar tu contraseña.',
+                  })}
+                </p>
+                <div className="form-group form-group--plain">
+                  <FocusableInput
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder={t('login.forgotPasswordEmailPlaceholder', { defaultValue: 'Correo electrónico' })}
+                    disabled={forgotSubmitting}
+                    autoComplete="email"
+                    required
+                    aria-label={t('login.forgotPasswordEmailPlaceholder', { defaultValue: 'Correo electrónico' })}
+                  />
+                </div>
+
+                {forgotNativeError && <p className="register-qr-placeholder">{forgotNativeError}</p>}
+
+                <FocusableButton type="submit" className="login-button" disabled={forgotSubmitting}>
+                  {forgotSubmitting
+                    ? t('login.forgotPasswordSubmitting', { defaultValue: 'Enviando...' })
+                    : t('login.forgotPasswordSubmit', { defaultValue: 'Enviar' })}
+                </FocusableButton>
+
+                <FocusableButton
+                  type="button"
+                  className="register-close-button"
+                  onClick={handleCloseForgotNativeModal}
+                  disabled={forgotSubmitting}
+                >
+                  {t('common.close')}
+                </FocusableButton>
+              </form>
+            )}
           </div>
         </div>
       )}

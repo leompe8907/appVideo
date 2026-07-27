@@ -172,6 +172,54 @@ export function persistDeviceSessionAuth({ access, refresh, user } = {}, brand) 
   if (user?.subscriber_code) setBrandItem(id, STORAGE_KEYS.subscriberCode, user.subscriber_code);
 }
 
+/**
+ * Fetch autenticado con el JWT de device-session, con un reintento
+ * automático (una sola vez) si el backend responde 401: intenta refrescar
+ * el access token con el refresh guardado (`refreshDeviceSessionAccessToken`,
+ * antes código muerto -- este es su primer caller real) y repite la misma
+ * llamada antes de rendirse. Usado por los endpoints autenticados de
+ * "dispositivos vinculados" y "cuenta" (perfil, cierre) -- ver
+ * `linkedDevicesService.js` y `accountSecurityService.js`.
+ *
+ * @param {Object} brandConfig
+ * @param {string} brand
+ * @param {string} path - p.ej. '/wind/devices/' (se concatena a la base resuelta).
+ * @param {RequestInit} [init]
+ * @returns {Promise<any>} el body ya parseado como JSON.
+ */
+export async function authorizedDeviceRequest(brandConfig, brand, path, init = {}) {
+  const base = resolveDeviceAuthBaseUrl(brandConfig);
+  if (!base) {
+    throw new Error('Falta configurar la base del backend (login.deviceSession.baseUrl).');
+  }
+
+  let accessToken = getDeviceSessionAccessToken(brand);
+  if (!accessToken) {
+    throw new Error('No hay sesión de dispositivo activa (vuelve a iniciar sesión).');
+  }
+
+  const doFetch = (token) =>
+    fetch(`${base}${path}`, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init.headers || {}),
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+  let res = await doFetch(accessToken);
+  if (res.status === 401) {
+    const refreshed = await refreshDeviceSessionAccessToken(brandConfig, brand);
+    if (refreshed) {
+      accessToken = refreshed;
+      res = await doFetch(accessToken);
+    }
+  }
+
+  return parseJsonResponse(res, 'Error comunicándose con el backend.');
+}
+
 export function getDeviceSessionAccessToken(brand) {
   return getBrandItem(resolveBrandId(brand), STORAGE_KEYS.access) || '';
 }
