@@ -9,10 +9,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
+import { useDevice } from '../contexts/DeviceContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import { usePreload } from '../store/usePreload';
 import { useParentalGate } from '../hooks/useParentalGate';
 import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
+import { navigationRouter } from '../navigation/NavigationRouter';
+import { TV_ACTION } from '../utils/tvRemote';
+import { moveFocus } from '../navigation/spatialNavigation';
 import VodCard from '../components/vod/VodCard';
 import VodSeeMoreCard from '../components/vod/VodSeeMoreCard';
 import VodDetailModal from '../components/vod/VodDetailModal';
@@ -27,6 +31,7 @@ export function VodPage() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+  const { isTV } = useDevice();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
   const { requestPlayMedia } = useParentalGate();
@@ -73,6 +78,31 @@ export function VodPage() {
     }, 0);
     return () => clearTimeout(timer);
   }, [location.state, allVods, status, navigate]);
+
+  // TV: cada fila (`.vod-row-cards`) scrollea horizontal de forma independiente,
+  // así que el motor genérico de geometría (que por defecto busca en TODO el
+  // documento) puede terminar "cruzando" a una tarjeta de otra categoría que
+  // casualmente cae más a la derecha en pantalla — típicamente al llegar al
+  // último foco de la fila (la tarjeta "Ver más") y seguir presionando RIGHT,
+  // donde ya no hay ningún candidato válido dentro de la fila actual. Acotamos
+  // la búsqueda a la fila activa: si hay otra tarjeta a la derecha DENTRO de
+  // esa fila, se mueve igual que antes; si no la hay, se consume la tecla sin
+  // hacer nada en vez de dejar que salte a otra fila. LEFT no se toca: cruzar
+  // desde la primera tarjeta de una fila hacia el Sidebar es comportamiento
+  // esperado (ver `HomeInputDispatcher`).
+  useEffect(() => {
+    if (!isTV) return undefined;
+    const unregister = navigationRouter.register('global', (action) => {
+      if (action !== TV_ACTION.RIGHT) return false;
+      const active = document.activeElement;
+      if (!(active instanceof HTMLElement)) return false;
+      const row = active.closest('.vod-row-cards');
+      if (!row) return false;
+      moveFocus('right', row);
+      return true;
+    });
+    return unregister;
+  }, [isTV]);
 
   /** Desde la fila principal: cerrar modal de género si estuviera abierto (p. ej. web). */
   const handleVodSelectFromRow = (item) => {

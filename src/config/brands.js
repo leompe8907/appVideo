@@ -656,10 +656,10 @@ export const BRANDS = [
         dangerText: "#ff8080",
       },
       links: {
-        changePassword: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=reset_password" },
-        linkedDevices: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=devices" },
-        subscription: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=subscription" },
-        deleteAccount: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=delete_account" },
+        changePassword: { enabled: true, url: "https://backend.wind.do/wind/login/" },
+        linkedDevices: { enabled: true, url: "https://backend.wind.do/wind/login/" },
+        subscription: { enabled: true, url: "https://backend.wind.do/wind/login/" },
+        deleteAccount: { enabled: true, url: "https://backend.wind.do/wind/login/" },
       },
     },
 
@@ -1643,10 +1643,10 @@ export const BRANDS = [
         dangerText: "#ff8080",
       },
       links: {
-        changePassword: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=reset_password" },
-        linkedDevices: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=devices" },
-        subscription: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=subscription" },
-        deleteAccount: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=delete_account" },
+        changePassword: { enabled: true, url: "https://backend.wind.do/wind/login/" },
+        linkedDevices: { enabled: true, url: "https://backend.wind.do/wind/login/" },
+        subscription: { enabled: true, url: "https://backend.wind.do/wind/login/" },
+        deleteAccount: { enabled: true, url: "https://backend.wind.do/wind/login/" },
       },
     },
 
