@@ -76,6 +76,75 @@ function getEpgCacheKey(brandConfig) {
   return `app_epg_cache_${bId}`;
 }
 
+function pruneEpgEvent(ev) {
+  if (!ev) return null;
+  const pruned = {};
+
+  if (ev.id !== undefined) pruned.id = ev.id;
+  if (ev.eventId !== undefined) pruned.eventId = ev.eventId;
+  if (ev.event_id !== undefined) pruned.event_id = ev.event_id;
+
+  if (ev.start !== undefined) pruned.start = ev.start;
+  if (ev.end !== undefined) pruned.end = ev.end;
+  if (ev.startDate !== undefined) pruned.startDate = ev.startDate;
+  if (ev.endDate !== undefined) pruned.endDate = ev.endDate;
+
+  if (ev.title !== undefined) pruned.title = ev.title;
+  if (ev.name !== undefined) pruned.name = ev.name;
+  if (ev.programTitle !== undefined) pruned.programTitle = ev.programTitle;
+  if (ev.eventName !== undefined) pruned.eventName = ev.eventName;
+
+  if (ev.imageUrl !== undefined) pruned.imageUrl = ev.imageUrl;
+  if (ev.imageUrl2 !== undefined) pruned.imageUrl2 = ev.imageUrl2;
+  if (ev.catchupImageUrl !== undefined) pruned.catchupImageUrl = ev.catchupImageUrl;
+  if (ev.posterUrl !== undefined) pruned.posterUrl = ev.posterUrl;
+  if (ev.image !== undefined) pruned.image = ev.image;
+  if (ev.poster !== undefined) pruned.poster = ev.poster;
+
+  if (ev.description !== undefined) pruned.description = ev.description;
+  if (ev.extendedDescription !== undefined) pruned.extendedDescription = ev.extendedDescription;
+  if (ev.summary !== undefined) pruned.summary = ev.summary;
+
+  if (Array.isArray(ev.languages)) {
+    pruned.languages = ev.languages.map(function (lang) {
+      if (!lang) return null;
+      const prunedLang = {};
+      if (lang.title !== undefined) prunedLang.title = lang.title;
+      if (lang.description !== undefined) prunedLang.description = lang.description;
+      if (lang.extendedDescription !== undefined) prunedLang.extendedDescription = lang.extendedDescription;
+      return prunedLang;
+    }).filter(Boolean);
+  } else if (ev.languages && typeof ev.languages === 'object') {
+    pruned.languages = {};
+    if (ev.languages.title !== undefined) pruned.languages.title = ev.languages.title;
+    if (ev.languages.description !== undefined) pruned.languages.description = ev.languages.description;
+    if (ev.languages.extendedDescription !== undefined) pruned.languages.extendedDescription = ev.languages.extendedDescription;
+  }
+
+  return pruned;
+}
+
+function pruneBouquets(bouquets) {
+  if (!Array.isArray(bouquets)) return [];
+  return bouquets.map(function (b) {
+    if (!b) return null;
+    return {
+      ...b,
+      items: Array.isArray(b.items)
+        ? b.items.map(function (ch) {
+            if (!ch) return null;
+            return {
+              ...ch,
+              epgItems: Array.isArray(ch.epgItems)
+                ? ch.epgItems.map(pruneEpgEvent).filter(Boolean)
+                : []
+            };
+          }).filter(Boolean)
+        : []
+    };
+  }).filter(Boolean);
+}
+
 function getStoredEpgCache(brandConfig) {
   try {
     const key = getEpgCacheKey(brandConfig);
@@ -86,6 +155,11 @@ function getStoredEpgCache(brandConfig) {
 
     const age = Date.now() - data.timestamp;
     if (age < EPG_CACHE_TTL_MS) {
+      // Reconstruir la lista de streams desduplicados a partir de los bouquets
+      const allStreamsRaw = data.bouquetsWithChannels.reduce(function (acc, b) {
+        return acc.concat(b.items || []);
+      }, []);
+      data.streams = dedupeStreams(allStreamsRaw);
       return data;
     }
   } catch {
@@ -95,12 +169,29 @@ function getStoredEpgCache(brandConfig) {
 }
 
 function saveEpgCache(brandConfig, bouquetsWithChannels, streams) {
+  const key = getEpgCacheKey(brandConfig);
+
+  // Limpieza proactiva: Elimina cachés de EPG de otras marcas para no saturar el localStorage
   try {
-    const key = getEpgCacheKey(brandConfig);
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('app_epg_cache_') && k !== key) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  } catch (e) {
+    // noop
+  }
+
+  try {
+    // Podar los bouquets y eventos para eliminar metadatos pesados innecesarios y optimizar espacio
+    const prunedBouquets = pruneBouquets(bouquetsWithChannels);
     const payload = {
       timestamp: Date.now(),
-      bouquetsWithChannels: bouquetsWithChannels || [],
-      streams: Array.isArray(streams) ? streams : [],
+      bouquetsWithChannels: prunedBouquets,
+      // No guardamos 'streams' para evitar duplicar todos los objetos de canal con su EPG (se reconstruye al cargar)
     };
     localStorage.setItem(key, JSON.stringify(payload));
   } catch (err) {

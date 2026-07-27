@@ -80,14 +80,6 @@
     "video.js": "7.21.1",
     "zustand": "^5.0.12"
   },
-  "pnpm": {
-    "allowBuilds": {
-      "@parcel/watcher": true,
-      "@swc/core": true,
-      "core-js": true,
-      "esbuild": true
-    }
-  },
   "devDependencies": {
     "@babel/core": "^7.29.7",
     "@babel/plugin-transform-nullish-coalescing-operator": "^7.29.7",
