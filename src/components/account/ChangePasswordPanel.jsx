@@ -8,7 +8,7 @@
  * así que tras un éxito forzamos logout completo -- no hay forma de
  * "seguir logueado" con la contraseña vieja en caché local.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { changePassword } from '../../services/accountSecurityService';
@@ -32,6 +32,16 @@ export function ChangePasswordPanel({ brandConfig, brand }) {
     clearSessionBeforeNewLogin();
     navigate('/login', { replace: true });
   };
+
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        goToLogin();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [success]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
