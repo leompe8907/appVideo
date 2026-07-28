@@ -48,6 +48,7 @@ import { refreshDeviceSessionAccessToken, resolveDeviceAuthBaseUrl } from './dev
 
 const STORAGE_KEYS = {
   deviceToken: 'deviceSession.deviceToken',
+  deviceId: 'deviceSession.deviceId',
 };
 
 export const DEVICE_TYPE = Object.freeze({
@@ -118,6 +119,77 @@ function setStoredDeviceToken(token, brand) {
 
 export function clearStoredDeviceToken(brand) {
   removeBrandItem(resolveBrandId(brand), STORAGE_KEYS.deviceToken);
+}
+
+/**
+ * `id` interno del `DeviceSession` de este mismo dispositivo (el que
+ * devuelve `device_registered`, ver backend Wind `device_consumers.py`).
+ * Permite a la UI de "dispositivos vinculados" (`LinkedDevicesPanel.jsx`)
+ * marcar cuál fila de la lista es "este dispositivo" comparando contra
+ * `GET /wind/devices/`, en vez de no poder distinguirlo nunca (antes
+ * `device_registered` no devolvía este campo).
+ */
+export function getStoredDeviceId(brand) {
+  return getBrandItem(resolveBrandId(brand), STORAGE_KEYS.deviceId) || '';
+}
+
+function setStoredDeviceId(id, brand) {
+  const brandId = resolveBrandId(brand);
+  if (id != null) setBrandItem(brandId, STORAGE_KEYS.deviceId, String(id));
+  else removeBrandItem(brandId, STORAGE_KEYS.deviceId);
+}
+
+function clearStoredDeviceId(brand) {
+  removeBrandItem(resolveBrandId(brand), STORAGE_KEYS.deviceId);
+}
+
+/**
+ * Restaura explícitamente un `device_token`/`id` leídos de antemano --
+ * pensado para un logout "normal" (mismo usuario, mismo dispositivo, ver
+ * `MiCuentaPage.jsx`) que necesita sobrevivir al borrado general de
+ * `userSession.setLoggedOut()` (limpia TODO el storage de la marca, sin
+ * excepciones), para que el próximo login en este mismo dispositivo
+ * pueda refrescar el mismo `DeviceSession` en vez de crear uno nuevo.
+ */
+export function restoreStoredDeviceSession({ token, id } = {}, brand) {
+  if (token) setStoredDeviceToken(token, brand);
+  if (id != null && id !== '') setStoredDeviceId(id, brand);
+}
+
+// Callback global para cuando ESTE dispositivo recibe `device_revoked` por
+// su propio WebSocket -- antes, `registerDeviceSession()` solo se lo
+// pasaba de vuelta al caller (`loginFlow.js`) vía `callbacks.onRevoked`,
+// que en producción no hacía nada visible (`loginFlow.js` es un servicio
+// plano, sin acceso al router de React para forzar un logout real). Acá
+// se agrega un segundo canal, global y persistente entre llamadas, para
+// que `App.jsx` se suscriba una sola vez al montar la app y reaccione en
+// vivo -- mismo patrón que ya usa `sessionValidator.setOnSessionInvalid`
+// para el caso de sesión de PanAccess inválida.
+let onDeviceRevokedGlobal = null;
+
+export function setOnDeviceRevoked(fn) {
+  onDeviceRevokedGlobal = typeof fn === 'function' ? fn : null;
+}
+
+// Callback global para cuando termina un `register_device` (nuevo o
+// refresco) -- el registro pasa una sola vez al hacer login
+// (`maybeEstablishDeviceSession`, fire-and-forget, sin que el resto de la
+// app lo espere), pero `LinkedDevicesPanel.jsx` puede montarse mucho
+// después (el usuario recién entra a "Mi cuenta" > "Dispositivos") y
+// necesita saber el `id` de este dispositivo para marcarlo en la lista.
+// Antes lo leía una sola vez de `localStorage` al renderizar -- si el
+// `GET /wind/devices/` de esa pantalla terminaba ANTES que el WS de
+// `register_device` (una conexión nueva puede tardar más que un simple
+// GET), el panel se quedaba con el id vacío/viejo para siempre, aunque el
+// registro terminara un instante después (reporte real: en varias
+// ventanas de prueba, solo la que ya llevaba un rato abierta mostraba
+// "Cerrar sesión aquí" correctamente). Con este canal, el panel puede
+// re-leer el id apenas el registro termina, sin depender de que la
+// carrera le haya jugado a favor.
+let onDeviceRegisteredGlobal = null;
+
+export function setOnDeviceRegistered(fn) {
+  onDeviceRegisteredGlobal = typeof fn === 'function' ? fn : null;
 }
 
 /**
@@ -276,8 +348,14 @@ export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) 
 
         if (type === 'device_registered') {
           setStoredDeviceToken(message.device_token, brand);
+          setStoredDeviceId(message.id, brand);
           activeDeviceSocket = ws;
-          finish({ ok: true, deviceToken: message.device_token, isNew: !!message.is_new });
+          try {
+            onDeviceRegisteredGlobal?.({ deviceToken: message.device_token, id: message.id, brand });
+          } catch {
+            // noop -- un listener global roto no debe impedir resolver la promesa
+          }
+          finish({ ok: true, deviceToken: message.device_token, deviceId: message.id, isNew: !!message.is_new });
           // A propósito no se cierra acá: la conexión queda viva para poder
           // recibir `device_revoked` en vivo (ver doc de la función). El
           // caller la cierra explícitamente vía `closeActiveDeviceSession()`
@@ -286,13 +364,25 @@ export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) 
         }
 
         if (type === 'device_revoked') {
+          const reason = message.reason || 'revoked_by_subscriber';
           clearStoredDeviceToken(brand);
+          clearStoredDeviceId(brand);
           stopHeartbeat();
           activeDeviceSocket = null;
           try {
-            callbacks.onRevoked?.(message.reason || 'revoked_by_subscriber');
+            callbacks.onRevoked?.(reason);
           } catch {
             // noop -- un callback roto del caller no debe impedir cerrar el socket
+          }
+          try {
+            // Canal global (ver comentario en `setOnDeviceRevoked`) -- este
+            // es el que de verdad fuerza el logout/redirect en producción;
+            // `callbacks.onRevoked` (arriba) queda solo para que el caller
+            // puntual (`loginFlow.js`) loguee/reaccione si quiere, sin
+            // depender de él para el efecto principal.
+            onDeviceRevokedGlobal?.(reason);
+          } catch {
+            // noop -- un listener global roto no debe impedir cerrar el socket
           }
           try {
             ws.close();
@@ -308,6 +398,7 @@ export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) 
           // registre uno nuevo en vez de reintentar en loop con el mismo.
           if (message.code === 'device_token_invalid') {
             clearStoredDeviceToken(brand);
+            clearStoredDeviceId(brand);
           }
           stopHeartbeat();
           finish({ ok: false, error: message.code || 'error' });

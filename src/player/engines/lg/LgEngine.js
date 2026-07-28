@@ -181,8 +181,14 @@ export class LgEngine extends BaseTvEngine {
     }
 
     if (adapterType !== 'webos-luna') return false;
-    super.setDimensions(rect);
-    return true;
+    // No hay API nativa de webOS Luna para reposicionar el <video>: se deja que
+    // BaseTvEngine caiga a su fallback CSS (super.setDimensions) UNA sola vez.
+    // Antes esto llamaba a super.setDimensions(rect) directamente desde acá,
+    // pero `this` sigue siendo la instancia con isNativeActive=true, así que
+    // BaseTvEngine.setDimensions() volvía a invocar this.nativeSetDimensions()
+    // -> recursión infinita (RangeError: Maximum call stack size exceeded).
+    // Mismo patrón que SamsungEngine.nativeHide(): devolver false.
+    return false;
   }
 
   nativeShow() {
@@ -195,8 +201,10 @@ export class LgEngine extends BaseTvEngine {
     }
 
     if (adapterType !== 'webos-luna') return false;
-    super.show();
-    return true;
+    // Ver comentario en nativeSetDimensions: evita la recursión infinita con
+    // BaseTvEngine.show(). Sin API nativa de show/hide en webOS Luna, se deja
+    // caer al fallback CSS del propio BaseTvEngine.
+    return false;
   }
 
   nativeHide() {
@@ -209,8 +217,9 @@ export class LgEngine extends BaseTvEngine {
     }
 
     if (adapterType !== 'webos-luna') return false;
-    super.hide();
-    return true;
+    // Ver comentario en nativeSetDimensions: evita la recursión infinita con
+    // BaseTvEngine.hide().
+    return false;
   }
 
   nativeDestroy() {

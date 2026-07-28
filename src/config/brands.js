@@ -1697,16 +1697,16 @@ export const BRANDS = [
     EPG: {
       daysOffset: 2, // Días de offset para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
-      epgLineColorTime: "#3333FF", //Color de la linea que indica la hora actual en la guia
+      epgLineColorTime: "#6c8eb6", //Color de la linea que indica la hora actual en la guia
       reminderLeadSeconds: 60,
       reminderShowWhilePlaying: false,
       // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
       epgPast: false,
       epgPagesPastEnabled: true,
-      epgCardsChannelActiveBg: "rgb(0 0 0)", //Color de fondo de la tarjeta cuando esta seleccionada
-      epgCardsHeaderBg: "rgb(0 0 0)", // Color de fondo de la cabecera de la guía de canales
+      epgCardsChannelActiveBg: "#ffffff", //Color de fondo de la tarjeta cuando esta seleccionada
+      epgCardsHeaderBg: "#6c8eb6", // Color de fondo de la cabecera de la guía de canales
       epgCardsProgramLiveBg: "#6C8EB6", //Color de fondo del programa en vivo
-      epgCardsProgramLiveProgressBg: "#6C8EB6",// Color de la barra de progreso (programa en vivo / "Ahora")
+      epgCardsProgramLiveProgressBg: "#000000ff",// Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsLaterGlobal: true,
       // Control del cierre de modal al reproducir en vivo:
       // true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
@@ -2293,7 +2293,7 @@ export function getBrandConfig(brandName) {
   if (!brand) return null;
 
   const resolved = applyBrandRuntimePolicy(brand);
-  if (!resolved.token && import.meta.env?.PROD) {
+  if (!resolved.token && import.meta.env.PROD) {
     console.warn(
       `[brands] Token no configurado para "${brand.brand}". ` +
         `Define VITE_BRAND_TOKEN_${String(brand.brand).toUpperCase()} en .env.local`,

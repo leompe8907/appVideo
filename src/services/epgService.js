@@ -175,7 +175,7 @@ export async function fetchEPG(url, options = {}) {
     }
     return await fetchPromise;
   } catch (e) {
-    if (import.meta.env?.DEV) {
+    if (import.meta.env.DEV) {
       console.warn('[epgService] fetchEPG error:', e?.message ?? e);
     }
     return [];
@@ -236,7 +236,7 @@ async function loadSingleChannelEpg(channel, opts, { epgHoursLimit, requestTimeo
   }
 
   const data = await fetchEPG(url, { timeoutMs: requestTimeoutMs });
-  if (!data.length && import.meta.env?.DEV) {
+  if (!data.length && import.meta.env.DEV) {
     console.warn('[epgService] EPG vacía o timeout para epgStreamId:', epgStreamId);
   }
   // Optimización TV: normalización en Worker si está disponible. El worker
@@ -274,7 +274,7 @@ export async function loadEPGForChannels(channels, options = {}) {
   const operatorName = options.operatorName ?? getOperatorName();
 
   if (!epgCdnUrl || !operatorName) {
-    if (import.meta.env?.DEV) {
+    if (import.meta.env.DEV) {
       console.warn('[epgService] loadEPGForChannels: sin epgCdnUrl u operatorName (getClientConfig)');
     }
     list.forEach((ch) => {

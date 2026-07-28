@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ConfirmModal from '../ConfirmModal';
 import { listLinkedDevices, revokeLinkedDevice } from '../../services/linkedDevicesService';
+import { getStoredDeviceId, setOnDeviceRegistered } from '../../services/deviceSessionService';
 // Los estilos de este panel viven en styles/pages/_mi-cuenta.scss (importado
 // desde MiCuentaPage.jsx), no acá -- ver el comentario en ese archivo sobre
 // por qué (chunk de CSS separado que se rompía en el build de producción).
@@ -35,6 +36,27 @@ export function LinkedDevicesPanel({ brandConfig, brand }) {
   const [pendingRevokeId, setPendingRevokeId] = useState(null);
   const [revokingId, setRevokingId] = useState(null);
   const [actionError, setActionError] = useState('');
+  // `id` que guardó este mismo dispositivo al registrarse (ver
+  // `deviceSessionService.js`) -- antes `device_registered` no devolvía
+  // ningún id, así que era imposible saber cuál fila de esta lista
+  // corresponde al dispositivo que se está usando ahora mismo.
+  //
+  // Se lee con `useState` (no una simple constante) y se vuelve a leer
+  // cuando `setOnDeviceRegistered` avisa que terminó un registro, porque
+  // el `register_device` de este dispositivo (WS, se dispara una sola vez
+  // al hacer login, sin que nada lo espere) puede terminar DESPUÉS de que
+  // este panel ya cargó su lista -- de lo contrario `selfDeviceId` se
+  // quedaba con el valor vacío/viejo que había en localStorage al montar
+  // el componente, aunque el registro terminara un instante después
+  // (reporte real: en varias ventanas abiertas casi al mismo tiempo, solo
+  // la que ya llevaba más rato mostraba "Cerrar sesión aquí").
+  const [selfDeviceId, setSelfDeviceId] = useState(() => getStoredDeviceId(brand));
+
+  useEffect(() => {
+    const handleRegistered = () => setSelfDeviceId(getStoredDeviceId(brand));
+    setOnDeviceRegistered(handleRegistered);
+    return () => setOnDeviceRegistered(null);
+  }, [brand]);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -118,32 +140,42 @@ export function LinkedDevicesPanel({ brandConfig, brand }) {
         <>
           {actionError && <div className="account-security-error">{actionError}</div>}
           <ul className="linked-devices-list">
-            {devices.map((d) => (
-              <li key={d.id} className="linked-devices-row">
-                <div className="linked-devices-row__info">
-                  <span className="linked-devices-row__type">
-                    {DEVICE_TYPE_LABELS[d.device_type] ||
-                      d.device_type ||
-                      t('account.linkedDevicesUnknownType', { defaultValue: 'Dispositivo' })}
-                  </span>
-                  {d.device_model && <span className="linked-devices-row__model">{d.device_model}</span>}
-                  <span className="linked-devices-row__meta">
-                    {t('account.linkedDevicesLastSeen', { defaultValue: 'Última conexión' })}:{' '}
-                    {formatDate(d.last_seen_at)}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="account-security-btn account-security-btn--danger"
-                  onClick={() => setPendingRevokeId(d.id)}
-                  disabled={revokingId === d.id}
-                >
-                  {revokingId === d.id
-                    ? t('common.loading')
-                    : t('account.linkedDevicesRevoke', { defaultValue: 'Revocar' })}
-                </button>
-              </li>
-            ))}
+            {devices.map((d) => {
+              const isSelf = selfDeviceId && String(d.id) === String(selfDeviceId);
+              return (
+                <li key={d.id} className="linked-devices-row">
+                  <div className="linked-devices-row__info">
+                    <span className="linked-devices-row__type">
+                      {DEVICE_TYPE_LABELS[d.device_type] ||
+                        d.device_type ||
+                        t('account.linkedDevicesUnknownType', { defaultValue: 'Dispositivo' })}
+                      {isSelf && (
+                        <span className="linked-devices-row__self-badge">
+                          {t('account.linkedDevicesSelfBadge', { defaultValue: 'Este dispositivo' })}
+                        </span>
+                      )}
+                    </span>
+                    {d.device_model && <span className="linked-devices-row__model">{d.device_model}</span>}
+                    <span className="linked-devices-row__meta">
+                      {t('account.linkedDevicesLastSeen', { defaultValue: 'Última conexión' })}:{' '}
+                      {formatDate(d.last_seen_at)}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="account-security-btn account-security-btn--danger"
+                    onClick={() => setPendingRevokeId(d.id)}
+                    disabled={revokingId === d.id}
+                  >
+                    {revokingId === d.id
+                      ? t('common.loading')
+                      : isSelf
+                        ? t('account.linkedDevicesLogoutHere', { defaultValue: 'Cerrar sesión aquí' })
+                        : t('account.linkedDevicesRevoke', { defaultValue: 'Revocar' })}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </>
       )}

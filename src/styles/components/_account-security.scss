@@ -138,6 +138,18 @@
   font-weight: 600;
 }
 
+.linked-devices-row__self-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 1px solid rgba(127, 209, 127, 0.6);
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #7fd17f;
+  vertical-align: middle;
+}
+
 .linked-devices-row__model,
 .linked-devices-row__meta {
   font-size: 0.82rem;

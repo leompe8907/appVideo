@@ -27,7 +27,7 @@ export function TvRadioServicesPage() {
   useTvInitialFocus('.bouquet-inicio-scroll', [epg.status, (epg.bouquetsWithChannels || []).length]);
 
   const handleChannelSelect = (channel) => {
-    if (import.meta.env?.DEV) {
+    if (import.meta.env.DEV) {
       console.log('[TvRadioServicesPage] handleChannelSelect', channel?.id ?? channel?.lcn, channel);
     }
     if (!channel) return;
@@ -45,7 +45,7 @@ export function TvRadioServicesPage() {
         try {
           url = panaccessService.getStreamM3u8Url({ streamId });
         } catch (e) {
-          if (import.meta.env?.DEV) {
+          if (import.meta.env.DEV) {
             console.warn('[TvRadioServicesPage] getStreamM3u8Url fallback:', e?.message || e);
           }
         }
@@ -60,7 +60,7 @@ export function TvRadioServicesPage() {
     try {
       url = panaccessService.normalizePlaybackUrl(url);
     } catch (e) {
-      if (import.meta.env?.DEV) {
+      if (import.meta.env.DEV) {
         console.warn('[TvRadioServicesPage] normalizePlaybackUrl:', e?.message || e);
       }
     }

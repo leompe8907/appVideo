@@ -7,12 +7,17 @@ import { mergeEpgIntoChannels } from '../utils/epgMerge';
 import { dedupeStreams } from '../utils/channelId';
 import { normalizeList, prepareRecorded, toMs } from './catchupRecorded';
 
-// FIX #1: Evaluar IS_DEV a nivel de módulo, fuera de cualquier closure asíncrono.
-// En closures de setTimeout/catch, `import.meta` puede ser undefined en WebKit 2019 (producción).
-const IS_DEV =
-  typeof import.meta !== 'undefined' &&
-  import.meta.env != null &&
-  import.meta.env.DEV === true;
+// Evaluar IS_DEV a nivel de módulo, fuera de cualquier closure asíncrono.
+// IMPORTANTE: `import.meta.env.DEV` tiene que quedar como acceso directo
+// (sin `?.`, sin comparar `import.meta.env` completo contra null/undefined).
+// Vite reemplaza esta expresión exacta por un literal en tiempo de build —
+// nunca se ejecuta como sintaxis real en el bundle final, así que no hace
+// falta ninguna guarda de runtime. Pero en cuanto `import.meta.env` aparece
+// como objeto completo (con `!= null` o similar) en CUALQUIER archivo del
+// bundle, Vite ya no puede reemplazar por clave y termina inyectando TODO el
+// objeto de entorno cargado (incluyendo VITE_BRAND_TOKEN_* de las demás
+// marcas y VITE_SECRET_KEY) como un objeto vivo en runtime. Ese era el bug.
+const IS_DEV = import.meta.env.DEV;
 
 /** Solo VOD preload: cortafuegos global si la carga entera se cuelga. */
 const VOD_LOADING_TIMEOUT_MS = 300000;

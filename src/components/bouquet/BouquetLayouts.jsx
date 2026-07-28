@@ -277,7 +277,7 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
   const handleClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (import.meta.env?.DEV) {
+    if (import.meta.env.DEV) {
       console.log('[ChannelCard] click', channel?.id ?? channel?.lcn);
     }
     onFocus?.();

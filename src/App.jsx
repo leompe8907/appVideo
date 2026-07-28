@@ -18,6 +18,8 @@ import {
   stopSessionValidator,
   setOnSessionInvalid,
 } from './utils/sessionValidator';
+import { setOnDeviceRevoked } from './services/deviceSessionService';
+import { clearSessionBeforeNewLogin } from './services/loginFlow';
 
 // Lazy loading de páginas
 const SplashPage = lazy(() => import('./pages/SplashPage'));
@@ -101,6 +103,27 @@ function App() {
       navigate('/', { replace: true });
     });
     return () => setOnSessionInvalid(null);
+  }, [navigate]);
+
+  useEffect(() => {
+    // "Dispositivos vinculados" (Fase 3 del backend externo) -- si este
+    // mismo dispositivo recibe `device_revoked` en vivo (lo revocó el
+    // propio usuario desde el panel, otro dispositivo, o un cambio de
+    // contraseña/cierre de cuenta), fuerza un logout real y vuelve a
+    // splash. Antes este evento llegaba (`deviceSessionService.js` ya lo
+    // procesaba bien) pero no tenía ningún efecto visible: el callback
+    // que lo recibía (`loginFlow.js`) es un servicio plano sin acceso al
+    // router, así que solo lo logueaba en desarrollo -- la app se quedaba
+    // logueada con un device_token muerto hasta el próximo reinicio.
+    setOnDeviceRevoked(() => {
+      try {
+        clearSessionBeforeNewLogin();
+      } catch {
+        // noop -- igual navegamos a splash aunque la limpieza falle parcialmente
+      }
+      navigate('/', { replace: true });
+    });
+    return () => setOnDeviceRevoked(null);
   }, [navigate]);
 
   useEffect(() => {

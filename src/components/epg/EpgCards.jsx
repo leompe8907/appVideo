@@ -149,7 +149,7 @@ export function EpgCards({ onSelect }) {
         try {
           url = panaccessService.getStreamM3u8Url({ streamId });
         } catch (e) {
-          if (import.meta.env?.DEV) {
+          if (import.meta.env.DEV) {
             console.warn('[EpgCards] getStreamM3u8Url error:', e?.message || e);
           }
         }
@@ -158,7 +158,7 @@ export function EpgCards({ onSelect }) {
     try {
       url = panaccessService.normalizePlaybackUrl(url);
     } catch (e) {
-      if (import.meta.env?.DEV) {
+      if (import.meta.env.DEV) {
         console.warn('[EpgCards] normalizePlaybackUrl error:', e?.message || e);
       }
     }

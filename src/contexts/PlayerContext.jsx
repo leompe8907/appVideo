@@ -500,7 +500,7 @@ export function PlayerProvider({ children }) {
       try {
         url = panaccessService.normalizePlaybackUrl(url);
       } catch (e) {
-        if (import.meta.env?.DEV) {
+        if (import.meta.env.DEV) {
           console.warn('[PlayerProvider] normalizePlaybackUrl:', e?.message || e);
         }
       }

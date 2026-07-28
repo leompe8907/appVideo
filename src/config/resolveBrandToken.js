@@ -17,6 +17,17 @@ export function resolveBrandToken(brandSlug) {
   const slug = String(brandSlug || '').trim();
   if (!slug) return '';
 
+  // NOTA: esta es la única referencia al objeto `import.meta.env` completo
+  // que queda en el proyecto, a propósito. Vite no puede reemplazar por
+  // clave un acceso dinámico (`env[claveCalculada]`) sin importar cómo se
+  // escriba, así que evitarlo acá no cambiaría nada. Lo que sí importa es
+  // que esta función solo se usa en runtime multi-marca (dev server /
+  // `getBrandConfig` cuando no hay `VITE_BRAND` fijo) — en un build de una
+  // sola marca, `singleBrandConfigPlugin` (vite.config.js) reemplaza
+  // `src/config/brands.js` completo por una versión que ya no importa esta
+  // función, así que Rollup la deja afuera del bundle por tree-shaking. El
+  // resto del proyecto (ver preloadStore.js y demás) sí debe evitar
+  // referencias al objeto completo, porque esos SÍ terminan en cada build.
   const env = typeof import.meta !== 'undefined' ? import.meta.env : {};
   const specificKey = brandSlugToEnvKey(slug);
   const specific = env[specificKey];

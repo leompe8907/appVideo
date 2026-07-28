@@ -22,7 +22,7 @@ const seenSignatures = new Set();
 
 function getReportUrl() {
   try {
-    return (import.meta.env?.VITE_ERROR_REPORT_URL || '').trim();
+    return (import.meta.env.VITE_ERROR_REPORT_URL || '').trim();
   } catch {
     return '';
   }
@@ -128,7 +128,7 @@ export function reportError(error, opts = {}) {
 
     storeError(entry);
 
-    if (import.meta.env?.DEV) {
+    if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
       console.error('[errorReporting]', entry);
     }

@@ -50,7 +50,7 @@ export function BouquetPage() {
   });
 
   const handleChannelSelect = (channel) => {
-    if (import.meta.env?.DEV) {
+    if (import.meta.env.DEV) {
       console.log('[BouquetPage] handleChannelSelect', channel?.id ?? channel?.lcn, channel);
     }
     if (!channel) return;
@@ -68,7 +68,7 @@ export function BouquetPage() {
         try {
           url = panaccessService.getStreamM3u8Url({ streamId });
         } catch (e) {
-          if (import.meta.env?.DEV) {
+          if (import.meta.env.DEV) {
             console.warn('[BouquetPage] getStreamM3u8Url fallback:', e?.message || e);
           }
         }
@@ -83,7 +83,7 @@ export function BouquetPage() {
     try {
       url = panaccessService.normalizePlaybackUrl(url);
     } catch (e) {
-      if (import.meta.env?.DEV) {
+      if (import.meta.env.DEV) {
         console.warn('[BouquetPage] normalizePlaybackUrl:', e?.message || e);
       }
     }

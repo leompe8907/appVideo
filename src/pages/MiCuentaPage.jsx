@@ -14,6 +14,12 @@ import panaccessService from '../services/panaccessService';
 import { isDeviceSessionEnabled } from '../services/deviceAuthService';
 import { exitAppBestEffort } from '../utils/tvNavigation';
 import { setLoggedOut, getActiveLicense, getCredentials } from '../utils/userSession';
+import {
+  closeActiveDeviceSession,
+  getStoredDeviceToken,
+  getStoredDeviceId,
+  restoreStoredDeviceSession,
+} from '../services/deviceSessionService';
 import '../styles/pages/_mi-cuenta.scss';
 
 /**
@@ -131,7 +137,7 @@ export function MiCuentaPage() {
     const card = active?.licenseKey ? String(active.licenseKey) : '';
     const brand = currentBrand?.brand || '';
     const version =
-      currentBrand?.version || import.meta.env?.VITE_APP_VERSION || import.meta.env?.VITE_VERSION || '';
+      currentBrand?.version || import.meta.env.VITE_APP_VERSION || import.meta.env.VITE_VERSION || '';
     const developedBy = currentBrand?.developedBy ? String(currentBrand.developedBy) : '';
     const timezone = Intl.DateTimeFormat().resolvedOptions?.().timeZone || '';
     return [
@@ -155,7 +161,26 @@ export function MiCuentaPage() {
     } catch {
       // noop
     }
+    // `setLoggedOut()` borra TODO el storage de esta marca (credenciales,
+    // licencias, y también `deviceSession.deviceToken`/`deviceId`, que
+    // viven bajo el mismo prefijo `{brand}.*`) -- sin nada que lo
+    // preserve, el próximo login en este mismo dispositivo no tenía
+    // ningún `device_token` para reenviar en `register_device`, y el
+    // backend creaba un `DeviceSession` nuevo cada vez que el usuario
+    // cerraba y volvía a iniciar sesión, aunque fuera literalmente el
+    // mismo navegador (reporte real de prueba). Se guarda antes de
+    // borrar y se restaura después -- un logout normal en el mismo
+    // dispositivo debe poder refrescar el mismo registro en el próximo
+    // login, no duplicarlo. (Distinto de `clearSessionBeforeNewLogin()`,
+    // usado cuando OTRO usuario va a loguearse en este dispositivo: ahí sí
+    // corresponde borrarlo, para no arrastrar el device_token de la
+    // cuenta anterior.)
+    const brand = currentBrand?.brand;
+    const deviceToken = getStoredDeviceToken(brand);
+    const deviceId = getStoredDeviceId(brand);
+    closeActiveDeviceSession();
     setLoggedOut();
+    restoreStoredDeviceSession({ token: deviceToken, id: deviceId }, brand);
     navigate('/login', { replace: true });
   };
 

@@ -81,15 +81,15 @@ async function maybeEstablishDeviceSession(brandConfig, credentials, precomputed
       onRevoked: (reason) => {
         // Push en vivo (revocado desde el panel, o en bloque por cambio de
         // contraseña/cierre de cuenta hecho desde OTRO dispositivo/canal).
-        // De momento solo se limpia el device_token local (ya lo hace
-        // deviceSessionService) y se loguea -- forzar un logout/redirect
-        // real de la sesión de PanAccess en este dispositivo requiere
-        // acceso al router de React, que este módulo (servicio plano, sin
-        // React) no tiene; queda para quien integre esto a nivel de UI
-        // (p.ej. `useAppLifecycle`) suscribirse si quiere reaccionar en
-        // vivo. Sin esa integración adicional, el efecto igual se aplica
-        // solo: el JWT/device_token viejo deja de servir en el siguiente
-        // intento de refresco.
+        // El logout/redirect real ya NO depende de este callback -- este
+        // módulo (servicio plano, sin React) sigue sin acceso al router,
+        // pero `deviceSessionService.js` ahora también notifica por un
+        // canal global (`setOnDeviceRevoked`) al que `App.jsx` se
+        // suscribe una sola vez al montar la app y sí puede forzar el
+        // logout/redirect de verdad (antes esa integración no existía y
+        // este callback era el único lugar que se enteraba, sin poder
+        // hacer nada visible con eso). Este callback queda solo para
+        // logging de desarrollo.
         if (import.meta.env.DEV) {
           console.warn('[loginFlow] device_revoked recibido:', reason);
         }

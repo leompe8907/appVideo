@@ -81,7 +81,7 @@ function ensureStreamPlaybackUrl(stream) {
     try {
       stream.url = panaccessService.normalizePlaybackUrl(stream.url);
     } catch (e) {
-      if (import.meta.env?.DEV) {
+      if (import.meta.env.DEV) {
         console.warn('[tvDataService] normalizePlaybackUrl:', e?.message || e);
       }
     }
@@ -92,7 +92,7 @@ function ensureStreamPlaybackUrl(stream) {
         const url = panaccessService.getStreamM3u8Url({ streamId });
         if (url) stream.url = panaccessService.normalizePlaybackUrl(url);
       } catch (e) {
-        if (import.meta.env?.DEV) {
+        if (import.meta.env.DEV) {
           console.warn('[tvDataService] ensureStreamPlaybackUrl:', e?.message || e);
         }
       }

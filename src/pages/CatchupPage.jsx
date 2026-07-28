@@ -124,7 +124,7 @@ export function CatchupPage() {
       const raw = panaccessService.getCatchupM3u8Url({ catchupId: id });
       return panaccessService.normalizePlaybackUrl(raw) || null;
     } catch (err) {
-      if (import.meta.env?.DEV) {
+      if (import.meta.env.DEV) {
         console.warn('[CatchupPage] resolveCatchupUrl failed', id, err);
       }
       return null;
@@ -135,7 +135,7 @@ export function CatchupPage() {
     const streamId = getCatchupStreamId(event);
     const url = resolveCatchupUrl(streamId);
     if (!url || streamId == null) {
-      if (import.meta.env?.DEV) {
+      if (import.meta.env.DEV) {
         console.warn('[CatchupPage] No se pudo reproducir catchup', { streamId, event });
       }
       return;
