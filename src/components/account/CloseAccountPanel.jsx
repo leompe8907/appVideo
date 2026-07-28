@@ -17,7 +17,9 @@ import { useTranslation } from 'react-i18next';
 import ConfirmModal from '../ConfirmModal';
 import { closeAccount } from '../../services/accountSecurityService';
 import { clearSessionBeforeNewLogin } from '../../services/loginFlow';
-import '../../styles/components/_account-security.scss';
+// Los estilos de este panel viven en styles/pages/_mi-cuenta.scss (importado
+// desde MiCuentaPage.jsx), no acá -- ver el comentario en ese archivo sobre
+// por qué (chunk de CSS separado que se rompía en el build de producción).
 
 const CONFIRM_WORD = 'ELIMINAR';
 

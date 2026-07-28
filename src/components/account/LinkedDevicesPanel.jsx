@@ -8,7 +8,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ConfirmModal from '../ConfirmModal';
 import { listLinkedDevices, revokeLinkedDevice } from '../../services/linkedDevicesService';
-import '../../styles/components/_account-security.scss';
+// Los estilos de este panel viven en styles/pages/_mi-cuenta.scss (importado
+// desde MiCuentaPage.jsx), no acá -- ver el comentario en ese archivo sobre
+// por qué (chunk de CSS separado que se rompía en el build de producción).
 
 const DEVICE_TYPE_LABELS = {
   web: 'PC / Web',

@@ -1,4 +1,15 @@
 @use '../mixins' as *;
+// Estilos de los paneles nativos de cuenta (dispositivos vinculados, cambiar
+// contraseña, eliminar cuenta -- ver components/account/*.jsx). Se importan
+// ACÁ (con @import, no desde cada componente) a propósito: en el build de
+// producción (pipeline legacy para TVs viejas, ver vite.config.js) cada
+// import de CSS puede terminar en un chunk distinto según desde qué módulo
+// se importe: un import separado desde los 3 componentes hijos causaba que
+// ese CSS terminara en un chunk que no se enlazaba junto con el de esta
+// página (funcionaba en `vite dev`, se rompía en el build real). Importarlo
+// acá garantiza que viaje en el mismo CSS que ya se sabe que funciona en
+// producción para esta página.
+@import '../components/account-security';
 
 .mi-cuenta-page {
   display: flex;

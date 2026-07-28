@@ -105,6 +105,7 @@ export default defineConfig(({ mode }) => {
       // es2015 + Terser ecma:5 → sin ?. / ?? en salida (Chrome 53+)
       target: 'es2015',
       cssTarget: 'chrome53',
+      cssCodeSplit: false,
       minify: 'terser',
       terserOptions: {
         compress: {
