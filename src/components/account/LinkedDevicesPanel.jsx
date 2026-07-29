@@ -8,7 +8,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ConfirmModal from '../ConfirmModal';
 import { listLinkedDevices, revokeLinkedDevice } from '../../services/linkedDevicesService';
-import { getStoredDeviceId, setOnDeviceRegistered } from '../../services/deviceSessionService';
+import {
+  getStoredDeviceId,
+  setOnDeviceRegistered,
+  setOnDeviceListChanged,
+} from '../../services/deviceSessionService';
 // Los estilos de este panel viven en styles/pages/_mi-cuenta.scss (importado
 // desde MiCuentaPage.jsx), no acá -- ver el comentario en ese archivo sobre
 // por qué (chunk de CSS separado que se rompía en el build de producción).
@@ -79,6 +83,16 @@ export function LinkedDevicesPanel({ brandConfig, brand }) {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // `device_list_changed` (ver deviceSessionService.js): otro dispositivo
+  // de la misma cuenta revocó uno o registró uno nuevo mientras este panel
+  // seguía abierto -- antes esta lista solo se actualizaba apretando
+  // "Actualizar" a mano (reporte real: revocar desde un dispositivo dejaba
+  // la lista del otro mostrando el conteo viejo indefinidamente).
+  useEffect(() => {
+    setOnDeviceListChanged(() => load());
+    return () => setOnDeviceListChanged(null);
   }, [load]);
 
   const handleRevoke = async (id) => {
@@ -160,6 +174,16 @@ export function LinkedDevicesPanel({ brandConfig, brand }) {
                       {t('account.linkedDevicesLastSeen', { defaultValue: 'Última conexión' })}:{' '}
                       {formatDate(d.last_seen_at)}
                     </span>
+                    {/* Ubicación aproximada por IP (MaxMind GeoLite2, ver
+                        wind/utils/geo_lookup.py) -- solo informativa, no
+                        siempre disponible (IP privada/VPN/base no
+                        configurada del lado del backend), por eso se oculta
+                        del todo si no vino ninguno de los dos campos. */}
+                    {(d.city || d.country) && (
+                      <span className="linked-devices-row__meta linked-devices-row__location">
+                        {[d.city, d.country].filter(Boolean).join(', ')}
+                      </span>
+                    )}
                   </div>
                   <button
                     type="button"

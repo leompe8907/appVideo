@@ -192,6 +192,22 @@ export function setOnDeviceRegistered(fn) {
   onDeviceRegisteredGlobal = typeof fn === 'function' ? fn : null;
 }
 
+// Callback global para `device_list_changed` -- aviso del backend (grupo
+// por CUENTA, no por dispositivo, ver `wind/services/device_session_service.py`
+// `notify_device_list_changed`) de que la lista de "dispositivos vinculados"
+// de esta cuenta cambió desde OTRO dispositivo (alguien revocó uno, o se
+// registró uno nuevo). Antes no había ningún canal para esto: si dos
+// dispositivos de la misma cuenta tenían el panel abierto a la vez, revocar
+// uno desde el otro no actualizaba la lista del que se quedó con la sesión
+// activa hasta apretar "Actualizar" a mano. No implica ninguna acción
+// destructiva (a diferencia de `device_revoked`) -- solo un "volvé a pedir
+// la lista si la tenés abierta".
+let onDeviceListChangedGlobal = null;
+
+export function setOnDeviceListChanged(fn) {
+  onDeviceListChangedGlobal = typeof fn === 'function' ? fn : null;
+}
+
 /**
  * `http(s)://host` -> `ws(s)://host/ws/device/`. Si el brand declaró una
  * `login.deviceSession.wsUrl` explícita, se usa esa tal cual (por si el
@@ -363,6 +379,15 @@ export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) 
           return;
         }
 
+        if (type === 'device_list_changed') {
+          try {
+            onDeviceListChangedGlobal?.();
+          } catch {
+            // noop -- un listener global roto no debe afectar el resto del socket
+          }
+          return;
+        }
+
         if (type === 'device_revoked') {
           const reason = message.reason || 'revoked_by_subscriber';
           clearStoredDeviceToken(brand);
@@ -436,18 +461,37 @@ export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) 
   }
 
   return attempt(accessToken).then(async (result) => {
-    if (result.ok || result.error !== 'auth_failed_before_open') {
+    if (result.ok) {
       return result;
     }
-    // Único reintento: refresca el access token con el refresh guardado
-    // (`refreshDeviceSessionAccessToken`, antes código muerto) y reabre la
-    // conexión una vez más. Si el refresh también falla (refresh vencido o
-    // inexistente), se rinde -- el caller ya no puede hacer nada más sin
-    // pasar por un login manual/social nuevo.
-    const refreshedToken = await refreshDeviceSessionAccessToken(brandConfig, brand);
-    if (!refreshedToken) {
-      return { ok: false, error: 'auth_failed' };
+
+    if (result.error === 'auth_failed_before_open') {
+      // Único reintento: refresca el access token con el refresh guardado
+      // (`refreshDeviceSessionAccessToken`, antes código muerto) y reabre la
+      // conexión una vez más. Si el refresh también falla (refresh vencido o
+      // inexistente), se rinde -- el caller ya no puede hacer nada más sin
+      // pasar por un login manual/social nuevo.
+      const refreshedToken = await refreshDeviceSessionAccessToken(brandConfig, brand);
+      if (!refreshedToken) {
+        return { ok: false, error: 'auth_failed' };
+      }
+      return attempt(refreshedToken);
     }
-    return attempt(refreshedToken);
+
+    if (result.error === 'device_token_invalid') {
+      // Único reintento, sin `device_token`: el que había guardado ya no
+      // sirve -- pertenece a otro `subscriber_code` (dispositivo compartido
+      // donde otro usuario acaba de loguearse) o quedó revocado del lado
+      // del backend (ver `clearSessionBeforeNewLogin`, que ahora preserva
+      // `device_token` "a ciegas" antes de cualquier login, confiando en
+      // que el backend rechace uno que no corresponda). El handler de este
+      // mensaje (arriba) ya lo borró de `localStorage`, así que este
+      // segundo intento manda `register_device` sin ningún token existente
+      // -- el backend crea un registro nuevo en vez de dejar esta sesión
+      // sin ningún dispositivo vinculado hasta el próximo login.
+      return attempt(accessToken);
+    }
+
+    return result;
   });
 }

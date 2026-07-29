@@ -12,11 +12,38 @@ import {
   getLicensesForAutoActivation,
 } from '../utils/licenseProducts';
 import * as deviceAuthService from './deviceAuthService';
-import { closeActiveDeviceSession, registerDeviceSession } from './deviceSessionService';
+import {
+  closeActiveDeviceSession,
+  registerDeviceSession,
+  getStoredDeviceToken,
+  getStoredDeviceId,
+  restoreStoredDeviceSession,
+} from './deviceSessionService';
 
 /**
- * Limpia sesión, storage de marca y caché en memoria antes de un login manual
- * (otro usuario en el mismo dispositivo). No usar en reactivación automática (splash).
+ * Limpia sesión, storage de marca y caché en memoria antes de un login
+ * (mismo dispositivo, sin importar todavía si el usuario que va a entrar es
+ * el mismo de antes u otro distinto -- eso no se puede saber en este punto,
+ * las credenciales todavía no se enviaron).
+ *
+ * IMPORTANTE -- por qué esto preserva `device_token`/`id` (bug real
+ * encontrado en pruebas): antes, `userSession.setLoggedOut()` borraba TODO
+ * el storage de la marca sin excepciones, incluido el `device_token` que
+ * identifica a este dispositivo físico ante "dispositivos vinculados". Con
+ * eso, cada vez que el MISMO usuario cerraba sesión y volvía a entrar en el
+ * MISMO navegador, `register_device` no tenía nada que reenviar y el
+ * backend creaba un `DeviceSession` nuevo -- el dispositivo se duplicaba en
+ * la lista en cada ciclo de logout/login (reporte real de pruebas).
+ *
+ * No hace falta que este código adivine si el próximo login es del mismo
+ * usuario o de uno distinto: el backend ya resuelve eso solo.
+ * `_register_or_refresh_device()` (`device_consumers.py`) rechaza con
+ * `device_token_invalid` cualquier token que no pertenezca al
+ * `subscriber_code` que se está autenticando (o que ya esté revocado) --
+ * reenviar un token "equivocado" (de otro usuario, en un dispositivo
+ * compartido) es inofensivo, el backend lo descarta y el propio handler de
+ * ese error en `deviceSessionService.js` limpia el token localmente y
+ * reintenta el registro sin él (ver `registerDeviceSession`).
  */
 export function clearSessionBeforeNewLogin() {
   try {
@@ -38,11 +65,31 @@ export function clearSessionBeforeNewLogin() {
     // credenciales del usuario anterior. `clearDeviceSessionAuth()` sin
     // argumento resuelve el brand activo (ver `resolveBrandId` en
     // `brandStorage.js`), igual que `closeActiveDeviceSession()` arriba.
+    // Nota: esto NO es lo mismo que el `device_token` (identifica al
+    // dispositivo físico) -- son dos JWT/tokens independientes, ver el
+    // comentario de la función sobre por qué el `device_token` sí se
+    // preserva más abajo.
     deviceAuthService.clearDeviceSessionAuth();
   } catch {
     // noop
   }
+
+  let deviceToken = '';
+  let deviceId = '';
+  try {
+    deviceToken = getStoredDeviceToken();
+    deviceId = getStoredDeviceId();
+  } catch {
+    // noop
+  }
+
   userSession.setLoggedOut();
+
+  try {
+    restoreStoredDeviceSession({ token: deviceToken, id: deviceId });
+  } catch {
+    // noop
+  }
 }
 
 /**
