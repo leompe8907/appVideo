@@ -218,7 +218,7 @@ export function MiCuentaPage() {
               className="mi-cuenta-item"
               onClick={() => navigate('/home/control-parental')}
             >
-              {t('account.advancedSettings', { defaultValue: 'Configuración avanzada' })}
+              {t('account.advancedSettings', { defaultValue: 'Control parental' })}
             </button>
             {osmsEnabled ? (
               <button type="button" className="mi-cuenta-item" onClick={() => navigate('/home/osms')}>
