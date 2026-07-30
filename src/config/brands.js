@@ -909,7 +909,7 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      profiles: false,
+      profiles: true,
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
