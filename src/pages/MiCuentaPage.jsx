@@ -90,6 +90,10 @@ export function MiCuentaPage() {
     return defs.filter((item) => item.link?.enabled !== false);
   }, [currentBrand, t]);
 
+  const deleteAccountItem = useMemo(() => {
+    return qrItems.find((item) => item.key === 'deleteAccount');
+  }, [qrItems]);
+
   const [activeKey, setActiveKey] = useState(() => qrItems[0]?.key || 'about');
   const [confirmAction, setConfirmAction] = useState(null); // 'logout' | 'exit' | null
   const [qrImageSrc, setQrImageSrc] = useState('');
@@ -198,16 +202,18 @@ export function MiCuentaPage() {
           <h2 className="mi-cuenta-sidebar__title">{t('account.title', { defaultValue: 'Mi cuenta' })}</h2>
 
           <div className="mi-cuenta-sidebar__group">
-            {qrItems.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                className={`mi-cuenta-item${activeKey === item.key ? ' active' : ''}${item.danger ? ' danger' : ''}`}
-                onClick={() => setActiveKey(item.key)}
-              >
-                {item.label}
-              </button>
-            ))}
+            {qrItems
+              .filter((item) => item.key !== 'deleteAccount')
+              .map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`mi-cuenta-item${activeKey === item.key ? ' active' : ''}${item.danger ? ' danger' : ''}`}
+                  onClick={() => setActiveKey(item.key)}
+                >
+                  {item.label}
+                </button>
+              ))}
           </div>
 
           <div className="mi-cuenta-sidebar__divider" role="separator" aria-hidden="true" />
@@ -235,6 +241,15 @@ export function MiCuentaPage() {
             <button type="button" className="mi-cuenta-item" onClick={handleRefresh}>
               {t('account.refresh', { defaultValue: 'Refrescar' })}
             </button>
+            {deleteAccountItem && (
+              <button
+                type="button"
+                className={`mi-cuenta-item${activeKey === 'deleteAccount' ? ' active' : ''}`}
+                onClick={() => setActiveKey('deleteAccount')}
+              >
+                {deleteAccountItem.label}
+              </button>
+            )}
             <button type="button" className="mi-cuenta-item" onClick={() => setConfirmAction('logout')}>
               {t('common.logout', { defaultValue: 'Cerrar sesión' })}
             </button>

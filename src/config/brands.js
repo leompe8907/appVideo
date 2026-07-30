@@ -1679,7 +1679,7 @@ export const BRANDS = [
         activeItemBg: "#5c8fc4",
         activeItemText: "#ffffff",
         dividerColor: "rgba(255, 255, 255, 0.18)",
-        contentTitleColor: "#8fb9e8",
+        contentTitleColor: "#ffffffff",
         qrBackground: "#9dc3ec",
         stepNumberBg: "#12365c",
         stepNumberText: "#ffffff",
