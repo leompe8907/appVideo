@@ -149,7 +149,20 @@ export async function refreshDeviceSessionAccessToken(brandConfig, brand) {
     });
     const data = await parseJsonResponse(res, 'No se pudo refrescar la sesión con el backend.');
     if (data?.access) {
-      setBrandItem(resolveBrandId(brand), STORAGE_KEYS.access, data.access);
+      const id = resolveBrandId(brand);
+      setBrandItem(id, STORAGE_KEYS.access, data.access);
+      // El backend tiene ROTATE_REFRESH_TOKENS+BLACKLIST_AFTER_ROTATION
+      // activados (ver panaccess_wind_integration/settings.py): cada refresh
+      // devuelve un refresh token NUEVO y el usado queda invalidado de
+      // inmediato -- confirmado que el body de /api/auth/token/refresh/ sí
+      // incluye "refresh" (dj_rest_auth.jwt_auth.RefreshViewWithCookieSupport
+      // solo lo quita si JWT_AUTH_HTTPONLY=True, y aquí está en False). Si no
+      // se guarda este valor rotado, el próximo refresh reutiliza el token
+      // viejo ya invalidado y falla con "Given token not valid for any token
+      // type" -- eso pasaba a partir del segundo refresh de cada sesión.
+      if (data.refresh) {
+        setBrandItem(id, STORAGE_KEYS.refresh, data.refresh);
+      }
       return data.access;
     }
   } catch {
