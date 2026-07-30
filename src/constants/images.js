@@ -8,9 +8,6 @@ const Img = [
   { id: 93, img: 'https://middleware.wind.do/public/images/93/v/thumb.png' },
   { id: 94, img: 'https://middleware.wind.do/public/images/94/v/thumb.png' },
   { id: 95, img: 'https://middleware.wind.do/public/images/95/v/thumb.png' },
-  { id: 96, img: 'https://middleware.wind.do/public/images/96/v/thumb.png' },
-  { id: 97, img: 'https://middleware.wind.do/public/images/97/v/thumb.png' },
-  { id: 98, img: 'https://middleware.wind.do/public/images/98/v/thumb.png' },
 ];
 
 export default Img;
