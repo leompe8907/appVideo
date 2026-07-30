@@ -1994,7 +1994,7 @@ export const BRANDS = [
         },
       },
       subheader: {
-        activado: { pc: false, tv: true },
+        activado: { pc: false, tv: false },
         enabled: false,
         areas: {
           left: { 
