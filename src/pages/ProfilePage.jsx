@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { CreateProfileModal } from '../components/Profile/CreateProfileModal';
+import { EditProfileModal } from '../components/Profile/EditProfileModal';
 import { DeleteProfileModal } from '../components/Profile/DeleteProfileModal';
 import { MessageModal } from '../components/MessageModal';
 import { FocusableButton } from '../components/navigation/FocusableButton';
@@ -17,16 +18,20 @@ import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import panaccessService from '../services/panaccessService';
 import { setLoggedOut } from '../utils/userSession';
 import { filterProfileSmartCards } from '../utils/licenseProducts';
-import Img from '../constants/images';
+import { getProfileAvatars } from '../constants/images';
 import '../styles/pages/_profile.scss';
 
 /**
- * Busca una imagen por su ID en el array de imágenes
+ * Busca una imagen por su ID en el array de avatares de la marca activa.
+ * Los avatares ahora son imágenes locales por marca (`public/<marca>/avatars/`,
+ * ver `getProfileAvatars`), no un CDN remoto compartido -- por eso hace falta
+ * el `brand` acá.
  * @param {number} imageId - ID de la imagen a buscar
+ * @param {string} brand - `currentBrand.brand`
  * @returns {string|null} URL de la imagen o null si no se encuentra
  */
-const getImageById = (imageId) => {
-  const image = Img.find(img => img.id === imageId);
+const getImageById = (imageId, brand) => {
+  const image = getProfileAvatars(brand).find((img) => img.id === imageId);
   return image ? image.img : null;
 };
 
@@ -45,6 +50,7 @@ export function ProfilePage() {
   const [profileMessage, setProfileMessage] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState(null);
+  const [profileToEdit, setProfileToEdit] = useState(null);
 
   // Si esta marca no tiene perfiles, redirigir a smartcard (evita acceso directo por URL)
   const profilesFeatureEnabled = currentBrand ? isFeatureEnabled('profiles') : true;
@@ -76,7 +82,7 @@ export function ProfilePage() {
 
       if (clientConfig?.profiles && Array.isArray(clientConfig.profiles)) {
         const profilesWithImages = clientConfig.profiles.map(profile => {
-          const imageUrl = getImageById(profile.imageId);
+          const imageUrl = getImageById(profile.imageId, currentBrand?.brand);
           return {
             id: profile.id,
             name: profile.name,
@@ -106,7 +112,7 @@ export function ProfilePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [t]);
+  }, [t, currentBrand?.brand]);
 
   useEffect(() => {
     fetchProfiles();
@@ -158,6 +164,11 @@ export function ProfilePage() {
     fetchProfiles();
   };
 
+  const handleEditSuccess = () => {
+    setProfileToEdit(null);
+    fetchProfiles();
+  };
+
   // No mostrar contenido mientras se redirige a /smartcard (marca sin perfiles)
   if (currentBrand && !profilesFeatureEnabled) {
     return null;
@@ -183,6 +194,13 @@ export function ProfilePage() {
           profile={profileToDelete}
           onClose={() => setProfileToDelete(null)}
           onSuccess={handleDeleteSuccess}
+        />
+      )}
+      {profileToEdit && (
+        <EditProfileModal
+          profile={profileToEdit}
+          onClose={() => setProfileToEdit(null)}
+          onSuccess={handleEditSuccess}
         />
       )}
       {profileMessage?.type === 'error' && (
@@ -233,6 +251,7 @@ export function ProfilePage() {
                     profile={profile}
                     index={index}
                     onSelect={() => handleProfileSelect(profile)}
+                    onEdit={() => setProfileToEdit(profile)}
                     onDelete={() => setProfileToDelete(profile)}
                     isSelected={selectedProfile?.id === profile.id}
                     disabled={isActivating}
@@ -269,7 +288,7 @@ export function ProfilePage() {
 /**
  * Componente de tarjeta de perfil
  */
-function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled = false }) {
+function ProfileCard({ profile, index, onSelect, onEdit, onDelete, isSelected, disabled = false }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
 
@@ -284,6 +303,12 @@ function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled 
       e.preventDefault();
       onSelect();
     }
+  };
+
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    if (disabled) return;
+    onEdit?.(profile);
   };
 
   const handleDeleteClick = (e) => {
@@ -332,23 +357,45 @@ function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled 
         </div>
         <div className="profile-name">{profile.name}</div>
       </div>
-      {onDelete && (
-        <button
-          type="button"
-          className="profile-card-delete"
-          onClick={handleDeleteClick}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              e.stopPropagation();
-              onDelete(profile);
-            }
-          }}
-          tabIndex={disabled ? -1 : 0}
-          aria-label={t('profile.deleteProfileAria', { name: profile.name })}
-        >
-          {t('profile.deleteConfirm')}
-        </button>
+      {(onEdit || onDelete) && (
+        <div className="profile-card-actions">
+          {onEdit && (
+            <button
+              type="button"
+              className="profile-card-edit"
+              onClick={handleEditClick}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit(profile);
+                }
+              }}
+              tabIndex={disabled ? -1 : 0}
+              aria-label={t('profile.editProfileAria', { name: profile.name })}
+            >
+              {t('profile.editButton')}
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              className="profile-card-delete"
+              onClick={handleDeleteClick}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete(profile);
+                }
+              }}
+              tabIndex={disabled ? -1 : 0}
+              aria-label={t('profile.deleteProfileAria', { name: profile.name })}
+            >
+              {t('profile.deleteConfirm')}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

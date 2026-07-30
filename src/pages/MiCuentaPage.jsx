@@ -47,6 +47,11 @@ export function MiCuentaPage() {
   const { text: clockText } = useDeviceTime({ locale: currentBrand?.ui?.locale, format: 'HH:mm' });
 
   const osmsEnabled = currentBrand?.features?.osms === true;
+  // "Cambiar perfil" reabre /profile sin pasar por logout -- antes la única
+  // salida de esa pantalla era cerrar sesión completa. Solo tiene sentido
+  // si la marca usa perfiles (mismo flag que decide el redirect post-login
+  // en utils/navigation.js), si no hay nada a qué "cambiar".
+  const changeProfileEnabled = currentBrand?.features?.profiles === true;
   const useNativeAccountFlow = !isTV && isDeviceSessionEnabled(currentBrand);
 
   // Flags independientes por funcionalidad (`brand.account.sections`): a
@@ -237,6 +242,11 @@ export function MiCuentaPage() {
           <div className="mi-cuenta-sidebar__divider" role="separator" aria-hidden="true" />
 
           <div className="mi-cuenta-sidebar__group">
+            {changeProfileEnabled && (
+              <button type="button" className="mi-cuenta-item" onClick={() => navigate('/profile')}>
+                {t('account.changeProfile', { defaultValue: 'Cambiar perfil' })}
+              </button>
+            )}
             {parentalControlEnabled && (
               <button
                 type="button"

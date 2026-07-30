@@ -34,6 +34,13 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+
+  // Wizard de crear perfil (ver CreateProfileModal.jsx): un poco más ancho
+  // que el modal base para que la grilla de avatares (más grande, ver
+  // `.create-profile-avatar-option` abajo) entre cómoda sin apretarse.
+  &.create-profile-modal--wizard {
+    max-width: min(600px, 100%);
+  }
 }
 
 .create-profile-title {
@@ -43,6 +50,67 @@
   color: #fff;
   text-align: center;
   flex-shrink: 0;
+}
+
+// Indicador de progreso del wizard (crear perfil: paso 1 nombre, paso 2 avatar)
+.create-profile-progress {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: $spacing-md;
+  flex-shrink: 0;
+}
+
+.create-profile-progress-dot {
+  width: 22px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  transition: background 0.2s;
+
+  &.active {
+    background: $primary-color;
+  }
+}
+
+.create-profile-step-label {
+  text-align: center;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: $spacing-xs;
+  flex-shrink: 0;
+}
+
+// Wizard: cada paso es su propio <form>, con la misma estructura de
+// acciones/error/success que antes tenía `.create-profile-form`.
+.create-profile-step {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// Input de nombre del paso 1: más grande y centrado, es el único control de
+// esa pantalla -- no compite por atención con nada más.
+.create-profile-name-input {
+  padding: $spacing-md;
+  border-radius: $border-radius-md;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 1.15rem;
+  text-align: center;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  &.focused {
+    border-color: $primary-color;
+    outline: none;
+  }
 }
 
 .create-profile-form {
@@ -95,10 +163,15 @@
 
 .create-profile-avatar-option {
   position: relative;
-  width: 52px;
-  height: 52px;
+  // Antes 52px, después 68px: se agranda de nuevo a propósito -- objetivo
+  // más grande y más fácil de distinguir/apuntar con control remoto
+  // (10-foot UI), sin depender de precisión de mouse. El modal del wizard
+  // (`.create-profile-modal--wizard`, más ancho) es el que le da lugar a
+  // este tamaño sin apretarse.
+  width: 10rem;
+  height: 10rem;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 3px solid transparent;
   overflow: hidden;
   cursor: pointer;
@@ -126,17 +199,17 @@
 
   .create-profile-avatar-check {
     position: absolute;
-    bottom: 2px;
-    right: 2px;
+    bottom: 3px;
+    right: 3px;
     background: $primary-color;
     color: #fff;
-    width: 20px;
-    height: 20px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: bold;
   }
 }

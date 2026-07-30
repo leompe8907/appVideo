@@ -159,6 +159,11 @@
     "profileAria": "Perfil {{name}}",
     "addProfileComingSoon": "Funcionalidade de adicionar perfil em breve",
     "createTitle": "Criar perfil",
+    "createStepOf": "Passo {{current}} de {{total}}",
+    "createStepNameTitle": "Qual é o nome?",
+    "createStepAvatarTitle": "Escolha um avatar",
+    "createNext": "Próximo",
+    "createBack": "Voltar",
     "createName": "Nome",
     "createNamePlaceholder": "Ex. Maria",
     "createNameRequired": "O nome é obrigatório.",
@@ -181,7 +186,15 @@
     "deleteCancel": "Cancelar",
     "deleteSuccess": "Perfil excluído com sucesso.",
     "deleteError": "Erro ao excluir o perfil.",
-    "deleteProfileAria": "Excluir perfil {{name}}"
+    "deleteProfileAria": "Excluir perfil {{name}}",
+    "editButton": "Editar",
+    "editTitle": "Editar perfil",
+    "editSubmit": "Salvar",
+    "editSubmitting": "Salvando...",
+    "editCancel": "Cancelar",
+    "editSuccess": "Perfil atualizado com sucesso.",
+    "editError": "Erro ao atualizar o perfil.",
+    "editProfileAria": "Editar perfil {{name}}"
   },
   "smartcard": {
     "loadingLicenses": "Carregando licenças...",

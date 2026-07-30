@@ -364,6 +364,37 @@ class PanaccessService {
   }
 
   /**
+   * Actualizar nombre y/o avatar de un perfil YA CREADO.
+   * NOTA: acción de Panaccess sin uso previo en este servicio -- se agregó
+   * siguiendo el mismo patrón 1:1 nombre-de-método = nombre-de-acción que
+   * `createProfile`/`setActiveProfile`/`deleteProfile`/`changeProfilePin`
+   * (todas usan exactamente su propio nombre de método como acción). Antes
+   * de este cambio, la app solo permitía crear o eliminar un perfil, nunca
+   * editarlo -- conviene verificar esta acción contra la documentación real
+   * de la cuenta Panaccess antes de pasar a producción.
+   * @param {Object} options - Opciones de la llamada.
+   * @param {string} options.profileId - ID del perfil (requerido).
+   * @param {string} [options.name] - Nuevo nombre del perfil.
+   * @param {number} [options.imageId] - Nuevo ID de avatar.
+   * @param {boolean} [options.enableRetry] - Ver callAuthenticatedApi.
+   * @returns {Promise<*>}
+   */
+  async changeProfile(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    const { profileId, name, imageId, ...apiOptions } = options;
+    try {
+      const result = await this.callAuthenticatedApi('changeProfile', { profileId, name, imageId }, apiOptions);
+      return result;
+    } catch (error) {
+      const customError = new Error('Error al actualizar el perfil.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
    * Activar el perfil seleccionado.
    * sessionId y udid los gestiona callAuthenticatedApi (desde localStorage).
    * @param {Object} options - Opciones y parámetros del método.

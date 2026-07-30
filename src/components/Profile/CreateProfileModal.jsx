@@ -1,31 +1,43 @@
 /**
  * Modal para crear un nuevo perfil (lógica OTT).
  * Usa la primera licencia disponible (smartCard no asignada a ningún perfil).
- * Formulario: nombre, avatar (imageId). La licencia y el PIN vienen de la tarjeta seleccionada.
+ *
+ * Wizard de 2 pasos (nombre -> avatar) en vez de un formulario único: con
+ * control remoto, menos elementos enfocables por pantalla hace la
+ * navegación mucho más predecible que saltar entre input, grilla de
+ * avatares y botones todo junto. El teclado en pantalla de TV no necesita
+ * ningún cambio acá -- `FocusableInput` ya lo dispara solo (ver
+ * `components/navigation/FocusableInput.jsx`), este wizard solo le da a ese
+ * paso su propia pantalla en vez de compartirla con el resto del formulario.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
+import { useBrand } from '../../contexts/BrandContext';
 
 import { FocusableInput } from '../navigation/FocusableInput';
 import { FocusableButton } from '../navigation/FocusableButton';
-import AppIcon from '../AppIcon';
+import { AvatarOption } from './AvatarOption';
 
 import panaccessService from '../../services/panaccessService';
-import Img from '../../constants/images';
+import { getProfileAvatars } from '../../constants/images';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusElementSafe } from '../../navigation/spatialNavigation';
-
-const DEFAULT_IMAGE_ID = Img && Img.length > 0 ? Img[0].id : null;
 
 const getCardKey = (card) => card?.KEY ?? card?.key ?? card?.licenseKey ?? card?.Key ?? '';
 
 export function CreateProfileModal({ smartCards = [], profiles = [], onClose, onSuccess }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
+  const { currentBrand } = useBrand();
+  // Avatares locales por marca (`public/<marca>/avatars/`, ver `getProfileAvatars`)
+  // en vez del array estático de antes -- por eso ya no hay una constante
+  // `DEFAULT_IMAGE_ID` a nivel de módulo, se calcula acá adentro.
+  const avatars = useMemo(() => getProfileAvatars(currentBrand?.brand), [currentBrand]);
+  const [step, setStep] = useState(1); // 1: nombre, 2: avatar
   const [name, setName] = useState('');
-  const [imageId, setImageId] = useState(DEFAULT_IMAGE_ID);
+  const [imageId, setImageId] = useState(() => avatars[0]?.id ?? null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -33,18 +45,32 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
   const zoneIdRef = useRef(null);
   if (!zoneIdRef.current) zoneIdRef.current = createZoneId('create-profile-modal');
 
+  // El handler de BACK (registrado una sola vez más abajo) necesita leer el
+  // paso ACTUAL, no el que había en el render donde se registró -- de ahí el
+  // ref en vez de leer `step` directo dentro del closure.
+  const stepRef = useRef(step);
+  useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
+
   const availableCard = smartCards.find(
     (card) => !profiles.some((profile) => profile.sn === getCardKey(card))
   );
 
-  // Navegación (LEFT/RIGHT/UP/DOWN por geometría, BACK cancela) delegada a una
-  // zona de FocusManager, igual que otros modales.
+  // Navegación (LEFT/RIGHT/UP/DOWN por geometría, BACK vuelve al paso 1 o
+  // cierra el modal si ya estaba en el paso 1) delegada a una zona de
+  // FocusManager, igual que otros modales.
   useEffect(() => {
     const zoneId = zoneIdRef.current;
     focusManager.push(zoneId, {
       containerEl: rootRef.current,
       onBack: () => {
-        onClose?.();
+        if (stepRef.current === 2) {
+          setError(null);
+          setStep(1);
+        } else {
+          onClose?.();
+        }
       },
     });
     return () => {
@@ -53,15 +79,35 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Focus inicial en TV
+  // Focus inicial en TV, tanto al abrir el modal como al cambiar de paso.
   useEffect(() => {
-    if (isTV) {
-      const timer = setTimeout(() => {
+    if (!isTV) return undefined;
+    const timer = setTimeout(() => {
+      if (step === 1) {
         focusElementSafe(document.getElementById('create-profile-name'));
-      }, 300);
-      return () => clearTimeout(timer);
+      } else {
+        const firstAvatar = rootRef.current?.querySelector('.create-profile-avatar-option');
+        if (firstAvatar) focusElementSafe(firstAvatar);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [isTV, step]);
+
+  const handleStepOneSubmit = (e) => {
+    if (e) e.preventDefault();
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setError(t('profile.createNameRequired'));
+      return;
     }
-  }, [isTV]);
+    setError(null);
+    setStep(2);
+  };
+
+  const handleBackToStepOne = () => {
+    setError(null);
+    setStep(1);
+  };
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -69,6 +115,9 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
 
     const trimmedName = name.trim();
     if (!trimmedName) {
+      // No debería pasar (ya se validó en el paso 1), pero si pasa, volver
+      // ahí en vez de mostrar el error en una pantalla sin el input.
+      setStep(1);
       setError(t('profile.createNameRequired'));
       return;
     }
@@ -106,28 +155,62 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
 
   return (
     <div ref={rootRef} className="create-profile-overlay" role="dialog" aria-modal="true" aria-labelledby="create-profile-title">
-      <div className="create-profile-modal">
-        <h2 id="create-profile-title" className="create-profile-title">{t('profile.createTitle')}</h2>
+      <div className="create-profile-modal create-profile-modal--wizard">
+        <div className="create-profile-progress" aria-hidden="true">
+          <span className={`create-profile-progress-dot${step === 1 ? ' active' : ''}`} />
+          <span className={`create-profile-progress-dot${step === 2 ? ' active' : ''}`} />
+        </div>
 
-        <form onSubmit={handleSubmit} className="create-profile-form">
-          <div className="form-group">
-            <label htmlFor="create-profile-name">{t('profile.createName')}</label>
+        {step === 1 ? (
+          <form onSubmit={handleStepOneSubmit} className="create-profile-step">
+            <div className="create-profile-step-label">
+              {t('profile.createStepOf', { current: 1, total: 2, defaultValue: 'Paso 1 de 2' })}
+            </div>
+            <h2 id="create-profile-title" className="create-profile-title">
+              {t('profile.createStepNameTitle', { defaultValue: '¿Cómo se llama?' })}
+            </h2>
+
             <FocusableInput
               id="create-profile-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t('profile.createNamePlaceholder')}
-              disabled={isSubmitting}
+              aria-label={t('profile.createName')}
               maxLength={50}
               autoComplete="off"
+              className="create-profile-name-input"
             />
-          </div>
 
-          <div className="form-group">
-            <label>{t('profile.createAvatar')}</label>
+            {error && <div className="create-profile-error">{error}</div>}
+
+            <div className="create-profile-actions">
+              <FocusableButton
+                type="submit"
+                className="create-profile-btn create-profile-btn-primary"
+              >
+                {t('profile.createNext', { defaultValue: 'Siguiente' })}
+              </FocusableButton>
+              <FocusableButton
+                type="button"
+                onClick={onClose}
+                className="create-profile-btn create-profile-btn-secondary"
+              >
+                {t('profile.createCancel')}
+              </FocusableButton>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="create-profile-step">
+            <div className="create-profile-step-label">
+              {t('profile.createStepOf', { current: 2, total: 2, defaultValue: 'Paso 2 de 2' })}
+            </div>
+            <h2 id="create-profile-title" className="create-profile-title">
+              {t('profile.createStepAvatarTitle', { defaultValue: 'Elegí un avatar' })}
+            </h2>
+
             <div className="create-profile-avatars">
-              {Img.map((img) => (
+              {avatars.map((img) => (
                 <AvatarOption
                   key={img.id}
                   img={img}
@@ -137,61 +220,30 @@ export function CreateProfileModal({ smartCards = [], profiles = [], onClose, on
                 />
               ))}
             </div>
-          </div>
 
-          {error && <div className="create-profile-error">{error}</div>}
-          {successMessage && <div className="create-profile-success">{successMessage}</div>}
+            {error && <div className="create-profile-error">{error}</div>}
+            {successMessage && <div className="create-profile-success">{successMessage}</div>}
 
-          <div className="create-profile-actions">
-            <FocusableButton
-              type="submit"
-              disabled={isSubmitting}
-              className="create-profile-btn create-profile-btn-primary"
-            >
-              {isSubmitting ? t('profile.createSubmitting') : t('profile.createSubmit')}
-            </FocusableButton>
-            <FocusableButton
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="create-profile-btn create-profile-btn-secondary"
-            >
-              {t('profile.createCancel')}
-            </FocusableButton>
-          </div>
-        </form>
+            <div className="create-profile-actions">
+              <FocusableButton
+                type="submit"
+                disabled={isSubmitting}
+                className="create-profile-btn create-profile-btn-primary"
+              >
+                {isSubmitting ? t('profile.createSubmitting') : t('profile.createSubmit')}
+              </FocusableButton>
+              <FocusableButton
+                type="button"
+                onClick={handleBackToStepOne}
+                disabled={isSubmitting}
+                className="create-profile-btn create-profile-btn-secondary"
+              >
+                {t('profile.createBack', { defaultValue: 'Atrás' })}
+              </FocusableButton>
+            </div>
+          </form>
+        )}
       </div>
-    </div>
-  );
-}
-
-function AvatarOption({ img, selected, onSelect, disabled }) {
-  const handleClick = () => {
-    if (!disabled) onSelect();
-  };
-
-  const handleKeyDown = (e) => {
-    if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
-      e.preventDefault();
-      onSelect();
-    }
-  };
-
-  return (
-    <div
-      role="button"
-      tabIndex={disabled ? -1 : 0}
-      className={`create-profile-avatar-option ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      aria-label={img.id.toString()}
-    >
-      <img src={img.img} alt="" className="create-profile-avatar-img" />
-      {selected && (
-        <span className="create-profile-avatar-check" aria-hidden="true">
-          <AppIcon name="done" size={18} />
-        </span>
-      )}
     </div>
   );
 }

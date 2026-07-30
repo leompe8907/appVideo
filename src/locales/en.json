@@ -159,6 +159,11 @@
     "profileAria": "Profile {{name}}",
     "addProfileComingSoon": "Add profile feature coming soon",
     "createTitle": "Create profile",
+    "createStepOf": "Step {{current}} of {{total}}",
+    "createStepNameTitle": "What's their name?",
+    "createStepAvatarTitle": "Choose an avatar",
+    "createNext": "Next",
+    "createBack": "Back",
     "createName": "Name",
     "createNamePlaceholder": "e.g. Mary",
     "createNameRequired": "Name is required.",
@@ -181,7 +186,15 @@
     "deleteCancel": "Cancel",
     "deleteSuccess": "Profile deleted successfully.",
     "deleteError": "Error deleting profile.",
-    "deleteProfileAria": "Delete profile {{name}}"
+    "deleteProfileAria": "Delete profile {{name}}",
+    "editButton": "Edit",
+    "editTitle": "Edit profile",
+    "editSubmit": "Save",
+    "editSubmitting": "Saving...",
+    "editCancel": "Cancel",
+    "editSuccess": "Profile updated successfully.",
+    "editError": "Error updating profile.",
+    "editProfileAria": "Edit profile {{name}}"
   },
   "smartcard": {
     "loadingLicenses": "Loading licenses...",

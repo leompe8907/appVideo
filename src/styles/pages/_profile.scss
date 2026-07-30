@@ -112,6 +112,38 @@
       margin: -$spacing-xs;
     }
 
+    // Fila de acciones secundarias (editar / eliminar) debajo del avatar+nombre.
+    // Antes solo existía "eliminar" como botón único; con "editar" agregado,
+    // los dos van lado a lado en vez de apilados.
+    .profile-card-actions {
+      display: flex;
+      gap: $spacing-xs;
+    }
+
+    // Botón editar (mismo estilo base que eliminar, sin el tono de peligro)
+    .profile-card-edit {
+      font-size: 0.75rem;
+      padding: $spacing-xs $spacing-sm;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: $border-radius-md;
+      color: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+
+      &:hover {
+        color: rgba(255, 255, 255, 0.95);
+        border-color: rgba(255, 255, 255, 0.4);
+      }
+
+      &.focused {
+        border-color: rgba(255, 255, 255, 0.6);
+        color: #fff;
+        outline: 2px solid $primary-color;
+        outline-offset: 2px;
+      }
+    }
+
     // Botón eliminar
     .profile-card-delete {
       font-size: 0.75rem;
