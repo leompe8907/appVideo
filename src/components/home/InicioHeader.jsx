@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
+import { useDevice } from '../../contexts/DeviceContext';
 import { useDeviceTime } from '../../hooks/useDeviceTime';
 import { useHomeHeaderState } from '../../contexts/homeHeaderContext';
 import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
 import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
+import { resolveShellMode, resolveSubheaderActivado } from '../../config/brandConfig';
 
 /**
  * Cabecera de Inicio: tres zonas horizontales (izquierda, centro, derecha).
@@ -54,7 +56,17 @@ function getNextEpgEvent(epgItems, currentEvent) {
 export function InicioHeader({ sectionKey = null }) {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
+  const { isTV } = useDevice();
   const focusedChannel = useHomeHeaderState();
+
+  // Si el shell global ya es un Topbar (`brand.layout.shell.{pc,tv}`), ese
+  // Topbar ya muestra el logo de forma persistente en todas las pantallas de
+  // Home. `header.areas.*.showLogo` no está separado por plataforma (aplica
+  // igual a PC y TV), así que en vez de apagarlo en brands.js —lo que también
+  // apagaría el logo en TV, donde puede seguir habiendo Sidebar sin logo
+  // propio—, se suprime acá solo cuando el shell activo (para esta
+  // plataforma) ya es Topbar, evitando el logo duplicado sin afectar TV.
+  const shellIsTopbar = resolveShellMode(currentBrand, isTV) === 'topbar';
 
   const areas = currentBrand?.header?.areas || {};
   const left = areas.left || {};
@@ -65,7 +77,12 @@ export function InicioHeader({ sectionKey = null }) {
   const subLeft = subAreas.left || {};
   const subCenter = subAreas.center || {};
   const subRight = subAreas.right || {};
-  const subheaderEnabled = Boolean(currentBrand?.header?.subheader?.enabled ?? true);
+  // Interruptor general (brand.header.subheader.enabled) Y plataforma
+  // (brand.header.subheader.activado.{pc,tv}) — independiente del header
+  // principal: se puede apagar solo el panel "Ahora/Siguiente" sin tocar la
+  // fila logo/hora, o viceversa.
+  const subheaderEnabled =
+    Boolean(currentBrand?.header?.subheader?.enabled ?? true) && resolveSubheaderActivado(currentBrand, isTV);
 
   const logoSrc = currentBrand?.assets?.logo || null;
   const appName = currentBrand?.appName || 'App';
@@ -95,7 +112,7 @@ export function InicioHeader({ sectionKey = null }) {
         data-enabled="1"
         style={{ justifyContent: resolveJustify(cfg.contentAlign) }}
       >
-        {cfg.showLogo && logoSrc ? (
+        {cfg.showLogo && logoSrc && !shellIsTopbar ? (
           <img className="inicio-header__logo" src={logoSrc} alt={appName} />
         ) : null}
         {cfg.showTime ? (
@@ -170,6 +187,25 @@ export function InicioHeader({ sectionKey = null }) {
     );
   };
 
+  // `.inicio-header` / `.inicio-subheader` reservan alto fijo (7.25rem / 10.25rem)
+  // pensado para cuando de verdad hay logo/hora/info de canal que mostrar. Si
+  // ninguna zona tiene contenido visible (p. ej. brand con Topbar, que ya
+  // suprime el logo acá, y sin `showTime`), esas filas quedaban como espacio
+  // en blanco fijo entre el shell y el contenido. Se calcula si hay algo real
+  // que mostrar y, si no, directamente no se renderiza la fila.
+  const hasHeaderRowContent =
+    (left.enabled !== false && ((left.showLogo && logoSrc && !shellIsTopbar) || left.showTime)) ||
+    (center.enabled !== false && ((center.showLogo && logoSrc && !shellIsTopbar) || center.showTime)) ||
+    (right.enabled !== false && ((right.showLogo && logoSrc && !shellIsTopbar) || right.showTime));
+
+  const hasSubheaderContent =
+    subheaderEnabled &&
+    ((subLeft.enabled !== false && subLeft.showServiceInfo) ||
+      (subCenter.enabled !== false && subCenter.showServiceInfo) ||
+      (subRight.enabled !== false && subRight.showServiceInfo));
+
+  const showSubheader = sectionKey === 'inicio' && hasSubheaderContent;
+
   const renderSubArea = (cfg, areaKey) => {
     const enabled = cfg.enabled !== false;
     if (!enabled) {
@@ -188,19 +224,19 @@ export function InicioHeader({ sectionKey = null }) {
     );
   };
 
+  if (!hasHeaderRowContent && !showSubheader) return null;
+
   return (
     <div className="inicio-header-wrap" aria-label={t('inicio.header', { defaultValue: 'Cabecera de inicio' })}>
-      <header className="inicio-header">
-        {renderArea(left, 'left')}
-        {renderArea(center, 'center')}
-        {renderArea(right, 'right')}
-      </header>
-      {sectionKey === 'inicio' && (
-        <div
-          className="inicio-subheader"
-          aria-label={t('inicio.subheader', { defaultValue: 'Subcabecera' })}
-          style={{ display: subheaderEnabled ? 'flex' : 'none' }}
-        >
+      {hasHeaderRowContent && (
+        <header className="inicio-header">
+          {renderArea(left, 'left')}
+          {renderArea(center, 'center')}
+          {renderArea(right, 'right')}
+        </header>
+      )}
+      {showSubheader && (
+        <div className="inicio-subheader" aria-label={t('inicio.subheader', { defaultValue: 'Subcabecera' })}>
           {renderSubArea(subLeft, 'left')}
           {renderSubArea(subCenter, 'center')}
           {renderSubArea(subRight, 'right')}

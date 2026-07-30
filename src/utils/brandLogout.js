@@ -7,10 +7,16 @@ import { useEpgReminderStore } from '../store/epgReminderStore';
 import { useOsmsStore } from '../store/osmsStore';
 import { usePreloadStore } from '../store/preloadStore';
 import { useSearchSessionStore } from '../store/searchSessionStore';
+import { useActiveProfileStore } from '../store/activeProfileStore';
 
 export function resetBrandStoresOnLogout() {
   try {
     useParentalStore.getState().resetOnLogout?.();
+  } catch {
+    // noop
+  }
+  try {
+    useActiveProfileStore.getState().resetOnLogout?.();
   } catch {
     // noop
   }

@@ -101,6 +101,106 @@ export function isParentalControlEnabledForBrand(brandConfig) {
 }
 
 /**
+ * Resuelve el modo del shell Home ("sidebar" | "topbar") para la marca activa,
+ * de forma independiente por plataforma (`brand.layout.shell.pc` / `.tv`).
+ * Default "sidebar" en ambas si la marca no define `layout` (retro-compatible
+ * con las marcas configuradas antes de este flag). Única función para esta
+ * pregunta en toda la app: la consulta `HomePage.jsx` para decidir si monta
+ * `<Sidebar>` o `<Topbar>`.
+ * @param {Object} brandConfig
+ * @param {boolean} isTV
+ * @returns {'sidebar'|'topbar'}
+ */
+export function resolveShellMode(brandConfig, isTV) {
+  const mode = isTV ? brandConfig?.layout?.shell?.tv : brandConfig?.layout?.shell?.pc;
+  return mode === 'topbar' ? 'topbar' : 'sidebar';
+}
+
+/**
+ * Resuelve qué contenido ("logo" | "nav" | "account" | "none") va en cada
+ * zona del Topbar (`brand.layout.topbar.areas.{left,center,right}`), siguiendo
+ * el mismo patrón que `header.areas`. Defaults: logo/nav/account tal como se
+ * ve en el mock de referencia (Wind).
+ * @param {Object} brandConfig
+ * @returns {{left: string, center: string, right: string}}
+ */
+export function resolveTopbarAreas(brandConfig) {
+  const areas = brandConfig?.layout?.topbar?.areas || {};
+  return {
+    left: areas.left?.content || 'logo',
+    center: areas.center?.content || 'nav',
+    right: areas.right?.content || 'account',
+  };
+}
+
+/**
+ * ¿Debe montarse `InicioHeader` (cabecera de contenido con logo/hora/info de
+ * canal) para esta sección de Home? Lee `brand.homeShell.header.[sectionKey]`
+ * (boolean, decide en qué páginas de Home aparece — igual para PC y TV; en la
+ * práctica hoy todas las marcas lo dejan igual en las 4 páginas). Si la marca
+ * no define nada, cae al fallback histórico: activo en
+ * inicio/serviciosTvRadio/vod/catchup.
+ *
+ * El "en qué plataforma" es una pregunta distinta — la resuelve
+ * `resolveHeaderActivado()` — para no mezclar "en qué página" con "en qué
+ * plataforma" en el mismo flag.
+ * @param {Object} brandConfig
+ * @param {'inicio'|'serviciosTvRadio'|'vod'|'catchup'|null} sectionKey
+ * @returns {boolean}
+ */
+export function resolveHomeShellHeaderEnabled(brandConfig, sectionKey) {
+  if (!sectionKey) return false;
+  const fallback =
+    sectionKey === 'inicio' ||
+    sectionKey === 'serviciosTvRadio' ||
+    sectionKey === 'vod' ||
+    sectionKey === 'catchup';
+
+  const raw = brandConfig?.homeShell?.header?.[sectionKey];
+  return raw == null ? fallback : Boolean(raw);
+}
+
+/**
+ * ¿Está activo el módulo `InicioHeader` (fila logo/hora) en esta plataforma?
+ * Lee `brand.header.activado.{pc,tv}`, colocado junto a `brand.header.areas`
+ * (lo que gobierna) en vez de en `homeShell` (que solo decide en qué
+ * páginas). Pensado para marcas con Topbar en PC: ahí ya no hace falta esta
+ * cabecera (el Topbar ya muestra logo/nav/cuenta), pero en TV sigue haciendo
+ * falta porque el Sidebar no la reemplaza. Default `true` en ambas si la
+ * marca no define `activado` (retro-compatible).
+ * Se combina con `resolveHomeShellHeaderEnabled()`: el header se monta solo
+ * si la página lo tiene Y la plataforma lo tiene.
+ * @param {Object} brandConfig
+ * @param {boolean} isTV
+ * @returns {boolean}
+ */
+export function resolveHeaderActivado(brandConfig, isTV) {
+  const activado = brandConfig?.header?.activado;
+  if (activado == null) return true;
+  const perPlatform = isTV ? activado.tv : activado.pc;
+  return perPlatform ?? true;
+}
+
+/**
+ * ¿Está activa la subcabecera (panel "Ahora/Siguiente" del canal enfocado,
+ * solo en Inicio) en esta plataforma? Lee `brand.header.subheader.activado`,
+ * independiente de `resolveHeaderActivado()`: permite apagar solo el panel
+ * de info de canal sin apagar la fila logo/hora, o viceversa. Se combina con
+ * `brand.header.subheader.enabled` (interruptor general ya existente) — el
+ * panel se muestra solo si ambos lo permiten. Default `true` en ambas si la
+ * marca no define `activado`.
+ * @param {Object} brandConfig
+ * @param {boolean} isTV
+ * @returns {boolean}
+ */
+export function resolveSubheaderActivado(brandConfig, isTV) {
+  const activado = brandConfig?.header?.subheader?.activado;
+  if (activado == null) return true;
+  const perPlatform = isTV ? activado.tv : activado.pc;
+  return perPlatform ?? true;
+}
+
+/**
  * Valida que la configuración de marca tenga campos mínimos.
  * @param {Object} config
  * @returns {string[]} Claves faltantes o inválidas

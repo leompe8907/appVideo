@@ -512,13 +512,34 @@ export const BRANDS = [
     },
 
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    // Layout del shell Home: sidebar (rail vertical) o topbar (barra horizontal),
+    // configurable de forma independiente por plataforma (pc/tv). Default "sidebar"
+    // en ambas si la marca no define layout (retro-compatible).
+    layout: {
+      shell: {
+        pc: "sidebar", // "sidebar" | "topbar"
+        tv: "sidebar", // "sidebar" | "topbar"
+      },
+      // Distribución del topbar en 3 zonas (solo aplica si layout.shell.* === "topbar").
+      // Mismo patrón que header.areas: cada zona define qué contenido muestra.
+      topbar: {
+        areas: {
+          left: { content: "logo" }, // "logo" | "nav" | "account" | "none"
+          center: { content: "nav" },
+          right: { content: "account" },
+        },
+      },
+    },
+
     header: {
+      activado: { pc: true, tv: true },
       areas: {
         left: { enabled: true, showLogo: true, showTime: false, contentAlign: 'left' },
         center: { enabled: true, showLogo: false, showTime: false, contentAlign: 'center' },
         right: { enabled: true, showLogo: false, showTime: true, contentAlign: 'right' },
       },
       subheader: {
+        activado: { pc: true, tv: true },
         enabled: true,
         areas: {
           left: { enabled: true, showServiceInfo: true, contentAlign: 'left' },
@@ -530,6 +551,10 @@ export const BRANDS = [
 
     // Flags de HomeShell (header + ads por sección)
     homeShell: {
+      // En qué páginas de Home aparece InicioHeader (mismo valor PC/TV: es una
+      // decisión de "qué página", no de "qué plataforma"). El on/off por
+      // plataforma vive en `header.activado` / `header.subheader.activado`
+      // (más abajo en esta misma marca), junto a lo que gobiernan.
       header: {
         inicio: true,
         serviciosTvRadio: true,
@@ -847,28 +872,48 @@ export const BRANDS = [
     },
 
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    layout: {
+      shell: {
+        pc: "topbar", // "sidebar" | "topbar"
+        tv: "sidebar", // "sidebar" | "topbar"
+      },
+      // Distribución del topbar en 3 zonas (solo aplica si layout.shell.* === "topbar").
+      // Mismo patrón que header.areas: cada zona define qué contenido muestra.
+      topbar: {
+        areas: {
+          left: { content: "logo" }, // "logo" | "nav" | "account" | "none"
+          center: { content: "nav" },
+          right: { content: "account" },
+        },
+      },
+    },
+
     header: {
+      // Topbar en PC ya cubre logo/nav/cuenta; se apaga acá para no duplicar.
+      // En TV sigue en Sidebar (sin logo propio), así que se mantiene igual que antes.
+      activado: { pc: false, tv: true },
       areas: {
         left: { 
-          enabled: true, 
-          showLogo: true, 
-          showTime: false,
+          enabled: false, 
+          showLogo: false, 
+          showTime: false ,
           contentAlign: 'left'
         },
         center: { 
-          enabled: true, 
+          enabled: false, 
           showLogo: false, 
           showTime: false,
           contentAlign: 'center'
         },
         right: { 
-          enabled: true, 
+          enabled: false, 
           showLogo: false, 
-          showTime: true,
+          showTime: false,
           contentAlign: 'right'
         },
       },
       subheader: {
+        activado: { pc: false, tv: true },
         enabled: false,
         areas: {
           left: { 
@@ -909,7 +954,7 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      profiles: true,
+      profiles: false,
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
     },
@@ -1207,13 +1252,31 @@ export const BRANDS = [
     },
 
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    layout: {
+      shell: {
+        pc: "sidebar", // "sidebar" | "topbar"
+        tv: "sidebar", // "sidebar" | "topbar"
+      },
+      // Distribución del topbar en 3 zonas (solo aplica si layout.shell.* === "topbar").
+      // Mismo patrón que header.areas: cada zona define qué contenido muestra.
+      topbar: {
+        areas: {
+          left: { content: "logo" }, // "logo" | "nav" | "account" | "none"
+          center: { content: "nav" },
+          right: { content: "account" },
+        },
+      },
+    },
+
     header: {
+      activado: { pc: false, tv: true },
       areas: {
         left: { enabled: true, showLogo: true, showTime: false, contentAlign: 'left' },
         center: { enabled: true, showLogo: false, showTime: false, contentAlign: 'center' },
         right: { enabled: true, showLogo: false, showTime: true, contentAlign: 'right' },
       },
       subheader: {
+        activado: { pc: false, tv: true },
         enabled: false,
         areas: {
           left: { enabled: true, showServiceInfo: false, contentAlign: 'left' },
@@ -1248,7 +1311,7 @@ export const BRANDS = [
     },
 
     vod: {
-      layout: "hero",
+      layout: "hero", //"hero" | "classic"
       add: true,
       vodDetail: {
         descriptionMaxLength: 180,
@@ -1538,13 +1601,31 @@ export const BRANDS = [
     },
 
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    layout: {
+      shell: {
+        pc: "sidebar", // "sidebar" | "topbar"
+        tv: "sidebar", // "sidebar" | "topbar"
+      },
+      // Distribución del topbar en 3 zonas (solo aplica si layout.shell.* === "topbar").
+      // Mismo patrón que header.areas: cada zona define qué contenido muestra.
+      topbar: {
+        areas: {
+          left: { content: "logo" }, // "logo" | "nav" | "account" | "none"
+          center: { content: "nav" },
+          right: { content: "account" },
+        },
+      },
+    },
+
     header: {
+      activado: { pc: true, tv: true },
       areas: {
         left: { enabled: true, showLogo: true, showTime: false, contentAlign: 'left' },
         center: { enabled: true, showLogo: false, showTime: false, contentAlign: 'center' },
         right: { enabled: true, showLogo: false, showTime: true, contentAlign: 'right' },
       },
       subheader: {
+        activado: { pc: true, tv: true },
         enabled: true,
         areas: {
           left: { enabled: true, showServiceInfo: true, contentAlign: 'left' },
@@ -1872,28 +1953,48 @@ export const BRANDS = [
     },
 
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    layout: {
+      shell: {
+        pc: "topbar", // "sidebar" | "topbar"
+        tv: "sidebar", // "sidebar" | "topbar"
+      },
+      // Distribución del topbar en 3 zonas (solo aplica si layout.shell.* === "topbar").
+      // Mismo patrón que header.areas: cada zona define qué contenido muestra.
+      topbar: {
+        areas: {
+          left: { content: "logo" }, // "logo" | "nav" | "account" | "none"
+          center: { content: "nav" },
+          right: { content: "account" },
+        },
+      },
+    },
+
     header: {
+      // Topbar en PC ya cubre logo/nav/cuenta; se apaga acá para no duplicar.
+      // En TV sigue en Sidebar (sin logo propio), así que se mantiene igual que antes.
+      activado: { pc: false, tv: true },
       areas: {
-        left: { 
-          enabled: true, 
-          showLogo: true, 
+        left: {
+          enabled: true,
+          showLogo: true,
           showTime: false,
           contentAlign: 'left'
         },
-        center: { 
-          enabled: true, 
-          showLogo: false, 
+        center: {
+          enabled: true,
+          showLogo: false,
           showTime: false,
           contentAlign: 'center'
         },
-        right: { 
-          enabled: true, 
-          showLogo: false, 
+        right: {
+          enabled: true,
+          showLogo: false,
           showTime: true,
           contentAlign: 'right'
         },
       },
       subheader: {
+        activado: { pc: false, tv: true },
         enabled: false,
         areas: {
           left: { 
@@ -2232,7 +2333,24 @@ export const BRANDS = [
     },
 
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    layout: {
+      shell: {
+        pc: "sidebar", // "sidebar" | "topbar"
+        tv: "sidebar", // "sidebar" | "topbar"
+      },
+      // Distribución del topbar en 3 zonas (solo aplica si layout.shell.* === "topbar").
+      // Mismo patrón que header.areas: cada zona define qué contenido muestra.
+      topbar: {
+        areas: {
+          left: { content: "logo" }, // "logo" | "nav" | "account" | "none"
+          center: { content: "nav" },
+          right: { content: "account" },
+        },
+      },
+    },
+
     header: {
+      activado: { pc: true, tv: true },
       areas: {
         left: { 
           enabled: true, 
@@ -2254,6 +2372,7 @@ export const BRANDS = [
         },
       },
       subheader: {
+        activado: { pc: true, tv: true },
         enabled: true,
         areas: {
           left: { 

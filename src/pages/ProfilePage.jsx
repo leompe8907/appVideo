@@ -19,6 +19,7 @@ import panaccessService from '../services/panaccessService';
 import { setLoggedOut } from '../utils/userSession';
 import { filterProfileSmartCards } from '../utils/licenseProducts';
 import { getProfileAvatars } from '../constants/images';
+import { useActiveProfile } from '../store/useActiveProfile';
 import '../styles/pages/_profile.scss';
 
 /**
@@ -40,6 +41,7 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const { currentBrand, appName, getImage, isFeatureEnabled } = useBrand();
   const { isTV } = useDevice();
+  const { setActiveProfile: persistActiveProfile } = useActiveProfile();
 
   const [profiles, setProfiles] = useState([]);
   const [smartCards, setSmartCards] = useState([]);
@@ -139,6 +141,10 @@ export function ProfilePage() {
         failIfInUse: false,
         pin,
       });
+      // Guardar qué perfil quedó activo (id/nombre/avatar) ANTES de navegar --
+      // el ícono de "Mi cuenta" del sidebar lo lee de acá para mostrar el
+      // avatar del perfil en vez del ícono genérico (ver Sidebar.jsx).
+      persistActiveProfile({ id: profile.id, name: profile.name, imageId: profile.imageId });
       // Ingreso directo: no mostrar modal de bienvenida en éxito.
       navigate('/home/inicio', { replace: true });
     } catch (err) {

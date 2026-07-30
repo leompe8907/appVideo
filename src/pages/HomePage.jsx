@@ -1,6 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
+import { Topbar } from '../components/Topbar';
+import { useBrand } from '../contexts/BrandContext';
+import { useDevice } from '../contexts/DeviceContext';
+import { resolveShellMode } from '../config/brandConfig';
 import { HomeShellContent } from '../components/ads/HomeShellContent';
 import { usePlayer } from '../contexts/PlayerContext';
 import PlayerHud from '../components/player/PlayerHud';
@@ -38,6 +42,10 @@ export function HomePage() {
   const showPlayerLoading = usePlayerLoadingVisible(isPlayerActive, containerRef, playerState);
   const wasPlayerActiveRef = useRef(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const { currentBrand } = useBrand();
+  const { isTV } = useDevice();
+  const shellMode = resolveShellMode(currentBrand, isTV);
+  const isTopbarMode = shellMode === 'topbar';
 
   useEffect(() => {
     if (!isPlayerActive) exitAppFullscreenSync();
@@ -161,11 +169,15 @@ export function HomePage() {
         className={[
           'home-shell-ui',
           isPlayerActive ? 'home-shell-ui--hidden' : '',
-          'home-shell-ui--sidebar-collapsed',
+          isTopbarMode ? 'home-shell-ui--topbar' : 'home-shell-ui--sidebar-collapsed',
         ].filter(Boolean).join(' ')}
       >
-        {!isPlayerActive && sidebarExpanded && <div className="home-shell-dim" aria-hidden="true" />}
-        <Sidebar expanded={sidebarExpanded} onExpandedChange={setSidebarExpanded} />
+        {!isPlayerActive && !isTopbarMode && sidebarExpanded && <div className="home-shell-dim" aria-hidden="true" />}
+        {isTopbarMode ? (
+          <Topbar />
+        ) : (
+          <Sidebar expanded={sidebarExpanded} onExpandedChange={setSidebarExpanded} />
+        )}
         <main className="home-content" data-home-scope="content">
           <HomeShellContent />
         </main>

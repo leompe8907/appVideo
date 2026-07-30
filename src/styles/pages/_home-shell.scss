@@ -603,6 +603,15 @@ html:-moz-full-screen {
   width: 2.25rem;
 }
 
+// Avatar del perfil activo en el link "Mi cuenta" (ver Sidebar.jsx): mismo
+// tamaño que el ícono genérico que reemplaza, pero recortado a círculo con
+// borde sutil para diferenciarse de un ícono plano.
+.home-sidebar-account-avatar {
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
 .home-sidebar-label {
   flex: 0 1 auto;
   min-width: 0;
@@ -948,4 +957,151 @@ html:-moz-full-screen {
  * realidad no hacía nada. `--sidebar-rail-width` ya es fluido (`4.2vw`, ver
  * línea 25), así que no hace falta ningún ajuste adicional acá.
  */
+
+// ---------------------------------------------------------------------------
+// Topbar — alternativa horizontal al Sidebar vertical, activable por marca vía
+// `brand.layout.shell.{pc,tv}`. Reemplaza el rail: el shell reserva espacio
+// arriba (margin-top) en vez de a la izquierda (margin-left). Ver Topbar.jsx.
+// ---------------------------------------------------------------------------
+.home-shell-ui--topbar {
+  --topbar-height: 4.5rem;
+
+  .home-content {
+    margin-left: 0;
+    margin-top: var(--topbar-height);
+  }
+}
+
+.home-topbar {
+  --sidebar-accent: var(--focus-color, var(--secondary-color, #5b9cf5));
+  --sidebar-panel-bg: var(--sidebar-panel-bg-theme, #0a0a0a);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-height, 4.5rem);
+  z-index: 30;
+  background: var(--sidebar-panel-bg);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 clamp(1rem, 2vw, 2.5rem);
+  box-sizing: border-box;
+}
+
+.home-topbar-zone {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.home-topbar-zone--left {
+  justify-content: flex-start;
+}
+
+.home-topbar-zone--center {
+  justify-content: center;
+}
+
+.home-topbar-zone--right {
+  justify-content: flex-end;
+}
+
+.home-topbar-zone-logo {
+  display: flex;
+  align-items: center;
+}
+
+.home-topbar-logo-img {
+  // `max-height` en % dependía de que el padre tuviera una altura definida
+  // (no la tenía: `.home-topbar-zone` mide "auto" porque `align-items: center`
+  // en `.home-topbar` le quita el stretch por defecto). El % se ignoraba y el
+  // logo se renderizaba a tamaño nativo (algunos assets de marca son ~400px
+  // de alto), reventando la barra. Se ancla directo a `--topbar-height`, que
+  // sí es un valor definido, para que siempre tenga una referencia real.
+  display: block;
+  height: auto;
+  max-height: calc(var(--topbar-height, 4.5rem) * 0.58);
+  max-width: 100%;
+  width: auto;
+  object-fit: contain;
+}
+
+.home-topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.5rem, 1.5vw, 2rem);
+}
+
+.home-topbar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 1.05rem;
+  font-weight: 400;
+  white-space: nowrap;
+  padding: 0.5rem 0.25rem;
+  position: relative;
+  transition: color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: rgba(255, 255, 255, 0.92);
+    outline: none;
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &.active {
+    color: #fff;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -0.5rem;
+      height: 2px;
+      background: var(--sidebar-accent, #5b9cf5);
+      border-radius: 999px;
+    }
+  }
+}
+
+.home-topbar-icon {
+  flex: 0 0 auto;
+  height: 1.35rem;
+  width: 1.35rem;
+}
+
+.home-topbar-account-avatar {
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+.home-topbar-account {
+  position: relative;
+}
+
+.home-topbar-badge {
+  min-width: clamp(16px, 1.6vmin, 22px);
+  height: clamp(16px, 1.6vmin, 22px);
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(10px, 1vmin, 12px);
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: rgba(255, 68, 68, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
 
