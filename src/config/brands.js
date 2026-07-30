@@ -343,6 +343,18 @@ export const BRANDS = [
         subscription: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=subscription" },
         deleteAccount: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=delete_account" },
       },
+      // Flags independientes por funcionalidad de Mi Cuenta (más allá de
+      // `links`, que ya cubre changePassword/linkedDevices/subscription/
+      // deleteAccount): permiten vender/activar Mi Cuenta "a la carta" por
+      // cliente. Default true en todas: si una marca no define `sections`,
+      // se sigue viendo todo como hasta ahora (retro-compatible).
+      sections: {
+        parentalControl: true,
+        about: true,
+        refresh: true,
+        logout: true,
+        exitApp: true,
+      },
     },
 
     // EPG: configuración unificada (guía + cards)
@@ -685,6 +697,13 @@ export const BRANDS = [
         linkedDevices: { enabled: true, url: "https://backend.wind.do/wind/login/" },
         subscription: { enabled: true, url: "https://backend.wind.do/wind/login/" },
         deleteAccount: { enabled: true, url: "https://backend.wind.do/wind/login/" },
+      },
+      sections: {
+        parentalControl: true,
+        about: true,
+        refresh: true,
+        logout: true,
+        exitApp: true,
       },
     },
 
@@ -1041,6 +1060,13 @@ export const BRANDS = [
         subscription: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=subscription" },
         deleteAccount: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=delete_account" },
       },
+      sections: {
+        parentalControl: true,
+        about: true,
+        refresh: true,
+        logout: true,
+        exitApp: true,
+      },
     },
 
     // EPG: configuración unificada (guía + cards)
@@ -1367,6 +1393,13 @@ export const BRANDS = [
         subscription: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=subscription" },
         deleteAccount: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=delete_account" },
       },
+      sections: {
+        parentalControl: true,
+        about: true,
+        refresh: true,
+        logout: true,
+        exitApp: true,
+      },
     },
 
     // EPG: configuración unificada (guía + cards)
@@ -1688,8 +1721,15 @@ export const BRANDS = [
       links: {
         changePassword: { enabled: true, url: "https://backend.wind.do/wind/login/" },
         linkedDevices: { enabled: true, url: "https://backend.wind.do/wind/login/" },
-        subscription: { enabled: true, url: "https://backend.wind.do/wind/login/" },
+        subscription: { enabled: false, url: "https://backend.wind.do/wind/login/" },
         deleteAccount: { enabled: true, url: "https://backend.wind.do/wind/login/" },
+      },
+      sections: {
+        parentalControl: false,
+        about: true,
+        refresh: true,
+        logout: true,
+        exitApp: true,
       },
     },
 
@@ -2044,6 +2084,13 @@ export const BRANDS = [
         linkedDevices: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=devices" },
         subscription: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=subscription" },
         deleteAccount: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=delete_account" },
+      },
+      sections: {
+        parentalControl: true,
+        about: true,
+        refresh: true,
+        logout: true,
+        exitApp: true,
       },
     },
 

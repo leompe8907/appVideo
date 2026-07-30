@@ -616,14 +616,19 @@ html:-moz-full-screen {
 
 .home-sidebar-badge {
   flex: 0 0 auto;
-  min-width: 22px;
-  height: 20px;
-  padding: 0 7px;
+  // clamp() en vmin en vez de px fijos: en un monitor grande con el
+  // escalado de Windows subido (125-200%) el viewport CSS efectivo se
+  // achica igual que en una pantalla más chica sin escalar — con px fijos
+  // esta insignia quedaba desproporcionadamente chica frente al resto del
+  // sidebar (que ya escala con `--sidebar-rail-width: 4.2vw`).
+  min-width: clamp(18px, 2vmin, 26px);
+  height: clamp(16px, 1.8vmin, 24px);
+  padding: 0 clamp(5px, 0.7vmin, 9px);
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: clamp(10px, 1.1vmin, 14px);
   font-weight: 700;
   line-height: 1;
   color: #fff;
@@ -633,8 +638,8 @@ html:-moz-full-screen {
 
 .home-sidebar--collapsed .home-sidebar-badge {
   position: absolute;
-  top: 6px;
-  right: 8px;
+  top: clamp(4px, 0.6vmin, 8px);
+  right: clamp(6px, 0.8vmin, 10px);
 }
 
 .home-sidebar--collapsed .home-sidebar-label {
@@ -822,16 +827,19 @@ html:-moz-full-screen {
 
 .home-sidebar--collapsed .home-sidebar-badge--settings {
   position: absolute;
-  top: 6px;
-  right: 8px;
+  top: clamp(4px, 0.6vmin, 8px);
+  right: clamp(6px, 0.8vmin, 10px);
   margin-left: 0;
 }
 
 .home-sidebar-badge--sub {
   position: static;
-  min-width: 20px;
-  height: 18px;
-  font-size: 11px;
+  min-width: clamp(16px, 1.8vmin, 24px);
+  height: clamp(15px, 1.6vmin, 22px);
+  // Piso en 10px (no 9px): con escalado de Windows alto en un monitor chico
+  // (ej. 1366x768 @125%) un clamp con piso de 9px queda por debajo del
+  // mínimo legible; 10px es el mismo piso que usa el badge principal.
+  font-size: clamp(10px, 1vmin, 13px);
 }
 
 // Nota: usamos `:focus` (no solo `:focus-visible`) porque el foco se coloca
@@ -929,13 +937,15 @@ html:-moz-full-screen {
   }
 }
 
-@media (max-width: 1024px) {
-  .home-content {
-    margin-left: var(--sidebar-rail-width);
-  }
-
-  .home-sidebar-link {
-    font-size: 1.25rem;
-  }
-}
+/*
+ * Se eliminó acá un @media (max-width: 1024px) que quedó como código muerto:
+ * tanto `margin-left: var(--sidebar-rail-width)` como
+ * `.home-sidebar-link { font-size: 1.25rem }` eran idénticos a los valores
+ * base (línea ~862 y ~564 respectivamente) — no cambiaban nada por debajo de
+ * 1024px de viewport. Un viewport angosto por escalado de Windows en un
+ * monitor grande (no un dispositivo chico real) disparaba esta regla igual,
+ * dando la falsa impresión de que existía un modo "compacto" cuando en
+ * realidad no hacía nada. `--sidebar-rail-width` ya es fluido (`4.2vw`, ver
+ * línea 25), así que no hace falta ningún ajuste adicional acá.
+ */
 

@@ -62,8 +62,19 @@ describe('loadEPGForChannels — carga en paralelo por tandas', () => {
 
     // Resolver requests de a una, dejando correr microtasks entre medio,
     // hasta drenar todos los canales.
-    while (resolvers.length < channels.length) {
+    //
+    // OJO: la condición de corte compara contra un CONTADOR ACUMULADO
+    // (`resolvedCount`), no contra `resolvers.length` (tamaño de la cola
+    // PENDIENTE en este instante). Con batchSize=5 y 12 canales, la cola
+    // pendiente nunca llega a 12 (el máximo real son 5 en simultáneo), así
+    // que `resolvers.length < channels.length` es siempre verdadero y nunca
+    // corta el loop — una vez procesados los 12 canales, `resolvers` queda
+    // vacío para siempre y el `while` gira en un loop infinito de microtasks
+    // sin nunca llegar a `await donePromise`, colgando el test.
+    let resolvedCount = 0;
+    while (resolvedCount < channels.length) {
       const toResolve = resolvers.splice(0, resolvers.length);
+      resolvedCount += toResolve.length;
       toResolve.forEach((r) => r());
       // eslint-disable-next-line no-await-in-loop
       await Promise.resolve();

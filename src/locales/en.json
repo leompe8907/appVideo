@@ -316,6 +316,7 @@
   "parental": {
     "title": "Parental control",
     "subtitle": "Block access to channels with a PIN (without hiding them).",
+    "disabledByBrand": "Parental control is not enabled for this account.",
     "enabled": "Enable parental control",
     "setupPinMessage": "To use parental control, you must set a PIN first.",
     "goToSettings": "Set PIN",

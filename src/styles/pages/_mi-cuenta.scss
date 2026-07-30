@@ -89,9 +89,16 @@
 }
 
 .mi-cuenta-content {
+  // Ancho reservado para el reloj superpuesto (--mi-cuenta-clock-reserve):
+  // una sola variable que usan tanto el reloj (posición) como el título
+  // (padding-right), en vez de dos números fijos independientes que antes
+  // podían desalinearse entre sí. En vmin en vez de px fijos: en un monitor
+  // grande con el escalado de Windows subido el viewport CSS efectivo se
+  // achica igual que en una pantalla más chica sin escalar.
+  --mi-cuenta-clock-reserve: clamp(70px, 9vmin, 110px);
   flex: 1;
   position: relative;
-  padding: 26px 34px 30px;
+  padding: clamp(18px, 2.6vmin, 30px) clamp(22px, 3.2vmin, 38px) clamp(20px, 2.8vmin, 32px);
   background: var(--account-content-bg, var(--account-panel-bg, #0b2a4a));
   color: var(--account-panel-text, #ffffff);
   min-width: 0;
@@ -99,9 +106,9 @@
 
 .mi-cuenta-clock {
   position: absolute;
-  top: 22px;
-  right: 30px;
-  font-size: 1.35rem;
+  top: clamp(14px, 2vmin, 24px);
+  right: clamp(18px, 2.6vmin, 32px);
+  font-size: clamp(1.1rem, 1.9vmin, 1.4rem);
   font-variant-numeric: tabular-nums;
   color: var(--account-panel-text, #ffffff);
   opacity: 0.9;
@@ -109,10 +116,10 @@
 
 .mi-cuenta-content__title {
   margin: 0 0 28px;
-  font-size: 1.5rem;
+  font-size: clamp(1.2rem, 2.1vmin, 1.55rem);
   font-weight: 700;
-  color: var(--account-content-title, #8fb9e8);
-  padding-right: 90px;
+  color: var(--account-content-title, #ffffff);
+  padding-right: var(--mi-cuenta-clock-reserve);
 }
 
 .mi-cuenta-qr-row {

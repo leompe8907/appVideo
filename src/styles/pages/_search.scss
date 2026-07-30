@@ -22,14 +22,18 @@
 
 .search-container {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
+  // vmin en vez de px fijos: un margen de 10px es una fracción muy distinta
+  // de la pantalla según el viewport CSS efectivo (que cambia tanto en TVs
+  // de otra resolución como en un monitor de PC grande con el escalado de
+  // Windows subido).
+  top: clamp(8px, 1.2vmin, 18px);
+  left: clamp(8px, 1.2vmin, 18px);
+  right: clamp(8px, 1.2vmin, 18px);
+  bottom: clamp(8px, 1.2vmin, 18px);
   max-width: 100%;
   background-color: var(--search-panel-bg, rgba(0, 0, 0, 0.92));
   border-radius: 10px;
-  padding: 20px;
+  padding: clamp(12px, 1.8vmin, 24px);
   display: flex;
   flex-direction: column;
   z-index: 1;
@@ -267,14 +271,14 @@ $search-tv-result-meta-size: 1.3rem;
 
 .search-empty {
   color: var(--search-empty-text, rgba(255, 255, 255, 0.75));
-  font-size: 15px;
+  font-size: clamp(13px, 1.5vmin, 17px);
   padding: 1rem 0.5rem;
   text-align: center;
 }
 
 .search-count {
   color: var(--search-empty-count-text, rgba(255, 255, 255, 0.65));
-  font-size: 13px;
+  font-size: clamp(11px, 1.2vmin, 14px);
   margin-bottom: 8px;
   padding: 0 4px;
 }

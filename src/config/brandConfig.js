@@ -82,6 +82,25 @@ export function getActiveBrandConfig() {
 }
 
 /**
+ * ¿La marca activa tiene habilitada la sección de Control Parental
+ * (`brand.account.sections.parentalControl`)? Default `true` si la marca no
+ * define `sections` (retro-compatible con marcas configuradas antes de este
+ * flag). Única función para esta pregunta en toda la app: la consultan tanto
+ * componentes React (pasando el `currentBrand` de `useBrand()`) como stores
+ * fuera de React (pasando `getActiveBrandConfig()`), para que el gate sea
+ * consistente en todos los puntos donde aparece la funcionalidad: la página
+ * de configuración (`ParentalSettingsPage.jsx`), el botón en Mi Cuenta, el
+ * candado del reproductor (`PlayerHud.jsx`), el ícono de bloqueo en las
+ * tarjetas de canal, y el gate de PIN antes de reproducir
+ * (`parentalStore.js` / `parentalGateStore.js`).
+ * @param {Object} brandConfig
+ * @returns {boolean}
+ */
+export function isParentalControlEnabledForBrand(brandConfig) {
+  return (brandConfig?.account?.sections?.parentalControl ?? true) !== false;
+}
+
+/**
  * Valida que la configuración de marca tenga campos mínimos.
  * @param {Object} config
  * @returns {string[]} Claves faltantes o inválidas

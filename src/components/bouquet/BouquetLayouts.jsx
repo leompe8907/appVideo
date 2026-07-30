@@ -84,7 +84,6 @@ export function BouquetHorizontalGrid({
     t('bouquet.unknown');
 
   const rawItems = Array.isArray(bouquet?.items) ? bouquet.items : [];
-  if (rawItems.length === 0) return null;
 
   const gridMode = resolveHorizontalGridMode(
     containerType,
@@ -94,9 +93,16 @@ export function BouquetHorizontalGrid({
     { isPC }
   );
   const useEmbla = isPC && gridMode.scrollX;
+  // useChunkedList debe llamarse siempre, sin importar rawItems.length: el
+  // early-return de abajo estaba ANTES de este hook, violando Rules of Hooks
+  // (si rawItems pasa de vacío a no-vacío entre renders, el orden de hooks
+  // cambiaba). Ahora el hook corre incondicionalmente y el bail-out va
+  // después de todos los hooks.
   const { entries, reportFocusIndex } = useChunkedList(rawItems, { enabled: !useEmbla });
   const { root: rootClass, track: trackClass } = getBouquetHorizontalGridClasses(layoutType);
   const trackStyle = { '--bouquet-grid-rows': gridMode.rows };
+
+  if (rawItems.length === 0) return null;
 
   const renderChannelCard = (channel, index) => (
     <ChannelCard

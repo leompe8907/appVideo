@@ -43,6 +43,13 @@ export function resolveBrandToken(brandSlug) {
   return '';
 }
 
+// `process` es un global de Node válido acá: esta función solo se llama
+// desde vite.config.js (ver import arriba en el propio archivo de config),
+// nunca desde el bundle de cliente. `/* global process */` en vez de
+// agregar este archivo al override de globals.node en eslint.config.js
+// para no habilitar sin querer otros globals de Node en `resolveBrandToken`
+// (la función de arriba), que sí corre en el cliente.
+/* global process */
 export function resolveBrandTokenFromProcessEnv(brandSlug) {
   const slug = String(brandSlug || '').trim();
   if (!slug) return '';

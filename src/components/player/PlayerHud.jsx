@@ -9,6 +9,7 @@ import { resolveLiveWindowFromEpgItems } from '../../utils/epgCurrentEvent';
 import { usePreload } from '../../store/usePreload';
 import panaccessService from '../../services/panaccessService';
 import { useBrand } from '../../contexts/BrandContext';
+import { isParentalControlEnabledForBrand } from '../../config/brandConfig';
 import AppIcon from '../AppIcon';
 import EpgEventModal from '../epg/EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
@@ -245,6 +246,10 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   } = usePlayer();
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
+  // Si la marca no vendió/activó Control Parental (`account.sections.parentalControl`),
+  // el candado de bloqueo de canal tampoco debe aparecer en el player -- ver
+  // `isParentalControlEnabledForBrand` para el resto de los puntos gateados.
+  const parentalControlEnabledForBrand = isParentalControlEnabledForBrand(currentBrand);
   const [visible, setVisible] = useState(true);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
@@ -940,7 +945,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
           >
             <AppIcon name="list" size="1em" />
           </FocusableButton>
-          {isLiveService && (
+          {isLiveService && parentalControlEnabledForBrand && (
             <FocusableButton
               type="button"
               className="player-hud__iconbtn"

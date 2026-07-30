@@ -1,7 +1,10 @@
 @use '../mixins' as *;
 
 .parental-page {
-  padding: 18px 18px 28px;
+  // clamp() en vmin en vez de px fijos: en un monitor grande con el
+  // escalado de Windows subido (125-200%), el viewport CSS efectivo se
+  // achica igual que en una pantalla más chica sin escalar.
+  padding: clamp(12px, 1.8vmin, 20px) clamp(12px, 1.8vmin, 20px) clamp(18px, 2.8vmin, 30px);
   color: var(--text-color, #fff);
   max-width: 100%;
   overflow-x: hidden; /* nunca scroll horizontal */
@@ -16,7 +19,7 @@
 
 .parental-title {
   margin: 0 0 6px;
-  font-size: 26px;
+  font-size: clamp(20px, 2.4vmin, 28px);
 }
 
 .parental-subtitle {
@@ -43,7 +46,7 @@
 }
 
 .parental-toggle {
-  padding: 10px 14px;
+  padding: clamp(7px, 1vmin, 11px) clamp(10px, 1.4vmin, 16px);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.08);
@@ -68,8 +71,8 @@
 }
 
 .parental-pin-input {
-  width: 160px;
-  padding: 10px 12px;
+  width: clamp(120px, 14vmin, 180px);
+  padding: clamp(7px, 1vmin, 11px) clamp(9px, 1.2vmin, 14px);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(0, 0, 0, 0.25);
@@ -77,7 +80,7 @@
 }
 
 .parental-btn {
-  padding: 10px 12px;
+  padding: clamp(7px, 1vmin, 11px) clamp(9px, 1.2vmin, 14px);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.08);
@@ -216,17 +219,17 @@
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 28px;
+  font-size: clamp(20px, 3vmin, 32px);
   background: rgba(0, 0, 0, 0.35);
   pointer-events: none;
 }
 
 .parental-channel-card__meta {
   display: grid;
-  grid-template-columns: 70px 1fr;
+  grid-template-columns: clamp(48px, 6vmin, 82px) 1fr;
   gap: 10px;
   align-items: center;
-  min-height: 34px;
+  min-height: clamp(26px, 3.2vmin, 40px);
 }
 
 .parental-channel-card__lcn {
@@ -267,7 +270,7 @@
 }
 
 .parental-pin-title {
-  font-size: 22px;
+  font-size: clamp(17px, 2.2vmin, 24px);
   font-weight: 700;
   margin-bottom: 6px;
 }
@@ -278,8 +281,8 @@
 
 .parental-pin-input {
   width: 100%;
-  font-size: 22px;
-  padding: 12px 14px;
+  font-size: clamp(17px, 2.2vmin, 24px);
+  padding: clamp(9px, 1.2vmin, 14px) clamp(10px, 1.4vmin, 16px);
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(0, 0, 0, 0.25);
@@ -299,12 +302,12 @@
 }
 
 .parental-pin-digit {
-  padding: 14px 0;
+  padding: clamp(10px, 1.4vmin, 16px) 0;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
-  font-size: 18px;
+  font-size: clamp(14px, 1.8vmin, 20px);
 }
 
 .parental-pin-digit--ok {
@@ -322,7 +325,7 @@
 
 .parental-pin-cancel,
 .parental-pin-ok {
-  padding: 12px 14px;
+  padding: clamp(9px, 1.2vmin, 14px) clamp(10px, 1.4vmin, 16px);
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.06);

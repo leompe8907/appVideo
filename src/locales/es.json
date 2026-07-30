@@ -49,6 +49,7 @@
     "step3DeleteAccount": "Sigue las instrucciones de tu dispositivo para eliminar tu cuenta.",
     "qrUnavailable": "Este servicio no está disponible por el momento.",
     "notConfigured": "Esta marca aún no configuró este enlace.",
+    "noSectionsAvailable": "No hay funciones disponibles para esta cuenta.",
     "comingSoon": "Disponible próximamente.",
     "aboutApp": "App",
     "aboutBrand": "Marca",
@@ -371,6 +372,7 @@
   "parental": {
     "title": "Control parental",
     "subtitle": "Bloquea el acceso a canales con PIN (sin ocultarlos).",
+    "disabledByBrand": "El control parental no está habilitado para esta cuenta.",
     "enabled": "Activar control parental",
     "statusEnabled": "Activado",
     "statusDisabled": "Desactivado",

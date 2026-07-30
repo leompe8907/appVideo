@@ -105,7 +105,10 @@
   height: 100%;
   min-height: 0;
   overflow: auto;
-  padding: 18px 18px 22px;
+  // clamp() en vmin en vez de px fijos: en un monitor grande con el
+  // escalado de Windows subido el viewport CSS efectivo se achica igual que
+  // en una pantalla más chica sin escalar.
+  padding: clamp(12px, 1.8vmin, 20px) clamp(12px, 1.8vmin, 20px) clamp(14px, 2.2vmin, 24px);
 }
 
 .catchup-header {
@@ -118,14 +121,14 @@
 
 .catchup-title {
   margin: 0;
-  font-size: 22px;
+  font-size: clamp(18px, 2.2vmin, 25px);
   font-weight: 800;
   color: #fff;
 }
 
 .catchup-subtitle {
   color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
+  font-size: clamp(12px, 1.3vmin, 15px);
 }
 
 .catchup-error {
@@ -145,7 +148,7 @@
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 12px;
-  padding: 10px 14px;
+  padding: clamp(7px, 1vmin, 11px) clamp(10px, 1.4vmin, 16px);
 }
 
 .catchup-layouts {
@@ -158,13 +161,18 @@
 .catchup-rail-title {
   color: #fff;
   margin: 18px 0 12px;
-  font-size: 18px;
+  font-size: clamp(15px, 1.7vmin, 20px);
   font-weight: 800;
 }
 
 .catchup-events-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  // minmax() en em en vez de px fijo: las tarjetas de esta grilla (la menos
+  // fluida de la app) escalan junto con el resto del texto/iconos en vez de
+  // quedar con una proporción fija sin importar qué tan chico sea el
+  // viewport CSS efectivo (por escalado de Windows en un monitor grande, o
+  // simplemente una pantalla más chica).
+  grid-template-columns: repeat(auto-fill, minmax(11.5em, 1fr));
   gap: 12px;
 }
 
@@ -173,9 +181,9 @@
   border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 14px;
   color: #fff;
-  padding: 10px;
+  padding: clamp(7px, 1vmin, 11px);
   display: grid;
-  grid-template-columns: 72px 1fr;
+  grid-template-columns: clamp(52px, 6.5vmin, 88px) 1fr;
   gap: 10px;
   align-items: center;
 }
@@ -195,16 +203,16 @@
 }
 
 .catchup-event-card-img {
-  width: 72px;
-  height: 54px;
+  width: clamp(52px, 6.5vmin, 88px);
+  height: clamp(39px, 4.9vmin, 66px);
   object-fit: cover;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
 }
 
 .catchup-event-card-img--placeholder {
-  width: 72px;
-  height: 54px;
+  width: clamp(52px, 6.5vmin, 88px);
+  height: clamp(39px, 4.9vmin, 66px);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
 }
@@ -215,7 +223,7 @@
 
 .catchup-event-card-title {
   font-weight: 700;
-  font-size: 14px;
+  font-size: clamp(12px, 1.3vmin, 15px);
   line-height: 1.2;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -225,7 +233,7 @@
 
 .catchup-event-card-time {
   color: rgba(255, 255, 255, 0.75);
-  font-size: 12px;
+  font-size: clamp(10.5px, 1.1vmin, 13px);
   margin-top: 6px;
 }
 
@@ -454,7 +462,7 @@
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 10px;
   color: #fff;
-  padding: 8px 12px;
+  padding: clamp(6px, 0.9vmin, 9px) clamp(9px, 1.2vmin, 14px);
   cursor: pointer;
 }
 

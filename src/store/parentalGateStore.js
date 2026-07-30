@@ -5,7 +5,7 @@ import { getChannelStableId } from '../utils/channelId';
 import { normalizeBrParentalRating } from '../utils/parentalRatingBR';
 import { getCurrentEpgEvent } from '../utils/epgCurrentEvent';
 import i18n from '../locales/i18n';
-import { getActiveBrandConfig } from '../config/brandConfig';
+import { getActiveBrandConfig, isParentalControlEnabledForBrand } from '../config/brandConfig';
 import { rememberMainShellFocus } from '../utils/homeShellLastContentFocus';
 
 function rememberShellFocusFromActiveElement() {
@@ -98,6 +98,15 @@ export const useParentalGateStore = create((set, get) => ({
   requestPlayChannel: ({ channel, playFn, title, message, purpose, unlockScope }) => {
     if (!channel || typeof playFn !== 'function') return false;
     const channelId = getChannelStableId(channel);
+
+    // Si la marca no tiene el flag `account.sections.parentalControl`, la
+    // funcionalidad completa (bloqueo por canal, contenido adulto, rating)
+    // queda inerte para esta marca -- nunca se abre el modal de PIN, sin
+    // importar el estado guardado de `parental.enabled`/canales bloqueados.
+    if (!isParentalControlEnabledForBrand(getActiveBrandConfig())) {
+      playFn();
+      return true;
+    }
 
     const parental = useParentalStore.getState();
     if (!parental.enabled) {
@@ -242,6 +251,12 @@ export const useParentalGateStore = create((set, get) => ({
 
   requestPlayMedia: ({ item, ratingRaw, playFn, title, message }) => {
     if (!item || typeof playFn !== 'function') return false;
+
+    if (!isParentalControlEnabledForBrand(getActiveBrandConfig())) {
+      playFn();
+      return true;
+    }
+
     const parental = useParentalStore.getState();
     if (!parental.enabled) {
       playFn();

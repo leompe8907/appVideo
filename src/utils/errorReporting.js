@@ -129,7 +129,8 @@ export function reportError(error, opts = {}) {
     storeError(entry);
 
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
+      // Nota: no hay regla `no-console` activa en eslint.config.js, así que
+      // el eslint-disable que había acá quedaba marcado como "unused directive".
       console.error('[errorReporting]', entry);
     }
 

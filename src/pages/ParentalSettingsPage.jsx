@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePreload } from '../store/usePreload';
 import { useParental } from '../store/useParental';
+import { useBrand } from '../contexts/BrandContext';
+import { isParentalControlEnabledForBrand } from '../config/brandConfig';
 import { useDevice } from '../contexts/DeviceContext';
 import { getChannelStableId } from '../utils/channelId';
 import { useParentalGate } from '../hooks/useParentalGate';
@@ -16,7 +18,14 @@ import '../styles/pages/_parental.scss';
 
 export function ParentalSettingsPage() {
   const { t } = useTranslation();
+  const { currentBrand } = useBrand();
   const { isTV } = useDevice();
+  // Gate por marca (`brand.account.sections.parentalControl`): MiCuentaPage
+  // ya oculta el botón que trae a esta ruta si está deshabilitado, pero esta
+  // ruta es independiente y navegable por URL directa -- el gate real tiene
+  // que vivir acá también (mismo patrón que `OsmsPage.jsx`), no solo en el
+  // botón de origen.
+  const parentalControlEnabled = isParentalControlEnabledForBrand(currentBrand);
   const { epg } = usePreload();
   const parental = useParental();
   const { requestPlayChannel } = useParentalGate();
@@ -94,6 +103,19 @@ export function ParentalSettingsPage() {
     Number.isFinite(parental.unlockUntilMs) &&
     parental.unlockUntilMs != null &&
     Date.now() < parental.unlockUntilMs;
+
+  if (!parentalControlEnabled) {
+    return (
+      <section className="parental-page" aria-label={t('parental.title', { defaultValue: 'Control parental' })}>
+        <div className="parental-header">
+          <h2 className="parental-title">{t('parental.title', { defaultValue: 'Control parental' })}</h2>
+        </div>
+        <div className="parental-empty">
+          {t('parental.disabledByBrand', { defaultValue: 'El control parental no está habilitado para esta cuenta.' })}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="parental-page" aria-label={t('parental.title', { defaultValue: 'Control parental' })}>

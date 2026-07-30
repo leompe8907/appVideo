@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import QRCode from 'qrcode';
 import { useBrand } from '../contexts/BrandContext';
+import { isParentalControlEnabledForBrand } from '../config/brandConfig';
 import { useDevice } from '../contexts/DeviceContext';
 import { useDeviceTime } from '../hooks/useDeviceTime';
 import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
@@ -47,6 +48,18 @@ export function MiCuentaPage() {
 
   const osmsEnabled = currentBrand?.features?.osms === true;
   const useNativeAccountFlow = !isTV && isDeviceSessionEnabled(currentBrand);
+
+  // Flags independientes por funcionalidad (`brand.account.sections`): a
+  // diferencia de `account.links` (que resuelve un QR/panel), estas son
+  // secciones sin URL propia -- permiten vender/activar cada botón de Mi
+  // Cuenta por separado según el contrato de cada cliente. Default `true`
+  // si la marca no define `sections` (retro-compatible).
+  const accountSections = currentBrand?.account?.sections || {};
+  const parentalControlEnabled = isParentalControlEnabledForBrand(currentBrand);
+  const aboutEnabled = accountSections.about !== false;
+  const refreshEnabled = accountSections.refresh !== false;
+  const logoutEnabled = accountSections.logout !== false;
+  const exitEnabled = accountSections.exitApp !== false;
 
   const qrItems = useMemo(() => {
     const accountLinks = currentBrand?.account?.links || {};
@@ -94,16 +107,21 @@ export function MiCuentaPage() {
     return qrItems.find((item) => item.key === 'deleteAccount');
   }, [qrItems]);
 
-  const [activeKey, setActiveKey] = useState(() => qrItems[0]?.key || 'about');
+  const [activeKey, setActiveKey] = useState(() => qrItems[0]?.key || (aboutEnabled ? 'about' : ''));
   const [confirmAction, setConfirmAction] = useState(null); // 'logout' | 'exit' | null
   const [qrImageSrc, setQrImageSrc] = useState('');
 
   useEffect(() => {
-    if (!qrItems.some((i) => i.key === activeKey) && activeKey !== 'about') {
-      setActiveKey(qrItems[0]?.key || 'about');
+    // 'about' solo cuenta como key válida si la sección está habilitada para
+    // esta marca -- si no, no debe quedar "trabada" seleccionada sin poder
+    // mostrarse (ver el fallback de contenido más abajo).
+    const validKeys = new Set(qrItems.map((i) => i.key));
+    if (aboutEnabled) validKeys.add('about');
+    if (!validKeys.has(activeKey)) {
+      setActiveKey(qrItems[0]?.key || (aboutEnabled ? 'about' : ''));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qrItems]);
+  }, [qrItems, aboutEnabled]);
 
   const activeItem = qrItems.find((i) => i.key === activeKey) || null;
   const activeUrl = activeItem?.link?.url || '';
@@ -219,28 +237,34 @@ export function MiCuentaPage() {
           <div className="mi-cuenta-sidebar__divider" role="separator" aria-hidden="true" />
 
           <div className="mi-cuenta-sidebar__group">
-            <button
-              type="button"
-              className="mi-cuenta-item"
-              onClick={() => navigate('/home/control-parental')}
-            >
-              {t('account.advancedSettings', { defaultValue: 'Control parental' })}
-            </button>
+            {parentalControlEnabled && (
+              <button
+                type="button"
+                className="mi-cuenta-item"
+                onClick={() => navigate('/home/control-parental')}
+              >
+                {t('account.advancedSettings', { defaultValue: 'Control parental' })}
+              </button>
+            )}
             {osmsEnabled ? (
               <button type="button" className="mi-cuenta-item" onClick={() => navigate('/home/osms')}>
                 {t('account.messages', { defaultValue: 'Mensajes' })}
               </button>
             ) : null}
-            <button
-              type="button"
-              className={`mi-cuenta-item${activeKey === 'about' ? ' active' : ''}`}
-              onClick={() => setActiveKey('about')}
-            >
-              {t('account.about', { defaultValue: 'Acerca de la App' })}
-            </button>
-            <button type="button" className="mi-cuenta-item" onClick={handleRefresh}>
-              {t('account.refresh', { defaultValue: 'Refrescar' })}
-            </button>
+            {aboutEnabled && (
+              <button
+                type="button"
+                className={`mi-cuenta-item${activeKey === 'about' ? ' active' : ''}`}
+                onClick={() => setActiveKey('about')}
+              >
+                {t('account.about', { defaultValue: 'Acerca de la App' })}
+              </button>
+            )}
+            {refreshEnabled && (
+              <button type="button" className="mi-cuenta-item" onClick={handleRefresh}>
+                {t('account.refresh', { defaultValue: 'Refrescar' })}
+              </button>
+            )}
             {deleteAccountItem && (
               <button
                 type="button"
@@ -250,10 +274,12 @@ export function MiCuentaPage() {
                 {deleteAccountItem.label}
               </button>
             )}
-            <button type="button" className="mi-cuenta-item" onClick={() => setConfirmAction('logout')}>
-              {t('common.logout', { defaultValue: 'Cerrar sesión' })}
-            </button>
-            {isTV && (
+            {logoutEnabled && (
+              <button type="button" className="mi-cuenta-item" onClick={() => setConfirmAction('logout')}>
+                {t('common.logout', { defaultValue: 'Cerrar sesión' })}
+              </button>
+            )}
+            {isTV && exitEnabled && (
               <button type="button" className="mi-cuenta-item danger" onClick={() => setConfirmAction('exit')}>
                 {t('common.exit', { defaultValue: 'Salir' })}
               </button>
@@ -302,7 +328,7 @@ export function MiCuentaPage() {
                 </div>
               )}
             </>
-          ) : (
+          ) : aboutEnabled ? (
             <>
               <h1 className="mi-cuenta-content__title">{t('account.about', { defaultValue: 'Acerca de la App' })}</h1>
               <ul className="mi-cuenta-about-list">
@@ -314,6 +340,14 @@ export function MiCuentaPage() {
                 ))}
               </ul>
             </>
+          ) : (
+            // Caso límite: ninguna sección (qrItems ni "Acerca de") habilitada
+            // para esta marca. No debería pasar en la práctica (siempre queda
+            // al menos logout/salir en el sidebar), pero evita una pantalla
+            // de contenido vacía sin explicación.
+            <div className="mi-cuenta-qr-empty">
+              {t('account.noSectionsAvailable', { defaultValue: 'No hay funciones disponibles para esta cuenta.' })}
+            </div>
           )}
         </div>
     </section>

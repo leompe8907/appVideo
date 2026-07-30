@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { derivePinHash, timingSafeEqual } from '../utils/pinHash';
 import { getBrandItem, resolveBrandId, setBrandItem } from '../utils/brandStorage';
+import { getActiveBrandConfig, isParentalControlEnabledForBrand } from '../config/brandConfig';
 
 const DEFAULT_UNLOCK_TTL_MS = 15 * 60 * 1000;
 const DEFAULT_RATING_UNLOCK_TTL_MS = 15 * 60 * 1000;
@@ -180,6 +181,12 @@ export const useParentalStore = create((set, get) => {
     isChannelBlocked: (channelId) => {
       const id = String(channelId ?? '').trim();
       if (!id) return false;
+      // Si la marca no tiene el flag `account.sections.parentalControl`, la
+      // funcionalidad se comporta como "sin nada bloqueado" en toda la app
+      // (candado del player, tarjetas de canal, gate de PIN) sin borrar
+      // `blockedChannelIds` -- si el cliente reactiva el flag más adelante,
+      // la lista de canales bloqueados que ya tenía configurada sigue ahí.
+      if (!isParentalControlEnabledForBrand(getActiveBrandConfig())) return false;
       const list = get().blockedChannelIds || [];
       return list.includes(id);
     },
