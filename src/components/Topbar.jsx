@@ -31,7 +31,7 @@ function TopbarLink({ to, label, icon, currentPathname, navigate }) {
 }
 
 function TopbarLogo({ currentBrand }) {
-  const src = currentBrand?.assets?.logoTop || currentBrand?.assets?.logo;
+  const src = currentBrand?.assets?.logo;
   if (!src) return null;
   return (
     <div className="home-topbar-zone-logo">

@@ -3,6 +3,18 @@
 
 // Teclado OSD — diseño 10-foot (lectura ~1.5 m en TV).
 //
+// Nota de compatibilidad: varios navegadores embebidos de Smart TV (motores
+// WebKit de generaciones viejas) no entienden `clamp()`/`min()` ni `gap` en
+// flexbox. Cuando un navegador no puede parsear el VALOR de una propiedad,
+// descarta esa línea entera y se queda con la última declaración válida
+// anterior para esa misma propiedad — por eso en cada regla que usa
+// `clamp()`/`min()` se declara primero un valor fijo (el fallback que usan
+// esos TVs) y después la versión fluida (la que usan los navegadores
+// modernos, que sí la entienden y pisa la anterior). El espaciado entre
+// teclas NO usa `gap` por el mismo motivo (soporte de `gap` en flex llegó
+// tarde a varios motores TV) — se usa `margin` en su lugar, universalmente
+// soportado.
+//
 // Nota de performance: se evita a propósito `backdrop-filter` y cualquier
 // `box-shadow`/`filter` con radio de blur > 0 en estados que cambian en cada
 // pulsación (foco de tecla). Ambos son conocidos por ser muy costosos en las
@@ -17,6 +29,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 1.25rem;
   padding: clamp(0.75rem, 2.5vmin, 2rem);
   background-color: rgba(6, 7, 10, 0.94);
   outline: none;
@@ -30,7 +43,9 @@
   overflow-y: hidden;
   background: #16171c;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.1rem;
   border-radius: clamp(0.85rem, 1.8vmin, 1.5rem);
+  padding: 2rem;
   padding: clamp(1.5rem, 4.5vmin, 3rem);
   box-shadow: 0 1.2vmin 3.5vmin rgba(0, 0, 0, 0.45);
   display: flex;
@@ -39,8 +54,10 @@
 }
 
 .osd-keyboard-title {
+  font-size: 1.75rem;
   font-size: clamp(1.4rem, 3.6vmin, 2.25rem);
   font-weight: 600;
+  margin-bottom: 1.25rem;
   margin-bottom: clamp(1rem, 2.8vmin, 2rem);
   color: rgba(255, 255, 255, 0.85);
   letter-spacing: 0.03em;
@@ -50,17 +67,22 @@
 .osd-keyboard-input-preview-wrapper {
   position: relative;
   width: 100%;
+  margin-bottom: 1.5rem;
   margin-bottom: clamp(1.25rem, 3.5vmin, 2.5rem);
 }
 
 .osd-keyboard-input-preview,
 .osd-keyboard-input-preview-custom {
   width: 100%;
+  height: 4.5rem;
   height: clamp(4rem, 8.5vmin, 6.5rem);
   background: rgba(0, 0, 0, 0.4);
   border: 2px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.75rem;
   border-radius: clamp(0.6rem, 1.2vmin, 1rem);
+  padding: 0 1.25rem;
   padding: 0 clamp(1rem, 2.8vmin, 2rem);
+  font-size: 1.85rem;
   font-size: clamp(1.65rem, 4.5vmin, 2.85rem);
   font-weight: 500;
   color: #ffffff;
@@ -70,11 +92,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
 }
 
 .osd-keyboard-caret {
   display: inline-block;
   width: 3px;
+  height: 2rem;
   height: clamp(1.8rem, 5vmin, 3rem);
   background-color: var(--focus-color, #3a86ff);
   margin: 0 1px;
@@ -86,42 +110,67 @@
   50% { background-color: var(--focus-color, #3a86ff) }
 }
 
-// Área interior: margen entre el borde del panel y las teclas periféricas
+// Área interior: margen entre el borde del panel y las teclas periféricas.
+// Sin `gap`: el espaciado entre filas lo da el margin-bottom de cada fila
+// (ver `.osd-keyboard-row`), no este contenedor.
 .osd-keyboard-grid {
   display: flex;
   flex-direction: column;
-  gap: clamp(0.65rem, 1.7vmin, 1.15rem);
   width: 100%;
+  padding: 1.5rem;
   padding: clamp(1.1rem, 3vmin, 2.25rem);
   background: rgba(0, 0, 0, 0.22);
   border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.9rem;
   border-radius: clamp(0.75rem, 1.4vmin, 1.2rem);
+  box-sizing: border-box;
+
+  > .osd-keyboard-row:not(:last-child) {
+    margin-bottom: 0.85rem;
+    margin-bottom: clamp(0.65rem, 1.7vmin, 1.15rem);
+  }
 }
 
 .osd-keyboard-row {
   display: flex;
   justify-content: center;
-  gap: clamp(0.55rem, 1.5vmin, 1.05rem);
   width: 100%;
 
+  // Espaciado horizontal entre teclas vía margin (no `gap`: sin soporte en
+  // varios navegadores de Smart TV). Aplica a letras, símbolos y numérico.
+  > .osd-keyboard-key:not(:last-child) {
+    margin-right: 0.75rem;
+    margin-right: clamp(0.55rem, 1.5vmin, 1.05rem);
+  }
+
   &--actions {
+    margin-top: 0.6rem;
     margin-top: clamp(0.4rem, 1.2vmin, 1rem);
+    padding-top: 0.85rem;
     padding-top: clamp(0.65rem, 1.7vmin, 1.15rem);
     border-top: 1px solid rgba(255, 255, 255, 0.07);
-    gap: clamp(0.5rem, 1.4vmin, 1rem);
+
+    > .osd-keyboard-key:not(:last-child) {
+      margin-right: 0.7rem;
+      margin-right: clamp(0.5rem, 1.4vmin, 1rem);
+    }
   }
 }
 
 .osd-keyboard-key {
   flex: 1;
   min-width: 0;
+  height: 4.75rem;
   height: clamp(4.25rem, 8.8vmin, 6.9rem);
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.6rem;
   border-radius: clamp(0.5rem, 1vmin, 0.85rem);
   color: rgba(255, 255, 255, 0.92);
+  font-size: 2rem;
   font-size: clamp(1.7rem, 4.4vmin, 2.9rem);
   font-weight: 500;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -134,6 +183,7 @@
   // Red de seguridad: una etiqueta de acción más larga que lo que quepa en su
   // ancho ya no se envuelve a 2 líneas desbordando el botón (ver
   // "Borrar todo") — se recorta con "…" en vez de sobresalir del recuadro.
+  padding: 0 0.5rem;
   padding: 0 clamp(0.35rem, 1vmin, 0.75rem);
   white-space: nowrap;
   overflow: hidden;
@@ -150,6 +200,7 @@
   &--action {
     background: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.08);
+    font-size: 1.5rem;
     font-size: clamp(1.25rem, 3.4vmin, 2.1rem);
     font-weight: 600;
     letter-spacing: 0.01em;
@@ -185,6 +236,7 @@
 
   &--arrow {
     flex: 0.85;
+    font-size: 1.7rem;
     font-size: clamp(1.4rem, 3.6vmin, 2.3rem);
   }
 
@@ -222,6 +274,7 @@
 }
 
 .osd-keyboard-box--numeric {
+  width: 420px;
   width: min(78vw, 58vmin);
 }
 
@@ -229,15 +282,24 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: clamp(0.75rem, 2vmin, 1.35rem);
+  padding: 1.75rem;
   padding: clamp(1.4rem, 3.6vmin, 2.75rem);
   background: rgba(0, 0, 0, 0.22);
   border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.9rem;
   border-radius: clamp(0.75rem, 1.4vmin, 1.2rem);
+  box-sizing: border-box;
+
+  > .osd-keyboard-row:not(:last-child) {
+    margin-bottom: 1rem;
+    margin-bottom: clamp(0.75rem, 2vmin, 1.35rem);
+  }
 }
 
 .osd-keyboard-key--num {
+  font-size: 2.2rem;
   font-size: clamp(1.9rem, 5vmin, 3.1rem);
   font-weight: 600;
+  height: 5rem;
   height: clamp(4.5rem, 9.5vmin, 7.25rem);
 }
