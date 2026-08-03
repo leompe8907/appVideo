@@ -65,10 +65,16 @@ export const FocusableInput = forwardRef(function FocusableInput(
       // Quitar foco del input para evitar glitches de dibujado del cursor
       el.blur();
 
-      // Abrir el teclado virtual OSD asíncrono
+      // Abrir el teclado virtual OSD asíncrono.
+      // `type` decide qué GRILLA mostrar (numeric tiene prioridad: PIN numérico usa el
+      // teclado 4x3 aunque el input además sea type="password"). `mask` es independiente:
+      // decide si el preview se enmascara con •, y se basa en el `type` real del input,
+      // no en el que termina usando la grilla — así un PIN numérico enmascarado sigue
+      // viéndose enmascarado (antes se perdía la máscara por completo en ese caso).
       showKeyboard({
         title: title || inputProps.placeholder || '',
         type: inputProps.inputMode === 'numeric' ? 'numeric' : (inputProps.type || 'text'),
+        mask: inputProps.type === 'password',
         initialValue: el.value || '',
       }).then((result) => {
         if (result !== null) {

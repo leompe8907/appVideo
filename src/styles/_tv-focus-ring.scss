@@ -202,3 +202,21 @@ html.device-tv .login-card {
     padding: 0;
   }
 }
+
+// Teclado OSD en TV: el anillo único ya marca la tecla enfocada (sigue a
+// document.activeElement, ver TvFocusRing.jsx). Sin esta anulación, cada
+// pulsación pagaba DOS efectos de foco a la vez — el anillo global (mueve un
+// div fixed con translate3d) y el propio `transform: scale + box-shadow` del
+// teclado — lo que hacía sentir la escritura lenta/trabada en TVs con GPU
+// débil. Igual que con `.login-card`: en TV el teclado no dibuja su propio
+// efecto de foco, solo lo hace en PC (fuera de este selector `.device-tv`).
+html.device-tv .osd-keyboard-key {
+  transition: none !important;
+
+  &:focus,
+  &:focus-visible {
+    transform: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+}

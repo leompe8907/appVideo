@@ -329,6 +329,7 @@
 .epg-cards-table-header {
   display: grid;
   grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+  border-radius:1rem;
   gap: 14px;
   padding: 0 0 10px;
   position: sticky;
@@ -406,7 +407,7 @@
   height: 6em;
   object-fit: contain;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0);
 }
 
 .epg-cards-channel-rating {

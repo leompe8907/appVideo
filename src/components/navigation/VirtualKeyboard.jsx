@@ -1,40 +1,74 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../../styles/components/_virtual-keyboard.scss';
 
+// Layouts de letras por idioma soportado (es/en/pt — los únicos que registra i18n.js).
 const LAYOUTS = {
   en: [
     ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
     ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', '@'],
-    ['z', 'x', 'c', 'v', 'b', 'n', 'm', '.', '_', '-']
+    ['z', 'x', 'c', 'v', 'b', 'n', 'm', '.', '_', '-'],
   ],
   es: [
     ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
     ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ñ'],
-    ['z', 'x', 'c', 'v', 'b', 'n', 'm', '@', '.', '_']
+    ['z', 'x', 'c', 'v', 'b', 'n', 'm', '@', '.', '_'],
   ],
   pt: [
     ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
     ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ç'],
-    ['z', 'x', 'c', 'v', 'b', 'n', 'm', '@', '.', '_']
+    ['z', 'x', 'c', 'v', 'b', 'n', 'm', '@', '.', '_'],
   ],
-  bg: [
-    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
-    ['я', 'в', 'е', 'р', 'т', 'ъ', 'у', 'и', 'о', 'п'],
-    ['а', 'с', 'д', 'ф', 'г', 'х', 'й', 'к', 'л', 'ш'],
-    ['з', 'ь', 'ц', 'ж', 'б', 'н', 'м', 'ч', 'ю', 'щ']
-  ]
 };
+
+// Mismo "shape" 4x10 que LAYOUTS a propósito: así la navegación por fila/columna
+// (ver handleKeyDown) no necesita saber si está mostrando letras o símbolos.
+const SYMBOL_LAYOUT = [
+  ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')'],
+  ['-', '_', '=', '+', '[', ']', '{', '}', '/', '\\'],
+  [':', ';', '"', "'", '<', '>', ',', '.', '?', '|'],
+  ['~', '`', '€', '£', '¥', '§', '°', '«', '»', '…'],
+];
 
 const NUMERIC_LAYOUT = [
   ['1', '2', '3'],
   ['4', '5', '6'],
   ['7', '8', '9'],
-  ['CANCEL', '0', 'OK']
+  ['CANCEL', '0', 'OK'],
 ];
+
+// Orden de la fila de acciones (navegación LEFT/RIGHT). "symbols" alterna letras↔símbolos.
+// "clearall" (borrar todo) vive acá en vez de ser un botón flotante aparte — así queda
+// alcanzable por control remoto, que antes era imposible (solo tenía onClick de mouse).
+const ACTIONS = ['symbols', 'shift', 'space', 'left', 'right', 'backspace', 'clearall', 'cancel', 'ok'];
+
+// Columna (0-9) de la última fila de letras/símbolos que cae sobre cada acción al bajar,
+// y a la inversa (acción -> columna) al subir. 10 columnas repartidas entre 9 acciones.
+const ACTION_DOWN_COL_MAP = [
+  [0, 'symbols'],
+  [1, 'shift'],
+  [2, 'space'], [3, 'space'],
+  [4, 'left'],
+  [5, 'right'],
+  [6, 'backspace'],
+  [7, 'clearall'],
+  [8, 'cancel'],
+  [9, 'ok'],
+];
+const ACTION_UP_COL = {
+  symbols: 0,
+  shift: 1,
+  space: 2,
+  left: 4,
+  right: 5,
+  backspace: 6,
+  clearall: 7,
+  cancel: 8,
+  ok: 9,
+};
 
 const DEFAULT_LAYOUT_LANG = 'en';
 
@@ -43,31 +77,52 @@ function resolveLayoutLanguage(language) {
   return LAYOUTS[code] ? code : DEFAULT_LAYOUT_LANG;
 }
 
+// Parsea el id de una tecla (asignado en el render) a una descripción de acción.
+// Único punto de verdad, usado tanto por teclado (Enter) como por click/foco (mouse/touch).
+function parseKeyId(id) {
+  if (!id) return null;
+  let m = id.match(/^key-num-(\d+)-(\d+)$/);
+  if (m) return { kind: 'num', row: Number(m[1]), col: Number(m[2]) };
+  m = id.match(/^key-char-(\d+)-(\d+)$/);
+  if (m) return { kind: 'char', row: Number(m[1]), col: Number(m[2]) };
+  m = id.match(/^key-action-(.+)$/);
+  if (m) return { kind: 'action', action: m[1] };
+  return null;
+}
+
+// Botón de tecla memoizado: props siempre primitivas (id/label/className), así que al
+// tipear (cambia solo `value`/`cursorPosition` del padre) React puede saltarse por completo
+// el re-render de las ~45 teclas — antes se recreaban todas en cada pulsación.
+const KeyButton = memo(function KeyButton({ id, label, className, ariaLabel }) {
+  return (
+    <button id={id} className={className} tabIndex={0} aria-label={ariaLabel}>
+      {label}
+    </button>
+  );
+});
+
 export function VirtualKeyboard({
   initialValue = '',
   title = '',
   type = 'text',
+  mask = false,
   onConfirm,
-  onCancel
+  onCancel,
 }) {
   const { t, i18n } = useTranslation();
   const [value, setValue] = useState(initialValue);
   const [cursorPosition, setCursorPosition] = useState(initialValue.length);
   const [layoutLanguage, setLayoutLanguage] = useState(() => resolveLayoutLanguage(i18n.language));
   const [isUppercase, setIsUppercase] = useState(false);
+  const [mode, setMode] = useState('letters'); // 'letters' | 'symbols'
 
   const isNumericMode = type === 'numeric';
+  const isMasked = mask || type === 'password';
 
-  // Coordenadas en Ref local (DOM puro, 0ms render lag)
-  const coordsRef = useRef({
-    row: 0,
-    col: 0,
-    actionKey: 'space',
-  });
-
+  // Coordenadas en Ref local (DOM puro, sin pasar por estado/re-render de React).
+  const coordsRef = useRef({ row: 0, col: 0, actionKey: 'space' });
   const containerRef = useRef(null);
 
-  // Sincronizar layout con el idioma de la app (TV); fallback a inglés si no hay teclado
   useEffect(() => {
     if (isNumericMode) {
       coordsRef.current.row = 0;
@@ -77,13 +132,12 @@ export function VirtualKeyboard({
     setLayoutLanguage(resolveLayoutLanguage(i18n.language));
   }, [i18n.language, isNumericMode]);
 
-  // Interceptar el botón VOLVER del control remoto en Smart TVs de forma global
   useEffect(() => {
     const handleGlobalBack = (e) => {
       const key = e.key || e.code;
       const keyCode = e.keyCode || e.which;
       const isTvBackCodes = keyCode === 10009 || keyCode === 461;
-      
+
       if (key === 'Escape' || isTvBackCodes) {
         e.preventDefault();
         e.stopPropagation();
@@ -95,7 +149,7 @@ export function VirtualKeyboard({
     return () => window.removeEventListener('keydown', handleGlobalBack, { capture: true });
   }, [onCancel]);
 
-  // Forzar foco en el primer elemento al montar o al cambiar de layout
+  // Forzar foco en el primer elemento al montar o al cambiar de layout/idioma.
   useEffect(() => {
     const tId = setTimeout(() => {
       const { row, col, actionKey } = coordsRef.current;
@@ -119,47 +173,110 @@ export function VirtualKeyboard({
     return () => clearTimeout(tId);
   }, [layoutLanguage, isUppercase, isNumericMode]);
 
-  const handleCharPress = (char) => {
-    const nextChar = isUppercase ? char.toUpperCase() : char.toLowerCase();
-    setValue((prev) => {
-      return prev.slice(0, cursorPosition) + nextChar + prev.slice(cursorPosition);
-    });
-    setCursorPosition((prev) => prev + 1);
-  };
+  const currentLetterLayout = LAYOUTS[layoutLanguage] || LAYOUTS[DEFAULT_LAYOUT_LANG];
+  const activeLayout = mode === 'symbols' ? SYMBOL_LAYOUT : currentLetterLayout;
 
-  const handleActionPress = (action) => {
-    if (action === 'shift') {
-      setIsUppercase((prev) => !prev);
-    } else if (action === 'space') {
-      setValue((prev) => {
-        return prev.slice(0, cursorPosition) + ' ' + prev.slice(cursorPosition);
-      });
+  const handleCharPress = useCallback(
+    (char) => {
+      const nextChar = isUppercase ? char.toUpperCase() : char.toLowerCase();
+      setValue((prev) => prev.slice(0, cursorPosition) + nextChar + prev.slice(cursorPosition));
       setCursorPosition((prev) => prev + 1);
-    } else if (action === 'backspace') {
-      if (cursorPosition > 0) {
-        setValue((prev) => {
-          return prev.slice(0, cursorPosition - 1) + prev.slice(cursorPosition);
+    },
+    [isUppercase, cursorPosition]
+  );
+
+  const handleActionPress = useCallback(
+    (action) => {
+      if (action === 'shift') {
+        setIsUppercase((prev) => !prev);
+      } else if (action === 'symbols') {
+        setMode((prev) => (prev === 'symbols' ? 'letters' : 'symbols'));
+      } else if (action === 'clearall') {
+        if (!value) return;
+        setValue('');
+        setCursorPosition(0);
+      } else if (action === 'space') {
+        setValue((prev) => prev.slice(0, cursorPosition) + ' ' + prev.slice(cursorPosition));
+        setCursorPosition((prev) => prev + 1);
+      } else if (action === 'backspace') {
+        setCursorPosition((prevPos) => {
+          if (prevPos <= 0) return prevPos;
+          setValue((prev) => prev.slice(0, prevPos - 1) + prev.slice(prevPos));
+          return prevPos - 1;
         });
-        setCursorPosition((prev) => prev - 1);
+      } else if (action === 'left') {
+        setCursorPosition((prev) => Math.max(0, prev - 1));
+      } else if (action === 'right') {
+        setCursorPosition((prev) => Math.min(value.length, prev + 1));
+      } else if (action === 'cancel') {
+        onCancel?.();
+      } else if (action === 'ok') {
+        onConfirm?.(value);
       }
-    } else if (action === 'left') {
-      setCursorPosition((prev) => Math.max(0, prev - 1));
-    } else if (action === 'right') {
-      setCursorPosition((prev) => Math.min(value.length, prev + 1));
-    } else if (action === 'cancel') {
-      onCancel?.();
-    } else if (action === 'ok') {
-      onConfirm?.(value);
+    },
+    [cursorPosition, value, onCancel, onConfirm]
+  );
+
+  // Activa lo que representa un id de tecla ya parseado — único punto de disparo,
+  // usado por Enter (control remoto) y por click/tap (mouse, touch, "OK" del remoto sobre foco).
+  const activateParsed = useCallback(
+    (parsed) => {
+      if (!parsed) return;
+      if (parsed.kind === 'num') {
+        const label = NUMERIC_LAYOUT[parsed.row][parsed.col];
+        if (label === 'CANCEL') onCancel?.();
+        else if (label === 'OK') onConfirm?.(value);
+        else {
+          setValue((prev) => prev.slice(0, cursorPosition) + label + prev.slice(cursorPosition));
+          setCursorPosition((prev) => prev + 1);
+        }
+      } else if (parsed.kind === 'char') {
+        const char = activeLayout[parsed.row]?.[parsed.col];
+        if (char != null) handleCharPress(char);
+      } else if (parsed.kind === 'action') {
+        handleActionPress(parsed.action);
+      }
+    },
+    [activeLayout, cursorPosition, value, onCancel, onConfirm, handleCharPress, handleActionPress]
+  );
+
+  const syncCoordsFromParsed = useCallback((parsed) => {
+    if (!parsed) return;
+    if (parsed.kind === 'action') {
+      coordsRef.current = { row: 4, col: coordsRef.current.col, actionKey: parsed.action };
+    } else {
+      coordsRef.current = { row: parsed.row, col: parsed.col, actionKey: coordsRef.current.actionKey };
     }
-  };
+  }, []);
+
+  // Delegación: un solo listener de click/foco por grilla en vez de uno por tecla
+  // (evita recrear ~45 closures en cada render mientras se tipea).
+  const handleGridFocus = useCallback(
+    (e) => {
+      const btn = e.target.closest('button[id]');
+      if (!btn) return;
+      syncCoordsFromParsed(parseKeyId(btn.id));
+    },
+    [syncCoordsFromParsed]
+  );
+
+  const handleGridClick = useCallback(
+    (e) => {
+      const btn = e.target.closest('button[id]');
+      if (!btn) return;
+      const parsed = parseKeyId(btn.id);
+      syncCoordsFromParsed(parsed);
+      activateParsed(parsed);
+    },
+    [syncCoordsFromParsed, activateParsed]
+  );
 
   const handleKeyDown = (e) => {
     const key = e.key || e.code;
     const keyCode = e.keyCode || e.which;
 
-    // Manejar tecla BACK nativa de TV
     const isTvBackCodes = keyCode === 10009 || keyCode === 461;
-    if (key === 'Escape' || key === 'Backspace' && value.length === 0 || isTvBackCodes) {
+    if (key === 'Escape' || (key === 'Backspace' && value.length === 0) || isTvBackCodes) {
       e.preventDefault();
       e.stopPropagation();
       onCancel?.();
@@ -169,37 +286,14 @@ export function VirtualKeyboard({
     const active = document.activeElement;
     if (!active || !(active instanceof HTMLElement)) return;
 
-    let row = coordsRef.current.row;
-    let col = coordsRef.current.col;
-    let actionKey = coordsRef.current.actionKey;
+    syncCoordsFromParsed(parseKeyId(active.id));
 
-    // Auto-detectar posición actual desde el ID del elemento enfocado
-    if (active.id.startsWith('key-num-')) {
-      const match = active.id.match(/^key-num-(\d+)-(\d+)$/);
-      if (match) {
-        row = parseInt(match[1], 10);
-        col = parseInt(match[2], 10);
-      }
-    } else if (active.id.startsWith('key-char-')) {
-      const match = active.id.match(/^key-char-(\d+)-(\d+)$/);
-      if (match) {
-        row = parseInt(match[1], 10);
-        col = parseInt(match[2], 10);
-      }
-    } else if (active.id.startsWith('key-action-')) {
-      const match = active.id.match(/^key-action-(.+)$/);
-      if (match) {
-        row = 4;
-        actionKey = match[1];
-      }
-    }
-
+    let { row, col, actionKey } = coordsRef.current;
     let nextRow = row;
     let nextCol = col;
     let nextAction = actionKey;
 
     if (isNumericMode) {
-      // Navegación matricial 4x3 para teclado numérico
       if (key === 'ArrowRight') {
         e.preventDefault();
         e.stopPropagation();
@@ -219,95 +313,57 @@ export function VirtualKeyboard({
       } else if (key === 'Enter') {
         e.preventDefault();
         e.stopPropagation();
-        const numKey = NUMERIC_LAYOUT[row][col];
-        if (numKey === 'CANCEL') {
-          onCancel?.();
-        } else if (numKey === 'OK') {
-          onConfirm?.(value);
-        } else {
-          setValue((prev) => prev.slice(0, cursorPosition) + numKey + prev.slice(cursorPosition));
-          setCursorPosition((prev) => prev + 1);
-        }
+        activateParsed({ kind: 'num', row, col });
       }
-    } else {
-      // Teclado completo QWERTY
-      if (key === 'ArrowRight') {
-        e.preventDefault();
-        e.stopPropagation();
-        if (row === 4) {
-          const actions = ['shift', 'space', 'left', 'right', 'backspace', 'cancel', 'ok'];
-          const currentIdx = actions.indexOf(actionKey);
-          if (currentIdx < actions.length - 1) {
-            nextAction = actions[currentIdx + 1];
-          }
-        } else {
-          if (col < 9) {
-            nextCol = col + 1;
-          }
-        }
-      } else if (key === 'ArrowLeft') {
-        e.preventDefault();
-        e.stopPropagation();
-        if (row === 4) {
-          const actions = ['shift', 'space', 'left', 'right', 'backspace', 'cancel', 'ok'];
-          const currentIdx = actions.indexOf(actionKey);
-          if (currentIdx > 0) {
-            nextAction = actions[currentIdx - 1];
-          }
-        } else {
-          if (col > 0) {
-            nextCol = col - 1;
-          }
-        }
-      } else if (key === 'ArrowDown') {
-        e.preventDefault();
-        e.stopPropagation();
-        if (row < 3) {
-          nextRow = row + 1;
-        } else if (row === 3) {
-          nextRow = 4;
-          if (col <= 1) nextAction = 'shift';
-          else if (col <= 3) nextAction = 'space';
-          else if (col === 4) nextAction = 'left';
-          else if (col === 5) nextAction = 'right';
-          else if (col <= 7) nextAction = 'backspace';
-          else if (col === 8) nextAction = 'cancel';
-          else nextAction = 'ok';
-        }
-      } else if (key === 'ArrowUp') {
-        e.preventDefault();
-        e.stopPropagation();
-        if (row === 4) {
-          nextRow = 3;
-          if (actionKey === 'shift') nextCol = 1;
-          else if (actionKey === 'space') nextCol = 3;
-          else if (actionKey === 'left') nextCol = 4;
-          else if (actionKey === 'right') nextCol = 5;
-          else if (actionKey === 'backspace') nextCol = 6;
-          else if (actionKey === 'cancel') nextCol = 8;
-          else nextCol = 9;
-        } else if (row > 0) {
-          nextRow = row - 1;
-        }
-      } else if (key === 'Enter') {
-        e.preventDefault();
-        e.stopPropagation();
-        if (row === 4) {
-          handleActionPress(actionKey);
-        } else {
-          handleCharPress(LAYOUTS[layoutLanguage][row][col]);
-        }
+    } else if (key === 'ArrowRight') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (row === 4) {
+        const idx = ACTIONS.indexOf(actionKey);
+        if (idx >= 0 && idx < ACTIONS.length - 1) nextAction = ACTIONS[idx + 1];
+      } else if (col < 9) {
+        nextCol = col + 1;
+      }
+    } else if (key === 'ArrowLeft') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (row === 4) {
+        const idx = ACTIONS.indexOf(actionKey);
+        if (idx > 0) nextAction = ACTIONS[idx - 1];
+      } else if (col > 0) {
+        nextCol = col - 1;
+      }
+    } else if (key === 'ArrowDown') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (row < 3) {
+        nextRow = row + 1;
+      } else if (row === 3) {
+        nextRow = 4;
+        const found = ACTION_DOWN_COL_MAP.find(([c]) => c === col);
+        nextAction = found ? found[1] : 'ok';
+      }
+    } else if (key === 'ArrowUp') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (row === 4) {
+        nextRow = 3;
+        nextCol = ACTION_UP_COL[actionKey] ?? 9;
+      } else if (row > 0) {
+        nextRow = row - 1;
+      }
+    } else if (key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (row === 4) {
+        activateParsed({ kind: 'action', action: actionKey });
+      } else {
+        activateParsed({ kind: 'char', row, col });
       }
     }
 
-    // Actualizar coordenadas en Ref
-    coordsRef.current = {
-      row: nextRow,
-      col: nextCol,
-      actionKey: nextAction
-    };
+    coordsRef.current = { row: nextRow, col: nextCol, actionKey: nextAction };
 
-    // Enfocar directamente a través del DOM sin re-renderizar
     let targetId = '';
     if (isNumericMode) {
       targetId = `key-num-${nextRow}-${nextCol}`;
@@ -327,7 +383,8 @@ export function VirtualKeyboard({
     }
   };
 
-  const currentLayout = LAYOUTS[layoutLanguage] || LAYOUTS[DEFAULT_LAYOUT_LANG];
+  const previewBefore = value.slice(0, cursorPosition);
+  const previewAfter = value.slice(cursorPosition);
 
   return (
     <div
@@ -341,218 +398,100 @@ export function VirtualKeyboard({
       <div className={`osd-keyboard-box ${isNumericMode ? 'osd-keyboard-box--numeric' : ''}`}>
         {title && <div className="osd-keyboard-title">{title}</div>}
 
-        {/* Input Preview */}
         <div className="osd-keyboard-input-preview-wrapper">
-          <div className="osd-keyboard-input-preview-custom">
-            <span>{type === 'password' ? '•'.repeat(value.slice(0, cursorPosition).length) : value.slice(0, cursorPosition)}</span>
-            <span className="osd-keyboard-caret"></span>
-            <span>{type === 'password' ? '•'.repeat(value.slice(cursorPosition).length) : value.slice(cursorPosition)}</span>
+          <div className="osd-keyboard-input-preview-custom" aria-live="polite">
+            <span>{isMasked ? '•'.repeat(previewBefore.length) : previewBefore}</span>
+            <span className="osd-keyboard-caret" />
+            <span>{isMasked ? '•'.repeat(previewAfter.length) : previewAfter}</span>
           </div>
-          {value.length > 0 && (
-            <span
-              className="osd-keyboard-clear-preview"
-              onClick={() => {
-                setValue('');
-                setCursorPosition(0);
-              }}
-            >
-              ×
-            </span>
-          )}
         </div>
 
-        {/* Renderizado de Teclado Numérico */}
         {isNumericMode ? (
-          <div className="osd-keyboard-grid osd-keyboard-grid--numeric">
+          <div className="osd-keyboard-grid osd-keyboard-grid--numeric" onFocus={handleGridFocus} onClick={handleGridClick}>
             {NUMERIC_LAYOUT.map((row, rIdx) => (
               <div key={rIdx} className="osd-keyboard-row">
                 {row.map((btnLabel, cIdx) => {
                   let keyClass = 'osd-keyboard-key osd-keyboard-key--num';
                   if (btnLabel === 'CANCEL') keyClass += ' osd-keyboard-key--cancel';
                   if (btnLabel === 'OK') keyClass += ' osd-keyboard-key--ok';
-
-                  return (
-                    <button
-                      id={`key-num-${rIdx}-${cIdx}`}
-                      key={cIdx}
-                      className={keyClass}
-                      onFocus={() => {
-                        coordsRef.current.row = rIdx;
-                        coordsRef.current.col = cIdx;
-                      }}
-                      onClick={() => {
-                        coordsRef.current.row = rIdx;
-                        coordsRef.current.col = cIdx;
-                        if (btnLabel === 'CANCEL') {
-                          onCancel?.();
-                        } else if (btnLabel === 'OK') {
-                          onConfirm?.(value);
-                        } else {
-                          setValue((prev) => prev.slice(0, cursorPosition) + btnLabel + prev.slice(cursorPosition));
-                          setCursorPosition((prev) => prev + 1);
-                        }
-                      }}
-                      tabIndex={0}
-                    >
-                      {btnLabel === 'CANCEL' ? t('keyboard.cancel', { defaultValue: 'Cancelar' }) : btnLabel}
-                    </button>
-                  );
+                  const label =
+                    btnLabel === 'CANCEL' ? t('keyboard.cancel', { defaultValue: 'Cancelar' }) : btnLabel;
+                  return <KeyButton key={cIdx} id={`key-num-${rIdx}-${cIdx}`} label={label} className={keyClass} />;
                 })}
               </div>
             ))}
           </div>
         ) : (
-          /* Renderizado de Teclado QWERTY */
-          <div className="osd-keyboard-grid">
-              {currentLayout.map((row, rIdx) => (
-                <div key={rIdx} className="osd-keyboard-row">
-                  {row.map((char, cIdx) => {
-                    const displayChar = isUppercase ? char.toUpperCase() : char.toLowerCase();
-                    return (
-                      <button
-                        id={`key-char-${rIdx}-${cIdx}`}
-                        key={cIdx}
-                        className="osd-keyboard-key"
-                        onFocus={() => {
-                          coordsRef.current.row = rIdx;
-                          coordsRef.current.col = cIdx;
-                        }}
-                        onClick={() => {
-                          handleCharPress(char);
-                          coordsRef.current.row = rIdx;
-                          coordsRef.current.col = cIdx;
-                        }}
-                        tabIndex={0}
-                      >
-                        {displayChar}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-
-              {/* Action Row */}
-              <div className="osd-keyboard-row osd-keyboard-row--actions">
-                <button
-                  id="key-action-shift"
-                  className={`osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--shift ${isUppercase ? 'osd-keyboard-key--action-active' : ''}`}
-                  onFocus={() => {
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'shift';
-                  }}
-                  onClick={() => {
-                    handleActionPress('shift');
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'shift';
-                  }}
-                  tabIndex={0}
-                >
-                  ⇧ {t('keyboard.shift', { defaultValue: 'Mayús' })}
-                </button>
-
-                <button
-                  id="key-action-space"
-                  className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--space"
-                  onFocus={() => {
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'space';
-                  }}
-                  onClick={() => {
-                    handleActionPress('space');
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'space';
-                  }}
-                  tabIndex={0}
-                >
-                  [ {t('keyboard.space', { defaultValue: 'Espacio' })} ]
-                </button>
-
-                <button
-                  id="key-action-left"
-                  className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--arrow"
-                  onFocus={() => {
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'left';
-                  }}
-                  onClick={() => {
-                    handleActionPress('left');
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'left';
-                  }}
-                  tabIndex={0}
-                >
-                  ◄
-                </button>
-
-                <button
-                  id="key-action-right"
-                  className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--arrow"
-                  onFocus={() => {
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'right';
-                  }}
-                  onClick={() => {
-                    handleActionPress('right');
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'right';
-                  }}
-                  tabIndex={0}
-                >
-                  ►
-                </button>
-
-                <button
-                  id="key-action-backspace"
-                  className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--backspace"
-                  onFocus={() => {
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'backspace';
-                  }}
-                  onClick={() => {
-                    handleActionPress('backspace');
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'backspace';
-                  }}
-                  tabIndex={0}
-                >
-                  ⌫ {t('keyboard.delete', { defaultValue: 'Borrar' })}
-                </button>
-
-                <button
-                  id="key-action-cancel"
-                  className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--cancel"
-                  onFocus={() => {
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'cancel';
-                  }}
-                  onClick={() => {
-                    handleActionPress('cancel');
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'cancel';
-                  }}
-                  tabIndex={0}
-                >
-                  {t('keyboard.cancel', { defaultValue: 'Cancelar' })}
-                </button>
-
-                <button
-                  id="key-action-ok"
-                  className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--ok"
-                  onFocus={() => {
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'ok';
-                  }}
-                  onClick={() => {
-                    handleActionPress('ok');
-                    coordsRef.current.row = 4;
-                    coordsRef.current.actionKey = 'ok';
-                  }}
-                  tabIndex={0}
-                >
-                  {t('keyboard.confirm', { defaultValue: 'OK' })}
-                </button>
+          <div className="osd-keyboard-grid" onFocus={handleGridFocus} onClick={handleGridClick}>
+            {activeLayout.map((row, rIdx) => (
+              <div key={rIdx} className="osd-keyboard-row">
+                {row.map((char, cIdx) => {
+                  const displayChar = mode === 'symbols' ? char : isUppercase ? char.toUpperCase() : char.toLowerCase();
+                  return (
+                    <KeyButton
+                      key={cIdx}
+                      id={`key-char-${rIdx}-${cIdx}`}
+                      label={displayChar}
+                      className="osd-keyboard-key"
+                    />
+                  );
+                })}
               </div>
+            ))}
+
+            <div className="osd-keyboard-row osd-keyboard-row--actions">
+              <KeyButton
+                id="key-action-symbols"
+                label={mode === 'symbols' ? t('keyboard.letters', { defaultValue: 'ABC' }) : t('keyboard.symbols', { defaultValue: '#+=' })}
+                className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--symbols"
+              />
+              <KeyButton
+                id="key-action-shift"
+                label={`⇧ ${t('keyboard.shift', { defaultValue: 'Mayús' })}`}
+                className={`osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--shift${
+                  isUppercase ? ' osd-keyboard-key--action-active' : ''
+                }`}
+              />
+              <KeyButton
+                id="key-action-space"
+                label={`[ ${t('keyboard.space', { defaultValue: 'Espacio' })} ]`}
+                className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--space"
+              />
+              <KeyButton
+                id="key-action-left"
+                label="◄"
+                className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--arrow"
+              />
+              <KeyButton
+                id="key-action-right"
+                label="►"
+                className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--arrow"
+              />
+              <KeyButton
+                id="key-action-backspace"
+                label={`⌫ ${t('keyboard.delete', { defaultValue: 'Borrar' })}`}
+                className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--backspace"
+              />
+              <KeyButton
+                id="key-action-clearall"
+                label={`× ${t('keyboard.clearAllShort', { defaultValue: 'Todo' })}`}
+                ariaLabel={t('keyboard.clearAll', { defaultValue: 'Borrar todo' })}
+                className={`osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--clearall${
+                  value.length === 0 ? ' osd-keyboard-key--action-disabled' : ''
+                }`}
+              />
+              <KeyButton
+                id="key-action-cancel"
+                label={t('keyboard.cancel', { defaultValue: 'Cancelar' })}
+                className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--cancel"
+              />
+              <KeyButton
+                id="key-action-ok"
+                label={t('keyboard.confirm', { defaultValue: 'OK' })}
+                className="osd-keyboard-key osd-keyboard-key--action osd-keyboard-key--ok"
+              />
             </div>
+          </div>
         )}
       </div>
     </div>

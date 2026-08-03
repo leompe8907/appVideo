@@ -741,11 +741,10 @@ export const BRANDS = [
       reminderShowWhilePlaying: false,
       epgPast: true,
       epgPagesPastEnabled: true,
-      epgCardsChannelActiveBg: "#6C8EB6", // Color de fondo del canal activo
-      epgCardsHeaderBg: "#104c91ff", // Color de fondo de la cabecera de la guía de canales
-      epgCardsProgramLiveBg: "#2d79d1ff", // Color de fondo del programa en vivo
-      // Color de la barra de progreso (programa en vivo / "Ahora")
-      epgCardsProgramLiveProgressBg: "#6C8EB6",
+      epgCardsChannelActiveBg: "#0A2135", //Color de fondo de la tarjeta cuando esta seleccionada
+      epgCardsHeaderBg: "#0A2135", // Color de fondo de la cabecera de la guía de canales
+      epgCardsProgramLiveBg: "#415463", //Color de fondo del programa en vivo
+      epgCardsProgramLiveProgressBg: "#3B9FAC",// Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsLaterGlobal: true,
       // Control del cierre de modal al reproducir en vivo:
       // true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
@@ -1824,10 +1823,10 @@ export const BRANDS = [
       // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
       epgPast: false,
       epgPagesPastEnabled: true,
-      epgCardsChannelActiveBg: "#ffffff", //Color de fondo de la tarjeta cuando esta seleccionada
-      epgCardsHeaderBg: "#6c8eb6", // Color de fondo de la cabecera de la guía de canales
-      epgCardsProgramLiveBg: "#6C8EB6", //Color de fondo del programa en vivo
-      epgCardsProgramLiveProgressBg: "#000000ff",// Color de la barra de progreso (programa en vivo / "Ahora")
+      epgCardsChannelActiveBg: "#0A2135", //Color de fondo de la tarjeta cuando esta seleccionada
+      epgCardsHeaderBg: "#0A2135", // Color de fondo de la cabecera de la guía de canales
+      epgCardsProgramLiveBg: "#415463", //Color de fondo del programa en vivo
+      epgCardsProgramLiveProgressBg: "#3B9FAC",// Color de la barra de progreso (programa en vivo / "Ahora")
       epgCardsLaterGlobal: true,
       // Control del cierre de modal al reproducir en vivo:
       // true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.

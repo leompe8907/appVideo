@@ -25,7 +25,7 @@
     "tvRadioServices": "Canales",
     "tvRadioPlaceholder": "Módulo en preparación para servicios de TV y radio.",
     "catchup": "Catchup",
-    "osms": "OSMS",
+    "osms": "Mensajes",
     "osmsPlaceholder": "Módulo en preparación para OSMS.",
     "account": "Cuenta"
   },
@@ -87,7 +87,7 @@
     "deleteAccountError": "No se pudo eliminar la cuenta."
   },
   "osms": {
-    "title": "OSMS",
+    "title": "Mensajes",
     "detail": "Detalle del mensaje",
     "empty": "No hay mensajes disponibles.",
     "selectOne": "Selecciona un mensaje para ver el detalle.",
@@ -98,7 +98,7 @@
     "refreshing": "Actualizando…",
     "markSeen": "Marcar como vistos",
     "new": "Nuevos",
-    "disabled": "OSMS no está habilitado para esta marca.",
+    "disabled": "Los mensajes no están habilitados para esta marca.",
     "groupToday": "Hoy",
     "groupYesterday": "Ayer",
     "groupEarlier": "Anteriores",
