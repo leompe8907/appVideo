@@ -9,6 +9,78 @@ import { validateSessionIfDue } from '../utils/sessionValidator';
 const MAX_BACKGROUND_MS = 30 * 60 * 1000;
 const SESSION_CHECK_KEY = 'app_last_background_time';
 const LAST_ROUTE_KEY = 'app_last_active_route';
+/** Snapshot de reproducción para recuperarse de un tab discard de Chrome (ver restoreDiscardedPlayback). */
+const PLAYBACK_SNAPSHOT_KEY = 'app_player_snapshot_v1';
+
+function savePlaybackSnapshot(player) {
+  try {
+    const s = player?.state;
+    if (!s?.type || !s?.url) {
+      sessionStorage.removeItem(PLAYBACK_SNAPSHOT_KEY);
+      return;
+    }
+    sessionStorage.setItem(
+      PLAYBACK_SNAPSHOT_KEY,
+      JSON.stringify({
+        type: s.type,
+        id: s.id,
+        url: s.url,
+        item: s.item,
+        mediaOption: s.mediaOption,
+        drmConfig: s.drmConfig,
+        currentTime: s.currentTime,
+        savedAtMs: Date.now(),
+      }),
+    );
+  } catch {
+    // noop
+  }
+}
+
+/**
+ * Restaura la reproducción si esta carga de página vino de un tab discard de
+ * Chrome (Memory Saver) — `document.wasDiscarded` es la señal oficial para
+ * esto (ver https://developer.chrome.com/docs/web-platform/page-lifecycle-api).
+ * Sin esto, el usuario vuelve a una pestaña "recargada" que cae al Home, lo
+ * que se siente como que se cerró la sesión.
+ */
+function restoreDiscardedPlayback(player) {
+  try {
+    if (!document.wasDiscarded) return;
+    const raw = sessionStorage.getItem(PLAYBACK_SNAPSHOT_KEY);
+    if (!raw) return;
+    const snap = JSON.parse(raw);
+    if (!snap?.type || !snap?.url) return;
+
+    player.play({
+      type: snap.type,
+      id: snap.id,
+      url: snap.url,
+      item: snap.item,
+      mediaOption: snap.mediaOption || {},
+      drmConfig: snap.drmConfig || {},
+      autoPlay: true,
+    });
+
+    // Para VOD/catchup, retomar en la posición donde quedó (un canal en vivo
+    // no lo necesita: el propio manifiesto ya entrega el punto en vivo).
+    if (snap.type !== 'service' && Number.isFinite(snap.currentTime) && snap.currentTime > 5) {
+      const target = snap.currentTime;
+      let attempts = 0;
+      const trySeek = () => {
+        attempts += 1;
+        if (player.state?.duration > 0) {
+          player.seek(target);
+          return;
+        }
+        if (attempts < 20) setTimeout(trySeek, 250);
+      };
+      setTimeout(trySeek, 250);
+    }
+  } catch {
+    // noop
+  }
+}
 
 /**
  * Hook global para gestionar el ciclo de vida de la aplicación (Warm Start / Suspend-Resume).
@@ -39,6 +111,18 @@ export function useAppLifecycle() {
     }
   }, [location]);
 
+  // Restaurar reproducción una sola vez al montar, si esta carga vino de un
+  // tab discard de Chrome — independiente del resto del ciclo de vida.
+  // Delay corto: PlayerProvider crea el engine de forma asíncrona (import
+  // dinámico de video.js/hls.js) en su propio efecto de montaje — sin este
+  // margen, `player.play()` puede llamarse antes de que el engine exista.
+  useEffect(() => {
+    if (!player) return undefined;
+    const timer = setTimeout(() => restoreDiscardedPlayback(player), 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const handleHide = () => {
       try {
@@ -51,14 +135,25 @@ export function useAppLifecycle() {
         // noop
       }
 
-      // Si el reproductor estaba en reproducción, pausar para ahorrar recursos en background
-      if (player?.isPlaying || player?.isPlayingLive || player?.isPlayingVod) {
-        wasPlayingRef.current = true;
-        try {
-          player?.pause?.();
-        } catch {
-          // noop
-        }
+      savePlaybackSnapshot(player);
+
+      const isPlaying = !!player?.state?.isPlaying;
+      if (!isPlaying) return;
+
+      // Canal en vivo: NO pausar. Mantener audio/video activos es lo que
+      // exime a la pestaña del descarte por Memory Saver de Chrome (ver
+      // useMediaSession.js) — pausar acá saca a la pestaña de esa categoría
+      // protegida y la deja expuesta al mismo descarte que cualquier otra
+      // pestaña inactiva. VOD/catchup sí se pausan (ahorro de datos en
+      // contenido on-demand, donde no aplica la misma expectativa de "TV
+      // encendida" que un canal en vivo).
+      if (player.state?.type === 'service') return;
+
+      wasPlayingRef.current = true;
+      try {
+        player?.pause?.();
+      } catch {
+        // noop
       }
     };
 
@@ -77,13 +172,23 @@ export function useAppLifecycle() {
           validateSessionIfDue(currentBrand);
         }
 
-        // Reanudar reproductor si estaba activo antes del suspend
+        // Reanudar reproductor si estaba activo antes del suspend.
+        // `play()` requiere el objeto { type, id, url, ... } — no tiene
+        // default, así que llamarlo sin argumentos tira "Cannot destructure
+        // property 'type' of 'undefined'" (quedaba silenciado por el
+        // try/catch, dejando el contenido pausado para siempre al volver).
+        // Se lee el estado actual y se llama con esos valores — como
+        // coincide con el contenido ya cargado, play() toma el atajo
+        // interno "mismo contenido -> engine.play()" sin recargar.
         if (wasPlayingRef.current) {
           wasPlayingRef.current = false;
-          try {
-            player?.play?.();
-          } catch {
-            // noop
+          const s = player?.state;
+          if (s?.type && s?.url) {
+            try {
+              player.play({ type: s.type, id: s.id, url: s.url, item: s.item, mediaOption: s.mediaOption, drmConfig: s.drmConfig });
+            } catch {
+              // noop
+            }
           }
         }
       }
@@ -100,6 +205,10 @@ export function useAppLifecycle() {
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('pagehide', handleHide);
     window.addEventListener('pageshow', handleShow);
+    // Page Lifecycle API: último momento confiable antes de que Chrome
+    // congele/descarte la pestaña (no soportado en todos los navegadores,
+    // por eso `pagehide`/`visibilitychange` arriba quedan como respaldo).
+    document.addEventListener('freeze', handleHide);
 
     // Eventos específicos de Smart TVs (Samsung Tizen)
     let tizenListenerId = null;
@@ -128,6 +237,7 @@ export function useAppLifecycle() {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pagehide', handleHide);
       window.removeEventListener('pageshow', handleShow);
+      document.removeEventListener('freeze', handleHide);
       document.removeEventListener('webOSHide', onWebOSHide);
       document.removeEventListener('webOSShow', onWebOSShow);
 

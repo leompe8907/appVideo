@@ -4,6 +4,7 @@ import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { HomeEpgRoutesLayout } from './components/preload/HomeEpgRoutesLayout';
 import { useAuthValidator } from './hooks/useAuthValidator';
 import { useAppLifecycle } from './hooks/useAppLifecycle';
+import { useMediaSession } from './hooks/useMediaSession';
 import { useBrand } from './contexts/BrandContext';
 import { isAuthenticated } from './utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
@@ -73,6 +74,7 @@ function ProtectedRoute({ children }) {
 
 function AppLifecycleHost() {
   useAppLifecycle();
+  useMediaSession();
   return null;
 }
 

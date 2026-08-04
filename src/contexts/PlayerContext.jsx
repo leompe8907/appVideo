@@ -762,6 +762,7 @@ export function PlayerProvider({ children }) {
     goLive,
     mute,
     unmute,
+    getVideoElement: () => engineRef.current?.video ?? null,
     refreshTracks,
     selectAudioTrack,
     selectTextTrack,
