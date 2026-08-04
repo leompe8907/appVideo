@@ -4,6 +4,7 @@ import { useBrand } from './BrandContext';
 import { createEngine } from '../player/engines/createEngine';
 import { DEFAULT_SEEK_STEP_SECONDS, PLAYER_ENGINE_EVENTS } from '../player/engines/contracts';
 import panaccessService from '../services/panaccessService';
+import telemetryService from '../services/telemetryService';
 import * as userSession from '../utils/userSession';
 import { isLicenseInUseError } from '../utils/licenseInUse';
 import { resolveBrandId } from '../utils/brandStorage';
@@ -66,6 +67,10 @@ export function PlayerProvider({ children }) {
   const tracksRestoredRef = useRef(false);
   const debugRef = useRef(false);
   const engineHandlersRef = useRef({});
+  // `handleEnded` vive dentro del efecto de montaje único (deps []) que crea
+  // el engine — closure fija en el primer render. Este ref evita leer un
+  // `state.currentTime` obsoleto al reportar telemetría de fin de reproducción.
+  const currentTimeRef = useRef(0);
 
   const getPlaybackSnapshot = useCallback(
     () => ({
@@ -85,6 +90,11 @@ export function PlayerProvider({ children }) {
   useEffect(() => {
     brandRef.current = currentBrand;
   }, [currentBrand]);
+
+  useEffect(() => {
+    telemetryService.init();
+    return () => telemetryService.destroy();
+  }, []);
 
   const isDebugEnabled = () => {
     if (import.meta.env.DEV) return true;
@@ -125,6 +135,10 @@ export function PlayerProvider({ children }) {
     liveSecondsLate: 0,
     error: null,
   });
+
+  useEffect(() => {
+    currentTimeRef.current = state.currentTime;
+  }, [state.currentTime]);
 
   const [licenseInUsePrompt, setLicenseInUsePrompt] = useState(null);
   const [tracks, setTracks] = useState({
@@ -273,6 +287,7 @@ export function PlayerProvider({ children }) {
       handleEnded: () => {
         clearSeekTimeout();
         log('engine:event ended');
+        telemetryService.stopCurrent({ finished: true, timeIndex: currentTimeRef.current });
         setState((s) => ({
           ...s,
           isPlaying: false,
@@ -523,6 +538,7 @@ export function PlayerProvider({ children }) {
       }
 
       playbackRef.current = { type, id, url, item: item ?? null };
+      telemetryService.recordSwitch({ type, id, item: item ?? null });
       resetTrackMemoryForPlayback();
 
       setState((s) => ({
@@ -579,6 +595,7 @@ export function PlayerProvider({ children }) {
   const stop = () => {
     clearSeekTimeout();
     log('action:stop');
+    telemetryService.stopCurrent({ finished: false, timeIndex: state.currentTime });
     resetEngineMedia();
     playbackRef.current = { type: null, id: null, url: null, item: null };
     resetTrackMemoryForPlayback();
@@ -594,6 +611,7 @@ export function PlayerProvider({ children }) {
   const close = () => {
     clearSeekTimeout();
     log('action:close');
+    telemetryService.stopCurrent({ finished: false, timeIndex: state.currentTime });
     resetEngineMedia();
     playbackRef.current = { type: null, id: null, url: null, item: null };
     resetTrackMemoryForPlayback();

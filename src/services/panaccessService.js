@@ -174,6 +174,19 @@ class PanaccessService {
   }
 
   /**
+   * Reporta telemetría de reproducción (canal/VOD/catchup) al backend.
+   * Sin retry automático: `telemetryService` ya maneja sus propios
+   * reintentos con backoff sobre la cola persistida (ver `flush()` ahí).
+   */
+  async pushTelemetryRecords(records) {
+    return this.callAuthenticatedApi(
+      'pushTelemetryRecords',
+      { records: JSON.stringify(records) },
+      { enableRetry: false },
+    );
+  }
+
+  /**
    * Obtiene el cliente CV
    */
   getClient() {

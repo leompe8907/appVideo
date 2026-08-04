@@ -394,9 +394,13 @@ export const BRANDS = [
     // Player: control técnico de selección de engine por marca.
     // nativeAdaptersEnabled=false mantiene WebEngine incluso en TV (modo seguro).
     // enginePolicy: 'auto' | 'force-web' | 'force-lg' | 'force-samsung'
+    // telemetryEnabled: envía telemetría de reproducción a Panaccess. Todas
+    // las marcas lo traen explícito en `true` — poner `false` para
+    // desactivarlo puntualmente en una marca.
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      telemetryEnabled: true,
       hudAutoHideMs: 6000,
       // Inactividad (detener playback + screensaver):
       // - Timeout principal: clientConfig.device.parameters.X_INACTIVITY_TIMEOUT_SEC (getClientConfig).
@@ -768,6 +772,7 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      telemetryEnabled: true,
       // HUD: auto-ocultar controles tras X ms de inactividad (similar a EPG legacy).
       hudAutoHideMs: 6000,
       // Inactividad (detener playback + screensaver):
@@ -1150,6 +1155,7 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      telemetryEnabled: true,
       hudAutoHideMs: 6000,
       // Inactividad (detener playback + screensaver):
       // - Timeout principal: clientConfig.device.parameters.X_INACTIVITY_TIMEOUT_SEC (getClientConfig).
@@ -1499,6 +1505,7 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      telemetryEnabled: true,
       hudAutoHideMs: 6000,
       // Inactividad (detener playback + screensaver):
       // - Timeout principal: clientConfig.device.parameters.X_INACTIVITY_TIMEOUT_SEC (getClientConfig).
@@ -1850,6 +1857,7 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      telemetryEnabled: true,
       hudAutoHideMs: 6000,
       // Inactividad (detener playback + screensaver):
       // - Timeout principal: clientConfig.device.parameters.X_INACTIVITY_TIMEOUT_SEC (getClientConfig).
@@ -2231,6 +2239,7 @@ export const BRANDS = [
     player: {
       nativeAdaptersEnabled: false,
       enginePolicy: 'auto',
+      telemetryEnabled: true,
       hudAutoHideMs: 6000,
       // Inactividad (detener playback + screensaver):
       // - Timeout principal: clientConfig.device.parameters.X_INACTIVITY_TIMEOUT_SEC (getClientConfig).
