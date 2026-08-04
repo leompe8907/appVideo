@@ -50,9 +50,13 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
     overflow: hidden;
     max-height: 100vh;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: 1rem;
+    }
   }
 
   // Vista lista tipo 10foot: instrucciones + lista scrollable
@@ -79,11 +83,15 @@
     overflow: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
     background: rgba(0, 0, 0, 0.25);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.15);
     @include scrollbar-hidden;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: 0.25rem;
+    }
   }
 
   .license-list-item {
@@ -178,9 +186,13 @@
 
   .confirm-in-use-actions {
     display: flex;
-    gap: 0.75rem;
     justify-content: center;
     flex-wrap: wrap;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > * {
+      margin: 0 0.375rem 0.75rem;
+    }
   }
 
   .confirm-in-use-btn {
@@ -207,10 +219,18 @@
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: 1rem;
     width: 100%;
     overflow: hidden;
+    // Fallback fijo antes de `min()`: WebKit viejo de Smart TV no lo
+    // interpreta y descarta la línea entera, quedándose con la última
+    // declaración válida.
+    max-height: 34em;
     max-height: min(34em, calc(100vh - 7.5rem));
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > * {
+      margin: 0 0.5rem 1rem;
+    }
   }
 
   // Tarjeta de licencia - estilo Netflix minimalista
@@ -310,18 +330,25 @@
   .license-fields {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
     width: 100%;
     overflow: hidden;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: 0.6rem;
+    }
   }
 
   .license-field {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
     padding: 0.6rem 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
+
+    > *:not(:last-child) {
+      margin-bottom: 0.25rem;
+    }
 
     &:last-child {
       border-bottom: none;
@@ -415,13 +442,17 @@
   .success-message {
     @include flex-center;
     flex-direction: column;
-    gap: 0.5rem;
     padding: 1.25rem 1.75rem;
     background: rgba(34, 139, 34, 0.85);
     backdrop-filter: blur(10px);
     border-radius: 8px;
     border: 2px solid rgba(255, 255, 255, 0.4);
     flex-shrink: 0;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: 0.5rem;
+    }
 
     .success-icon {
       font-size: 1.75rem;

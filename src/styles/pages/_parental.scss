@@ -4,6 +4,10 @@
   // clamp() en vmin en vez de px fijos: en un monitor grande con el
   // escalado de Windows subido (125-200%), el viewport CSS efectivo se
   // achica igual que en una pantalla más chica sin escalar.
+  // Fallback fijo antes de `clamp()`: WebKit viejo de Smart TV no lo
+  // interpreta y descarta la línea entera, quedándose con la última
+  // declaración válida anterior para esa misma propiedad.
+  padding: 14px 14px 20px;
   padding: clamp(12px, 1.8vmin, 20px) clamp(12px, 1.8vmin, 20px) clamp(18px, 2.8vmin, 30px);
   color: var(--text-color, #fff);
   max-width: 100%;
@@ -19,6 +23,7 @@
 
 .parental-title {
   margin: 0 0 6px;
+  font-size: 22px;
   font-size: clamp(20px, 2.4vmin, 28px);
 }
 
@@ -38,7 +43,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 10px;
+  }
 }
 
 .parental-row__label {
@@ -46,6 +55,7 @@
 }
 
 .parental-toggle {
+  padding: 9px 12px;
   padding: clamp(7px, 1vmin, 11px) clamp(10px, 1.4vmin, 16px);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -65,13 +75,19 @@
 
 .parental-pin-controls {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > * {
+    margin: 0 0 8px 8px;
+  }
 }
 
 .parental-pin-input {
+  width: 135px;
   width: clamp(120px, 14vmin, 180px);
+  padding: 9px 11px;
   padding: clamp(7px, 1vmin, 11px) clamp(9px, 1.2vmin, 14px);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -80,6 +96,7 @@
 }
 
 .parental-btn {
+  padding: 9px 11px;
   padding: clamp(7px, 1vmin, 11px) clamp(9px, 1.2vmin, 14px);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -100,9 +117,13 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 12px;
   max-width: 100%;
   overflow-x: hidden; /* nunca scroll horizontal */
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > * {
+    margin: 0 6px 10px 0;
+  }
 }
 
 .parental-rating-label {
@@ -119,9 +140,13 @@
 .parental-rating-segment {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
   max-width: 100%;
   overflow-x: hidden; /* nunca scroll horizontal */
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > * {
+    margin: 0 8px 8px 0;
+  }
 }
 
 .parental-rating-segbtn {
@@ -141,8 +166,12 @@
 .parental-rating-checkbox {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   opacity: 0.95;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 8px;
+  }
 }
 
 .parental-empty {
@@ -155,7 +184,10 @@
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
-  // Base en em (escala con html font-size) con tope por altura de viewport
+  // Base en em (escala con html font-size) con tope por altura de viewport.
+  // Fallback fijo antes de `min()`: WebKit viejo de Smart TV no lo interpreta
+  // y descarta la línea entera, quedándose con la última declaración válida.
+  max-height: 28em;
   max-height: min(28em, 56vh);
   overflow-y: auto;
   overflow-x: hidden; /* nunca scroll horizontal */
@@ -183,7 +215,6 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
   padding: 10px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -191,6 +222,11 @@
   color: inherit;
   text-align: left;
   overflow: hidden;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 10px;
+  }
 }
 
 .parental-channel-card__media {
@@ -219,6 +255,7 @@
   inset: 0;
   display: grid;
   place-items: center;
+  font-size: 24px;
   font-size: clamp(20px, 3vmin, 32px);
   background: rgba(0, 0, 0, 0.35);
   pointer-events: none;
@@ -226,9 +263,13 @@
 
 .parental-channel-card__meta {
   display: grid;
+  grid-template-columns: 60px 1fr;
   grid-template-columns: clamp(48px, 6vmin, 82px) 1fr;
+  // `gap` en Grid sí es compatible en WebKit de Smart TV (a diferencia de
+  // flexbox, donde llegó tarde) — se deja sin fallback.
   gap: 10px;
   align-items: center;
+  min-height: 30px;
   min-height: clamp(26px, 3.2vmin, 40px);
 }
 
@@ -270,6 +311,7 @@
 }
 
 .parental-pin-title {
+  font-size: 19px;
   font-size: clamp(17px, 2.2vmin, 24px);
   font-weight: 700;
   margin-bottom: 6px;
@@ -281,7 +323,9 @@
 
 .parental-pin-input {
   width: 100%;
+  font-size: 19px;
   font-size: clamp(17px, 2.2vmin, 24px);
+  padding: 11px 12px;
   padding: clamp(9px, 1.2vmin, 14px) clamp(10px, 1.4vmin, 16px);
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -302,11 +346,13 @@
 }
 
 .parental-pin-digit {
+  padding: 12px 0;
   padding: clamp(10px, 1.4vmin, 16px) 0;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
+  font-size: 16px;
   font-size: clamp(14px, 1.8vmin, 20px);
 }
 
@@ -320,11 +366,16 @@
   margin-top: 14px;
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 10px;
+  }
 }
 
 .parental-pin-cancel,
 .parental-pin-ok {
+  padding: 11px 12px;
   padding: clamp(9px, 1.2vmin, 14px) clamp(10px, 1.4vmin, 16px);
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.14);

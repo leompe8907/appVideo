@@ -78,17 +78,20 @@ $home-sidebar-overlay-width: 15vw;
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  gap: 0.5rem;
   min-height: 7.25rem;
   padding: 0.5rem 0.75rem;
   box-sizing: border-box;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > .inicio-header__col:not(:last-child) {
+    margin-right: 0.5rem;
+  }
 }
 
 .inicio-subheader {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  gap: 0.5rem;
   // Altura fija para evitar "saltos" cuando cambia el contenido (p. ej. canales sin EPG).
   // Debe ser suficientemente alta para el bloque de "Ahora/Siguiente" en TVs.
   height: 10.25rem;
@@ -98,6 +101,10 @@ $home-sidebar-overlay-width: 15vw;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-sizing: border-box;
   overflow: hidden;
+
+  > .inicio-subheader__col:not(:last-child) {
+    margin-right: 0.5rem;
+  }
 }
 
 .inicio-header__col {
@@ -151,19 +158,26 @@ $home-sidebar-overlay-width: 15vw;
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
   min-width: 0;
   max-height: 100%;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.6rem;
+  }
 }
 
 .inicio-service-info__channel {
   display: flex;
-  gap: 0.6rem;
   align-items: baseline;
   font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.1;
   min-width: 0;
+
+  > *:not(:last-child) {
+    margin-right: 0.6rem;
+  }
 }
 
 .inicio-service-info__channel-lcn {
@@ -188,15 +202,21 @@ $home-sidebar-overlay-width: 15vw;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+
+  > *:not(:last-child) {
+    margin-bottom: 0.25rem;
+  }
 }
 
 .inicio-service-info__label {
   display: flex;
-  gap: 0.5rem;
   align-items: baseline;
   font-size: 1.2rem;
   opacity: 0.9;
+
+  > *:not(:last-child) {
+    margin-right: 0.5rem;
+  }
 }
 
 .inicio-service-info__time {
@@ -501,7 +521,11 @@ html:-moz-full-screen {
 .home-sidebar-group {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.15rem;
+  }
 }
 
 .home-sidebar-group--brand {
@@ -545,7 +569,13 @@ html:-moz-full-screen {
   display: flex;
   justify-content: center;
   flex-direction: column;
-  gap: 0.15rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  // El override TV (media min-height:1080px) ajusta este margin en
+  // pages/_home-shell-tv.scss, no un `gap` propio.
+  > *:not(:last-child) {
+    margin-bottom: 0.15rem;
+  }
 }
 
 .home-sidebar-settings {
@@ -630,13 +660,20 @@ html:-moz-full-screen {
   // achica igual que en una pantalla más chica sin escalar — con px fijos
   // esta insignia quedaba desproporcionadamente chica frente al resto del
   // sidebar (que ya escala con `--sidebar-rail-width: 4.2vw`).
+  // Fallback fijo antes de `clamp()`: WebKit viejo de Smart TV no lo
+  // interpreta y descarta la línea entera, quedándose con la última
+  // declaración válida anterior para la misma propiedad.
+  min-width: 20px;
   min-width: clamp(18px, 2vmin, 26px);
+  height: 18px;
   height: clamp(16px, 1.8vmin, 24px);
+  padding: 0 6px;
   padding: 0 clamp(5px, 0.7vmin, 9px);
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-size: 11px;
   font-size: clamp(10px, 1.1vmin, 14px);
   font-weight: 700;
   line-height: 1;
@@ -647,7 +684,9 @@ html:-moz-full-screen {
 
 .home-sidebar--collapsed .home-sidebar-badge {
   position: absolute;
+  top: 5px;
   top: clamp(4px, 0.6vmin, 8px);
+  right: 7px;
   right: clamp(6px, 0.8vmin, 10px);
 }
 
@@ -696,6 +735,7 @@ html:-moz-full-screen {
 // Panel expandido: columna de labels con el mismo fondo opaco que el rail cerrado.
 .home-sidebar.home-sidebar--overlay {
   width: var(--sidebar-overlay-width);
+  max-width: 46vw;
   max-width: min(var(--sidebar-overlay-width), 46vw);
   overflow: visible;
   box-shadow: none;
@@ -759,10 +799,14 @@ html:-moz-full-screen {
 .home-sidebar-submenu {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
   padding-left: 0.4rem;
   margin-top: 0.2rem;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.35rem;
+  }
 }
 
 .home-sidebar-submenu--right {
@@ -805,8 +849,12 @@ html:-moz-full-screen {
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
   box-sizing: border-box;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 0.45rem;
+  }
 }
 
 .home-sidebar-sublink-label {
@@ -836,18 +884,23 @@ html:-moz-full-screen {
 
 .home-sidebar--collapsed .home-sidebar-badge--settings {
   position: absolute;
+  top: 5px;
   top: clamp(4px, 0.6vmin, 8px);
+  right: 7px;
   right: clamp(6px, 0.8vmin, 10px);
   margin-left: 0;
 }
 
 .home-sidebar-badge--sub {
   position: static;
+  min-width: 18px;
   min-width: clamp(16px, 1.8vmin, 24px);
+  height: 17px;
   height: clamp(15px, 1.6vmin, 22px);
   // Piso en 10px (no 9px): con escalado de Windows alto en un monitor chico
   // (ej. 1366x768 @125%) un clamp con piso de 9px queda por debajo del
   // mínimo legible; 10px es el mismo piso que usa el badge principal.
+  font-size: 11px;
   font-size: clamp(10px, 1vmin, 13px);
 }
 
@@ -985,7 +1038,10 @@ html:-moz-full-screen {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
+  // `gap` en Grid sí es compatible en WebKit de Smart TV (a diferencia de
+  // flexbox, donde llegó tarde) — se deja sin fallback.
   gap: 1rem;
+  padding: 0 1.5rem;
   padding: 0 clamp(1rem, 2vw, 2.5rem);
   box-sizing: border-box;
 }
@@ -1031,13 +1087,17 @@ html:-moz-full-screen {
 .home-topbar-nav {
   display: flex;
   align-items: center;
-  gap: clamp(0.5rem, 1.5vw, 2rem);
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 1rem;
+    margin-right: clamp(0.5rem, 1.5vw, 2rem);
+  }
 }
 
 .home-topbar-link {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   text-decoration: none;
   color: rgba(255, 255, 255, 0.62);
   font-size: 1.05rem;
@@ -1046,6 +1106,11 @@ html:-moz-full-screen {
   padding: 0.5rem 0.25rem;
   position: relative;
   transition: color 0.15s ease;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 0.5rem;
+  }
 
   &:hover,
   &:focus-visible {
@@ -1090,13 +1155,16 @@ html:-moz-full-screen {
 }
 
 .home-topbar-badge {
+  min-width: 17px;
   min-width: clamp(16px, 1.6vmin, 22px);
+  height: 17px;
   height: clamp(16px, 1.6vmin, 22px);
   padding: 0 0.35rem;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-size: 11px;
   font-size: clamp(10px, 1vmin, 12px);
   font-weight: 700;
   line-height: 1;

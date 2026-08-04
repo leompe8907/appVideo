@@ -14,13 +14,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
   margin-bottom: 18px;
   padding: 12px 14px;
   border-radius: 14px;
   background: rgba(8, 14, 28, 0.82);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 12px;
+  }
 }
 
 .osms-page__title {
@@ -47,8 +51,12 @@
 
 .osms-page__actions {
   display: flex;
-  gap: 10px;
   flex-shrink: 0;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 10px;
+  }
 }
 
 .osms-page__btn {
@@ -80,8 +88,12 @@
 .osms-page__header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
   min-width: 0;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 10px;
+  }
 }
 
 .osms-page__btn:disabled {
@@ -227,8 +239,12 @@
 .osms-list-item__meta {
   display: flex;
   align-items: center;
-  gap: 8px;
   margin-bottom: 5px;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 8px;
+  }
 }
 
 .osms-list-item__date {
@@ -307,6 +323,7 @@
 
 .osms-detail__message {
   margin: 0;
+  font-size: 18px;
   font-size: clamp(17px, 1.8vw, 20px);
   font-weight: 500;
   line-height: 1.55;
@@ -331,6 +348,9 @@
 .osms-modal {
   width: 100%;
   max-width: 640px;
+  // Fallback fijo antes de `min()`: WebKit viejo de Smart TV no lo interpreta
+  // y descarta la línea entera, quedándose con la última declaración válida.
+  max-height: 88vh;
   max-height: min(88vh, 720px);
   display: flex;
   flex-direction: column;
@@ -345,15 +365,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
   padding: 14px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 12px;
+  }
 }
 
 .osms-modal__back {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   appearance: none;
   border: 0;
   background: transparent;
@@ -364,6 +387,11 @@
   padding: 6px 8px;
   border-radius: 8px;
   opacity: 0.9;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 6px;
+  }
 
   &:hover,
   &:focus-visible {
@@ -387,6 +415,7 @@
 .osms-modal__message {
   margin: 0 auto;
   max-width: 42rem;
+  font-size: 18px;
   font-size: clamp(17px, 2.2vw, 20px);
   line-height: 1.55;
   white-space: pre-wrap;
@@ -437,7 +466,6 @@
   max-width: 560px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
   padding: 20px 22px;
   border-radius: 16px;
   border: 2px solid rgba(255, 255, 255, 0.22);
@@ -446,6 +474,11 @@
     0 20px 56px rgba(0, 0, 0, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   color: #fff;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 14px;
+  }
 }
 
 .osms-notification__icon {
@@ -463,8 +496,12 @@
 
 .osms-notification__body {
   display: flex;
-  gap: 14px;
   align-items: flex-start;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 14px;
+  }
 }
 
 .osms-notification__text {
@@ -495,9 +532,13 @@
 
 .osms-notification__actions {
   display: flex;
-  gap: 12px;
   justify-content: stretch;
   flex-wrap: wrap;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > * {
+    margin: 0 0 12px 12px;
+  }
 }
 
 .osms-notification__btn {

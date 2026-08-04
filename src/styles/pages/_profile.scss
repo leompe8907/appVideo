@@ -39,7 +39,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: $spacing-xxl;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: $spacing-xxl;
+    }
   }
 
   // Header
@@ -91,7 +95,6 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: $spacing-sm;
     cursor: default;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     padding: $spacing-lg;
@@ -99,6 +102,11 @@
     background: transparent;
     border: 3px solid transparent;
     position: relative;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: $spacing-sm;
+    }
 
     // Área principal (seleccionar perfil)
     .profile-card-select {
@@ -117,7 +125,11 @@
     // los dos van lado a lado en vez de apilados.
     .profile-card-actions {
       display: flex;
-      gap: $spacing-xs;
+
+      // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+      > *:not(:last-child) {
+        margin-right: $spacing-xs;
+      }
     }
 
     // Botón editar (mismo estilo base que eliminar, sin el tono de peligro)

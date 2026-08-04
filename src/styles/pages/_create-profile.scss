@@ -24,6 +24,10 @@
   background: linear-gradient(145deg, #1a1a1a 0%, #252525 100%);
   border-radius: $border-radius-lg;
   padding: $spacing-lg;
+  // Fallback fijo antes de `min()`: WebKit viejo de Smart TV no lo interpreta
+  // y descarta la línea entera, quedándose con la última declaración válida
+  // (sin este fallback el modal quedaba sin tope de ancho en esos TVs).
+  max-width: 480px;
   max-width: min(480px, 100%);
   width: 100%;
   max-height: 100%;
@@ -39,6 +43,7 @@
   // que el modal base para que la grilla de avatares (más grande, ver
   // `.create-profile-avatar-option` abajo) entre cómoda sin apretarse.
   &.create-profile-modal--wizard {
+    max-width: 600px;
     max-width: min(600px, 100%);
   }
 }
@@ -56,9 +61,13 @@
 .create-profile-progress {
   display: flex;
   justify-content: center;
-  gap: 6px;
   margin-bottom: $spacing-md;
   flex-shrink: 0;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 6px;
+  }
 }
 
 .create-profile-progress-dot {
@@ -86,9 +95,13 @@
 .create-profile-step {
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
   min-height: 0;
   overflow: hidden;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: $spacing-md;
+  }
 }
 
 // Input de nombre del paso 1: más grande y centrado, es el único control de
@@ -116,14 +129,21 @@
 .create-profile-form {
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
   min-height: 0;
   overflow: hidden;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: $spacing-md;
+  }
 
   .form-group {
     display: flex;
     flex-direction: column;
-    gap: $spacing-xs;
+
+    > *:not(:last-child) {
+      margin-bottom: $spacing-xs;
+    }
 
     label {
       font-size: 0.85rem;
@@ -156,9 +176,13 @@
 .create-profile-avatars {
   display: flex;
   flex-wrap: wrap;
-  gap: $spacing-sm;
   justify-content: center;
   max-width: 100%;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > * {
+    margin: 0 $spacing-xs $spacing-sm $spacing-xs;
+  }
 }
 
 .create-profile-avatar-option {
@@ -242,11 +266,15 @@
 
 .create-profile-actions {
   display: flex;
-  gap: $spacing-md;
   margin-top: $spacing-sm;
   justify-content: center;
   flex-wrap: wrap;
   flex-shrink: 0;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > * {
+    margin: 0 calc(#{$spacing-md} / 2) $spacing-md;
+  }
 }
 
 .create-profile-btn {
@@ -301,11 +329,15 @@
 .message-modal-content {
   display: flex;
   align-items: center;
-  gap: $spacing-md;
   margin-bottom: $spacing-md;
   padding: $spacing-md;
   border-radius: $border-radius-md;
   text-align: left;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: $spacing-md;
+  }
 
   .message-modal-icon {
     flex-shrink: 0;

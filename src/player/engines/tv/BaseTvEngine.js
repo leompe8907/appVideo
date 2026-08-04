@@ -60,7 +60,12 @@ export class BaseTvEngine extends WebEngine {
   load(url, options = {}) {
     this.currentSource = url;
     this.lastLoadOptions = options;
-    if (!this.isNativeActive) {
+    if (!this.isNativeActive || this.canHandleNatively(url) === false) {
+      // `canHandleNatively` === false es una decisión deliberada de ruteo
+      // (ej. contenido que el adapter nativo no puede desencriptar), no un
+      // fallo — por eso NO pasa por el try/catch de abajo, que emite
+      // PLAYER_ENGINE_EVENTS.ERROR y dispararía el overlay de error en el
+      // HUD por una fracción de segundo antes de que WebEngine cargue bien.
       super.load(url, options);
       return;
     }
@@ -275,6 +280,11 @@ export class BaseTvEngine extends WebEngine {
   // region Métodos para sobreescribir en adapters concretos
   tryActivateNativeAdapter() {
     return false;
+  }
+
+  /** Permite a un adapter declinar el manejo nativo de una URL puntual (sin que cuente como error). */
+  canHandleNatively() {
+    return true;
   }
 
   nativeLoad() {}

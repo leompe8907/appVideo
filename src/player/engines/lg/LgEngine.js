@@ -1,4 +1,5 @@
 import BaseTvEngine from '../tv/BaseTvEngine';
+import { middlewareNeedsSession } from '../web/sessionHlsXhrSetup';
 
 const DRM_UNLOAD_TIMEOUT_MS = 5000;
 
@@ -14,6 +15,12 @@ export class LgEngine extends BaseTvEngine {
     this._drmClient = null;
     this._pendingPlay = false;
     this._drmTransitionPromise = Promise.resolve();
+  }
+
+  canHandleNatively(url) {
+    // Ver comentario en nativeLoad(): este middleware puede requerir
+    // desenvolver una key AES-128 rotativa que solo WebEngine sabe manejar.
+    return !middlewareNeedsSession(url);
   }
 
   tryActivateNativeAdapter() {

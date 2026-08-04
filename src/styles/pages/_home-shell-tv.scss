@@ -23,10 +23,9 @@
 [data-focus='on'].device-tv .home-sidebar {
   --home-sidebar-tv-item-min-height: 5vw;
 
-  .home-sidebar-nav,
-  .home-sidebar-group--nav {
-    gap: 0.15rem;
-  }
+  // Mismo valor que la base (pages/_home-shell.scss), que ya lo resuelve
+  // con `margin` (sin `gap`, no soportado en flexbox por varios WebKit de
+  // Smart TV) — no hace falta repetirlo acá.
 
   .home-sidebar-link,
   .home-sidebar-settings-btn {
@@ -116,6 +115,16 @@
       align-self: center;
     }
 
+    // El ícono genérico (SVG) llena su columna sin problema, pero el avatar
+    // de perfil (foto real, object-fit: cover) se deformaba en óvalo: el
+    // `flex-basis` de arriba solo pisa el ANCHO (eje principal en fila), no
+    // el alto, que seguía en 3vw — acá se vuelve a igualar el ancho al alto
+    // para que el avatar se mantenga cuadrado/circular.
+    .home-sidebar-account-avatar {
+      flex: 0 0 auto;
+      width: 3vw;
+    }
+
     .home-sidebar-label {
       flex: 0 1 auto;
       width: fit-content;
@@ -139,9 +148,13 @@
   [data-focus='on'].device-tv .home-sidebar {
     --home-sidebar-tv-item-min-height: 5vw;
 
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    // Pisa el margin de 0.15rem que pone la base en TVs de mayor resolución.
     .home-sidebar-nav,
     .home-sidebar-group--nav {
-      gap: 0.65rem;
+      > *:not(:last-child) {
+        margin-bottom: 0.65rem;
+      }
     }
 
     .home-sidebar-link,
@@ -152,6 +165,12 @@
 
     .home-sidebar-icon {
       height: 2vw;
+      width: 2vw;
+    }
+
+    // Mismo motivo que en el bloque base: reajustar el ancho del avatar al
+    // nuevo alto (2vw) para que no quede ovalado en TVs de mayor resolución.
+    &.home-sidebar--overlay .home-sidebar-settings-btn .home-sidebar-account-avatar {
       width: 2vw;
     }
 

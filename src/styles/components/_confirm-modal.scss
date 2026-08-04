@@ -36,9 +36,13 @@
 
 .confirm-modal__actions {
   display: flex;
-  gap: 0.75rem;
   justify-content: center;
   flex-wrap: wrap;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > * {
+    margin: 0 0.375rem 0.75rem;
+  }
 }
 
 .confirm-modal__btn {

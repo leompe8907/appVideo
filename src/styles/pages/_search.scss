@@ -26,13 +26,21 @@
   // de la pantalla según el viewport CSS efectivo (que cambia tanto en TVs
   // de otra resolución como en un monitor de PC grande con el escalado de
   // Windows subido).
+  // Fallback fijo antes de `clamp()`: WebKit viejo de Smart TV no lo
+  // interpreta y descarta la línea entera, quedándose con la última
+  // declaración válida.
+  top: 10px;
   top: clamp(8px, 1.2vmin, 18px);
+  left: 10px;
   left: clamp(8px, 1.2vmin, 18px);
+  right: 10px;
   right: clamp(8px, 1.2vmin, 18px);
+  bottom: 10px;
   bottom: clamp(8px, 1.2vmin, 18px);
   max-width: 100%;
   background-color: var(--search-panel-bg, rgba(0, 0, 0, 0.92));
   border-radius: 10px;
+  padding: 15px;
   padding: clamp(12px, 1.8vmin, 24px);
   display: flex;
   flex-direction: column;
@@ -47,7 +55,6 @@
 .search-header {
   display: flex;
   align-items: center;
-  gap: 10px;
   background-color: var(--search-header-bg, #333);
   color: var(--search-header-text, #fff);
   border-radius: 5px;
@@ -60,6 +67,11 @@
   flex-shrink: 0;
   // Si el input recibe estilos de foco (sombras/bordes), no recortar placeholder/efectos.
   overflow: visible;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 10px;
+  }
 }
 
 .search-input {
@@ -437,11 +449,17 @@ $search-tv-result-meta-size: 1.3rem;
   align-items: baseline;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 0 6px;
   font-size: 1.05rem;
   color: var(--search-results-meta-text, rgba(255, 255, 255, 0.88));
   line-height: 1.25;
   text-align: center;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  // `.search-result__lcn` ya trae su propio margin-right (4px); esto solo
+  // agrega el resto del espaciado que antes daba `gap: 0 6px`.
+  > *:not(:last-child) {
+    margin-right: 6px;
+  }
 }
 
 .search-result__channel-name {

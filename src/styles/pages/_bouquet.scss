@@ -445,9 +445,13 @@ $bouquet-items-gap: 2rem;
     .bouquet-horizontal-grid-column {
       display: flex;
       flex-direction: column;
-      gap: var(--bouquet-items-gap, #{$bouquet-items-gap});
       width: var(--bouquet-cell-width);
       flex-shrink: 0;
+
+      // A diferencia de `.bouquet-horizontal-grid-track` (Grid, `gap`
+      // compatible), esto es flexbox — sin `gap`, no soportado por varios
+      // WebKit de Smart TV. Se usa margin, igual que el resto del archivo.
+      @include bouquet-stack-spacing;
     }
 
     /**
@@ -640,8 +644,12 @@ $bouquet-items-gap: 2rem;
         .channel-card-event-meta {
           display: flex;
           flex-direction: column;
-          gap: 0.15em;
           margin-bottom: 0.35em;
+
+          // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+          > *:not(:last-child) {
+            margin-bottom: 0.15em;
+          }
         }
 
         .channel-card-event-time {
@@ -685,9 +693,13 @@ $bouquet-items-gap: 2rem;
         background: transparent;
         display: flex;
         flex-direction: column;
-        gap: 0.15em;
         overflow: hidden;
         justify-content: center;
+
+        // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+        > *:not(:last-child) {
+          margin-bottom: 0.15em;
+        }
 
         .channel-card-event-time {
           font-size: 1.2rem;
@@ -881,8 +893,12 @@ $bouquet-items-gap: 2rem;
         .channel-card-event-meta {
           display: flex;
           flex-direction: column;
-          gap: 0.15em;
           margin-bottom: 0.35em;
+
+          // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+          > *:not(:last-child) {
+            margin-bottom: 0.15em;
+          }
         }
 
         .channel-card-event-time {
@@ -998,8 +1014,12 @@ $bouquet-items-gap: 2rem;
     max-width: 900px;
     display: flex;
     flex-direction: column;
-    gap: $spacing-md;
     padding: $spacing-xl 0;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: $spacing-md;
+    }
   }
 
   .bouquet-row {
@@ -1022,7 +1042,11 @@ $bouquet-items-gap: 2rem;
     .bouquet-row-main {
       display: flex;
       flex-direction: column;
-      gap: $spacing-xs;
+
+      // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+      > *:not(:last-child) {
+        margin-bottom: $spacing-xs;
+      }
     }
 
     .bouquet-row-name {

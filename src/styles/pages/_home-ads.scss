@@ -99,9 +99,13 @@
 
 .home-ad-dots {
   display: flex;
-  gap: 6px;
   justify-content: center;
   padding: 6px 8px 4px;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 6px;
+  }
 }
 
 .home-ad-dot,

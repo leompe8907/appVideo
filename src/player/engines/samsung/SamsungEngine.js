@@ -1,8 +1,28 @@
 import BaseTvEngine from '../tv/BaseTvEngine';
 import { PLAYER_ENGINE_EVENTS, PLAYER_ENGINE_STATES } from '../contracts';
+import { isHlsUrl } from '../web/hlsSupport';
+import { windDirectM3u8FromAny } from '../web/windHlsManifest';
+import { middlewareNeedsSession } from '../web/sessionHlsXhrSetup';
 
 /** AVPlay solo permite play() en READY o PAUSED (reanudar). */
 const AVPLAY_PLAY_STATES = new Set(['READY', 'PAUSED']);
+
+/**
+ * AVPlay identifica el contenedor por la extensión de la URL. Los manifiestos
+ * de Wind/Panaccess no tienen extensión (`index.php?requestMode=m3u8&...`),
+ * lo que hace que `prepareAsync()` falle de entrada con
+ * `PLAYER_ERROR_NOT_SUPPORTED_FILE` (TypeMismatchError) — confirmado en
+ * hardware Samsung real, antes de llegar siquiera a pedir el manifiesto.
+ * El workaround documentado por la comunidad de Tizen/AVPlay es agregar un
+ * fragmento `#.m3u8` al final: no viaja en la request HTTP real (los
+ * fragmentos son solo del lado cliente), pero le da a AVPlay la pista de
+ * formato que necesita para reconocer el stream como HLS.
+ */
+function toAvPlayCompatibleUrl(url) {
+  const direct = windDirectM3u8FromAny(url);
+  if (!isHlsUrl(direct) || direct.toLowerCase().includes('.m3u8')) return direct;
+  return `${direct}#.m3u8`;
+}
 
 /**
  * Engine Samsung Tizen (AVPlay) con fallback WebEngine.
@@ -16,6 +36,12 @@ export class SamsungEngine extends BaseTvEngine {
     this._isPreparing = false;
     this._pendingAutoPlay = false;
     this._nativePlayDeferred = false;
+  }
+
+  canHandleNatively(url) {
+    // Ver comentario en nativeLoad(): este middleware puede requerir
+    // desenvolver una key AES-128 rotativa que solo WebEngine sabe manejar.
+    return !middlewareNeedsSession(url);
   }
 
   shouldSkipNativePlayingEvent() {
@@ -190,7 +216,7 @@ export class SamsungEngine extends BaseTvEngine {
       this.applySamsungMediaOptions(api, options?.mediaOption, caps);
       this.applySamsungDrmConfig(api, options?.drmConfig, caps);
 
-      api.open(url);
+      api.open(toAvPlayCompatibleUrl(url));
       this.applyDefaultDisplayRect(api, caps);
 
       if (caps.hasPrepareAsync) {

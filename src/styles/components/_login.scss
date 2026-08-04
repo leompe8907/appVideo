@@ -71,9 +71,14 @@
     .brand-logo {
       display: block;
       margin: 0 auto 1rem;
+      // Fallback fijo antes de `min()`/`clamp()`: WebKit viejo de Smart TV
+      // no los interpreta y descarta la línea entera, quedándose con la
+      // última declaración válida anterior para esa misma propiedad.
+      width: 11rem;
       width: min(100%, 11rem);
       max-width: 100%;
       height: auto;
+      max-height: 3.75rem;
       max-height: clamp(3rem, 8vh, 4.5rem);
       object-fit: contain;
     }
@@ -365,8 +370,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.5rem;
       text-align: center;
+
+      // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+      > *:not(:last-child) {
+        margin-bottom: 0.5rem;
+      }
     }
 
     .login-subscribe-hint {
@@ -417,13 +426,20 @@
     .login-divider {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
       margin: 1.15rem 0 0.95rem;
       color: rgba(255, 255, 255, 0.55);
       font-size: 0.82rem;
       text-transform: lowercase;
 
-      &::before,
+      // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+      &::before {
+        content: '';
+        flex: 1;
+        height: 1px;
+        margin-right: 0.75rem;
+        background: var(--login-divider-color, rgba(255, 255, 255, 0.25));
+      }
+
       &::after {
         content: '';
         flex: 1;
@@ -434,6 +450,7 @@
       span {
         flex-shrink: 0;
         line-height: 1;
+        margin-right: 0.75rem;
       }
     }
 
@@ -727,14 +744,15 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 0.65rem;
 
+        // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
         .social-button__icon {
           flex-shrink: 0;
           width: 1.15rem;
           height: 1.15rem;
           object-fit: contain;
           display: block;
+          margin-right: 0.65rem;
         }
 
         &:hover:not(:disabled) {
@@ -780,6 +798,10 @@
   }
 
   .register-modal {
+    // Fallback fijo antes de `min()`: WebKit viejo de Smart TV no lo
+    // interpreta y descarta la línea entera, quedándose con la última
+    // declaración válida.
+    width: 420px;
     width: min(420px, 100%);
     background: #141414;
     border: 1px solid rgba(255, 255, 255, 0.16);
@@ -865,7 +887,11 @@
     .udid-modal-actions {
       display: flex;
       flex-direction: column;
-      gap: 0.6rem;
+
+      // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+      > *:not(:last-child) {
+        margin-bottom: 0.6rem;
+      }
     }
   }
 

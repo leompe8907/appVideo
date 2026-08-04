@@ -1,6 +1,6 @@
 import * as userSession from '../../../utils/userSession';
 
-function middlewareNeedsSession(url) {
+export function middlewareNeedsSession(url) {
   const lower = url.toLowerCase();
   if (!lower.includes('index.php')) return false;
   if (lower.includes('requestmode=m3u8')) return true;

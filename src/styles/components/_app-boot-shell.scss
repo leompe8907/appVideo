@@ -16,9 +16,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
   box-sizing: border-box;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 1rem;
+  }
 }
 
 .brand-loading {
