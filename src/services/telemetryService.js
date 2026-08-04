@@ -1,14 +1,24 @@
 /**
  * Telemetría de reproducción (canal en vivo / VOD / catchup) hacia Panaccess.
  *
- * Port del módulo `Telemetry.js` (proyecto EPG legacy, a su vez port del
- * `TelemetryRecords.java` del SDK Android de Panaccess): reporta cuándo el
- * usuario empieza y deja de ver contenido, vía `cvPushTelemetryRecords`.
+ * Port de `TelemetryRecords.java` (SDK Android de Panaccess, provisto por el
+ * cliente como referencia autoritativa) — valores de actionId/reasonId,
+ * umbrales anti-zapping y forma exacta de los campos `data` confirmados
+ * línea por línea contra ese archivo, no contra el WSDL ni contra el
+ * `Telemetry.js` del proyecto EPG legacy (que en algunos puntos había
+ * inventado campos que Android no manda — ver notas puntuales abajo).
  *
- * Reglas de negocio replicadas del original:
- * - Anti-zapping: solo se reporta un "inicio" si el usuario se queda viendo
- *   el contenido al menos `MIN_TIME_MS` (1 min). Si cambia/corta antes, no se
- *   reporta absolutamente nada (ni inicio ni fin) — igual que Android.
+ * Reglas de negocio:
+ * - Anti-zapping: al empezar a reproducir, arranca un timer de confirmación
+ *   (`minTimeFor(type)` — 5 min para canal/stream, 1 min para VOD/catchup,
+ *   igual que Android). Si el usuario cambia/corta ANTES de ese tiempo, no
+ *   se reporta absolutamente nada (ni inicio ni fin).
+ * - Si se confirma (pasó el tiempo mínimo) mientras el usuario sigue viendo
+ *   lo mismo, se envía el registro de INICIO ya mismo — no se espera a que
+ *   el usuario cambie de contenido para mandarlo.
+ * - El registro de FIN (switched away / stopped prematurely / finished) se
+ *   envía recién cuando el usuario efectivamente cambia de contenido, corta,
+ *   o el contenido termina solo.
  * - Cola persistida en localStorage (sobrevive recargas/cortes de red).
  * - Envío por lotes (máx. `MAX_RECORDS_PER_CALL`), con un intervalo mínimo
  *   entre llamadas (`MIN_MS_BETWEEN_CALLS`) y reintento con backoff simple
@@ -20,19 +30,51 @@ import panaccessService from './panaccessService';
 const STORAGE_KEY = 'app_telemetry_pending_v1';
 const MAX_QUEUE = 500;
 
-/** Umbral anti-zapping: por debajo de esto, no se reporta nada. */
-const MIN_TIME_MS = 60 * 1000;
-const MAX_RECORDS_PER_CALL = 100;
-const MIN_MS_BETWEEN_CALLS = 30 * 1000;
-const FIRST_FLUSH_DELAY_MS = 25 * 1000;
-/** Ver nota en el original: en producción debería ser más alto (ej. 2h); se deja
- * en 10 min acá para no perder demasiada cola si la marca no ajusta esto. */
-const PERIODIC_FLUSH_MS = 10 * 60 * 1000;
-const RETRY_AFTER_ERROR_MS = 5 * 60 * 1000;
+/**
+ * Umbrales anti-zapping.
+ * Valores REALES de Android (`SWITCHED_TO_STREAM_MIN_TIME` /
+ * `VOD_STARTED_MIN_TIME` / `CATCHUP_STARTED_MIN_TIME`): canal en vivo 5 min,
+ * VOD/catchup 1 min.
+ *
+ * TEMPORAL PARA TESTEO EN FRÍO — ambos reducidos a 30s por pedido explícito.
+ * Se eligió 30s (no 5s) porque con 5s es difícil probar a mano el caso de
+ * "cambiaste antes de tiempo, se descarta" sin que el cambio de canal sea
+ * casi instantáneo — 30s da margen para probar tanto la confirmación como
+ * el descarte por zapping. Volver a los valores reales (arriba) antes de
+ * un release.
+ */
+export const MIN_TIME_STREAM_MS = 30 * 1000;
+export const MIN_TIME_VOD_OR_CATCHUP_MS = 30 * 1000;
 
+const MAX_RECORDS_PER_CALL = 100;
+/** Android: DELAY_TIME_TO_SEND_TELEMETRY_REPORT (30s entre envíos de archivo/lote). */
+const MIN_MS_BETWEEN_CALLS = 30 * 1000;
+/** Android: TIME_TO_SEND_FIRST_TELEMETRY_REPORT. */
+const FIRST_FLUSH_DELAY_MS = 25 * 1000;
+/**
+ * TEMPORAL PARA TESTEO — Android real usa 2h (PERIODIC_TIME_TO_SEND_TELEMETRY_REPORT).
+ * Reducido a 1 min por pedido explícito para acelerar pruebas contra el
+ * backend real. Volver a subir esto (a 2h) antes de un release real.
+ */
+const PERIODIC_FLUSH_MS = 1 * 60 * 1000;
+/**
+ * TEMPORAL PARA TESTEO — Android real usa 1 hora
+ * (DELAY_TIME_TO_SEND_TELEMETRY_REPORT_AFTER_ERROR). Reducido a 1 min por
+ * pedido explícito. Volver a 1 hora antes de un release real.
+ */
+export const RETRY_AFTER_ERROR_MS = 1 * 60 * 1000;
+
+/**
+ * Valores exactos de `TelemetryRecords.java`. 5/6 (SWITCHED_TO/AWAY_FROM_SERVICE)
+ * son específicamente para servicio Multicast/DVB (sintonía de tuner de
+ * broadcast tradicional, con netId/tsId) — esta app SIEMPRE sirve el
+ * contenido en vivo por HLS/HTTP vía CDN (OTT, confirmado también por el
+ * nombre del método `getAvailableStreams` de la propia API de Panaccess),
+ * así que el par correcto es 7/8 (SWITCHED_TO/AWAY_FROM_STREAM).
+ */
 export const TELEMETRY_ACTION = Object.freeze({
-  SWITCHED_TO_SERVICE: 5,
-  SWITCHED_AWAY_FROM_SERVICE: 6,
+  SWITCHED_TO_STREAM: 7,
+  SWITCHED_AWAY_FROM_STREAM: 8,
   VOD_STARTED: 13,
   VOD_STOPPED_PREMATURELY: 14,
   VOD_FINISHED: 15,
@@ -41,6 +83,11 @@ export const TELEMETRY_ACTION = Object.freeze({
   CATCHUP_FINISHED: 18,
 });
 
+/**
+ * Android manda SIEMPRE `USER_INTERACTION_REASON` (1) en toda llamada
+ * observada, incluso para *_FINISHED — `VOD_ENDED_REASON`(3)/`CATCHUP_ENDED_REASON`(4)
+ * existen como constantes pero ninguna función real las usa.
+ */
 const REASON_USER_INTERACTION = 1;
 
 function loadQueue() {
@@ -53,39 +100,19 @@ function loadQueue() {
   }
 }
 
-function buildData(type, item, id) {
-  if (type === 'service') {
-    const serviceId = item?.id ?? item?.lcn ?? id;
-    if (serviceId == null) return null;
-    return { serviceId, serviceName: item?.name ?? '' };
-  }
-  if (type === 'vod') {
-    const vodId = item?.id ?? item?.vodId ?? id;
-    if (vodId == null) return null;
-    return { vodId, vodName: item?.name ?? item?.title ?? '', duration: item?.duration ?? 0 };
-  }
-  if (type === 'catchup') {
-    const catchupId = item?.id ?? item?.catchupId ?? id;
-    if (catchupId == null) return null;
-    return {
-      catchupGroupId: item?.catchupGroupId ?? item?.groupId ?? null,
-      catchupId,
-      catchupName: item?.name ?? item?.title ?? '',
-      duration: item?.duration ?? 0,
-    };
-  }
-  return null;
+function minTimeFor(type) {
+  return type === 'service' ? MIN_TIME_STREAM_MS : MIN_TIME_VOD_OR_CATCHUP_MS;
 }
 
 function startActionFor(type) {
-  if (type === 'service') return TELEMETRY_ACTION.SWITCHED_TO_SERVICE;
+  if (type === 'service') return TELEMETRY_ACTION.SWITCHED_TO_STREAM;
   if (type === 'vod') return TELEMETRY_ACTION.VOD_STARTED;
   if (type === 'catchup') return TELEMETRY_ACTION.CATCHUP_STARTED;
   return null;
 }
 
 function stoppedOrAwayActionFor(type) {
-  if (type === 'service') return TELEMETRY_ACTION.SWITCHED_AWAY_FROM_SERVICE;
+  if (type === 'service') return TELEMETRY_ACTION.SWITCHED_AWAY_FROM_STREAM;
   if (type === 'vod') return TELEMETRY_ACTION.VOD_STOPPED_PREMATURELY;
   if (type === 'catchup') return TELEMETRY_ACTION.CATCHUP_STOPPED_PREMATURELY;
   return null;
@@ -94,19 +121,92 @@ function stoppedOrAwayActionFor(type) {
 function finishedActionFor(type) {
   if (type === 'vod') return TELEMETRY_ACTION.VOD_FINISHED;
   if (type === 'catchup') return TELEMETRY_ACTION.CATCHUP_FINISHED;
-  // Un canal en vivo no "termina": equivale a cambiarse de servicio.
+  // Un canal en vivo no "termina": equivale a cambiarse de stream.
   return stoppedOrAwayActionFor(type);
 }
 
 /**
- * `profileId` se manda SIEMPRE en 0 — confirmado contra el
- * `TelemetryRecords.java` real de Android (`sendTelemetryRecords()`): no
- * pasa este campo en ninguna llamada observada, y el proyecto EPG (que sí
- * validó esto línea a línea contra el .java) también lo fija en 0 de forma
- * fija, no ligado al sistema de sub-perfiles de la propia app (son conceptos
- * distintos). Un intento anterior de mandar acá el perfil activo de
- * `activeProfileStore` fue una hipótesis equivocada — revertida.
+ * Datos del registro de INICIO — shape exacto de
+ * `storeSwitchedToStreamAction` / `storeVodStartedAction` / `storeCatchupStartedAction`,
+ * más un par `serviceId`/`serviceName` agregado a pedido explícito en TODAS
+ * las acciones (canal/VOD/catchup) — no existe en Android, es una adición
+ * nuestra para no tener que fijarse en qué campo mirar según el `actionId`
+ * al parsear/analizar la telemetría después. Siempre es un espejo del
+ * id/nombre específico del tipo (streamId/vodId/catchupId), nunca un dato
+ * nuevo — no reemplaza a esos campos, que siguen mandándose igual.
+ * Notar la asimetría real de Android en catchup: el inicio SÍ lleva
+ * catchupGroupId/catchupGroupName (el fin no).
  */
+function buildStartData(type, item, id) {
+  if (type === 'service') {
+    const streamId = item?.id ?? item?.lcn ?? id;
+    if (streamId == null) return null;
+    const streamName = item?.name ?? '';
+    return { streamId, streamName, serviceId: streamId, serviceName: streamName };
+  }
+  if (type === 'vod') {
+    const vodId = item?.id ?? item?.vodId ?? id;
+    if (vodId == null) return null;
+    const vodName = item?.name ?? item?.title ?? '';
+    // timeIndex acá es la posición de REANUDACIÓN (0 si arranca de cero) —
+    // esta app no tiene hoy un concepto de "seguir viendo desde..." para VOD.
+    return { vodId, vodName, timeIndex: 0, serviceId: vodId, serviceName: vodName };
+  }
+  if (type === 'catchup') {
+    const catchupId = item?.id ?? item?.catchupId ?? id;
+    if (catchupId == null) return null;
+    const catchupName = item?.name ?? item?.title ?? '';
+    return {
+      catchupGroupId: item?.catchupGroupId ?? item?.groupId ?? null,
+      catchupGroupName: item?.catchupGroupName ?? item?.groupName ?? '',
+      catchupId,
+      catchupName,
+      serviceId: catchupId,
+      serviceName: catchupName,
+    };
+  }
+  return null;
+}
+
+/**
+ * Datos del registro de FIN — shape exacto de
+ * `storeSwitchedAwayFromStreamOrServiceAction` / `storeVodStoppedPrematurelyAction`
+ * / `storeVodFinishedAction` / `storeCatchupStoppedPrematurelyAction` / `storeCatchupFinishedAction`,
+ * más el mismo par `serviceId`/`serviceName` agregado en el inicio (ver comentario ahí).
+ * - service: mismos campos que el inicio (streamId/streamName) + `duration`
+ *   real calculada (única acción cuyo registro de fin SÍ suma un `duration`
+ *   en Android, ver `storeSwitchedAwayFromStreamOrServiceAction`).
+ * - vod: vodId/vodName/timeIndex (posición donde cortó/terminó) — SIN duration.
+ * - catchup: catchupId/catchupName/timeIndex — SIN catchupGroupId/catchupGroupName
+ *   ni duration (asimetría real respecto del inicio, confirmada en el .java).
+ */
+function buildStopData(pending, timeIndex) {
+  const { type, startData, startedAtMs } = pending;
+  if (type === 'service') {
+    const watchedSeconds = Math.round((Date.now() - startedAtMs) / 1000);
+    return { ...startData, duration: watchedSeconds }; // startData ya trae serviceId/serviceName
+  }
+  if (type === 'vod') {
+    return {
+      vodId: startData.vodId,
+      vodName: startData.vodName,
+      timeIndex: timeIndex ?? 0,
+      serviceId: startData.vodId,
+      serviceName: startData.vodName,
+    };
+  }
+  if (type === 'catchup') {
+    return {
+      catchupId: startData.catchupId,
+      catchupName: startData.catchupName,
+      timeIndex: timeIndex ?? 0,
+      serviceId: startData.catchupId,
+      serviceName: startData.catchupName,
+    };
+  }
+  return null;
+}
+
 function buildRecord(actionId, data) {
   const now = new Date();
   return {
@@ -119,6 +219,9 @@ function buildRecord(actionId, data) {
     reasonId: REASON_USER_INTERACTION,
     reasonKey: '',
     data: JSON.stringify(data),
+    // profileId SIEMPRE 0 — Android no lo pasa en ninguna llamada observada
+    // (no está ligado al sistema de sub-perfiles de esta app, son conceptos
+    // distintos).
     profileId: 0,
   };
 }
@@ -178,26 +281,31 @@ export class TelemetryService {
   /** Nuevo contenido en reproducción — cierra lo anterior (si aplica) y arranca el umbral anti-zapping. */
   recordSwitch({ type, item, id } = {}) {
     if (!this.isEnabled()) return;
-    // Cambiar de contenido cierra lo que se venía mirando, como un "stop" implícito.
-    this._resolvePending({ finished: false, timeIndex: 0 });
+    // Cambiar de contenido cierra lo que se venía mirando, como un "stop"
+    // implícito (sin timeIndex — no aplica a un cambio directo de canal).
+    this._resolvePending({ finished: false });
 
-    const data = buildData(type, item, id);
-    if (!data) return;
+    const startData = buildStartData(type, item, id);
+    if (!startData) return;
 
-    this._pending = { type, data, startedAtMs: Date.now(), confirmed: false };
+    this._pending = { type, startData, startedAtMs: Date.now(), confirmed: false };
     this._confirmTimer = setTimeout(() => {
       if (!this._pending) return;
       this._pending.confirmed = true;
-      this._enqueue(buildRecord(startActionFor(this._pending.type), this._pending.data));
-    }, MIN_TIME_MS);
+      this._enqueue(buildRecord(startActionFor(this._pending.type), this._pending.startData));
+    }, minTimeFor(type));
   }
 
-  /** El usuario cortó (`finished=false`) o el contenido terminó solo (`finished=true`). */
-  stopCurrent({ finished = false, timeIndex = 0 } = {}) {
+  /**
+   * El usuario cortó (`finished=false`) o el contenido terminó solo (`finished=true`).
+   * `timeIndex` es la posición de reproducción en VOD/catchup (ej. "se quedó
+   * en el minuto 30") — no aplica a canal en vivo.
+   */
+  stopCurrent({ finished = false, timeIndex } = {}) {
     this._resolvePending({ finished, timeIndex });
   }
 
-  _resolvePending({ finished, timeIndex }) {
+  _resolvePending({ finished, timeIndex } = {}) {
     if (this._confirmTimer) {
       clearTimeout(this._confirmTimer);
       this._confirmTimer = null;
@@ -208,7 +316,11 @@ export class TelemetryService {
 
     const stopAction = finished ? finishedActionFor(pending.type) : stoppedOrAwayActionFor(pending.type);
     if (stopAction == null) return;
-    this._enqueue(buildRecord(stopAction, { ...pending.data, timeIndex }));
+
+    const stopData = buildStopData(pending, timeIndex);
+    if (!stopData) return;
+
+    this._enqueue(buildRecord(stopAction, stopData));
   }
 
   _enqueue(record) {
@@ -247,10 +359,10 @@ export class TelemetryService {
     this._flushing = true;
     this._lastFlushAtMs = now;
     const batch = this._queue.slice(0, MAX_RECORDS_PER_CALL);
-    // Log SIEMPRE (no solo DEV): si el backend devuelve "Unhandeld error"
-    // genérico, esto es lo único que permite comparar el payload exacto
-    // enviado contra lo que espera el WSDL — la consola a veces colapsa
-    // objetos/strings largos, por eso el detalle de record[0] va aparte.
+    // Log SIEMPRE (no solo DEV): si el backend devuelve un error genérico,
+    // esto es lo único que permite comparar el payload exacto enviado — la
+    // consola a veces colapsa objetos/strings largos, por eso el detalle de
+    // record[0] va aparte.
     console.log('[telemetryService] enviando', batch.length, 'registro(s)', batch);
     if (batch[0]) {
       console.log(
@@ -258,7 +370,8 @@ export class TelemetryService {
           ' actionKey=' + JSON.stringify(batch[0].actionKey) +
           ' reasonId=' + batch[0].reasonId +
           ' reasonKey=' + JSON.stringify(batch[0].reasonKey) +
-          ' profileId=' + JSON.stringify(batch[0].profileId),
+          ' profileId=' + JSON.stringify(batch[0].profileId) +
+          ' data=' + batch[0].data,
       );
     }
     try {
@@ -287,11 +400,9 @@ export class TelemetryService {
   /**
    * SOLO PARA BISECCIÓN MANUAL DESDE LA CONSOLA. Manda records directo a
    * `panaccessService.pushTelemetryRecords`, sin pasar por la cola — para
-   * probar variantes del payload a mano contra el backend real y acotar qué
-   * campo hace que devuelva el "Unhandeld error" genérico. Ej.:
-   *   telemetryService.debugPush([{ actionId: 5, reasonId: 1 }])   // mínimo
+   * probar variantes del payload a mano contra el backend real. Ej.:
+   *   telemetryService.debugPush([{ actionId: 7, reasonId: 1 }])   // mínimo
    *   telemetryService.debugPush(telemetryService.debugSampleRecord())  // "normal" completo
-   *   telemetryService.debugPush(telemetryService.debugSampleRecord().map(r => ({ ...r, actionKey: null })))
    */
   async debugPush(records) {
     console.log('[telemetryService] debugPush ->', records);
@@ -307,15 +418,14 @@ export class TelemetryService {
 
   /** Registro "normal" de ejemplo, mismo shape que arma buildRecord(). */
   debugSampleRecord() {
-    return [buildRecord(TELEMETRY_ACTION.SWITCHED_TO_SERVICE, { test: true })];
+    return [buildRecord(TELEMETRY_ACTION.SWITCHED_TO_STREAM, { test: true })];
   }
 }
 
 const telemetryService = new TelemetryService();
 
 // Acceso desde la consola del navegador/TV para bisectar el payload contra
-// el backend real (ej. `telemetryService.debugPush(telemetryService.debugSampleRecord())`),
-// igual que el `Telemetry` global del proyecto EPG legacy.
+// el backend real (ej. `telemetryService.debugPush(telemetryService.debugSampleRecord())`).
 if (typeof window !== 'undefined') {
   window.telemetryService = telemetryService;
 }
