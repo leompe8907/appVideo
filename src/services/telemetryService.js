@@ -31,17 +31,9 @@ const STORAGE_KEY = 'app_telemetry_pending_v1';
 const MAX_QUEUE = 500;
 
 /**
- * Umbrales anti-zapping.
- * Valores REALES de Android (`SWITCHED_TO_STREAM_MIN_TIME` /
- * `VOD_STARTED_MIN_TIME` / `CATCHUP_STARTED_MIN_TIME`): canal en vivo 5 min,
- * VOD/catchup 1 min.
- *
- * TEMPORAL PARA TESTEO EN FRÍO — ambos reducidos a 30s por pedido explícito.
- * Se eligió 30s (no 5s) porque con 5s es difícil probar a mano el caso de
- * "cambiaste antes de tiempo, se descarta" sin que el cambio de canal sea
- * casi instantáneo — 30s da margen para probar tanto la confirmación como
- * el descarte por zapping. Volver a los valores reales (arriba) antes de
- * un release.
+ * Umbrales anti-zapping — decisión final del producto (distinta de Android,
+ * que usa 5 min para canal/stream y 1 min para VOD/catchup): acá se
+ * unificaron los tres tipos en 30s.
  */
 export const MIN_TIME_STREAM_MS = 30 * 1000;
 export const MIN_TIME_VOD_OR_CATCHUP_MS = 30 * 1000;
@@ -51,18 +43,10 @@ const MAX_RECORDS_PER_CALL = 100;
 const MIN_MS_BETWEEN_CALLS = 30 * 1000;
 /** Android: TIME_TO_SEND_FIRST_TELEMETRY_REPORT. */
 const FIRST_FLUSH_DELAY_MS = 25 * 1000;
-/**
- * TEMPORAL PARA TESTEO — Android real usa 2h (PERIODIC_TIME_TO_SEND_TELEMETRY_REPORT).
- * Reducido a 1 min por pedido explícito para acelerar pruebas contra el
- * backend real. Volver a subir esto (a 2h) antes de un release real.
- */
-const PERIODIC_FLUSH_MS = 1 * 60 * 1000;
-/**
- * TEMPORAL PARA TESTEO — Android real usa 1 hora
- * (DELAY_TIME_TO_SEND_TELEMETRY_REPORT_AFTER_ERROR). Reducido a 1 min por
- * pedido explícito. Volver a 1 hora antes de un release real.
- */
-export const RETRY_AFTER_ERROR_MS = 1 * 60 * 1000;
+/** Decisión final del producto (Android real usa 2h): flush periódico cada 30 min. */
+const PERIODIC_FLUSH_MS = 30 * 60 * 1000;
+/** Igual que Android: DELAY_TIME_TO_SEND_TELEMETRY_REPORT_AFTER_ERROR (1 hora). */
+export const RETRY_AFTER_ERROR_MS = 60 * 60 * 1000;
 
 /**
  * Valores exactos de `TelemetryRecords.java`. 5/6 (SWITCHED_TO/AWAY_FROM_SERVICE)
