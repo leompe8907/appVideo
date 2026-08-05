@@ -878,7 +878,7 @@ export const BRANDS = [
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
     layout: {
       shell: {
-        pc: "topbar", // "sidebar" | "topbar"
+        pc: "sidebar", // "sidebar" | "topbar"
         tv: "sidebar", // "sidebar" | "topbar"
       },
       // Distribución del topbar en 3 zonas (solo aplica si layout.shell.* === "topbar").
