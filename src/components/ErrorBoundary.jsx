@@ -37,10 +37,41 @@ export class ErrorBoundary extends Component {
       const reloadKey = 'app_reloaded_from_error';
       if (!sessionStorage.getItem(reloadKey)) {
         sessionStorage.setItem(reloadKey, '1');
-        window.location.reload();
+        this.reloadWhenOnline();
         return;
       }
     }
+  }
+
+  /**
+   * Un chunk que falla al cargar suele ser síntoma de un corte de red real
+   * (no solo un deploy con hash viejo) — recargar de inmediato en ese caso
+   * navega hacia la misma red caída y el propio reload de "recuperación"
+   * vuelve con 404/error de red, dejando la app sin ningún JS corriendo para
+   * reintentar (visto en producción: el reload de `windtv.wind.do` volvió
+   * con 404 durante un corte). Por eso, si el navegador ya sabe que está
+   * offline, se espera al evento `online` (con tope de 15s por si nunca
+   * llega) antes de recargar.
+   */
+  reloadWhenOnline() {
+    const doReload = () => window.location.reload();
+    if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+      doReload();
+      return;
+    }
+    let done = false;
+    const onOnline = () => {
+      if (done) return;
+      done = true;
+      doReload();
+    };
+    window.addEventListener('online', onOnline, { once: true });
+    setTimeout(() => {
+      if (done) return;
+      done = true;
+      window.removeEventListener('online', onOnline);
+      doReload();
+    }, 15000);
   }
 
   render() {

@@ -115,14 +115,22 @@
       align-self: center;
     }
 
-    // El ícono genérico (SVG) llena su columna sin problema, pero el avatar
-    // de perfil (foto real, object-fit: cover) se deformaba en óvalo: el
-    // `flex-basis` de arriba solo pisa el ANCHO (eje principal en fila), no
-    // el alto, que seguía en 3vw — acá se vuelve a igualar el ancho al alto
-    // para que el avatar se mantenga cuadrado/circular.
+    // El ícono genérico (SVG) llena su columna (var(--sidebar-rail-width))
+    // sin problema porque su propio contenido (viewBox) se centra solo
+    // dentro de esa caja más ancha (preserveAspectRatio). El avatar real
+    // (<img>, object-fit: cover) no puede usar el mismo `flex-basis` ancho
+    // porque se deforma en óvalo, así que queda con su propio tamaño
+    // cuadrado (3vw) — pero eso lo dejaba ocupando MENOS espacio horizontal
+    // que el resto de los íconos, corriendo el nombre del perfil a una
+    // posición distinta de la de "Buscador"/"Inicio"/etc. Se centra el
+    // cuadrado de 3vw con márgenes iguales para que en conjunto (margen +
+    // avatar + margen) ocupe el mismo ancho que la columna del ícono
+    // genérico, arrancando el label exactamente en el mismo lugar.
     .home-sidebar-account-avatar {
       flex: 0 0 auto;
       width: 3vw;
+      height: 3vw;
+      margin: 0 calc((var(--sidebar-rail-width) - 3vw) / 2);
     }
 
     .home-sidebar-label {
@@ -169,9 +177,13 @@
     }
 
     // Mismo motivo que en el bloque base: reajustar el ancho del avatar al
-    // nuevo alto (2vw) para que no quede ovalado en TVs de mayor resolución.
+    // nuevo alto (2vw) para que no quede ovalado en TVs de mayor resolución,
+    // recentrando con el mismo criterio (margen igual a cada lado para
+    // ocupar el ancho total de var(--sidebar-rail-width)).
     &.home-sidebar--overlay .home-sidebar-settings-btn .home-sidebar-account-avatar {
       width: 2vw;
+      height: 2vw;
+      margin: 0 calc((var(--sidebar-rail-width) - 2vw) / 2);
     }
 
     .home-sidebar-toggle .home-sidebar-toggle-icon {

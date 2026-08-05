@@ -133,7 +133,11 @@ function toPlaybackError(data) {
     data.details === 'bufferAddCodecError'
       ? 'Audio/vídeo no compatible con el navegador (H.264 + AAC requerido en web)'
       : null;
-  return new Error(codecMsg || data.details || data.type || 'Error HLS');
+  const authMsg =
+    data.type === Hls.ErrorTypes.NETWORK_ERROR && data.response?.code === 401
+      ? 'Sesión de streaming inválida (401) — la licencia expiró o pasó a otro dispositivo'
+      : null;
+  return new Error(authMsg || codecMsg || data.details || data.type || 'Error HLS');
 }
 
 /**
@@ -390,7 +394,17 @@ export class HlsPlaybackController {
       }
     }
 
-    if (data.type === Hls.ErrorTypes.NETWORK_ERROR && this._scheduleNetworkRetry(hls, generation)) {
+    // 401 en un manifiesto/nivel/fragmento/key de este middleware significa
+    // que la sesión/licencia dejó de ser válida (expiró, o se la llevó otro
+    // dispositivo) — no un corte de red transitorio. Reintentar la MISMA URL
+    // con la MISMA sesión revocada nunca va a funcionar: solo suma varios
+    // segundos de pantalla congelada antes de llegar al recovery real
+    // (`tryRecoverAfterError` en PlayerContext, que reactiva la licencia y
+    // recarga). Por eso este caso se excluye del backoff de red y cae directo
+    // al `onError` de más abajo.
+    const isAuthError = data.type === Hls.ErrorTypes.NETWORK_ERROR && data.response?.code === 401;
+
+    if (data.type === Hls.ErrorTypes.NETWORK_ERROR && !isAuthError && this._scheduleNetworkRetry(hls, generation)) {
       return;
     }
 

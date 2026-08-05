@@ -176,6 +176,38 @@ describe('HlsPlaybackController - backoff de red', () => {
 
     expect(startLoadSpy).not.toHaveBeenCalled();
   });
+
+  /**
+   * Regresión: un 401 (sesión/licencia revocada por el middleware, no un
+   * corte de red transitorio) escalaba a onError igual que cualquier otro
+   * NETWORK_ERROR, pero solo después de agotar los 3 reintentos locales
+   * (1s+2s+4s) — todos condenados a fallar, porque reintentan la MISMA
+   * petición con la MISMA sesión inválida. Ahora un 401 salta directo a
+   * onError (que dispara `tryRecoverAfterError` en PlayerContext) sin pasar
+   * por ese backoff inútil.
+   */
+  it('ante un 401 (sesión/licencia revocada) escala a onError de inmediato, sin backoff', async () => {
+    const videoEl = makeVideoEl();
+    const onError = vi.fn();
+    const controller = new HlsPlaybackController({ onError });
+
+    await controller.load(videoEl, 'https://example.invalid/master.m3u8');
+    const hls = controller.instance;
+    const startLoadSpy = vi.spyOn(hls, 'startLoad').mockImplementation(() => {});
+
+    hls.trigger(Hls.Events.ERROR, {
+      type: Hls.ErrorTypes.NETWORK_ERROR,
+      details: 'levelLoadError',
+      fatal: true,
+      response: { code: 401 },
+    });
+
+    expect(startLoadSpy).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0][0].message).toMatch(/401/);
+
+    controller.destroy();
+  });
 });
 
 /**
