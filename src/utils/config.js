@@ -390,7 +390,19 @@ export function applyTheme(brandConfig) {
   setLoginVar('--login-social-bg', loginSocial.bg);
   setLoginVar('--login-social-text', loginSocial.text);
   setLoginVar('--login-social-border', loginSocial.border);
-  
+
+  // Modal "Recuperar contraseña" nativo (PC/web, sin QR): `login.theme.forgotPasswordModal`
+  const forgotModalTheme = loginTheme.forgotPasswordModal || {};
+  setLoginVar('--login-forgot-modal-bg', forgotModalTheme.background);
+  setLoginVar('--login-forgot-modal-border', forgotModalTheme.borderColor);
+  setLoginVar('--login-forgot-title-color', forgotModalTheme.titleColor);
+  setLoginVar('--login-forgot-text-color', forgotModalTheme.textColor);
+  setLoginVar('--login-forgot-icon-bg', forgotModalTheme.iconBg);
+  setLoginVar('--login-forgot-icon-color', forgotModalTheme.iconColor);
+  setLoginVar('--login-forgot-success-icon-bg', forgotModalTheme.successIconBg);
+  setLoginVar('--login-forgot-success-icon-color', forgotModalTheme.successIconColor);
+  setLoginVar('--login-forgot-input-icon-color', forgotModalTheme.inputIconColor);
+
   // Aplicar clase de tema
   root.setAttribute('data-theme', ui.theme);
 

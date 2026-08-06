@@ -956,12 +956,22 @@
     // éxito tras enviar el correo. Escopeado a `--forgot` para no afectar el
     // modal de registro por QR ni el de UDID, que reusan `.register-modal`.
     &--forgot {
+      // Fondo/borde/texto propios del modal (por defecto, iguales a los del
+      // `.register-modal` genérico de arriba) — así una marca puede recolorear
+      // SOLO este modal (`login.theme.forgotPasswordModal`) sin afectar al de
+      // registro por QR ni al de UDID, que siguen usando los valores fijos.
+      background: var(--login-forgot-modal-bg, #141414);
+      border-color: var(--login-forgot-modal-border, rgba(255, 255, 255, 0.16));
+      color: var(--login-forgot-text-color, rgba(255, 255, 255, 0.82));
+
       h3 {
         text-align: center;
+        color: var(--login-forgot-title-color, #fff);
       }
 
       p {
         text-align: center;
+        color: var(--login-forgot-text-color, rgba(255, 255, 255, 0.82));
       }
 
       .register-modal-icon {
@@ -972,8 +982,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(var(--primary-color-rgb, 102, 126, 234), 0.16);
-        color: var(--primary-color, #667eea);
+        background: var(--login-forgot-icon-bg, rgba(var(--primary-color-rgb, 102, 126, 234), 0.16));
+        color: var(--login-forgot-icon-color, var(--primary-color, #667eea));
 
         svg {
           width: 1.4rem;
@@ -981,8 +991,8 @@
         }
 
         &--success {
-          background: rgba(99, 153, 34, 0.18);
-          color: #97c459;
+          background: var(--login-forgot-success-icon-bg, rgba(99, 153, 34, 0.18));
+          color: var(--login-forgot-success-icon-color, #97c459);
         }
       }
 
@@ -996,7 +1006,7 @@
           transform: translateY(-50%);
           width: 1.05rem;
           height: 1.05rem;
-          color: rgba(255, 255, 255, 0.4);
+          color: var(--login-forgot-input-icon-color, rgba(255, 255, 255, 0.4));
           pointer-events: none;
         }
 

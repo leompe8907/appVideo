@@ -99,6 +99,16 @@
  *     @param {string} login.theme.modalCloseText - Texto del botón cerrar modal.
  *     @param {string|null} login.theme.linkColor - Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor.
  *     @param {string} login.theme.dividerColor - Color línea del separador "o" antes de login social.
+ *     @param {Object} login.theme.forgotPasswordModal - Modal "Recuperar contraseña" nativo (PC/web, con formulario de correo; no confundir con el QR de TV).
+ *       @param {string} login.theme.forgotPasswordModal.background - Fondo de la tarjeta del modal.
+ *       @param {string} login.theme.forgotPasswordModal.borderColor - Borde de la tarjeta del modal.
+ *       @param {string} login.theme.forgotPasswordModal.titleColor - Color del título.
+ *       @param {string} login.theme.forgotPasswordModal.textColor - Color del texto descriptivo.
+ *       @param {string} login.theme.forgotPasswordModal.iconBg - Fondo del círculo de icono (estado normal, candado).
+ *       @param {string} login.theme.forgotPasswordModal.iconColor - Color del icono (estado normal).
+ *       @param {string} login.theme.forgotPasswordModal.successIconBg - Fondo del círculo de icono (estado de éxito, check).
+ *       @param {string} login.theme.forgotPasswordModal.successIconColor - Color del icono (estado de éxito).
+ *       @param {string} login.theme.forgotPasswordModal.inputIconColor - Color del icono de sobre dentro del campo de correo.
  *   @param {Object} login.backgroundImage - Imagen de fondo de pantalla completa.
  *     @param {boolean} login.backgroundImage.enabled - true: usa assetPath; false: assets.background o background.png.
  *     @param {string} login.backgroundImage.assetPath - Archivo en la carpeta de assets de la marca.
@@ -266,6 +276,17 @@ export const BRANDS = [
         modalCloseText: "#ffffff", // Texto botón cerrar modal
         linkColor: null, // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
         dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
+        forgotPasswordModal: {
+          background: "#141414",
+          borderColor: "rgba(255, 255, 255, 0.16)",
+          titleColor: "#ffffff",
+          textColor: "rgba(255, 255, 255, 0.82)",
+          iconBg: "rgba(var(--primary-color-rgb, 102, 126, 234), 0.16)",
+          iconColor: "var(--primary-color, #667eea)",
+          successIconBg: "rgba(99, 153, 34, 0.18)",
+          successIconColor: "#97c459",
+          inputIconColor: "rgba(255, 255, 255, 0.4)",
+        },
       },
       // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
@@ -652,6 +673,17 @@ export const BRANDS = [
         modalCloseText: "#ffffff", // Texto botón cerrar modal
         linkColor: null, // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
         dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
+        forgotPasswordModal: {
+          background: "rgba(22, 32, 45, 0.96))",
+          borderColor: "rgba(12, 1, 104, 0.97)",
+          titleColor: "#ffffff",
+          textColor: "rgba(255, 255, 255, 0.82)",
+          iconBg: "rgba(var(--primary-color-rgb, 102, 126, 234), 0.16)",
+          iconColor: "var(--primary-color, #667eea)",
+          successIconBg: "rgba(99, 153, 34, 0.18)",
+          successIconColor: "#97c459",
+          inputIconColor: "rgba(255, 255, 255, 0.4)",
+        },
       },
       // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
@@ -1034,6 +1066,17 @@ export const BRANDS = [
         modalCloseText: "#ffffff", // Texto botón cerrar modal
         linkColor: null, // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
         dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
+        forgotPasswordModal: {
+          background: "#141414",
+          borderColor: "rgba(255, 255, 255, 0.16)",
+          titleColor: "#ffffff",
+          textColor: "rgba(255, 255, 255, 0.82)",
+          iconBg: "rgba(var(--primary-color-rgb, 102, 126, 234), 0.16)",
+          iconColor: "var(--primary-color, #667eea)",
+          successIconBg: "rgba(99, 153, 34, 0.18)",
+          successIconColor: "#97c459",
+          inputIconColor: "rgba(255, 255, 255, 0.4)",
+        },
       },
       // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
@@ -1385,6 +1428,17 @@ export const BRANDS = [
         modalCloseText: "#ffffff", // Texto botón cerrar modal
         linkColor: null, // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
         dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
+        forgotPasswordModal: {
+          background: "#141414",
+          borderColor: "rgba(255, 255, 255, 0.16)",
+          titleColor: "#ffffff",
+          textColor: "rgba(255, 255, 255, 0.82)",
+          iconBg: "rgba(var(--primary-color-rgb, 102, 126, 234), 0.16)",
+          iconColor: "var(--primary-color, #667eea)",
+          successIconBg: "rgba(99, 153, 34, 0.18)",
+          successIconColor: "#97c459",
+          inputIconColor: "rgba(255, 255, 255, 0.4)",
+        },
       },
       // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
@@ -1736,6 +1790,17 @@ export const BRANDS = [
         modalCloseText: "#ffffff", // Texto botón cerrar modal
         linkColor: "#99bbd3", // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
         dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
+        forgotPasswordModal: {
+          background: "rgba(22, 32, 45, 0.96)",
+          borderColor: "rgb(38 34 67 / 97%)",
+          titleColor: "#ffffff",
+          textColor: "rgba(255, 255, 255, 0.82)",
+          iconBg: "rgba(var(--primary-color-rgb, 102, 126, 234), 0.16)",
+          iconColor: "var(--primary-color, #667eea)",
+          successIconBg: "rgba(99, 153, 34, 0.18)",
+          successIconColor: "#97c459",
+          inputIconColor: "rgba(255, 255, 255, 0.4)",
+        },
       },
       // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
@@ -2118,6 +2183,17 @@ export const BRANDS = [
         modalCloseText: "#ffffff", // Texto botón cerrar modal
         linkColor: null, // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
         dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
+        forgotPasswordModal: {
+          background: "#141414",
+          borderColor: "rgba(255, 255, 255, 0.16)",
+          titleColor: "#ffffff",
+          textColor: "rgba(255, 255, 255, 0.82)",
+          iconBg: "rgba(var(--primary-color-rgb, 102, 126, 234), 0.16)",
+          iconColor: "var(--primary-color, #667eea)",
+          successIconBg: "rgba(99, 153, 34, 0.18)",
+          successIconColor: "#97c459",
+          inputIconColor: "rgba(255, 255, 255, 0.4)",
+        },
       },
       // --- Imagen de fondo de pantalla completa ---
       backgroundImage: {
