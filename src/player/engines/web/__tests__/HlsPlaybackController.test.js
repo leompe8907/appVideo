@@ -208,6 +208,100 @@ describe('HlsPlaybackController - backoff de red', () => {
 
     controller.destroy();
   });
+
+  /**
+   * Regresión: "segmentos .ts bajando en 200 OK durante minutos, sin ningún
+   * error en consola, pantalla de carga sin salir nunca" — visto en
+   * producción (Samsung Tizen). Causa: en un canal en vivo, cada fragmento
+   * nuevo es "virgen" para el contador de reintentos interno de hls.js, así
+   * que un fallo de demux/append que se repite fragmento tras fragmento
+   * nunca cruza EL PROPIO umbral de hls.js para marcarse fatal — queda
+   * como no-fatal para siempre, y los no-fatales no generan ningún reintento
+   * ni recuperación de nuestro lado. Este test verifica el watchdog: tras
+   * varios `fragParsingError`/`bufferAppendError` no-fatales seguidos sin un
+   * `FRAG_BUFFERED` de por medio, el controller lo trata como fatal.
+   */
+  it('escala a fatal tras varios fragParsingError no-fatales seguidos sin FRAG_BUFFERED (atasco silencioso)', async () => {
+    const videoEl = makeVideoEl();
+    const onError = vi.fn();
+    const controller = new HlsPlaybackController({ onError });
+
+    await controller.load(videoEl, 'https://example.invalid/master.m3u8');
+    const hls = controller.instance;
+    vi.spyOn(hls, 'recoverMediaError').mockImplementation(() => {});
+
+    // Se invoca directamente el listener propio del controller (el último
+    // registrado para este evento), igual que el test de FRAG_BUFFERED de
+    // arriba: `hls.trigger` propaga el evento a los controllers internos de
+    // hls.js también (ContentSteeringController, etc.), que esperan un
+    // payload de error "real" (con `errorAction`, contexto de red, etc.) y
+    // tiran su propia excepción interna con un objeto sintético mínimo como
+    // este — ruido ajeno a lo que este test verifica.
+    const errorListeners = hls.listeners(Hls.Events.ERROR);
+    const emitError = errorListeners[errorListeners.length - 1];
+
+    const nonFatalMediaError = () => ({
+      type: Hls.ErrorTypes.MEDIA_ERROR,
+      details: 'fragParsingError',
+      fatal: false,
+    });
+
+    for (let i = 0; i < 5; i += 1) {
+      emitError(Hls.Events.ERROR, nonFatalMediaError());
+    }
+    expect(onError).not.toHaveBeenCalled();
+
+    // 6º fallo seguido sin FRAG_BUFFERED de por medio: se trata como fatal.
+    // La primera vez, `_handleFatalError` intenta `recoverMediaError()` antes
+    // de escalar a `onError` (mismo camino que un fragParsingError fatal
+    // real) — no debería tirar la toalla de inmediato.
+    emitError(Hls.Events.ERROR, nonFatalMediaError());
+    expect(hls.recoverMediaError).toHaveBeenCalledTimes(1);
+    expect(onError).not.toHaveBeenCalled();
+
+    // Si sigue fallando tras el intento de recuperación, ahí sí escala.
+    for (let i = 0; i < 6; i += 1) {
+      emitError(Hls.Events.ERROR, nonFatalMediaError());
+    }
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+  });
+
+  it('un FRAG_BUFFERED exitoso resetea el contador de fallos no-fatales de media', async () => {
+    const videoEl = makeVideoEl();
+    const onError = vi.fn();
+    const controller = new HlsPlaybackController({ onError });
+
+    await controller.load(videoEl, 'https://example.invalid/master.m3u8');
+    const hls = controller.instance;
+    vi.spyOn(hls, 'recoverMediaError').mockImplementation(() => {});
+
+    const errorListeners = hls.listeners(Hls.Events.ERROR);
+    const emitError = errorListeners[errorListeners.length - 1];
+
+    const nonFatalMediaError = () => ({
+      type: Hls.ErrorTypes.MEDIA_ERROR,
+      details: 'fragParsingError',
+      fatal: false,
+    });
+
+    for (let i = 0; i < 5; i += 1) {
+      emitError(Hls.Events.ERROR, nonFatalMediaError());
+    }
+
+    const fragBufferedListeners = hls.listeners(Hls.Events.FRAG_BUFFERED);
+    fragBufferedListeners[fragBufferedListeners.length - 1]();
+
+    // Presupuesto reseteado: 5 fallos más NO deberían alcanzar el umbral (6).
+    for (let i = 0; i < 5; i += 1) {
+      emitError(Hls.Events.ERROR, nonFatalMediaError());
+    }
+    expect(onError).not.toHaveBeenCalled();
+    expect(hls.recoverMediaError).not.toHaveBeenCalled();
+
+    controller.destroy();
+  });
 });
 
 /**

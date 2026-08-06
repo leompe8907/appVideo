@@ -109,6 +109,7 @@
     "forgotPasswordSubmitting": "Enviando...",
     "forgotPasswordNativeSuccess": "Se o e-mail estiver registrado, você receberá um link para redefinir sua senha. Verifique também a pasta de spam.",
     "forgotPasswordNativeError": "Não foi possível processar a solicitação. Tente novamente.",
+    "forgotPasswordBackToLogin": "Voltar para o login",
     "noAccountYet": "Ainda não tem conta?",
     "subscribeHere": "Assine aqui",
     "orDivider": "ou",

@@ -821,6 +821,47 @@
       font-size: 0.9rem;
     }
 
+    // `.login-form`/`.form-group`/`.login-button` viven anidados bajo `.login-card`
+    // en este mismo archivo, así que no alcanzan a los elementos de este modal
+    // (hermano de `.login-card`, no descendiente). Se redeclaran acá, escopeados
+    // a `.register-modal`, en vez de tocar las reglas originales bajo `.login-card`.
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+      gap: 0.7rem;
+    }
+
+    .form-group {
+      margin-bottom: 0;
+    }
+
+    .login-button {
+      @include button-base;
+      width: 100%;
+      background: var(
+        --login-submit-bg,
+        linear-gradient(
+          135deg,
+          var(--primary-color, #667eea) 0%,
+          var(--secondary-color, #764ba2) 100%
+        )
+      );
+      border: none;
+      color: var(--login-submit-text, #fff);
+      font-weight: 600;
+      padding: 0.95rem 1rem;
+      border-radius: 999px;
+
+      &:focus {
+        outline: none;
+      }
+
+      &.focused {
+        box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55);
+      }
+    }
+
     .register-qr-image {
       width: 256px;
       max-width: 100%;
@@ -841,6 +882,48 @@
       margin-bottom: 0.9rem;
       padding: 0.8rem;
       color: rgba(255, 255, 255, 0.75);
+    }
+
+    // Estado de error real (distinto del placeholder de carga del QR arriba):
+    // mismo tratamiento que `.error-message` del login principal, para que se
+    // lea como fallo y no como una caja de información pasiva.
+    .form-error {
+      text-align: left;
+      padding: $spacing-md;
+      background: rgba(220, 53, 69, 0.2);
+      border: 1px solid rgba(220, 53, 69, 0.4);
+      border-radius: $border-radius-md;
+      color: #ff6b7a;
+      margin: 0;
+      font-size: $font-size-sm;
+      backdrop-filter: blur(10px);
+    }
+
+    // Versión "link de texto" del cierre, para el botón secundario dentro del
+    // formulario (no confundir con `.register-close-button`, que sigue siendo
+    // el botón relleno usado por el modal QR y el de UDID).
+    .register-text-link {
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin: 0 auto;
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--login-link-color, var(--primary-color, #99bbd3));
+      cursor: pointer;
+      text-decoration: none;
+      width: auto;
+      min-height: auto;
+
+      &:hover:not(:disabled),
+      &.focused,
+      &:focus-visible {
+        text-decoration: underline;
+        background: transparent;
+        box-shadow: none;
+        filter: brightness(1.08);
+      }
     }
 
     .register-close-button {
@@ -864,6 +947,96 @@
 
       &.focused {
         box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55);
+      }
+    }
+
+    // Modal "Recuperar contraseña" nativo (PC/web, sin QR): icono redondo
+    // arriba del título, input con icono de correo integrado, y el mismo
+    // tratamiento de icono (redondo, con color de estado) para la vista de
+    // éxito tras enviar el correo. Escopeado a `--forgot` para no afectar el
+    // modal de registro por QR ni el de UDID, que reusan `.register-modal`.
+    &--forgot {
+      h3 {
+        text-align: center;
+      }
+
+      p {
+        text-align: center;
+      }
+
+      .register-modal-icon {
+        width: 3rem;
+        height: 3rem;
+        margin: 0 auto 0.9rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(var(--primary-color-rgb, 102, 126, 234), 0.16);
+        color: var(--primary-color, #667eea);
+
+        svg {
+          width: 1.4rem;
+          height: 1.4rem;
+        }
+
+        &--success {
+          background: rgba(99, 153, 34, 0.18);
+          color: #97c459;
+        }
+      }
+
+      .form-group--icon {
+        position: relative;
+
+        .form-group-icon {
+          position: absolute;
+          left: 0.9rem;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 1.05rem;
+          height: 1.05rem;
+          color: rgba(255, 255, 255, 0.4);
+          pointer-events: none;
+        }
+
+        input {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 0.85rem 1rem 0.85rem 2.6rem;
+          border-radius: 0.75rem;
+          border: 1px solid var(--login-input-border, rgba(255, 255, 255, 0.18));
+          background: var(--login-input-bg, rgba(255, 255, 255, 0.06));
+          color: var(--login-input-text, #fff);
+          font-size: 0.95rem;
+          transition: all $transition-normal;
+
+          &::placeholder {
+            color: var(--login-input-placeholder, rgba(255, 255, 255, 0.45));
+          }
+
+          &:hover:not(:disabled) {
+            border-color: var(--login-input-focused-border, var(--primary-color, #667eea));
+          }
+
+          &:focus {
+            outline: none;
+          }
+
+          &.focused {
+            background: var(--login-input-focused-bg, rgba(255, 255, 255, 0.1));
+            border-color: var(--login-input-focused-border, var(--primary-color, #667eea));
+            box-shadow: var(
+              --login-input-focused-shadow,
+              0 0 0 3px rgba(var(--primary-color-rgb, 102, 126, 234), 0.3)
+            );
+          }
+
+          &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
+        }
       }
     }
 

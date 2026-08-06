@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { changePassword } from '../../services/accountSecurityService';
 import { clearSessionBeforeNewLogin } from '../../services/loginFlow';
+import { getCredentials } from '../../utils/userSession';
 // Los estilos de este panel viven en styles/pages/_mi-cuenta.scss (importado
 // desde MiCuentaPage.jsx), no acá -- ver el comentario en ese archivo sobre
 // por qué (chunk de CSS separado que se rompía en el build de producción).
@@ -22,6 +23,7 @@ const MIN_LENGTH = 8;
 export function ChangePasswordPanel({ brandConfig, brand }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +49,22 @@ export function ChangePasswordPanel({ brandConfig, brand }) {
     e.preventDefault();
     if (isSubmitting) return;
     setError('');
+
+    // Verificación local contra la contraseña guardada en este dispositivo
+    // (ver userSession.js -- se cachea cifrada tras el login para reanudar
+    // sesión sin pedirla de nuevo). El backend de cambio de contraseña no
+    // valida la actual, así que este chequeo es la única barrera real: si
+    // no coincide, no se llega a llamar a changePassword().
+    const trimmedCurrent = currentPass.trim();
+    if (!trimmedCurrent) {
+      setError(t('account.changePasswordCurrentRequired', { defaultValue: 'Ingresa tu contraseña actual.' }));
+      return;
+    }
+    const stored = getCredentials(brand);
+    if (!stored?.password || trimmedCurrent !== stored.password) {
+      setError(t('account.changePasswordCurrentWrong', { defaultValue: 'La contraseña actual no es correcta.' }));
+      return;
+    }
 
     if (newPass.length < MIN_LENGTH) {
       setError(
@@ -101,6 +119,20 @@ export function ChangePasswordPanel({ brandConfig, brand }) {
           defaultValue: 'Al cambiar tu contraseña se cerrará el acceso de todos tus dispositivos vinculados, incluido este.',
         })}
       </p>
+
+      <label className="account-security-label" htmlFor="change-password-current">
+        {t('account.changePasswordCurrentLabel', { defaultValue: 'Contraseña actual' })}
+      </label>
+      <input
+        id="change-password-current"
+        type="password"
+        className="account-security-input"
+        value={currentPass}
+        onChange={(e) => setCurrentPass(e.target.value)}
+        autoComplete="current-password"
+        disabled={isSubmitting}
+        required
+      />
 
       <label className="account-security-label" htmlFor="change-password-new">
         {t('account.changePasswordNewLabel', { defaultValue: 'Nueva contraseña' })}

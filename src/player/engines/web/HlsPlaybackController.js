@@ -125,6 +125,20 @@ export class PanaccessKeyUnwrapLoader extends XhrLoader {
   }
 }
 
+/**
+ * Detalles de hls.js que indican que un segmento SÍ se descargó (200 OK, se
+ * ve bajar en Network) pero no llegó a convertirse en video reproducible
+ * (demux/append). hls.js los reporta como no-fatal y simplemente pasa al
+ * próximo fragmento — en un canal en vivo, cada fragmento nuevo es "virgen"
+ * para el contador de reintentos interno de hls.js (nunca es el MISMO
+ * fragmento fallando dos veces), así que su propio umbral de "esto ya es
+ * fatal" nunca se dispara. Resultado observado en producción: segmentos
+ * bajando en bucle indefinido, consola sin ningún error (los no-fatales solo
+ * se logean en DEV), pantalla de carga sin salir nunca.
+ */
+const STUCK_MEDIA_ERROR_DETAILS = new Set(['fragParsingError', 'bufferAppendError']);
+const STUCK_MEDIA_ERROR_LIMIT = 6;
+
 function toPlaybackError(data) {
   if (!data) return new Error('Error HLS');
   const codecMsg =
@@ -158,6 +172,7 @@ export class HlsPlaybackController {
     this._currentSrc = '';
     this._networkRetryCount = 0;
     this._networkRetryTimer = null;
+    this._nonFatalMediaErrorCount = 0;
   }
 
   get instance() {
@@ -177,6 +192,7 @@ export class HlsPlaybackController {
     this._recoveredMedia = false;
     this._currentSrc = '';
     this._networkRetryCount = 0;
+    this._nonFatalMediaErrorCount = 0;
     if (this._networkRetryTimer != null) {
       clearTimeout(this._networkRetryTimer);
       this._networkRetryTimer = null;
@@ -283,6 +299,7 @@ export class HlsPlaybackController {
       // minutos después) tenga sus propios intentos disponibles, en vez de
       // ir agotando un contador que nunca se limpia durante toda la sesión.
       this._networkRetryCount = 0;
+      this._nonFatalMediaErrorCount = 0;
       this._emitLoaded();
       if (autoPlay) this._ensurePlay(videoEl);
     });
@@ -307,7 +324,28 @@ export class HlsPlaybackController {
           data,
         );
       }
-      if (!data?.fatal) return;
+      if (!data?.fatal) {
+        if (data?.type === Hls.ErrorTypes.MEDIA_ERROR && STUCK_MEDIA_ERROR_DETAILS.has(data.details)) {
+          this._nonFatalMediaErrorCount += 1;
+          if (this._nonFatalMediaErrorCount >= STUCK_MEDIA_ERROR_LIMIT) {
+            this._nonFatalMediaErrorCount = 0;
+            // Se logea SIEMPRE (no solo DEV): es la única señal visible de
+            // este atasco en producción, donde hls.js nunca marca el error
+            // como fatal por sí solo. Se trata como fatal a partir de acá,
+            // reusando la misma cadena de recuperación (recoverMediaError()
+            // una vez, y si no alcanza, escalar a onError -> reactivación de
+            // licencia/sesión en PlayerContext).
+            console.error(
+              '[HlsPlayback] atascado: fragmentos bajan (200 OK) pero no bufferizan —',
+              STUCK_MEDIA_ERROR_LIMIT,
+              'fallos de demux/append seguidos sin ningún FRAG_BUFFERED. Tratando como fatal.',
+              data,
+            );
+            this._handleFatalError(hls, src, { ...data, fatal: true }, generation);
+          }
+        }
+        return;
+      }
       this._handleFatalError(hls, src, data, generation);
     });
 

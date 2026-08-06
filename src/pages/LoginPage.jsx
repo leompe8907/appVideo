@@ -923,11 +923,15 @@ export function LoginPage() {
 
       {isForgotNativeModalOpen && (
         <div className="register-modal-backdrop">
-          <div className="register-modal">
-            <h3>{t('login.forgotPasswordTitle')}</h3>
-
+          <div className="register-modal register-modal--forgot">
             {forgotNativeSuccess ? (
               <>
+                <div className="register-modal-icon register-modal-icon--success" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 12.5l4.5 4.5L20 6" />
+                  </svg>
+                </div>
+                <h3>{t('login.forgotPasswordTitle')}</h3>
                 <p>
                   {t('login.forgotPasswordNativeSuccess', {
                     defaultValue:
@@ -939,46 +943,63 @@ export function LoginPage() {
                   className="register-close-button"
                   onClick={handleCloseForgotNativeModal}
                 >
-                  {t('common.close')}
+                  {t('login.forgotPasswordBackToLogin', { defaultValue: 'Volver a iniciar sesión' })}
                 </FocusableButton>
               </>
             ) : (
-              <form onSubmit={handleForgotNativeSubmit} className="login-form">
-                <p>
-                  {t('login.forgotPasswordNativeHint', {
-                    defaultValue: 'Ingresa el correo de tu cuenta y te enviaremos instrucciones para recuperar tu contraseña.',
-                  })}
-                </p>
-                <div className="form-group form-group--plain">
-                  <FocusableInput
-                    type="email"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder={t('login.forgotPasswordEmailPlaceholder', { defaultValue: 'Correo electrónico' })}
-                    disabled={forgotSubmitting}
-                    autoComplete="email"
-                    required
-                    aria-label={t('login.forgotPasswordEmailPlaceholder', { defaultValue: 'Correo electrónico' })}
-                  />
+              <>
+                <div className="register-modal-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="5" y="11" width="14" height="9" rx="2" />
+                    <path d="M8 11V7a4 4 0 1 1 8 0v4" />
+                  </svg>
                 </div>
+                <h3>{t('login.forgotPasswordTitle')}</h3>
+                <form onSubmit={handleForgotNativeSubmit} className="login-form">
+                  <p>
+                    {t('login.forgotPasswordNativeHint', {
+                      defaultValue: 'Ingresa el correo de tu cuenta y te enviaremos instrucciones para recuperar tu contraseña.',
+                    })}
+                  </p>
+                  <div className="form-group form-group--plain form-group--icon">
+                    <svg className="form-group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h15A1.5 1.5 0 0 1 21 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-11Z" />
+                      <path d="M4 6.5l8 6 8-6" />
+                    </svg>
+                    <FocusableInput
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder={t('login.forgotPasswordEmailPlaceholder', { defaultValue: 'Correo electrónico' })}
+                      disabled={forgotSubmitting}
+                      autoComplete="email"
+                      required
+                      aria-label={t('login.forgotPasswordEmailPlaceholder', { defaultValue: 'Correo electrónico' })}
+                    />
+                  </div>
 
-                {forgotNativeError && <p className="register-qr-placeholder">{forgotNativeError}</p>}
+                  {forgotNativeError && (
+                    <p className="form-error" role="alert">
+                      {forgotNativeError}
+                    </p>
+                  )}
 
-                <FocusableButton type="submit" className="login-button" disabled={forgotSubmitting}>
-                  {forgotSubmitting
-                    ? t('login.forgotPasswordSubmitting', { defaultValue: 'Enviando...' })
-                    : t('login.forgotPasswordSubmit', { defaultValue: 'Enviar' })}
-                </FocusableButton>
+                  <FocusableButton type="submit" className="login-button" disabled={forgotSubmitting}>
+                    {forgotSubmitting
+                      ? t('login.forgotPasswordSubmitting', { defaultValue: 'Enviando...' })
+                      : t('login.forgotPasswordSubmit', { defaultValue: 'Enviar' })}
+                  </FocusableButton>
 
-                <FocusableButton
-                  type="button"
-                  className="register-close-button"
-                  onClick={handleCloseForgotNativeModal}
-                  disabled={forgotSubmitting}
-                >
-                  {t('common.close')}
-                </FocusableButton>
-              </form>
+                  <FocusableButton
+                    type="button"
+                    className="register-text-link"
+                    onClick={handleCloseForgotNativeModal}
+                    disabled={forgotSubmitting}
+                  >
+                    {t('common.close')}
+                  </FocusableButton>
+                </form>
+              </>
             )}
           </div>
         </div>
