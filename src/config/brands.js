@@ -554,6 +554,7 @@ export const BRANDS = [
           right: { content: "account" },
         },
       },
+      navOrder: ["search", "inicio", "channels", "vod", "epg", "catchup"],
     },
 
     header: {
@@ -910,7 +911,7 @@ export const BRANDS = [
     // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
     layout: {
       shell: {
-        pc: "sidebar", // "sidebar" | "topbar"
+        pc: "topbar", // "sidebar" | "topbar"
         tv: "sidebar", // "sidebar" | "topbar"
       },
       // Distribución del topbar en 3 zonas (solo aplica si layout.shell.* === "topbar").
@@ -922,6 +923,7 @@ export const BRANDS = [
           right: { content: "account" },
         },
       },
+      navOrder: ["inicio", "channels", "epg", "search", "vod", "catchup"],
     },
 
     header: {
@@ -1314,6 +1316,7 @@ export const BRANDS = [
           right: { content: "account" },
         },
       },
+      navOrder: ["search", "inicio", "channels", "vod", "epg", "catchup"],
     },
 
     header: {
@@ -1675,6 +1678,7 @@ export const BRANDS = [
           right: { content: "account" },
         },
       },
+      navOrder: ["search", "inicio", "channels", "vod", "epg", "catchup"],
     },
 
     header: {
@@ -1834,14 +1838,14 @@ export const BRANDS = [
       socialLogin: {
         backendBaseUrl: "https://backend.wind.do", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
         google: {
-          enabled: true, // Muestra botón Google (solo escritorio)
+          enabled: false, // Muestra botón Google (solo escritorio)
           redirectUrl: "/wind/auth/google/", // Path relativo a backendBaseUrl o URL absoluta del POST OAuth
           accessToken: "487078023200-686hite4p619jtaobfa4oksvhoal7qc1.apps.googleusercontent.com", // Google OAuth client_id
           preferCustomButton: true, // true: botón custom con theme.social; false: widget GIS nativo
           backendBaseUrl: "", // Base específica Google; vacío = usa socialLogin.backendBaseUrl
         },
         facebook: {
-          enabled: true, // Muestra botón Facebook (solo escritorio)
+          enabled: false, // Muestra botón Facebook (solo escritorio)
           redirectUrl: "/wind/auth/facebook/", // Path relativo o URL absoluta del POST OAuth
           accessToken: "823584907447149", // Facebook App ID
           backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
@@ -2039,6 +2043,7 @@ export const BRANDS = [
           right: { content: "account" },
         },
       },
+      navOrder: ["search", "inicio", "channels", "vod", "epg", "catchup"],
     },
 
     header: {
@@ -2107,8 +2112,8 @@ export const BRANDS = [
     
     // Features habilitadas/deshabilitadas
     features: {
-      profiles: true,
-      showRating: false, // Equivalente a showRating en 10foot
+      profiles: false,
+      showRating: true, // Equivalente a showRating en 10foot
       osms: true, // Equivalente a osmsEnabled en 10foot
     },
 
@@ -2431,6 +2436,7 @@ export const BRANDS = [
           right: { content: "account" },
         },
       },
+      navOrder: ["search", "inicio", "channels", "vod", "epg", "catchup"],
     },
 
     header: {

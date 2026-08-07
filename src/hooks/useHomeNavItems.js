@@ -53,29 +53,42 @@ export function useHomeNavItems() {
   const osmsUnreadCount = useOsmsStore((s) => s.unreadCount);
   const osmsBadgeVisible = currentBrand?.features?.osms === true && osmsUnreadCount > 0;
 
-  const navItems = [
-    { key: 'search', to: '/home/buscador', label: t('sidebar.search', { defaultValue: 'Buscar' }), icon: 'search' },
-    { key: 'inicio', to: '/home/inicio', label: t('sidebar.bouquets', { defaultValue: 'Inicio' }), icon: 'home' },
-    showTvRadioServices && {
-      key: 'channels',
-      to: '/home/servicios-tv-radio',
-      label: t('sidebar.tvRadioServices', { defaultValue: 'Canales' }),
-      icon: 'channels',
-    },
-    showVod && {
-      key: 'vod',
-      to: '/home/vod',
-      label: t('sidebar.movies', { defaultValue: 'Películas' }),
-      icon: 'movies',
-    },
-    { key: 'epg', to: '/home/epg', label: t('sidebar.channelGuide', { defaultValue: 'Guía' }), icon: 'guide' },
-    showCatchup && {
-      key: 'catchup',
-      to: '/home/catchup',
-      label: t('sidebar.catchup'),
-      icon: 'catchup',
-    },
-  ].filter(Boolean);
+  const itemsMap = {
+    search: { key: 'search', to: '/home/buscador', label: t('sidebar.search', { defaultValue: 'Buscar' }), icon: 'search' },
+    inicio: { key: 'inicio', to: '/home/inicio', label: t('sidebar.bouquets', { defaultValue: 'Inicio' }), icon: 'home' },
+    channels: showTvRadioServices
+      ? {
+          key: 'channels',
+          to: '/home/servicios-tv-radio',
+          label: t('sidebar.tvRadioServices', { defaultValue: 'Canales' }),
+          icon: 'channels',
+        }
+      : null,
+    vod: showVod
+      ? {
+          key: 'vod',
+          to: '/home/vod',
+          label: t('sidebar.movies', { defaultValue: 'Películas' }),
+          icon: 'movies',
+        }
+      : null,
+    epg: { key: 'epg', to: '/home/epg', label: t('sidebar.channelGuide', { defaultValue: 'Guía' }), icon: 'guide' },
+    catchup: showCatchup
+      ? {
+          key: 'catchup',
+          to: '/home/catchup',
+          label: t('sidebar.catchup'),
+          icon: 'catchup',
+        }
+      : null,
+  };
+
+  const defaultOrder = ['search', 'inicio', 'channels', 'vod', 'epg', 'catchup'];
+  const preferredOrder = currentBrand?.layout?.navOrder || defaultOrder;
+
+  const navItems = preferredOrder
+    .map((key) => itemsMap[key])
+    .filter(Boolean);
 
   return {
     accountDisplayName,

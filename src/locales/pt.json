@@ -54,7 +54,7 @@
     "unreadBadge": "{{count}} não lidas"
   },
   "search": {
-    "placeholder": "Buscar...",
+    "placeholder": "Canais, Categoria ou Programa",
     "clear": "Limpar",
     "tabAll": "Todos",
     "tabServices": "Canais",

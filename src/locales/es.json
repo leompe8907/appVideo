@@ -114,7 +114,7 @@
     "unreadBadge": "{{count}} sin leer"
   },
   "search": {
-    "placeholder": "Buscar...",
+    "placeholder": "Canales, Categoría o Programa",
     "clear": "Limpiar",
     "tabAll": "Todos",
     "tabServices": "Canales",

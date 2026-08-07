@@ -54,7 +54,7 @@
     "unreadBadge": "{{count}} unread"
   },
   "search": {
-    "placeholder": "Search...",
+    "placeholder": "Channels, Category or Program",
     "clear": "Clear",
     "tabAll": "All",
     "tabServices": "Channels",
