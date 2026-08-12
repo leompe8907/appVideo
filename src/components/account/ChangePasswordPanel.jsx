@@ -19,6 +19,82 @@ import { getCredentials } from '../../utils/userSession';
 // por qué (chunk de CSS separado que se rompía en el build de producción).
 
 const MIN_LENGTH = 8;
+const MAX_LENGTH = 255;
+
+// Política de contraseña -- debe mantenerse sincronizada con
+// wind/utils/password_policy.py (backend, Wind). Es solo un atajo para dar
+// feedback inmediato antes del round-trip; el backend sigue siendo la
+// fuente de verdad y valida esto mismo de nuevo (si esta validación local
+// quedara desactualizada respecto al backend, el peor caso es un 400 con
+// `code=password_rejected_by_panaccess`/`password_policy_violation`, no un
+// error silencioso).
+const PASSWORD_ALLOWED_CHARS_RE = /^[A-Za-z0-9_!@#$%^&*()+=[\]{};:'",.<>/?~`|\\-]+$/;
+const PASSWORD_HAS_UPPER_RE = /[A-Z]/;
+const PASSWORD_HAS_DIGIT_RE = /[0-9]/;
+
+function getPasswordPolicyErrorKey(password) {
+  if (!password || password.length < MIN_LENGTH || password.length > MAX_LENGTH) {
+    return 'changePasswordTooShort';
+  }
+  if (!PASSWORD_ALLOWED_CHARS_RE.test(password)) {
+    return 'changePasswordInvalidChars';
+  }
+  if (!PASSWORD_HAS_UPPER_RE.test(password)) {
+    return 'changePasswordMissingUpper';
+  }
+  if (!PASSWORD_HAS_DIGIT_RE.test(password)) {
+    return 'changePasswordMissingNumber';
+  }
+  return null;
+}
+
+/** Input de contraseña con botón de mostrar/ocultar interno (ver `.account-security-password-field` en _account-security.scss). */
+function PasswordToggleInput({
+  id,
+  value,
+  onChange,
+  autoComplete,
+  disabled,
+  required,
+  minLength,
+  maxLength,
+  show,
+  onToggleShow,
+  t,
+}) {
+  return (
+    <div className="account-security-password-field">
+      <input
+        id={id}
+        type={show ? 'text' : 'password'}
+        className="account-security-input"
+        value={value}
+        onChange={onChange}
+        autoComplete={autoComplete}
+        minLength={minLength}
+        maxLength={maxLength}
+        disabled={disabled}
+        required={required}
+      />
+      <button
+        type="button"
+        className="account-security-password-toggle"
+        onClick={onToggleShow}
+        disabled={disabled}
+        aria-label={
+          show
+            ? t('account.hidePassword', { defaultValue: 'Ocultar contraseña' })
+            : t('account.showPassword', { defaultValue: 'Mostrar contraseña' })
+        }
+      >
+        <span
+          className={`account-security-password-toggle__icon${show ? ' is-visible' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+    </div>
+  );
+}
 
 export function ChangePasswordPanel({ brandConfig, brand }) {
   const { t } = useTranslation();
@@ -26,6 +102,9 @@ export function ChangePasswordPanel({ brandConfig, brand }) {
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -66,10 +145,17 @@ export function ChangePasswordPanel({ brandConfig, brand }) {
       return;
     }
 
-    if (newPass.length < MIN_LENGTH) {
+    const policyErrorKey = getPasswordPolicyErrorKey(newPass);
+    if (policyErrorKey) {
+      const defaults = {
+        changePasswordTooShort: `La contraseña debe tener entre ${MIN_LENGTH} y ${MAX_LENGTH} caracteres.`,
+        changePasswordInvalidChars: 'La contraseña tiene caracteres no permitidos.',
+        changePasswordMissingUpper: 'La contraseña debe incluir al menos una letra mayúscula.',
+        changePasswordMissingNumber: 'La contraseña debe incluir al menos un número.',
+      };
       setError(
-        t('account.changePasswordTooShort', {
-          defaultValue: `La contraseña debe tener al menos ${MIN_LENGTH} caracteres.`,
+        t(`account.${policyErrorKey}`, {
+          defaultValue: defaults[policyErrorKey],
           count: MIN_LENGTH,
         }),
       );
@@ -123,43 +209,54 @@ export function ChangePasswordPanel({ brandConfig, brand }) {
       <label className="account-security-label" htmlFor="change-password-current">
         {t('account.changePasswordCurrentLabel', { defaultValue: 'Contraseña actual' })}
       </label>
-      <input
+      <PasswordToggleInput
         id="change-password-current"
-        type="password"
-        className="account-security-input"
         value={currentPass}
         onChange={(e) => setCurrentPass(e.target.value)}
         autoComplete="current-password"
         disabled={isSubmitting}
         required
+        show={showCurrentPass}
+        onToggleShow={() => setShowCurrentPass((s) => !s)}
+        t={t}
       />
 
       <label className="account-security-label" htmlFor="change-password-new">
         {t('account.changePasswordNewLabel', { defaultValue: 'Nueva contraseña' })}
       </label>
-      <input
+      <PasswordToggleInput
         id="change-password-new"
-        type="password"
-        className="account-security-input"
         value={newPass}
         onChange={(e) => setNewPass(e.target.value)}
         autoComplete="new-password"
+        minLength={MIN_LENGTH}
+        maxLength={MAX_LENGTH}
         disabled={isSubmitting}
         required
+        show={showNewPass}
+        onToggleShow={() => setShowNewPass((s) => !s)}
+        t={t}
       />
+      <p className="account-security-field-hint">
+        {t('account.changePasswordRulesHint', {
+          defaultValue:
+            'Entre 8 y 255 caracteres, con al menos una mayúscula y un número. También puedes usar símbolos como ! @ # $ % ^ & * ( ) + = - _ [ ] { } ; : \' " , . < > / ? ~ ` |',
+        })}
+      </p>
 
       <label className="account-security-label" htmlFor="change-password-confirm">
         {t('account.changePasswordConfirmLabel', { defaultValue: 'Confirmar nueva contraseña' })}
       </label>
-      <input
+      <PasswordToggleInput
         id="change-password-confirm"
-        type="password"
-        className="account-security-input"
         value={confirmPass}
         onChange={(e) => setConfirmPass(e.target.value)}
         autoComplete="new-password"
         disabled={isSubmitting}
         required
+        show={showConfirmPass}
+        onToggleShow={() => setShowConfirmPass((s) => !s)}
+        t={t}
       />
 
       {error && <div className="account-security-error">{error}</div>}

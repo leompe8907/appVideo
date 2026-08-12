@@ -42,6 +42,16 @@
   opacity: 0.8;
 }
 
+// Texto de ayuda pegado a un campo puntual (p. ej. requisitos de la nueva
+// contraseña) -- más discreto que `.account-security-hint` (que es un
+// banner con fondo, pensado para avisos de todo el panel, no por campo).
+.account-security-field-hint {
+  margin: -6px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  opacity: 0.65;
+}
+
 .account-security-input {
   padding: 10px 12px;
   border-radius: 10px;
@@ -53,6 +63,73 @@
 
 .account-security-input:focus-visible {
   outline: 2px solid var(--account-active-bg, #5c8fc4);
+}
+
+// Campo de contraseña con botón de mostrar/ocultar interno -- mismo patrón
+// visual que `.password-field`/`.password-toggle` de _login.scss, pero
+// escopado acá (esas clases están anidadas bajo `.login-card` y no llegan a
+// los paneles de Mi Cuenta).
+.account-security-password-field {
+  position: relative;
+  width: 100%;
+
+  .account-security-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding-right: 2.75rem;
+  }
+}
+
+.account-security-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.15rem;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.55);
+  transition: color 0.2s ease;
+}
+
+// El `focusin` global (main.jsx) le agrega `.focused` a cualquier botón que
+// recibe foco, y `button.focused` en global.scss le mete `transform:
+// scale(1.05)` -- como este botón ya usa `transform` para centrarse
+// verticalmente (`translateY(-50%)`), ese scale se lo pisaba entero y el
+// ícono saltaba fuera del input al hacer click/tab. Se repite el mismo
+// `translateY(-50%)` acá (2 clases > `button.focused`, gana por
+// especificidad) para que el hover/foco solo cambie de color, sin mover nada.
+.account-security-password-toggle:hover,
+.account-security-password-toggle.focused {
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.85);
+  background: transparent;
+}
+
+.account-security-password-toggle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.account-security-password-toggle__icon {
+  display: block;
+  width: 1.15rem;
+  height: 1.15rem;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029M6.223 6.223A9.956 9.956 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411M15 12a3 3 0 11-6 0 3 3 0 016 0z'/%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M3 3l18 18'/%3E%3C/svg%3E");
+}
+
+.account-security-password-toggle__icon.is-visible {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'/%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'/%3E%3C/svg%3E");
 }
 
 .account-security-btn {

@@ -43,15 +43,30 @@ async function parseJsonResponse(res, fallbackMessage) {
   }
 
   if (!res.ok) {
+    // `data.errors` con forma DRF (p. ej. { newPass: ["mensaje legible"] },
+    // ver ProfilePasswordSerializer/ResetPasswordConfirmSerializer en el
+    // backend) -- antes esto caía siempre al JSON.stringify de más abajo,
+    // mostrando algo como `{"newPass":["..."]}` en vez del mensaje real
+    // (p. ej. la explicación de la política de contraseña).
+    let fieldErrorMessage;
+    if (data.errors && typeof data.errors === 'object' && !Array.isArray(data.errors)) {
+      const firstField = Object.values(data.errors)[0];
+      if (Array.isArray(firstField) && typeof firstField[0] === 'string') {
+        fieldErrorMessage = firstField[0];
+      }
+    }
+
     const detail =
       (typeof data.detail === 'string' && data.detail) ||
       (Array.isArray(data.non_field_errors) && data.non_field_errors[0]) ||
       (typeof data.message === 'string' && data.message) ||
+      fieldErrorMessage ||
       (data.errors && JSON.stringify(data.errors)) ||
       res.statusText ||
       fallbackMessage;
     const err = new Error(detail);
     err.status = res.status;
+    err.code = data.code;
     err.data = data;
     throw err;
   }

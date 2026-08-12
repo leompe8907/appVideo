@@ -194,7 +194,7 @@ export function LinkedDevicesPanel({ brandConfig, brand }) {
                     {revokingId === d.id
                       ? t('common.loading')
                       : isSelf
-                        ? t('account.linkedDevicesLogoutHere', { defaultValue: 'Cerrar sesión aquí' })
+                        ? t('account.linkedDevicesLogoutHere', { defaultValue: 'Remover' })
                         : t('account.linkedDevicesRevoke', { defaultValue: 'Revocar' })}
                   </button>
                 </li>
