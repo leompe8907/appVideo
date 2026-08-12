@@ -72,6 +72,10 @@
     color: rgba(255, 255, 255, 0.95);
     text-align: left;
     flex-shrink: 0;
+    // El texto (`smartcard.instructionsNoPIN`) trae un `\n` a propósito para
+    // separar "¡Todas tus pantallas están en uso!" de la instrucción de abajo
+    // -- sin esto, HTML colapsa el salto de línea y queda todo en un renglón.
+    white-space: pre-line;
   }
 
   .licenses-list {

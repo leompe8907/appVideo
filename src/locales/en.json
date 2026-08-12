@@ -211,7 +211,7 @@
     "errorNoKey": "License key (KEY) not found on selected card.",
     "selectLicense": "Select {{title}}",
     "selectLicenseFallback": "license {{index}}",
-    "instructionsNoPIN": "Here you can choose which of your licenses should be activated on this device. To activate a license, click on it.",
+    "instructionsNoPIN": "All your screens are in use!\nSelect one of the screens to disconnect it and use {{appName}} on this device.",
     "logout": "Log out",
     "licenseInUseConfirm": "Smartcard already in use. Do you want to continue here?",
     "licenseInUseYes": "Yes",

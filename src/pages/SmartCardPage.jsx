@@ -314,7 +314,7 @@ export function SmartCardPage() {
               </div>
             )}
             <h4 className="smartcard-instructions" id="smartcard-instructions-label">
-              {t('smartcard.instructionsNoPIN')}
+              {t('smartcard.instructionsNoPIN', { appName: currentBrand?.appName || 'App' })}
             </h4>
             <div className="licenses-list" role="list" aria-labelledby="smartcard-instructions-label">
               {validLicenses.map((license, index) => (

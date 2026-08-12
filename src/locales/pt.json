@@ -211,7 +211,7 @@
     "errorNoKey": "Chave de licença (KEY) não encontrada no cartão selecionado.",
     "selectLicense": "Selecionar {{title}}",
     "selectLicenseFallback": "licença {{index}}",
-    "instructionsNoPIN": "Aqui você pode escolher qual das suas licenças ativar neste dispositivo. Para ativar uma licença, clique nela.",
+    "instructionsNoPIN": "Todas as suas telas estão em uso!\nSelecione uma das telas para desconectá-la e poder usar {{appName}} neste dispositivo.",
     "logout": "Sair",
     "licenseInUseConfirm": "Smartcard em uso. Deseja continuar aqui?",
     "licenseInUseYes": "Sim",
