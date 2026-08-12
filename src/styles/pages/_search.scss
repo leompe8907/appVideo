@@ -105,20 +105,39 @@
 
 .search-clear {
   flex-shrink: 0;
-  background-color: var(--search-clear-bg, #ff4c4c);
-  color: var(--search-clear-text, #fff);
-  border: none;
-  border-radius: 6px;
-  padding: 10px 18px;
+  background-color: var(--search-clear-bg, rgba(255, 255, 255, 0.08));
+  color: var(--search-clear-text, rgba(255, 255, 255, 0.85));
+  border: 2px solid var(--search-clear-border, rgba(255, 255, 255, 0.18));
+  border-radius: 8px;
+  padding: 10px 20px;
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
   line-height: 1;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
 
-  &:hover,
+  // Botón "fantasma" en reposo -- limpiar el texto de búsqueda no es una
+  // acción destructiva (no borra nada guardado), así que no debe competir
+  // visualmente con el rojo de alerta ni parecer más importante que el
+  // propio campo de búsqueda.
+  &:hover {
+    background-color: var(--search-clear-hover-bg, rgba(255, 255, 255, 0.14));
+    border-color: var(--search-clear-hover-border, rgba(255, 255, 255, 0.3));
+    color: var(--search-clear-hover-text, #fff);
+  }
+
+  // Foco de control remoto: mismo lenguaje visual que `.search-input:focus`
+  // (borde + halo con el color de foco de la marca) en vez de un rojo más
+  // intenso -- consistente con el resto de los controles enfocables de TV.
   &:focus,
   &.focused {
-    background-color: var(--search-clear-hover-bg, #ff1a1a);
+    background-color: var(--search-clear-focus-bg, rgba(255, 255, 255, 0.14));
+    border-color: var(--search-clear-focus-border, var(--focus-color, #007bff));
+    box-shadow: var(
+      --search-clear-focus-shadow,
+      0 0 0 2px rgba(var(--focus-color-rgb, 0, 123, 255), 0.35)
+    );
+    color: var(--search-clear-hover-text, #fff);
     outline: none;
   }
 }

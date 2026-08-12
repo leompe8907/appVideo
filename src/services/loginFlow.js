@@ -426,6 +426,12 @@ export async function reactivateSession(brandConfig, options = {}) {
 
 /**
  * Reactiva solo la licencia (sesión ya válida) y verifica que haya streams disponibles.
+ * Si la licencia guardada está en uso por otro dispositivo (o falla por
+ * cualquier otro motivo) y `failIfInUse` es true, prueba el resto de las
+ * licencias de la cuenta antes de rendirse -- mismo criterio que el login
+ * fresco (`LoginPage.jsx`, `autoActivateLicense`) y que el `LoginHelper` del
+ * proyecto de referencia (10foot): un dispositivo nuevo no "pelea" por una
+ * tarjeta ocupada si hay otra libre en la misma cuenta.
  * @param {Object} brandConfig - currentBrand.
  * @param {boolean} [failIfInUse=false]
  * @returns {Promise<boolean>}
@@ -443,14 +449,51 @@ export async function reactivateLicense(brandConfig, failIfInUse = false) {
     { key: active.licenseKey, pin: active.pin ?? '' },
     { failIfInUse, requireContent: true },
   );
-  return activated != null;
+  if (activated) return true;
+  if (!failIfInUse) return false;
+
+  try {
+    const rawLicenses = await panaccessService.getStreamingLicenses({
+      withPins: true,
+      enableRetry: false,
+    });
+    const licenses = normalizeLicenses(rawLicenses);
+    const candidates = getLicensesForAutoActivation(licenses).filter(
+      (license) => getLicenseKey(license) !== active.licenseKey,
+    );
+    const fallback = await autoActivateLicense(panaccessService, candidates, {
+      activationRecursive: true,
+      maxAutoActivateLicense: DEFAULT_OPTIONS.maxAutoActivateLicense,
+      failIfInUse: true,
+    });
+    if (fallback) {
+      userSession.setActiveLicense({ licenseKey: fallback.key, pin: fallback.pin });
+      return true;
+    }
+  } catch {
+    // sin conexión / error al listar licencias -- caer al resultado sin licencia de abajo
+  }
+
+  return false;
 }
 
 /**
  * Comprueba sesión y reactiva licencia o sesión (equivalente a LoginHelper.checkSessionAndReactivateIfNeeded).
+ *
+ * Importante: si la SESIÓN sigue siendo válida, el resultado de reactivar la
+ * licencia (`reactivateLicense`) no cambia esa conclusión -- que otro
+ * dispositivo haya tomado la tarjeta activa (o que hoy no quede ninguna
+ * libre en la cuenta) no significa que este login esté comprometido. Antes,
+ * cualquier fallo acá (incluido ese) se propagaba como "sesión inválida" y
+ * el validador periódico (`sessionValidator.js`) terminaba deslogueando por
+ * completo al dispositivo -- ver 10foot (`home.js`/`licenseEnded`), que ante
+ * este mismo conflicto solo pausa y pregunta, nunca cierra la sesión. Si el
+ * usuario se queda sin licencia activa, la próxima reproducción real ya
+ * dispara el flujo existente (`tryRecoverAfterError`/`licenseInUsePrompt` en
+ * PlayerContext).
  * @param {Object} brandConfig - currentBrand.
  * @param {{ failIfInUse?: boolean }} [options] - Si la sesión es válida, pasa a reactivateLicense; si no, re-login + licencia guardada.
- * @returns {Promise<boolean>} true si la sesión/licencia quedan operativas, false si hay que ir a login.
+ * @returns {Promise<boolean>} true si la sesión queda operativa, false si hay que ir a login.
  */
 export async function checkSessionAndReactivateIfNeeded(brandConfig, options = {}) {
   const { failIfInUse = false, ...reactivateOptions } = options;
@@ -466,7 +509,8 @@ export async function checkSessionAndReactivateIfNeeded(brandConfig, options = {
   try {
     const valid = await panaccessService.loggedIn({ enableRetry: false }).then(Boolean).catch(() => false);
     if (valid) {
-      return reactivateLicense(brandConfig, failIfInUse);
+      await reactivateLicense(brandConfig, failIfInUse);
+      return true;
     }
   } catch {
     // seguir a reactivar sesión completa

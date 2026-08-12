@@ -2043,7 +2043,7 @@ export const BRANDS = [
           right: { content: "account" },
         },
       },
-      navOrder: ["search", "inicio", "channels", "vod", "epg", "catchup"],
+      navOrder: ["inicio","channels","epg","search","vod","catchup"],
     },
 
     header: {

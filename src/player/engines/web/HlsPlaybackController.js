@@ -4,9 +4,16 @@ import { isWindMiddlewareHost, windDirectM3u8FromAny } from './windHlsManifest';
 import { isPanaccessRotatingKeyUri } from './sessionHlsXhrSetup';
 import {
   describeWindLevels,
+  lockWindLevel,
+  pickAdaptiveWindLevel,
   pickWindCompatibleLevel,
   tryNextWindLevel,
 } from './windLevelSelect';
+
+/** Cada cuánto se reevalúa si conviene subir/bajar de nivel (ver `_startWindAdaptive`). */
+const WIND_ADAPTIVE_CHECK_INTERVAL_MS = 10000;
+/** Mínimo tiempo entre dos cambios de nivel reales, aunque el check corra más seguido. */
+const WIND_ADAPTIVE_MIN_SWITCH_INTERVAL_MS = 20000;
 
 /**
  * FIX REAL (confirmado contra un player de referencia del MISMO operador —
@@ -173,6 +180,8 @@ export class HlsPlaybackController {
     this._networkRetryCount = 0;
     this._networkRetryTimer = null;
     this._nonFatalMediaErrorCount = 0;
+    this._adaptiveTimer = null;
+    this._lastAdaptiveSwitchAt = 0;
   }
 
   get instance() {
@@ -197,6 +206,11 @@ export class HlsPlaybackController {
       clearTimeout(this._networkRetryTimer);
       this._networkRetryTimer = null;
     }
+    if (this._adaptiveTimer != null) {
+      clearInterval(this._adaptiveTimer);
+      this._adaptiveTimer = null;
+    }
+    this._lastAdaptiveSwitchAt = 0;
 
     if (this._hls) {
       try {
@@ -279,6 +293,7 @@ export class HlsPlaybackController {
       if (generation !== this._loadGeneration) return;
       if (wind) {
         this._lockedLevel = pickWindCompatibleLevel(hls);
+        this._startWindAdaptive(hls, generation);
         if (import.meta.env.DEV) {
           console.log(
             '[HlsPlayback]',
@@ -370,6 +385,49 @@ export class HlsPlaybackController {
     hls.attachMedia(videoEl);
 
     return Promise.resolve({ mode: 'hls.js', hls });
+  }
+
+  /**
+   * ABR acotado para Wind: en vez de dejar el nivel fijo elegido en
+   * `MANIFEST_PARSED` para toda la sesión, reevalúa cada
+   * `WIND_ADAPTIVE_CHECK_INTERVAL_MS` si el ancho de banda estimado por
+   * hls.js (`hls.bandwidthEstimate`, se sigue actualizando aunque el nivel
+   * esté fijado a mano) alcanza para subir un escalón, o ya no alcanza para
+   * el actual y hay que bajar uno -- ver `pickAdaptiveWindLevel` para el por
+   * qué de la histéresis y por qué es seguro (nunca sale del subconjunto de
+   * codec compatible). Solo empieza a mover el nivel después del primer
+   * fragmento bufferizado (`_loadedEmitted`): el estimador de hls.js arranca
+   * con un valor semilla poco confiable antes de eso.
+   */
+  _startWindAdaptive(hls, generation) {
+    if (this._adaptiveTimer != null) {
+      clearInterval(this._adaptiveTimer);
+    }
+    this._lastAdaptiveSwitchAt = Date.now();
+    this._adaptiveTimer = setInterval(() => {
+      if (generation !== this._loadGeneration || this._hls !== hls) {
+        clearInterval(this._adaptiveTimer);
+        this._adaptiveTimer = null;
+        return;
+      }
+      if (!this._loadedEmitted) return;
+      if (Date.now() - this._lastAdaptiveSwitchAt < WIND_ADAPTIVE_MIN_SWITCH_INTERVAL_MS) return;
+
+      const next = pickAdaptiveWindLevel(hls, this._lockedLevel, hls.bandwidthEstimate);
+      if (next !== this._lockedLevel) {
+        lockWindLevel(hls, next);
+        this._lockedLevel = next;
+        this._lastAdaptiveSwitchAt = Date.now();
+        if (import.meta.env.DEV) {
+          console.log(
+            '[HlsPlayback] adaptive level ->',
+            next,
+            'bandwidthEstimate',
+            Math.round(hls.bandwidthEstimate || 0),
+          );
+        }
+      }
+    }, WIND_ADAPTIVE_CHECK_INTERVAL_MS);
   }
 
   /**

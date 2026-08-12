@@ -177,13 +177,24 @@ class PanaccessService {
    * Reporta telemetría de reproducción (canal/VOD/catchup) al backend.
    * Sin retry automático: `telemetryService` ya maneja sus propios
    * reintentos con backoff sobre la cola persistida (ver `flush()` ahí).
+   *
+   * `smartcardId`: el SDK Android de referencia (`sendTelemetryRecords` en
+   * `TelemetryRecords.java`) manda siempre este campo -- `getLicenseEnabled()`
+   * en mobile o el serial de la box en STB. Esta app (web/PC/TV, sin
+   * smartcard física ni serial de box) no tiene un equivalente exacto; lo más
+   * cercano es la licencia de streaming activa que el usuario carga en
+   * `/smartcard` (`getActiveLicense()`, ver `userSession.js` y
+   * `SmartCardPage.jsx`). Se manda solo si existe (igual que `udid` en
+   * `callAuthenticatedApi`) -- hay brands/usuarios sin licencia activa (no
+   * todos usan este sistema), y no queremos mandar un campo vacío/undefined.
    */
   async pushTelemetryRecords(records) {
-    return this.callAuthenticatedApi(
-      'pushTelemetryRecords',
-      { records: JSON.stringify(records) },
-      { enableRetry: false },
-    );
+    const activeLicense = userSession.getActiveLicense();
+    const params = { records: JSON.stringify(records) };
+    if (activeLicense?.licenseKey) {
+      params.smartcardId = activeLicense.licenseKey;
+    }
+    return this.callAuthenticatedApi('pushTelemetryRecords', params, { enableRetry: false });
   }
 
   /**
