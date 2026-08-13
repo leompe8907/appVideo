@@ -208,6 +208,26 @@ export function setOnDeviceListChanged(fn) {
   onDeviceListChangedGlobal = typeof fn === 'function' ? fn : null;
 }
 
+// Callback global para cuando la conexión ACTIVA (ya registrada con éxito)
+// se cae sola -- blip de red, reinicio/deploy del backend, lo que sea --
+// sin haber pasado por un cierre esperado (`closeActiveDeviceSession()` en
+// logout, o el propio `device_revoked`, ambos ya limpian `activeDeviceSocket`
+// ANTES de cerrar el socket, ver más abajo). Antes de esto, el único momento
+// en que algo volvía a intentar reconectar era el watchdog de
+// `useAppLifecycle.js` (al montar la app o al volver de background) -- si el
+// socket moría mientras la pestaña se quedaba todo el tiempo en primer plano
+// (sin pasar nunca por background), quedaba muerto para el resto de la
+// sesión: caso real, cambio de contraseña hecho desde otro dispositivo que
+// nunca llegó a este porque su `ws/device/` se había caído horas antes sin
+// que nada lo notara. Este canal deja que `useAppLifecycle.js` reaccione de
+// inmediato al cierre inesperado, sin depender de un evento de
+// background/foreground para notarlo.
+let onUnexpectedCloseGlobal = null;
+
+export function setOnDeviceSessionUnexpectedClose(fn) {
+  onUnexpectedCloseGlobal = typeof fn === 'function' ? fn : null;
+}
+
 /**
  * `http(s)://host` -> `ws(s)://host/ws/device/`. Si el brand declaró una
  * `login.deviceSession.wsUrl` explícita, se usa esa tal cual (por si el
@@ -454,7 +474,15 @@ export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) 
         // una conexión que estuvo viva un rato y luego se cayó/cerró -- no
         // hay nada más que resolver. `finish()` ya es un no-op en ese caso.
         stopHeartbeat();
-        if (activeDeviceSocket === ws) activeDeviceSocket = null;
+        // `wasActive`: esta conexión seguía siendo LA vigente (nadie la había
+        // reemplazado ni desregistrado todavía) en el momento de cerrarse.
+        // `closeActiveDeviceSession()` (logout) y el handler de
+        // `device_revoked` (arriba) ya ponen `activeDeviceSocket = null`
+        // ANTES de llamar a `ws.close()` -- así que si acá `wasActive` es
+        // true, este cierre no vino de ninguno de esos dos caminos
+        // esperados, es inesperado (red, backend reiniciado, etc.).
+        const wasActive = activeDeviceSocket === ws;
+        if (wasActive) activeDeviceSocket = null;
         // El backend valida el JWT solo en el `connect()` inicial (ver
         // `wind/utils/ws_auth.py` / `device_consumers.py`): si el token ya
         // expiró, cierra ANTES de aceptar la conexión (código 4001/4004) --
@@ -466,6 +494,13 @@ export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) 
           return;
         }
         finish({ ok: false, error: 'closed_before_ack' });
+        if (wasActive) {
+          try {
+            onUnexpectedCloseGlobal?.();
+          } catch {
+            // noop -- un listener global roto no debe afectar el resto del socket
+          }
+        }
       };
     });
   }

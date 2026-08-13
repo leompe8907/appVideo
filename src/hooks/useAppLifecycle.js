@@ -5,7 +5,7 @@ import { usePlayer } from '../contexts/PlayerContext';
 import { isAuthenticated, getCredentials, getCredentialsWithFallback } from '../utils/userSession';
 import { validateSessionIfDue } from '../utils/sessionValidator';
 import { isDeviceSessionEnabled } from '../services/deviceAuthService';
-import { isDeviceSessionActive } from '../services/deviceSessionService';
+import { isDeviceSessionActive, setOnDeviceSessionUnexpectedClose } from '../services/deviceSessionService';
 import { maybeEstablishDeviceSession } from '../services/loginFlow';
 
 /** Tiempo máximo en milisegundos en background antes de forzar revalidación silenciosa de token (30 min) */
@@ -153,6 +153,23 @@ export function useAppLifecycle() {
     if (!currentBrand) return undefined;
     const timer = setTimeout(() => ensureDeviceSessionConnected(currentBrand), 1500);
     return () => clearTimeout(timer);
+  }, [currentBrand]);
+
+  // Reconexión reactiva: cubre el caso que el watchdog de arriba (montaje +
+  // resume-desde-background) no cubre -- el socket que muere solo (red,
+  // reinicio de backend) mientras la pestaña se queda todo el tiempo en
+  // primer plano, sin pasar nunca por background. Caso real que motivó esto:
+  // un cambio de contraseña hecho desde otro dispositivo nunca llegó a una
+  // sesión web que llevaba horas abierta porque su `ws/device/` se había
+  // caído mucho antes sin que nada lo notara ni lo reabriera. Ver
+  // `setOnDeviceSessionUnexpectedClose` en deviceSessionService.js para el
+  // criterio exacto de qué cuenta como "inesperado" (no dispara en logout ni
+  // en un `device_revoked` real, ambos ya limpian la conexión activa antes
+  // de cerrarla).
+  useEffect(() => {
+    if (!currentBrand) return undefined;
+    setOnDeviceSessionUnexpectedClose(() => ensureDeviceSessionConnected(currentBrand));
+    return () => setOnDeviceSessionUnexpectedClose(null);
   }, [currentBrand]);
 
   // Guardar continuamente la ruta activa cuando el usuario navega por la app
