@@ -2,8 +2,11 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
-import { isAuthenticated } from '../utils/userSession';
+import { isAuthenticated, getCredentials, getCredentialsWithFallback } from '../utils/userSession';
 import { validateSessionIfDue } from '../utils/sessionValidator';
+import { isDeviceSessionEnabled } from '../services/deviceAuthService';
+import { isDeviceSessionActive } from '../services/deviceSessionService';
+import { maybeEstablishDeviceSession } from '../services/loginFlow';
 
 /** Tiempo máximo en milisegundos en background antes de forzar revalidación silenciosa de token (30 min) */
 const MAX_BACKGROUND_MS = 30 * 60 * 1000;
@@ -11,6 +14,46 @@ const SESSION_CHECK_KEY = 'app_last_background_time';
 const LAST_ROUTE_KEY = 'app_last_active_route';
 /** Snapshot de reproducción para recuperarse de un tab discard de Chrome (ver restoreDiscardedPlayback). */
 const PLAYBACK_SNAPSHOT_KEY = 'app_player_snapshot_v1';
+
+/**
+ * Watchdog centralizado de "dispositivo vinculado" (Fase 3, backend Wind) --
+ * asegura que exista una conexión viva a `/ws/device/` sin depender de que
+ * cada camino de login/reactivación de sesión se acuerde de establecerla.
+ *
+ * Motivo (auditoría, gap real encontrado): `splashAuthFlow.js` tiene un
+ * camino "rápido" (sesión + licencia ya activas -> `reactivateLicense()`)
+ * que nunca pasaba por `loginAndActivateLicense()`/`maybeEstablishDeviceSession()`
+ * -- ese es el camino MÁS COMÚN al reabrir la app, así que en la práctica el
+ * WebSocket casi nunca terminaba de abrirse ahí, y ese dispositivo no recibía
+ * el aviso en vivo de "contraseña cambiada"/"dispositivo revocado". En vez de
+ * parchear ese camino puntual (y arriesgarse a que aparezca el mismo hueco en
+ * el próximo atajo que se agregue), este watchdog vive en un solo lugar
+ * (`useAppLifecycle`, ya el punto central de "la app se activó/volvió de
+ * background") y se dispara sin importar qué camino de login/reactivación se
+ * tomó.
+ *
+ * `registerDeviceSession()` (deviceSessionService.js) ya cierra cualquier
+ * conexión previa antes de abrir una nueva, así que llamar a esto de más no
+ * duplica conexiones -- el chequeo `isDeviceSessionActive()` de abajo es solo
+ * para no reabrir innecesariamente cuando ya hay una conexión viva.
+ */
+function ensureDeviceSessionConnected(brandConfig) {
+  try {
+    if (!brandConfig || !isDeviceSessionEnabled(brandConfig)) return;
+    if (isDeviceSessionActive()) return;
+
+    const credentials =
+      getCredentials(brandConfig?.brand) ?? getCredentialsWithFallback(brandConfig?.token, brandConfig?.brand);
+    if (!credentials) return;
+
+    // Fire-and-forget: nunca debe bloquear ni afectar el resto del ciclo de
+    // vida de la app (mismo criterio que `maybeEstablishDeviceSession`, que
+    // ya se traga sus propios errores).
+    maybeEstablishDeviceSession(brandConfig, credentials);
+  } catch {
+    // noop -- un fallo acá nunca debe afectar el resto de useAppLifecycle
+  }
+}
 
 function savePlaybackSnapshot(player) {
   try {
@@ -99,6 +142,19 @@ export function useAppLifecycle() {
     // Fuera de PlayerProvider
   }
 
+  // Watchdog de "dispositivo vinculado" al montar/cuando cambia el brand --
+  // cubre el arranque en frío (no solo el resume-desde-background de más
+  // abajo). Delay corto (no imprescindible para la corrección, solo
+  // cortesía): le da tiempo al camino normal de login/splash a establecer su
+  // propia conexión primero, para no competir con ella innecesariamente
+  // (`ensureDeviceSessionConnected` ya no hace nada si detecta una conexión
+  // viva -- ver isDeviceSessionActive()).
+  useEffect(() => {
+    if (!currentBrand) return undefined;
+    const timer = setTimeout(() => ensureDeviceSessionConnected(currentBrand), 1500);
+    return () => clearTimeout(timer);
+  }, [currentBrand]);
+
   // Guardar continuamente la ruta activa cuando el usuario navega por la app
   useEffect(() => {
     const path = location.pathname + location.search;
@@ -171,6 +227,14 @@ export function useAppLifecycle() {
         if (elapsed > MAX_BACKGROUND_MS) {
           validateSessionIfDue(currentBrand);
         }
+
+        // Asegurar que "dispositivo vinculado" siga conectado tras volver de
+        // background -- el sistema operativo (o el propio navegador) puede
+        // haber cerrado el WebSocket mientras la app estaba en background,
+        // dejando a este dispositivo sordo a `device_revoked` hasta que
+        // alguien más dispare un login/reactivación completo (ver
+        // ensureDeviceSessionConnected arriba).
+        ensureDeviceSessionConnected(currentBrand);
 
         // Reanudar reproductor si estaba activo antes del suspend.
         // `play()` requiere el objeto { type, id, url, ... } — no tiene

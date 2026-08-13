@@ -112,7 +112,7 @@ export function clearSessionBeforeNewLogin() {
  *   social, que lo recibe en la misma respuesta de `/wind/auth/google|facebook/`),
  *   pasarlo acá evita repetir un login manual innecesario contra `/api/auth/login/`.
  */
-async function maybeEstablishDeviceSession(brandConfig, credentials, precomputedSession) {
+export async function maybeEstablishDeviceSession(brandConfig, credentials, precomputedSession) {
   if (!deviceAuthService.isDeviceSessionEnabled(brandConfig)) return;
 
   try {

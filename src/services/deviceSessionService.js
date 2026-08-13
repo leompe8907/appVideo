@@ -243,6 +243,16 @@ export function closeActiveDeviceSession() {
 }
 
 /**
+ * true si ya hay una conexión de "dispositivo vinculado" abierta y en
+ * estado OPEN -- usado por el watchdog centralizado de useAppLifecycle.js
+ * para no reconectar de más cuando ya hay una conexión viva (p. ej. si el
+ * login/splash normal ya la estableció justo antes).
+ */
+export function isDeviceSessionActive() {
+  return !!(activeDeviceSocket && activeDeviceSocket.readyState === WebSocket.OPEN);
+}
+
+/**
  * Abre `wss://.../ws/device/?token=<jwt>`, registra este dispositivo, y
  * deja la conexión viva para poder recibir `device_revoked` en vivo (push
  * inmediato si el usuario revoca este dispositivo desde su panel, o si se
