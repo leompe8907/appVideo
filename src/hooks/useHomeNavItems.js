@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { usePreload } from '../store/usePreload';
@@ -20,9 +21,36 @@ import { getProfileAvatars } from '../constants/images';
 export function useHomeNavItems() {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
-  const { vod, catchup, epg } = usePreload();
+  const { vod, catchup, epg, loadVOD, loadCatchup } = usePreload();
   const subscriberName = getSubscriberName();
   const activeProfile = useActiveProfile();
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  });
+
+  const catchupEnabledByBrand = currentBrand?.catchup?.enabled !== false;
+
+  // Este hook es la fuente de verdad de qué links mostrar en TODO `/home/*`
+  // (Sidebar y Topbar), pero solo unas pocas páginas (VodPage, CatchupPage,
+  // SearchPage, /preload) disparan `loadVOD`/`loadCatchup` -- páginas como
+  // Mi Cuenta, OSMS o Control Parental no lo hacen. `vodIsEmptyAfterLoad` /
+  // `catchupIsEmptyAfterLoad` de abajo exigen `status === 'ready'` para poder
+  // ocultar el link (mientras no se sepa, se muestra optimistamente, para no
+  // esconder contenido real durante la carga normal de Home) -- pero eso
+  // significa que, si el usuario recarga el navegador estando YA en una de
+  // esas páginas que nunca disparan la carga, `status` se queda en `idle`
+  // PARA SIEMPRE en esa pantalla (el store de zustand vuelve a su estado
+  // inicial en cada recarga completa), y el link de Películas/Catchup queda
+  // mostrado de forma permanente aunque el usuario no tenga ninguno de los
+  // dos. Se dispara la carga defensiva acá (mismo patrón ya usado en
+  // SearchPage.jsx) para que, sin importar en qué página se refresque,
+  // `status` termine reflejando la realidad.
+  useEffect(() => {
+    if (!currentBrand) return;
+    if (vod.status === 'idle') loadVOD(currentBrand, { t: tRef.current });
+    if (catchupEnabledByBrand && catchup.status === 'idle') loadCatchup(currentBrand);
+  }, [currentBrand, vod.status, catchup.status, catchupEnabledByBrand, loadVOD, loadCatchup]);
 
   const profilesFeatureEnabled = currentBrand?.features?.profiles === true;
   const activeProfileAvatarUrl =
@@ -44,7 +72,6 @@ export function useHomeNavItems() {
     (catchup.recorded?.length ?? 0) === 0;
 
   const showVod = !vodIsEmptyAfterLoad;
-  const catchupEnabledByBrand = currentBrand?.catchup?.enabled !== false;
   const showCatchup = catchupEnabledByBrand && !catchupIsEmptyAfterLoad;
 
   const showTvRadioServices =
