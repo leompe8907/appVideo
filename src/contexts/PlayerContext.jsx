@@ -148,6 +148,12 @@ export function PlayerProvider({ children }) {
     selectedTextId: null,
     textEnabled: false,
   });
+  // Solo lo usa SamsungEngine (AVPlay) -- ver PLAYER_ENGINE_EVENTS.SUBTITLE_CUE
+  // en contracts.js sobre por qué AVPlay necesita que la app dibuje el
+  // subtítulo a mano. WebEngine (PC) y LG (native <video>) ya lo pintan solos
+  // vía el propio navegador, así que esto queda '' para siempre en esas
+  // plataformas -- el overlay que lo consume (HomePage.jsx) no se nota.
+  const [subtitleCueText, setSubtitleCueText] = useState('');
 
   const clearSeekTimeout = useCallback(() => {
     if (seekTimeoutRef.current) {
@@ -373,6 +379,9 @@ export function PlayerProvider({ children }) {
         setTracks((prev) => (tracksSnapshotsEqual(prev, next) ? prev : next));
         tryRestoreSavedTracks(next);
       },
+      handleSubtitleCue: (payload) => {
+        setSubtitleCueText(String(payload?.text || ''));
+      },
     };
   });
 
@@ -398,6 +407,7 @@ export function PlayerProvider({ children }) {
       handleSeekStart: () => dispatch('handleSeekStart'),
       handleSeekEnd: () => dispatch('handleSeekEnd'),
       handleTracksChange: (p) => dispatch('handleTracksChange', p),
+      handleSubtitleCue: (p) => dispatch('handleSubtitleCue', p),
     };
 
     function bindEngineListeners(engine) {
@@ -409,6 +419,7 @@ export function PlayerProvider({ children }) {
       engine.on(PLAYER_ENGINE_EVENTS.SEEK_START, boundHandlers.handleSeekStart);
       engine.on(PLAYER_ENGINE_EVENTS.SEEK_END, boundHandlers.handleSeekEnd);
       engine.on(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, boundHandlers.handleTracksChange);
+      engine.on(PLAYER_ENGINE_EVENTS.SUBTITLE_CUE, boundHandlers.handleSubtitleCue);
     }
 
     (async () => {
@@ -460,6 +471,7 @@ export function PlayerProvider({ children }) {
       engine.off(PLAYER_ENGINE_EVENTS.SEEK_START, boundHandlers.handleSeekStart);
       engine.off(PLAYER_ENGINE_EVENTS.SEEK_END, boundHandlers.handleSeekEnd);
       engine.off(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, boundHandlers.handleTracksChange);
+      engine.off(PLAYER_ENGINE_EVENTS.SUBTITLE_CUE, boundHandlers.handleSubtitleCue);
       clearSeekTimeout();
       log('engine:destroy (cleanup on unmount)');
       engine.destroy();
@@ -561,6 +573,7 @@ export function PlayerProvider({ children }) {
       }));
 
       setTracks({ audio: [], text: [], selectedAudioId: null, selectedTextId: null, textEnabled: false });
+      setSubtitleCueText('');
       engine.load(url, { type, autoPlay, mediaOption, drmConfig });
     })().catch((err) => {
       console.error('[PlayerProvider] Error en play', err);
@@ -634,6 +647,7 @@ export function PlayerProvider({ children }) {
       error: null,
     });
     setTracks({ audio: [], text: [], selectedAudioId: null, selectedTextId: null, textEnabled: false });
+    setSubtitleCueText('');
   };
 
   const seek = (seconds) => {
@@ -739,6 +753,11 @@ export function PlayerProvider({ children }) {
       userTrackChoiceRef.current = true;
       engineRef.current?.setSubtitlesEnabled?.(enabled);
       if (enabled === false) {
+        // Defensivo: en Samsung, el engine ya emite SUBTITLE_CUE('') al
+        // desactivar (ver SamsungEngine.nativeSetSubtitlesEnabled), pero no
+        // hay que depender de esa vuelta de evento para que el overlay
+        // desaparezca al toque del click del usuario.
+        setSubtitleCueText('');
         const brandId = resolveBrandId(brandRef.current?.brand ?? brandRef.current?.id);
         persistSubtitlePreference(brandId, getPlaybackSnapshot(), { enabled: false });
       }
@@ -749,6 +768,7 @@ export function PlayerProvider({ children }) {
   const value = {
     state,
     tracks,
+    subtitleCueText,
     play,
     retry,
     pause,

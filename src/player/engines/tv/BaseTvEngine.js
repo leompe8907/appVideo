@@ -191,6 +191,62 @@ export class BaseTvEngine extends WebEngine {
     }
   }
 
+  /**
+   * Audio/subtítulos: mismo patrón de fallback que play()/pause()/seek() de
+   * arriba, pero sin el try/catch "silencioso -> super" en caso de éxito
+   * (acá "no implementado" NO es un error, es routing normal -- ej. LG con
+   * adapter `injected` opaco, o Samsung sin alguna capability puntual de
+   * AVPlay). `nativeGetTracks()` devuelve `null` cuando el adapter nativo no
+   * tiene forma de listar tracks; en ese caso se cae al `super.getTracks()`
+   * heredado de WebEngine (video.js), que en el peor caso devuelve listas
+   * vacías -- inofensivo, oculta el botón de Audio/Subtítulos en el HUD en
+   * vez de romper algo.
+   */
+  getTracks() {
+    if (this.isNativeActive) {
+      try {
+        const native = this.nativeGetTracks();
+        if (native) return native;
+      } catch (error) {
+        this.emitNativeError(error);
+      }
+    }
+    return super.getTracks();
+  }
+
+  selectAudioTrack(id) {
+    if (this.isNativeActive) {
+      try {
+        if (this.nativeSelectAudioTrack(id)) return true;
+      } catch (error) {
+        this.emitNativeError(error);
+      }
+    }
+    return super.selectAudioTrack(id);
+  }
+
+  selectTextTrack(id) {
+    if (this.isNativeActive) {
+      try {
+        if (this.nativeSelectTextTrack(id)) return true;
+      } catch (error) {
+        this.emitNativeError(error);
+      }
+    }
+    return super.selectTextTrack(id);
+  }
+
+  setSubtitlesEnabled(enabled) {
+    if (this.isNativeActive) {
+      try {
+        if (this.nativeSetSubtitlesEnabled(enabled)) return true;
+      } catch (error) {
+        this.emitNativeError(error);
+      }
+    }
+    return super.setSubtitlesEnabled(enabled);
+  }
+
   destroy() {
     this.unbindLifecycleHooks();
     if (this.isNativeActive) {
@@ -306,6 +362,23 @@ export class BaseTvEngine extends WebEngine {
   nativeOnAppHide() {}
 
   nativeOnAppResume() {}
+
+  /** `null` = adapter nativo no sabe listar tracks -> cae a WebEngine (ver getTracks() arriba). */
+  nativeGetTracks() {
+    return null;
+  }
+
+  nativeSelectAudioTrack() {
+    return false;
+  }
+
+  nativeSelectTextTrack() {
+    return false;
+  }
+
+  nativeSetSubtitlesEnabled() {
+    return false;
+  }
   // endregion
 }
 

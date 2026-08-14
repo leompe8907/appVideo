@@ -37,7 +37,8 @@ export function HomePlaceholderPage({ title, description }) {
 export function HomePage() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
-  const { containerRef, state: playerState, licenseInUsePrompt, confirmLicenseInUse, close } = usePlayer();
+  const { containerRef, state: playerState, licenseInUsePrompt, confirmLicenseInUse, close, subtitleCueText } =
+    usePlayer();
   const isPlayerActive = Boolean(playerState?.url);
   const showPlayerLoading = usePlayerLoadingVisible(isPlayerActive, containerRef, playerState);
   const wasPlayerActiveRef = useRef(false);
@@ -160,6 +161,19 @@ export function HomePage() {
         {showPlayerLoading && (
           <div className="home-global-player-loading">
             <div className="home-global-player-loading-spinner" />
+          </div>
+        )}
+        {/*
+          Solo tiene contenido en Samsung/AVPlay (ver PlayerContext.jsx
+          subtitleCueText y SamsungEngine.js) -- WebEngine (PC) y LG (native
+          <video>) ya dibujan el subtítulo solos vía el navegador, así que acá
+          `subtitleCueText` queda siempre '' y este div no se nota. Va afuera
+          de PlayerHud a propósito: el HUD se auto-oculta a los pocos
+          segundos de inactividad, pero el subtítulo tiene que seguir viéndose.
+        */}
+        {isPlayerActive && subtitleCueText && (
+          <div className="home-global-player-subtitle" aria-live="polite">
+            {subtitleCueText}
           </div>
         )}
         {isPlayerActive && <PlayerHud isPlaybackMaximized />}

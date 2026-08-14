@@ -4,6 +4,14 @@ import { isHlsUrl } from '../web/hlsSupport';
 import { windDirectM3u8FromAny } from '../web/windHlsManifest';
 import { middlewareNeedsSession } from '../web/sessionHlsXhrSetup';
 
+/**
+ * Tope defensivo para el auto-clear de un cue de subtítulo (ver
+ * `onsubtitlechange` en nativeLoad()): si el firmware manda una `duration`
+ * absurda (0, negativa, o un valor gigante por un bug de esa versión de
+ * Tizen), el texto no debe quedar pegado en pantalla para siempre.
+ */
+const SUBTITLE_CUE_MAX_DURATION_MS = 15000;
+
 /** AVPlay solo permite play() en READY o PAUSED (reanudar). */
 const AVPLAY_PLAY_STATES = new Set(['READY', 'PAUSED']);
 
@@ -36,6 +44,14 @@ export class SamsungEngine extends BaseTvEngine {
     this._isPreparing = false;
     this._pendingAutoPlay = false;
     this._nativePlayDeferred = false;
+    // Audio/subtítulos (AVPlay): a diferencia de video.js, no hay un evento
+    // "tracks disponibles" -- se piden a demanda con getTotalTrackInfo(). Se
+    // recuerda acá la selección actual porque AVPlay no expone "cuál está
+    // seleccionada ahora" en ningún campo de getTotalTrackInfo().
+    this._selectedAudioIndex = null;
+    this._selectedTextIndex = null;
+    this._textEnabled = false;
+    this._subtitleCueTimer = null;
   }
 
   canHandleNatively(url) {
@@ -192,6 +208,12 @@ export class SamsungEngine extends BaseTvEngine {
 
     this._isPreparing = false;
     this._pendingAutoPlay = options?.autoPlay === true;
+    // Contenido nuevo: la selección de audio/subtítulo del contenido anterior
+    // no tiene ningún significado acá (índices de un track table distinto).
+    this._selectedAudioIndex = null;
+    this._selectedTextIndex = null;
+    this._textEnabled = false;
+    this._clearSubtitleCueTimer();
 
     try {
       if (caps.hasSetListener) {
@@ -207,6 +229,17 @@ export class SamsungEngine extends BaseTvEngine {
           onstreamcompleted: () => this.emitNativeState('ended'),
           onerror: (err) => this.emitNativeError(err),
           onerrormsg: (_kind, msg) => this.emitNativeError(new Error(String(msg || 'Samsung AVPlay error'))),
+          // NO verificado contra hardware real (a diferencia de otros
+          // comentarios de este archivo) -- firma y comportamiento según la
+          // documentación pública de Tizen AVPlay: a diferencia de un <video>
+          // HTML5 o video.js, AVPlay no dibuja el subtítulo por sí solo para
+          // la mayoría de los formatos embebidos en HLS -- el texto de cada
+          // cue llega por acá y la app tiene que mostrarlo/ocultarlo a mano
+          // (ver `_emitSubtitleCue`, PlayerContext.jsx `subtitleCueText` y el
+          // overlay en HomePage.jsx). Solo tiene efecto visible si antes se
+          // llamó `setSelectTrack('TEXT', idx)` + `setSilentSubtitle(false)`
+          // (ver nativeSetSubtitlesEnabled/nativeSelectTextTrack abajo).
+          onsubtitlechange: (duration, text) => this._emitSubtitleCue(duration, text),
         };
         api.setListener(this.avplayListener);
       }
@@ -400,6 +433,10 @@ export class SamsungEngine extends BaseTvEngine {
     this._isPreparing = false;
     this._pendingAutoPlay = false;
     this._nativePlayDeferred = false;
+    this._selectedAudioIndex = null;
+    this._selectedTextIndex = null;
+    this._textEnabled = false;
+    this._clearSubtitleCueTimer();
     this.clearAvplayListener(api);
     this.safeStopAndClose(api, this.capabilities);
     this.capabilities = null;
@@ -422,12 +459,207 @@ export class SamsungEngine extends BaseTvEngine {
       hasStop: typeof api?.stop === 'function',
       hasClose: typeof api?.close === 'function',
       hasGetState: typeof api?.getState === 'function',
+      hasGetTotalTrackInfo: typeof api?.getTotalTrackInfo === 'function',
+      hasSetSelectTrack: typeof api?.setSelectTrack === 'function',
+      hasSetSilentSubtitle: typeof api?.setSilentSubtitle === 'function',
     };
   }
 
   nativeOnAppHide() {}
 
   nativeOnAppResume() {}
+
+  /**
+   * Parsea `extra_info` (DOMString JSON) de un AVPlayTrackInfo. Distintas
+   * versiones de firmware Tizen usan claves algo distintas para el idioma
+   * (`language` / `track_lang` / `lang`) -- se prueban todas.
+   */
+  _parseTrackExtraInfo(track) {
+    try {
+      const raw = track?.extra_info;
+      if (!raw) return {};
+      return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch {
+      return {};
+    }
+  }
+
+  _avplayTrackLabel(track, extra, idx, kind) {
+    const lang = extra?.language || extra?.track_lang || extra?.lang || track?.language || '';
+    if (lang) return String(lang).toUpperCase();
+    return kind === 'AUDIO' ? `Audio ${idx + 1}` : `Sub ${idx + 1}`;
+  }
+
+  /**
+   * Ver comentario largo en `onsubtitlechange` (nativeLoad()) sobre por qué
+   * hace falta esto -- AVPlay no dibuja el subtítulo, solo avisa el texto.
+   * NO verificado contra hardware real.
+   */
+  nativeGetTracks() {
+    const api = this.nativeAdapter?.api;
+    if (!api || !this.capabilities?.hasGetTotalTrackInfo) return null;
+
+    let all;
+    try {
+      all = api.getTotalTrackInfo();
+    } catch (error) {
+      this.emitNativeError(error);
+      return null;
+    }
+    if (!Array.isArray(all)) return null;
+
+    const audio = [];
+    const text = [];
+    let audioIdx = 0;
+    let textIdx = 0;
+
+    all.forEach((track) => {
+      const type = String(track?.type || '').toUpperCase();
+      const extra = this._parseTrackExtraInfo(track);
+      const index = Number.isFinite(track?.index) ? track.index : null;
+      if (index == null) return;
+
+      if (type === 'AUDIO') {
+        audio.push({
+          id: String(index),
+          label: this._avplayTrackLabel(track, extra, audioIdx, 'AUDIO'),
+          lang: String(extra?.language || extra?.track_lang || extra?.lang || ''),
+          index,
+        });
+        audioIdx += 1;
+      } else if (type === 'TEXT') {
+        text.push({
+          id: String(index),
+          label: this._avplayTrackLabel(track, extra, textIdx, 'TEXT'),
+          lang: String(extra?.language || extra?.track_lang || extra?.lang || ''),
+          index,
+        });
+        textIdx += 1;
+      }
+    });
+
+    // AVPlay no reporta "cuál está activa": si el usuario todavía no eligió
+    // nada explícitamente, se asume la primera de audio (es la que decodifica
+    // por defecto casi cualquier firmware) y ningún subtítulo (apagado por
+    // defecto, igual que en WebEngine).
+    const selectedAudioId =
+      this._selectedAudioIndex != null ? String(this._selectedAudioIndex) : (audio[0]?.id ?? null);
+    const selectedTextId = this._selectedTextIndex != null ? String(this._selectedTextIndex) : null;
+
+    return {
+      audio,
+      text,
+      selectedAudioId,
+      selectedTextId,
+      textEnabled: this._textEnabled === true,
+    };
+  }
+
+  _emitSamsungTracksChange() {
+    const snap = this.nativeGetTracks();
+    if (snap) this.emit(PLAYER_ENGINE_EVENTS.TRACKS_CHANGE, snap);
+  }
+
+  nativeSelectAudioTrack(id) {
+    const api = this.nativeAdapter?.api;
+    if (!api || !this.capabilities?.hasSetSelectTrack) return false;
+    const index = Number(id);
+    if (!Number.isFinite(index)) return false;
+
+    try {
+      api.setSelectTrack('AUDIO', index);
+    } catch (error) {
+      this.emitNativeError(error);
+      return false;
+    }
+    this._selectedAudioIndex = index;
+    this._emitSamsungTracksChange();
+    return true;
+  }
+
+  nativeSelectTextTrack(id) {
+    const api = this.nativeAdapter?.api;
+    if (!api || !this.capabilities?.hasSetSelectTrack) return false;
+    const index = Number(id);
+    if (!Number.isFinite(index)) return false;
+
+    try {
+      api.setSelectTrack('TEXT', index);
+    } catch (error) {
+      this.emitNativeError(error);
+      return false;
+    }
+    this._selectedTextIndex = index;
+    // Seleccionar un track de texto no lo muestra por sí solo -- ver
+    // nativeSetSubtitlesEnabled(). El llamador (PlayerContext.selectTextTrack)
+    // ya llama primero a setSubtitlesEnabled(true), así que esto es un
+    // refuerzo defensivo, no la única vía.
+    if (this._textEnabled && this.capabilities?.hasSetSilentSubtitle) {
+      try {
+        api.setSilentSubtitle(false);
+      } catch (error) {
+        this.emitNativeError(error);
+      }
+    }
+    this._emitSamsungTracksChange();
+    return true;
+  }
+
+  nativeSetSubtitlesEnabled(enabled) {
+    const api = this.nativeAdapter?.api;
+    if (!api || !this.capabilities?.hasSetSilentSubtitle) return false;
+    const want = enabled === true;
+
+    // Activar sin haber elegido nunca un track: elegir el primero disponible
+    // (mismo comportamiento que WebEngine.setSubtitlesEnabled con video.js).
+    if (want && this._selectedTextIndex == null) {
+      const snap = this.nativeGetTracks();
+      const first = snap?.text?.[0];
+      if (!first) return false; // sin subtítulos disponibles, nada que activar
+      if (this.capabilities?.hasSetSelectTrack) {
+        try {
+          api.setSelectTrack('TEXT', first.index);
+        } catch (error) {
+          this.emitNativeError(error);
+        }
+      }
+      this._selectedTextIndex = first.index;
+    }
+
+    try {
+      // setSilentSubtitle(true) = silenciar el callback onsubtitlechange
+      // (subtítulo "apagado" sin perder la pista seleccionada).
+      api.setSilentSubtitle(!want);
+    } catch (error) {
+      this.emitNativeError(error);
+      return false;
+    }
+
+    this._textEnabled = want;
+    if (!want) this._emitSubtitleCue(0, '');
+    this._emitSamsungTracksChange();
+    return true;
+  }
+
+  _clearSubtitleCueTimer() {
+    if (this._subtitleCueTimer != null) {
+      clearTimeout(this._subtitleCueTimer);
+      this._subtitleCueTimer = null;
+    }
+  }
+
+  _emitSubtitleCue(durationMs, text) {
+    this._clearSubtitleCueTimer();
+    this.emit(PLAYER_ENGINE_EVENTS.SUBTITLE_CUE, { text: text ? String(text) : '' });
+
+    const ms = Number(durationMs);
+    if (!text || !Number.isFinite(ms) || ms <= 0) return;
+    const clampedMs = Math.min(ms, SUBTITLE_CUE_MAX_DURATION_MS);
+    this._subtitleCueTimer = setTimeout(() => {
+      this._subtitleCueTimer = null;
+      this.emit(PLAYER_ENGINE_EVENTS.SUBTITLE_CUE, { text: '' });
+    }, clampedMs);
+  }
 }
 
 export default SamsungEngine;
