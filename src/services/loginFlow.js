@@ -5,6 +5,7 @@
 
 import panaccessService from './panaccessService';
 import * as userSession from '../utils/userSession';
+import { classifyError, retryOperation } from '../cv/errorClassifier';
 import {
   getLicenseKey,
   getLicensePin,
@@ -384,18 +385,31 @@ async function autoActivateLicense(service, licenses, options) {
 }
 
 /**
- * Reactiva sesión usando credenciales guardadas (re-login + getClientConfig + opcional licencia).
- * @param {Object} brandConfig - currentBrand.
- * @param {Object} [options] - Mismas opciones que loginAndActivateLicense (autoActivateLicense, etc.).
- * @returns {Promise<boolean>} true si todo ok, false si no hay credenciales o falla.
+ * Núcleo de `reactivateSession()` -- a diferencia de esa función pública,
+ * ESTA lanza en vez de devolver `false`, para que quien la llame pueda
+ * distinguir por qué falló (ver `checkSessionAndReactivateIfNeeded`, que
+ * necesita esa distinción; `reactivateSession()` de más abajo la sigue
+ * ocultando para no romper a sus otros callers, `splashAuthFlow.js`).
+ *
+ * Reintenta (`retryOperation`, ver `cv/errorClassifier.js`) SOLO ante
+ * errores clasificados como recuperables (red/timeout) -- nunca ante un
+ * rechazo real de credenciales, para no arriesgarse a disparar un bloqueo
+ * por intentos repetidos en PanAccess. Motivo (bug real encontrado): el
+ * momento más común para que este re-login silencioso falle es justo al
+ * volver de background/sleep -- el instante de peor conectividad posible
+ * (wifi/datos reconectando, DNS frío) -- y antes un solo timeout ahí se
+ * trataba exactamente igual que una contraseña incorrecta, cerrando la
+ * sesión del usuario por un problema de red transitorio y no por nada que
+ * hiciera mal.
  */
-export async function reactivateSession(brandConfig, options = {}) {
+async function reactivateSessionOrThrow(brandConfig, options = {}) {
   const credentials =
     userSession.getCredentials() ??
     userSession.getCredentialsWithFallback(brandConfig?.token);
   if (!credentials) {
-    if (import.meta.env.DEV) console.warn('[loginFlow] reactivateSession: no hay credenciales');
-    return false;
+    const err = new Error('No hay credenciales guardadas.');
+    err.errorInfo = { type: 'AUTH_ERROR', canRetry: false };
+    throw err;
   }
 
   const active = userSession.getActiveLicense();
@@ -412,9 +426,22 @@ export async function reactivateSession(brandConfig, options = {}) {
     opts.pin = active.pin ?? '';
   }
 
+  await retryOperation(() => loginAndActivateLicense(brandConfig, credentials, opts), {
+    maxRetries: 2,
+    baseDelay: 800,
+  });
+  if (import.meta.env.DEV) console.log('[loginFlow] reactivateSession: ok');
+}
+
+/**
+ * Reactiva sesión usando credenciales guardadas (re-login + getClientConfig + opcional licencia).
+ * @param {Object} brandConfig - currentBrand.
+ * @param {Object} [options] - Mismas opciones que loginAndActivateLicense (autoActivateLicense, etc.).
+ * @returns {Promise<boolean>} true si todo ok, false si no hay credenciales o falla.
+ */
+export async function reactivateSession(brandConfig, options = {}) {
   try {
-    await loginAndActivateLicense(brandConfig, credentials, opts);
-    if (import.meta.env.DEV) console.log('[loginFlow] reactivateSession: ok');
+    await reactivateSessionOrThrow(brandConfig, options);
     return true;
   } catch (e) {
     if (import.meta.env.DEV) {
@@ -491,30 +518,44 @@ export async function reactivateLicense(brandConfig, failIfInUse = false) {
  * usuario se queda sin licencia activa, la próxima reproducción real ya
  * dispara el flujo existente (`tryRecoverAfterError`/`licenseInUsePrompt` en
  * PlayerContext).
+ *
  * @param {Object} brandConfig - currentBrand.
  * @param {{ failIfInUse?: boolean }} [options] - Si la sesión es válida, pasa a reactivateLicense; si no, re-login + licencia guardada.
- * @returns {Promise<boolean>} true si la sesión queda operativa, false si hay que ir a login.
+ * @returns {Promise<{ok: boolean, reason: 'ok'|'invalid'|'network'}>}
+ *   `reason` distingue por qué falló -- `sessionValidator.js` solo debe
+ *   forzar un logout completo ante `'invalid'` (sesión/credenciales
+ *   realmente rechazadas). Ante `'network'` (error de red/timeout, incluso
+ *   después de reintentar) la sesión local debe quedar intacta: el usuario
+ *   sigue logueado desde su perspectiva, solo falló esta verificación
+ *   puntual -- forzarlo a loguearse de nuevo por un problema de red es
+ *   exactamente el bug real que motivó este cambio.
  */
 export async function checkSessionAndReactivateIfNeeded(brandConfig, options = {}) {
   const { failIfInUse = false, ...reactivateOptions } = options;
-  if (!brandConfig) return false;
+  if (!brandConfig) return { ok: false, reason: 'invalid' };
 
   if (!panaccessService.client) {
     await panaccessService.initialize(brandConfig);
   }
 
   const sessionId = userSession.getSessionId();
-  if (!sessionId) return false;
+  if (!sessionId) return { ok: false, reason: 'invalid' };
 
   try {
     const valid = await panaccessService.loggedIn({ enableRetry: false }).then(Boolean).catch(() => false);
     if (valid) {
       await reactivateLicense(brandConfig, failIfInUse);
-      return true;
+      return { ok: true, reason: 'ok' };
     }
   } catch {
     // seguir a reactivar sesión completa
   }
 
-  return reactivateSession(brandConfig, reactivateOptions);
+  try {
+    await reactivateSessionOrThrow(brandConfig, reactivateOptions);
+    return { ok: true, reason: 'ok' };
+  } catch (e) {
+    const info = e.errorInfo || classifyError(e);
+    return { ok: false, reason: info.canRetry ? 'network' : 'invalid' };
+  }
 }

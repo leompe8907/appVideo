@@ -1,5 +1,5 @@
 import * as userSession from './userSession';
-import { checkSessionAndReactivateIfNeeded } from '../services/loginFlow';
+import { checkSessionAndReactivateIfNeeded, clearSessionBeforeNewLogin } from '../services/loginFlow';
 import logger from './logger';
 
 const VALIDATION_INTERVAL_MS = 5 * 60 * 1000;
@@ -43,13 +43,35 @@ async function validateSession(brandConfig) {
       return false;
     }
 
-    const ok = await checkSessionAndReactivateIfNeeded(brandConfig, {
+    const { ok, reason } = await checkSessionAndReactivateIfNeeded(brandConfig, {
       failIfInUse: true,
     });
 
     if (!ok) {
+      if (reason === 'network') {
+        // Fallo de red/timeout (incluso después de reintentar) -- NO forzar
+        // logout. El usuario sigue logueado desde su perspectiva; forzarlo a
+        // loguearse de nuevo por un problema de conectividad transitorio
+        // (típicamente justo al volver de background, el momento de peor
+        // conexión) era el bug real: además de la mala experiencia, ese
+        // logout no pasaba por `clearSessionBeforeNewLogin()`, así que
+        // también perdía el `device_token` y duplicaba el dispositivo en el
+        // próximo login. Se deja la sesión local intacta y se reintentará
+        // en el próximo ciclo del validador.
+        logger.warn('[SessionValidator] No se pudo verificar la sesión (red/timeout) -- se mantiene la sesión local, se reintentará después.');
+        isValidationInProgress = false;
+        return true;
+      }
+
       logger.warn('[SessionValidator] Sesión inválida o reactivación fallida.');
-      userSession.setLoggedOut();
+      // `clearSessionBeforeNewLogin()` en vez de `userSession.setLoggedOut()`
+      // directo -- esta última borra TODO el storage de la marca sin
+      // excepciones, incluido el `device_token` de "dispositivos vinculados"
+      // (ver `clearBrandStorage`), y el próximo login manual quedaba sin
+      // nada que reenviar en `register_device`, creando un `DeviceSession`
+      // duplicado. `clearSessionBeforeNewLogin()` es la función que ya
+      // preserva y restaura ese token alrededor del mismo borrado.
+      clearSessionBeforeNewLogin();
       isValidationInProgress = false;
       notifySessionInvalid();
       return false;
