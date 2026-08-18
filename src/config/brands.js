@@ -693,22 +693,22 @@ export const BRANDS = [
       },
       // --- Registro por código QR ---
       qrRegister: {
-        enabled: true, // Muestra botón y modal de registro con QR
-        url: "https://portal.in.tv.br/#/login", // URL codificada en el QR de registro
+        enabled: false, // Muestra botón y modal de registro con QR
+        url: "", // URL codificada en el QR de registro
       },
       // --- Enlace "Olvidé contraseña" ---
       forgotPassword: {
-        enabled: true, // Muestra enlace debajo del campo contraseña
-        url: "https://portal.in.tv.br/#/forgot-password", // URL destino al hacer clic; vacío = no navega
+        enabled: false, // Muestra enlace debajo del campo contraseña
+        url: "", // URL destino al hacer clic; vacío = no navega
       },
       // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
-        enabled: true, // Muestra botón y flujo UDID
-        baseUrl: "https://intv-payment.in.tv.br/", // Base HTTP del backend UDID
-        requestPath: "/api/devices/request-access/", // Endpoint POST para solicitar código UDID
-        wsUrl: "wss://intv-payment.in.tv.br/ws/device-access/", // WebSocket para recibir credenciales cifradas
-        appType: "10foot", // Tipo de app enviado al backend
-        appVersion: "1.0", // Versión enviada al backend
+        enabled: false, // Muestra botón y flujo UDID
+        baseUrl: "", // Base HTTP del backend UDID
+        requestPath: "", // Endpoint POST para solicitar código UDID
+        wsUrl: "", // WebSocket para recibir credenciales cifradas
+        appType: "", // Tipo de app enviado al backend
+        appVersion: "", // Versión enviada al backend
         maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
         reconnectMs: [3000, 6000, 10000], // Delays entre reintentos (ms)
         heartbeatMs: 30000, // Intervalo de ping WebSocket (ms)
@@ -716,26 +716,26 @@ export const BRANDS = [
       },
       // --- Login social (Google / Facebook); oculto en TV ---
       socialLogin: {
-        backendBaseUrl: "http://127.0.0.1:8000", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
+        backendBaseUrl: "", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
         google: {
-          enabled: true, // Muestra botón Google (solo escritorio)
+          enabled: false, // Muestra botón Google (solo escritorio)
           redirectUrl: "", // Path relativo a backendBaseUrl o URL absoluta del POST OAuth
-          accessToken: "184856008395-25a3h9o078l4rch61236f45t8qg8f04d.apps.googleusercontent.com", // Google OAuth client_id
+          accessToken: "", // Google OAuth client_id
           preferCustomButton: true, // true: botón custom con theme.social; false: widget GIS nativo
           backendBaseUrl: "", // Base específica Google; vacío = usa socialLogin.backendBaseUrl
         },
         facebook: {
-          enabled: true, // Muestra botón Facebook (solo escritorio)
+          enabled: false, // Muestra botón Facebook (solo escritorio)
           redirectUrl: "", // Path relativo o URL absoluta del POST OAuth
-          accessToken: "7198627023533757", // Facebook App ID
+          accessToken: "", // Facebook App ID
           backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
         },
       },
       // --- "Dispositivos vinculados" (Fase 3, hoy backend Wind) -- opt-in, ver deviceAuthService.js ---
       deviceSession: {
-        enabled: true, // ACTIVADO para pruebas locales (2026-07-27) -- apunta a localhost:8000, NO a producción (backend.wind.do). Antes de desplegar a producción real, volver a "" (vacío, reutiliza socialLogin.backendBaseUrl) y confirmar con el equipo que /api/auth/login/ y /ws/device/ ya están desplegados en backend.wind.do.
-        baseUrl: "https://backend.wind.do/", // backend Wind local para pruebas -- pisa socialLogin.backendBaseUrl a propósito
-        wsUrl: "wss://backend.wind.do/ws/device/", // endpoint de "dispositivos vinculados" (Fase 3) contra el mismo backend local
+        enabled: false, // ACTIVADO para pruebas locales (2026-07-27) -- apunta a localhost:8000, NO a producción (backend.wind.do). Antes de desplegar a producción real, volver a "" (vacío, reutiliza socialLogin.backendBaseUrl) y confirmar con el equipo que /api/auth/login/ y /ws/device/ ya están desplegados en backend.wind.do.
+        baseUrl: "", // backend Wind local para pruebas -- pisa socialLogin.backendBaseUrl a propósito
+        wsUrl: "", // endpoint de "dispositivos vinculados" (Fase 3) contra el mismo backend local
       },
     },
 
@@ -755,10 +755,10 @@ export const BRANDS = [
         dangerText: "#ff8080",
       },
       links: {
-        changePassword: { enabled: true, url: "https://backend.wind.do/wind/login/" },
-        linkedDevices: { enabled: true, url: "https://backend.wind.do/wind/login/" },
-        subscription: { enabled: true, url: "https://backend.wind.do/wind/login/" },
-        deleteAccount: { enabled: true, url: "https://backend.wind.do/wind/login/" },
+        changePassword: { enabled: true, url: "" },
+        linkedDevices: { enabled: true, url: "" },
+        subscription: { enabled: true, url: "" },
+        deleteAccount: { enabled: true, url: "" },
       },
       sections: {
         parentalControl: true,
