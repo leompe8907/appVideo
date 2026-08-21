@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react-swc'
 import legacy from '@vitejs/plugin-legacy'
 import { brandPublicAssetsPlugin } from './vite/brandPublicAssets.js'
 import { BRANDS } from './src/config/brands.js'
-import { resolveBrandTokenFromProcessEnv } from './src/config/resolveBrandToken.js'
+import { resolveBrandTokenFromProcessEnv, resolveBrandDrmFromProcessEnv } from './src/config/resolveBrandToken.js'
 import { applyBrandRuntimePolicyFromEnv } from './src/config/applyBrandRuntimePolicy.js'
 import { ensureLegacyEs5Plugin } from './vite/ensureLegacyEs5Plugin.js'
 
@@ -35,6 +35,20 @@ function singleBrandConfigPlugin(brand, env) {
         this.warn(
           `[single-brand-config] Token vacío para "${selectedBrand.brand}". ` +
             `Define VITE_BRAND_TOKEN_${String(selectedBrand.brand).toUpperCase()} en .env.local`,
+        );
+      }
+
+      const drm =
+        resolveBrandDrmFromProcessEnv(selectedBrand.brand) ||
+        env[`VITE_BRAND_DRM_${String(selectedBrand.brand).toUpperCase()}`] ||
+        env.VITE_BRAND_DRM ||
+        selectedBrand.drm ||
+        '';
+
+      if (!drm) {
+        this.warn(
+          `[single-brand-config] drm (URL base de middleware) vacío para "${selectedBrand.brand}". ` +
+            `Define VITE_BRAND_DRM_${String(selectedBrand.brand).toUpperCase()} en .env.local`,
         );
       }
 

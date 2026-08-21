@@ -43,6 +43,61 @@ export function resolveBrandToken(brandSlug) {
   return '';
 }
 
+/**
+ * Resuelve la URL base del middleware/backend ("drm") de una marca desde
+ * variables de entorno Vite. Convención: VITE_BRAND_DRM_<SLUG> (mismo
+ * esquema que VITE_BRAND_TOKEN_<SLUG> de arriba). No es una clave real de
+ * DRM (Widevine/PlayReady) -- es la URL base de infraestructura del cliente
+ * (ver JSDoc de `drm` en brands.js) -- se mueve a env por higiene de repo
+ * (evitar que quede en git), no porque sea un secreto que haya que ocultar
+ * del dispositivo final (ver conversación: esto es un SPA cliente, todo lo
+ * que llega a `import.meta.env.VITE_*` termina igual en el bundle shippeado).
+ */
+function brandSlugToDrmEnvKey(slug) {
+  return `VITE_BRAND_DRM_${String(slug || '')
+    .trim()
+    .toUpperCase()
+    .replace(/-/g, '_')}`;
+}
+
+export function resolveBrandDrm(brandSlug) {
+  const slug = String(brandSlug || '').trim();
+  if (!slug) return '';
+
+  const env = typeof import.meta !== 'undefined' ? import.meta.env : {};
+  const specificKey = brandSlugToDrmEnvKey(slug);
+  const specific = env[specificKey];
+  if (specific && String(specific).trim() !== '') {
+    return String(specific).trim();
+  }
+
+  const fallback = env.VITE_BRAND_DRM;
+  if (fallback && String(fallback).trim() !== '') {
+    return String(fallback).trim();
+  }
+
+  return '';
+}
+
+/* global process */
+export function resolveBrandDrmFromProcessEnv(brandSlug) {
+  const slug = String(brandSlug || '').trim();
+  if (!slug) return '';
+
+  const specificKey = brandSlugToDrmEnvKey(slug);
+  const specific = process.env[specificKey];
+  if (specific && String(specific).trim() !== '') {
+    return String(specific).trim();
+  }
+
+  const fallback = process.env.VITE_BRAND_DRM;
+  if (fallback && String(fallback).trim() !== '') {
+    return String(fallback).trim();
+  }
+
+  return '';
+}
+
 // `process` es un global de Node válido acá: esta función solo se llama
 // desde vite.config.js (ver import arriba en el propio archivo de config),
 // nunca desde el bundle de cliente. `/* global process */` en vez de

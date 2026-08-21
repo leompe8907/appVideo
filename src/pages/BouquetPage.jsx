@@ -9,6 +9,7 @@ import { usePlayer } from '../contexts/PlayerContext';
 import { useBrand } from '../contexts/BrandContext';
 import { useParentalGate } from '../hooks/useParentalGate';
 import BouquetWall from '../components/bouquet/BouquetWall';
+import MostWatchedRail from '../components/bouquet/MostWatchedRail';
 import VodRecommendedHomeRail from '../components/vod/VodRecommendedHomeRail';
 import panaccessService from '../services/panaccessService';
 import { useCallback } from 'react';
@@ -117,6 +118,10 @@ export function BouquetPage() {
             )}
             <BouquetWall
               variant="inicio"
+              onChannelSelect={handleChannelSelect}
+              onChannelFocus={handleChannelFocus}
+            />
+            <MostWatchedRail
               onChannelSelect={handleChannelSelect}
               onChannelFocus={handleChannelFocus}
             />

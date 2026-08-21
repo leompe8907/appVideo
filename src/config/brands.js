@@ -6,6 +6,9 @@
  * @param {string} brand - Identificador único de la marca (slug), usado para seleccionar la configuración activa.
  * @param {string} appName - Nombre visible de la aplicación que se muestra en la UI.
  * @param {string} drm - URL base del servicio DRM/backend (ej. Panaccess, inTV) para autenticación y contenido.
+ *   Placeholder '' en este archivo -- se resuelve en build/runtime desde VITE_BRAND_DRM_<MARCA> en .env.local
+ *   (mismo mecanismo que `token`, ver resolveBrandToken.js/applyBrandRuntimePolicy.js). No hardcodear acá:
+ *   scripts/check-brand-secrets.js falla el build si detecta un literal no vacío.
  * @param {string} token - Token de API o clave para autenticar las peticiones contra el servicio DRM.
  * @param {string} developedBy - Texto o HTML del crédito "Desarrollado por" (puede incluir entidades como &#174).
  * @param {string} version - Número de versión de la app para esta marca (ej. "1.0.2", "2.0.2").
@@ -241,8 +244,6 @@ export const BRANDS = [
   {
     brand: "bromteck",
     appName: "Bromteck",
-    drm: "https://cv01.panaccess.com/",
-    token: '',
     // Metadatos de integración con DRM (equivalentes al proyecto EPG clásico)
     os: 'HTML5',
     appVersion: '1',
@@ -343,6 +344,10 @@ export const BRANDS = [
         enabled: false, // true: login manual/social/TV-pareada también autentica contra /api/auth/login/ y registra el dispositivo por WS (/ws/device/). Activar explícitamente cuando el equipo confirme el rollout en este brand.
         baseUrl: "", // vacío = reutiliza socialLogin.backendBaseUrl ("http://backend.wind.do") y luego udid.baseUrl
         wsUrl: "", // vacío = se deriva de la base resuelta arriba + /ws/device/
+      },
+      telemetry: {
+        enabled: false,
+        baseUrl: "",
       },
     },
 
@@ -641,8 +646,6 @@ export const BRANDS = [
   {
     brand: "intv",
     appName: "inTV Play",
-    drm: "https://pmdw-1.in.tv.br/",
-    token: '',
     os: 'HTML5',
     appVersion: '1',
     branding: 'Panaccess',
@@ -741,6 +744,10 @@ export const BRANDS = [
         enabled: false, // ACTIVADO para pruebas locales (2026-07-27) -- apunta a localhost:8000, NO a producción (backend.wind.do). Antes de desplegar a producción real, volver a "" (vacío, reutiliza socialLogin.backendBaseUrl) y confirmar con el equipo que /api/auth/login/ y /ws/device/ ya están desplegados en backend.wind.do.
         baseUrl: "", // backend Wind local para pruebas -- pisa socialLogin.backendBaseUrl a propósito
         wsUrl: "", // endpoint de "dispositivos vinculados" (Fase 3) contra el mismo backend local
+      },
+      telemetry: {
+        enabled: false,
+        baseUrl: "",
       },
     },
 
@@ -1036,8 +1043,6 @@ export const BRANDS = [
   {
     brand: "gigmax",
     appName: "Gigmax",
-    drm: "https://cv10.panaccess.com/",
-    token: '',
     os: 'HTML5',
     appVersion: '1',
     branding: 'Panaccess',
@@ -1136,6 +1141,10 @@ export const BRANDS = [
         enabled: false,
         baseUrl: "",
         wsUrl: "",
+      },
+      telemetry: {
+        enabled: false,
+        baseUrl: "",
       },
     },
 
@@ -1400,8 +1409,6 @@ export const BRANDS = [
   {
     brand: "cableatlantico",
     appName: "delancertv",
-    drm: 'https://mw.cabledelancer.com/', //"https://cv01.panaccess.com/"
-    token: '',
     os: 'HTML5',
     appVersion: '1',
     branding: 'Cabledelancer',
@@ -1501,6 +1508,10 @@ export const BRANDS = [
         enabled: false, // true: login manual/social/TV-pareada también autentica contra /api/auth/login/ y registra el dispositivo por WS (/ws/device/). Este brand ya apunta a un backend Wind local (udid.baseUrl) -- candidato natural para pilotear esto primero.
         baseUrl: "", // vacío = no hay socialLogin.backendBaseUrl configurada acá -> cae a udid.baseUrl ("http://127.0.0.1:8000")
         wsUrl: "", // vacío = se deriva de la base resuelta arriba + /ws/device/
+      },
+      telemetry: {
+        enabled: false,
+        baseUrl: "",
       },
     },
 
@@ -1764,8 +1775,6 @@ export const BRANDS = [
   {
     brand: "wind",
     appName: "WindTV",
-    drm: "https://middleware.wind.do/",
-    token: '',
     os: 'HTML5',
     appVersion: '1',    
     branding: 'Panaccess',
@@ -1864,6 +1873,13 @@ export const BRANDS = [
         enabled: true, // ACTIVADO para pruebas locales (2026-07-27) -- apunta a localhost:8000, NO a producción (backend.wind.do). Antes de desplegar a producción real, volver a "" (vacío, reutiliza socialLogin.backendBaseUrl) y confirmar con el equipo que /api/auth/login/ y /ws/device/ ya están desplegados en backend.wind.do.
         baseUrl: "https://backend.wind.do/", // backend Wind local para pruebas -- pisa socialLogin.backendBaseUrl a propósito
         wsUrl: "wss://backend.wind.do/ws/device/", // endpoint de "dispositivos vinculados" (Fase 3) contra el mismo backend local
+      },
+      // --- "Canales más vistos" (riel de Inicio) -- consume GET {baseUrl}/api/v1/telemetry/top-channels/
+      // en el mismo backend Wind (mismo JWT que deviceSession). Cada marca lo activa cuando tenga su
+      // propia ingesta de telemetría corriendo contra su PanAccess (ver app "telemetry" en Back-Wind-V2).
+      telemetry: {
+        enabled: true, // Wind ya tiene la ingesta de telemetría corriendo.
+        baseUrl: "", // vacío = reutiliza deviceSession.baseUrl/socialLogin.backendBaseUrl
       },
     },
 
@@ -2159,8 +2175,6 @@ export const BRANDS = [
   {
     brand: "multiplustv",
     appName: "MultiplusTV",
-    drm: "https://cv10.panaccess.com/",
-    token: '',
     os: 'HTML5',
     appVersion: '1',    
     branding: 'Panaccess',
@@ -2259,6 +2273,10 @@ export const BRANDS = [
         enabled: false,
         baseUrl: "",
         wsUrl: "",
+      },
+      telemetry: {
+        enabled: false,
+        baseUrl: "",
       },
     },
 

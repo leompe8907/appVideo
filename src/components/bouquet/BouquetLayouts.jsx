@@ -179,7 +179,7 @@ export const BouquetGridHorizontal = BouquetHorizontalGrid;
  * - event_line: igual que event pero con tamaño mayor
  * - logo_with_number: logo centrado en tarjeta + LCN abajo a la derecha + nombre debajo
  */
-function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }) {
+export function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }) {
   const { isTV } = useDevice();
   const parental = useParental();
   const focusedRef = useRef(false);
