@@ -13,7 +13,14 @@ import {
 import { useOsmsTvNav } from '../hooks/useOsmsTvNav';
 import '../styles/pages/_osms.scss';
 
-export function OsmsPage() {
+/**
+ * @param {boolean} [embedded=false] - true cuando se renderiza inline dentro de
+ * Mi Cuenta (`features.osmsInline`), en vez de como ruta independiente
+ * (/home/osms). Misma lógica y layout maestro-detalle en ambos casos; solo
+ * cambia el estilo del contenedor externo (ver `.osms-page--embedded` en
+ * _osms.scss) para que no duplique fondo/padding sobre el panel de Mi Cuenta.
+ */
+export function OsmsPage({ embedded = false } = {}) {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const { currentBrand } = useBrand();
@@ -96,9 +103,11 @@ export function OsmsPage() {
     setReadIds(new Set((items || []).map((m) => String(m.id))));
   };
 
+  const rootClassName = `osms-page${embedded ? ' osms-page--embedded' : ''}`;
+
   if (!enabled) {
     return (
-      <section className="osms-page" aria-label={t('osms.title')}>
+      <section className={rootClassName} aria-label={t('osms.title')}>
         <header className="osms-page__header">
           <h2 className="osms-page__title">{t('osms.title')}</h2>
         </header>
@@ -112,7 +121,7 @@ export function OsmsPage() {
   const isLoading = status === 'loading' && (items?.length ?? 0) === 0;
 
   return (
-    <section className="osms-page" aria-label={t('osms.title')}>
+    <section className={rootClassName} aria-label={t('osms.title')}>
       <header className="osms-page__header">
         <div className="osms-page__header-left">
           <h2 className="osms-page__title">{t('osms.title')}</h2>

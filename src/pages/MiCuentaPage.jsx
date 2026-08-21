@@ -11,6 +11,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import LinkedDevicesPanel from '../components/account/LinkedDevicesPanel';
 import ChangePasswordPanel from '../components/account/ChangePasswordPanel';
 import CloseAccountPanel from '../components/account/CloseAccountPanel';
+import { OsmsPage } from './OsmsPage';
 import { isDeviceSessionEnabled } from '../services/deviceAuthService';
 import { clearSessionBeforeNewLogin } from '../services/loginFlow';
 import { exitAppBestEffort } from '../utils/tvNavigation';
@@ -47,6 +48,10 @@ export function MiCuentaPage() {
   const { text: clockText } = useDeviceTime({ locale: currentBrand?.ui?.locale, format: 'HH:mm' });
 
   const osmsEnabled = currentBrand?.features?.osms === true;
+  // Solo aplica si osmsEnabled es true. true: "Mensajes" se muestra inline acá
+  // mismo (mismo patrón que Cambiar contraseña/Dispositivos vinculados/Eliminar
+  // cuenta). false (default): comportamiento actual, navega a /home/osms.
+  const osmsInline = osmsEnabled && currentBrand?.features?.osmsInline === true;
   // "Cambiar perfil" reabre /profile sin pasar por logout -- antes la única
   // salida de esa pantalla era cerrar sesión completa. Solo tiene sentido
   // si la marca usa perfiles (mismo flag que decide el redirect post-login
@@ -122,11 +127,12 @@ export function MiCuentaPage() {
     // mostrarse (ver el fallback de contenido más abajo).
     const validKeys = new Set(qrItems.map((i) => i.key));
     if (aboutEnabled) validKeys.add('about');
+    if (osmsInline) validKeys.add('osms');
     if (!validKeys.has(activeKey)) {
       setActiveKey(qrItems[0]?.key || (aboutEnabled ? 'about' : ''));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qrItems, aboutEnabled]);
+  }, [qrItems, aboutEnabled, osmsInline]);
 
   const activeItem = qrItems.find((i) => i.key === activeKey) || null;
   const activeUrl = activeItem?.link?.url || '';
@@ -257,7 +263,11 @@ export function MiCuentaPage() {
               </button>
             )}
             {osmsEnabled ? (
-              <button type="button" className="mi-cuenta-item" onClick={() => navigate('/home/osms')}>
+              <button
+                type="button"
+                className={`mi-cuenta-item${osmsInline && activeKey === 'osms' ? ' active' : ''}`}
+                onClick={() => (osmsInline ? setActiveKey('osms') : navigate('/home/osms'))}
+              >
                 {t('account.messages', { defaultValue: 'Mensajes' })}
               </button>
             ) : null}
@@ -300,7 +310,9 @@ export function MiCuentaPage() {
         <div className="mi-cuenta-content">
           <div className="mi-cuenta-clock">{clockText}</div>
 
-          {activeItem ? (
+          {activeKey === 'osms' && osmsInline ? (
+            <OsmsPage embedded />
+          ) : activeItem ? (
             <>
               <h1 className="mi-cuenta-content__title">{activeItem.label}</h1>
               {useNativeAccountFlow && NATIVE_ACCOUNT_PANELS[activeItem.key] ? (

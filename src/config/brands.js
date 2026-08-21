@@ -71,6 +71,10 @@
  *   @param {boolean} features.profiles - true: tras login redirige a /profile; false: redirige a /smartcard.
  *   @param {boolean} features.showRating - true: muestra la clasificación/rating de contenido; false: la oculta.
  *   @param {boolean} features.osms - true: habilita la integración OSMS y su menú; false: la deshabilita.
+ *   @param {boolean} [features.osmsInline=false] - Solo aplica si features.osms es true. true: "Mensajes"
+ *     se muestra inline dentro de Mi Cuenta, en el mismo panel al lado del submenú (igual que Cambiar
+ *     contraseña / Dispositivos vinculados / Eliminar cuenta), sin cambiar de pantalla. false (default,
+ *     comportamiento actual): "Mensajes" navega a /home/osms como módulo independiente.
  *
  * @param {Object} login - Bloque unificado de configuración del Login por marca.
  *   @param {Object} login.theme - Colores y estilos del formulario (CSS: hex, rgba, gradiente o var(--primary-color)).
@@ -601,6 +605,7 @@ export const BRANDS = [
       profiles: false, // Si es true → redirige a /profile después del login, si es false → redirige a /smartcard después del login
       showRating: true, // Equivalente a showRating en 10foot
       osms: true, // Equivalente a osmsEnabled en 10foot
+      osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente)
     },
 
     vod: {
@@ -995,6 +1000,7 @@ export const BRANDS = [
       profiles: false,
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
+      osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente) -- sin efecto mientras osms sea false
     },
 
     vod: {
@@ -1359,6 +1365,7 @@ export const BRANDS = [
       profiles: false,
       showRating: false, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
+      osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente) -- sin efecto mientras osms sea false
     },
 
     vod: {
@@ -1721,6 +1728,7 @@ export const BRANDS = [
       profiles: false,
       showRating: true, // Equivalente a showRating en 10foot
       osms: true, // Equivalente a osmsEnabled en 10foot
+      osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente)
     },
 
     vod: {
@@ -2115,6 +2123,7 @@ export const BRANDS = [
       profiles: false,
       showRating: true, // Equivalente a showRating en 10foot
       osms: true, // Equivalente a osmsEnabled en 10foot
+      osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente)
     },
 
     vod: {
@@ -2506,6 +2515,7 @@ export const BRANDS = [
       profiles: false,
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
+      osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente) -- sin efecto mientras osms sea false
     },
 
     vod: {

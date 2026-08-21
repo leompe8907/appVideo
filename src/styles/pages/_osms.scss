@@ -10,6 +10,32 @@
   flex-direction: column;
 }
 
+// Variante inline dentro de Mi Cuenta (`features.osmsInline`): el panel
+// externo de Mi Cuenta ya pone fondo/padding propios, así que acá se
+// resetean para no duplicarlos -- el layout maestro-detalle interno
+// (header, lista, detalle) queda intacto.
+.osms-page--embedded {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+  height: auto;
+}
+
+.osms-page--embedded .osms-page__header {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0 0 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  // Reserva el mismo espacio que .mi-cuenta-content__title para el reloj
+  // superpuesto de Mi Cuenta (--mi-cuenta-clock-reserve, definida en
+  // _mi-cuenta.scss): sin esto, "Marcar como vistos" queda debajo/pisado
+  // por la hora. Fallback fijo antes de la var(): WebKit viejo de Smart TV
+  // descarta la línea entera si no entiende var(), quedándose con este valor.
+  padding-right: 84px;
+  padding-right: var(--mi-cuenta-clock-reserve, 84px);
+}
+
 .osms-page__header {
   display: flex;
   align-items: center;
