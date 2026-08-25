@@ -151,6 +151,10 @@ export function SearchPage() {
   const { play } = usePlayer();
   const { requestPlayChannel, requestPlayMedia } = useParentalGate();
   const { epg, vod, catchup, loadVOD, loadCatchup } = usePreload();
+  // Bandera de marca: oculta accesos a la guía completa (EPG.enabled en
+  // brands.js). Default true: sin cambios. Afecta también los resultados
+  // de búsqueda de tipo "epg" (programación), no solo la navegación a /home/epg.
+  const epgEnabledByBrand = currentBrand?.EPG?.enabled !== false;
 
   const query = useSearchSessionStore((s) => s.query);
   const activeTab = useSearchSessionStore((s) => s.activeTab);
@@ -238,10 +242,10 @@ export function SearchPage() {
       if (r.type === 'service') services.push(r);
       else if (r.type === 'vod') vods.push(r);
       else if (r.type === 'catchup') catchups.push(r);
-      else if (r.type === 'epg') epgEvents.push(r);
+      else if (r.type === 'epg' && epgEnabledByBrand) epgEvents.push(r);
     });
     return { services, vods, catchups, epgEvents };
-  }, [resultsAll]);
+  }, [resultsAll, epgEnabledByBrand]);
 
   const isEmptyQuery = !debouncedQuery || debouncedQuery.trim().length === 0;
   const hideServiceTab = isEmptyQuery || grouped.services.length === 0;

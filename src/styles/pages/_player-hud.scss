@@ -218,6 +218,52 @@
   background: rgba(255, 255, 255, 0.28);
 }
 
+// Flechas de canal anterior/siguiente (solo web/PC, features.playerChannelArrows).
+// `position: fixed` a propósito, igual que `.player-hud__topbar` -- `.player-hud`
+// (el padre) no tiene altura propia (solo `bottom: 0`), así que un `top: 50%`
+// relativo a él no tendría de qué mitad calcularse.
+.player-hud__channel-arrow {
+  // Sin esto, el estilo nativo del navegador ("pressed"/inset) desplaza el
+  // contenido del botón 1px hacia abajo al hacer click -- por eso "brincaba".
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  pointer-events: auto;
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  padding: 0.5rem;
+  margin: 0;
+  background: transparent;
+  border: none;
+  outline-offset: 4px;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: #fff;
+  }
+
+  &:active {
+    transform: translateY(-50%);
+  }
+}
+
+.player-hud__channel-arrow--prev {
+  left: 1.1rem;
+}
+
+.player-hud__channel-arrow--next {
+  right: 1.1rem;
+}
+
 .player-hud__seek {
   pointer-events: auto;
   margin-top: 0.1rem;

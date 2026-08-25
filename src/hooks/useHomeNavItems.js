@@ -30,6 +30,7 @@ export function useHomeNavItems() {
   });
 
   const catchupEnabledByBrand = currentBrand?.catchup?.enabled !== false;
+  const epgEnabledByBrand = currentBrand?.EPG?.enabled !== false;
 
   // Este hook es la fuente de verdad de qué links mostrar en TODO `/home/*`
   // (Sidebar y Topbar), pero solo unas pocas páginas (VodPage, CatchupPage,
@@ -99,7 +100,9 @@ export function useHomeNavItems() {
           icon: 'movies',
         }
       : null,
-    epg: { key: 'epg', to: '/home/epg', label: t('sidebar.channelGuide', { defaultValue: 'Guía' }), icon: 'guide' },
+    epg: epgEnabledByBrand
+      ? { key: 'epg', to: '/home/epg', label: t('sidebar.channelGuide', { defaultValue: 'Guía' }), icon: 'guide' }
+      : null,
     catchup: showCatchup
       ? {
           key: 'catchup',
@@ -123,6 +126,7 @@ export function useHomeNavItems() {
     osmsUnreadCount,
     osmsBadgeVisible,
     navItems,
+    epgEnabledByBrand,
   };
 }
 

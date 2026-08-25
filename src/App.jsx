@@ -72,6 +72,20 @@ function ProtectedRoute({ children }) {
   );
 }
 
+/**
+ * Bloquea el acceso directo por URL a la guía (EPG) cuando la marca la tiene
+ * deshabilitada (`EPG.enabled === false` en brands.js) -- mismo flag que
+ * oculta el link del menú, el botón del player y el tab de búsqueda.
+ */
+function EpgGuardRoute({ children }) {
+  const { currentBrand } = useBrand();
+  const epgEnabled = currentBrand?.EPG?.enabled !== false;
+  if (!epgEnabled) {
+    return <Navigate to="/home/inicio" replace />;
+  }
+  return children;
+}
+
 function AppLifecycleHost() {
   useAppLifecycle();
   useMediaSession();
@@ -156,13 +170,13 @@ function App() {
                 <Route path="/preload" element={<ProtectedRoute><Suspense fallback={<Loading />}><PreloadDataPage /></Suspense></ProtectedRoute>}/>
                 <Route path="/inicio" element={<Navigate to="/home/inicio" replace />}/>
                 <Route path="/vod" element={<Navigate to="/home/vod" replace />}/>
-                <Route path="/epg" element={<Navigate to="/home/epg" replace />}/>
+                <Route path="/epg" element={<EpgGuardRoute><Navigate to="/home/epg" replace /></EpgGuardRoute>}/>
                 <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>}>
                   <Route element={<HomeEpgRoutesLayout />}>
                     <Route path="inicio" element={<BouquetPage />} />
                     <Route path="buscador" element={<Suspense fallback={<Loading />}><SearchPage /></Suspense>} />
                     <Route path="servicios-tv-radio" element={<Suspense fallback={<Loading />}><TvRadioServicesPage /></Suspense>} />
-                    <Route path="epg" element={<Suspense fallback={<Loading />}><EpgCardsPage /></Suspense>} />
+                    <Route path="epg" element={<EpgGuardRoute><Suspense fallback={<Loading />}><EpgCardsPage /></Suspense></EpgGuardRoute>} />
                     <Route path="control-parental" element={<Suspense fallback={<Loading />}><ParentalSettingsPage /></Suspense>} />
                   </Route>
                   <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>} />

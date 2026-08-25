@@ -26,6 +26,7 @@ import { PLAYER_FOCUS_IDS } from '../../hooks/usePlayerHudTvNavigation';
  * @property {Function} goLive
  * @property {number|undefined} hudTvTabIndex
  * @property {string} clockText
+ * @property {boolean} [epgEnabledForBrand] - bandera EPG.enabled (brands.js); default true.
  */
 
 /**
@@ -54,6 +55,7 @@ export function renderPlayerHudButton(buttonKey, ctx) {
       );
 
     case PLAYER_HUD_BUTTON_KEYS.EPG:
+      if (ctx.epgEnabledForBrand === false) return null;
       return (
         <FocusableButton
           key={buttonKey}

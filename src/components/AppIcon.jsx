@@ -71,6 +71,11 @@ export function AppIcon({ name, size = 18, className = '', title }) {
       'M120-560L280-560L480-760L480-200L280-400L120-400Z M520-580L560-580L640-480L560-380L520-380L580-480Z M680-660L720-660L820-480L720-300L680-300L740-480Z',
     volumeMute:
       'M120-560L280-560L480-760L480-200L280-400L120-400Z M125-785L175-835L835-175L785-125Z',
+    // Chevrones para cambiar de canal (< / >) en el player web -- chevronLeft
+    // es la misma geometría que "back" (ya verificada); chevronRight es su
+    // espejo horizontal exacto (960 - x en cada punto), no un path nuevo.
+    chevronLeft: 'M640-80 240-480l400-400 71 71-329 329 329 329-71 71Z',
+    chevronRight: 'M320-80 720-480 320-880 249-809 578-480 249-151Z',
   };
 
   const d = paths[name];

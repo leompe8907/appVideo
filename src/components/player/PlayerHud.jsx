@@ -255,6 +255,10 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   // Bandera de marca: botón de mute + slider de volumen (solo web/PC, ver
   // brands.js -- features.playerVolumeControls). Default false: sin cambios.
   const volumeControlsEnabled = currentBrand?.features?.playerVolumeControls === true;
+  // Bandera de marca: oculta accesos a la guía completa (EPG.enabled en
+  // brands.js). Default true: sin cambios. El botón de "info" del evento
+  // actual (que no navega a la guía) queda fuera de este flag a propósito.
+  const epgEnabledForBrand = currentBrand?.EPG?.enabled !== false;
   const [visible, setVisible] = useState(true);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
@@ -712,7 +716,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     [play, requestPlayChannel, resolveChannelLiveUrl]
   );
 
-  usePlayerChannelZapping({
+  const { zapByDirection } = usePlayerChannelZapping({
     arrowKeysEnabled: channelChangeWithArrows,
     channelKeysEnabled: true,
     isLiveService,
@@ -723,6 +727,13 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     onZapToChannel: handleZapToChannel,
     onWakeHud: wakeHud,
   });
+
+  // Bandera de marca: flechas de canal anterior/siguiente flotando sobre el
+  // video (solo web/PC -- ver brands.js, features.playerChannelArrows).
+  // Reutiliza `zapByDirection` de usePlayerChannelZapping, la misma lógica
+  // que ya usa el teclado/control remoto (CH+/CH-, flechas arriba/abajo).
+  const channelArrowsEnabled =
+    !isTV && isLiveService && currentBrand?.features?.playerChannelArrows === true;
 
   usePlayerHudTvNavigation({
     isTV,
@@ -921,6 +932,28 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
         ref={hudRootRef}
         className={`player-hud ${visible ? 'player-hud--visible' : 'player-hud--hidden'} ${className}`.trim()}
       >
+      {channelArrowsEnabled ? (
+        <>
+          <FocusableButton
+            type="button"
+            className="player-hud__channel-arrow player-hud__channel-arrow--prev"
+            onClick={() => zapByDirection('down')}
+            aria-label={t('player.previousChannel', { defaultValue: 'Canal anterior' })}
+            title={t('player.previousChannel', { defaultValue: 'Canal anterior' })}
+          >
+            <AppIcon name="chevronLeft" size="8em" />
+          </FocusableButton>
+          <FocusableButton
+            type="button"
+            className="player-hud__channel-arrow player-hud__channel-arrow--next"
+            onClick={() => zapByDirection('up')}
+            aria-label={t('player.nextChannel', { defaultValue: 'Canal siguiente' })}
+            title={t('player.nextChannel', { defaultValue: 'Canal siguiente' })}
+          >
+            <AppIcon name="chevronRight" size="8em" />
+          </FocusableButton>
+        </>
+      ) : null}
       <div className="player-hud__topbar">
         <div className="player-hud__topbar-left" data-tv-nav-zone="player-top-left">
           <FocusableButton
@@ -934,22 +967,24 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
           >
             <AppIcon name="back" size="1em" />
           </FocusableButton>
-          <FocusableButton
-            type="button"
-            className="player-hud__iconbtn"
-            id={PLAYER_FOCUS_IDS.EPG}
-            data-tv-nav="player-hud"
-            tabIndex={hudTvTabIndex}
-            onClick={() => {
-              closePlayerOverlay();
-              close();
-              navigate('/home/epg');
-            }}
-            aria-label={t('epg.title', { defaultValue: 'EPG' })}
-            title={t('epg.title', { defaultValue: 'EPG' })}
-          >
-            <AppIcon name="list" size="1em" />
-          </FocusableButton>
+          {epgEnabledForBrand && (
+            <FocusableButton
+              type="button"
+              className="player-hud__iconbtn"
+              id={PLAYER_FOCUS_IDS.EPG}
+              data-tv-nav="player-hud"
+              tabIndex={hudTvTabIndex}
+              onClick={() => {
+                closePlayerOverlay();
+                close();
+                navigate('/home/epg');
+              }}
+              aria-label={t('epg.title', { defaultValue: 'EPG' })}
+              title={t('epg.title', { defaultValue: 'EPG' })}
+            >
+              <AppIcon name="list" size="1em" />
+            </FocusableButton>
+          )}
           {isLiveService && parentalControlEnabledForBrand && (
             <FocusableButton
               type="button"

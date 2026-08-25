@@ -82,6 +82,11 @@
  *     de mute + un slider de volumen (solo web/PC -- en TV el volumen lo maneja el control remoto físico,
  *     este control no se muestra ahí). false (default, comportamiento actual): sin control de volumen en
  *     el HUD. El volumen/mute elegido se recuerda entre sesiones (localStorage, por marca).
+ *   @param {boolean} [features.playerChannelArrows=false] - true: agrega flechas de "canal anterior" /
+ *     "canal siguiente" flotando sobre el video (solo web/PC -- en TV el cambio de canal ya lo maneja el
+ *     control remoto vía CH+/CH-). Reutiliza la misma lógica de zapping que el teclado/control remoto
+ *     (usePlayerChannelZapping), no hay lógica nueva de selección de canal. false (default, comportamiento
+ *     actual): sin flechas en el HUD.
  *
  * @param {Object} login - Bloque unificado de configuración del Login por marca.
  *   @param {Object} login.theme - Colores y estilos del formulario (CSS: hex, rgba, gradiente o var(--primary-color)).
@@ -227,6 +232,10 @@
  *     con `parentalControl:true`. Default: 40 minutos.
  *
  * @param {Object} EPG - Configuración de EPG por marca (guía + cards):
+ *   @param {boolean} [EPG.enabled=true] - false: oculta TODO acceso a la guía completa (link del menú/Sidebar,
+ *     botón del player, tab "EPG" del buscador, y bloquea /home/epg y el alias legacy /epg por URL directa).
+ *     El ícono de "info" del evento actual en el player (que muestra datos del EPG pero no navega a la guía)
+ *     NO está gateado por este flag. true (default): comportamiento actual, sin cambios.
  *   @param {number} EPG.daysOffset
  *   @param {number} EPG.hoursLimit
  *   @param {string} EPG.epgLineColorTime - Color guía (alineado con ui.epgLineColorTime de la marca).
@@ -393,6 +402,7 @@ export const BRANDS = [
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
+      enabled: true, // false: oculta TODO acceso a la guía completa (menú, botón del player, búsqueda) -- ver useHomeNavItems.js / PlayerHud.jsx / SearchPage.jsx
       daysOffset: 2, // Días de offset para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#2CE308",
@@ -616,6 +626,7 @@ export const BRANDS = [
       osms: true, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente)
       playerVolumeControls: false, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
+      playerChannelArrows: false, // true: agrega flechas de canal anterior/siguiente en el reproductor web/PC (reutiliza la misma lógica de zapping del control remoto); false (default): sin cambios (comportamiento actual)
     },
 
     vod: {
@@ -788,6 +799,7 @@ export const BRANDS = [
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
+      enabled: false, // false: oculta TODO acceso a la guía completa (menú, botón del player, búsqueda) -- ver useHomeNavItems.js / PlayerHud.jsx / SearchPage.jsx
       daysOffset: 2, // Días de offset para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#3333FF",
@@ -1014,6 +1026,7 @@ export const BRANDS = [
       osms: false, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente) -- sin efecto mientras osms sea false
       playerVolumeControls: true, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
+      playerChannelArrows: true, // true: agrega flechas de canal anterior/siguiente en el reproductor web/PC (reutiliza la misma lógica de zapping del control remoto); false (default): sin cambios (comportamiento actual)
     },
 
     vod: {
@@ -1186,6 +1199,7 @@ export const BRANDS = [
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
+      enabled: true, // false: oculta TODO acceso a la guía completa (menú, botón del player, búsqueda) -- ver useHomeNavItems.js / PlayerHud.jsx / SearchPage.jsx
       daysOffset: 2, // Días de offset para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#2CE308",
@@ -1382,6 +1396,7 @@ export const BRANDS = [
       osms: false, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente) -- sin efecto mientras osms sea false
       playerVolumeControls: false, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
+      playerChannelArrows: false, // true: agrega flechas de canal anterior/siguiente en el reproductor web/PC (reutiliza la misma lógica de zapping del control remoto); false (default): sin cambios (comportamiento actual)
     },
 
     vod: {
@@ -1554,6 +1569,7 @@ export const BRANDS = [
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
+      enabled: true, // false: oculta TODO acceso a la guía completa (menú, botón del player, búsqueda) -- ver useHomeNavItems.js / PlayerHud.jsx / SearchPage.jsx
       daysOffset: 3, // Días de offset para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#3333FF",
@@ -1748,6 +1764,7 @@ export const BRANDS = [
       osms: true, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente)
       playerVolumeControls: false, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
+      playerChannelArrows: false, // true: agrega flechas de canal anterior/siguiente en el reproductor web/PC (reutiliza la misma lógica de zapping del control remoto); false (default): sin cambios (comportamiento actual)
     },
 
     vod: {
@@ -1923,6 +1940,7 @@ export const BRANDS = [
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
+      enabled: true, // false: oculta TODO acceso a la guía completa (menú, botón del player, búsqueda) -- ver useHomeNavItems.js / PlayerHud.jsx / SearchPage.jsx
       daysOffset: 2, // Días de offset para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#6c8eb6", //Color de la linea que indica la hora actual en la guia
@@ -2149,6 +2167,7 @@ export const BRANDS = [
       osms: true, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente)
       playerVolumeControls: false, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
+      playerChannelArrows: false, // true: agrega flechas de canal anterior/siguiente en el reproductor web/PC (reutiliza la misma lógica de zapping del control remoto); false (default): sin cambios (comportamiento actual)
     },
 
     vod: {
@@ -2321,6 +2340,7 @@ export const BRANDS = [
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
+      enabled: true, // false: oculta TODO acceso a la guía completa (menú, botón del player, búsqueda) -- ver useHomeNavItems.js / PlayerHud.jsx / SearchPage.jsx
       daysOffset: 2, // Días de offset para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#3333FF",
@@ -2544,6 +2564,7 @@ export const BRANDS = [
       osms: false, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente) -- sin efecto mientras osms sea false
       playerVolumeControls: false, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
+      playerChannelArrows: false, // true: agrega flechas de canal anterior/siguiente en el reproductor web/PC (reutiliza la misma lógica de zapping del control remoto); false (default): sin cambios (comportamiento actual)
     },
 
     vod: {
