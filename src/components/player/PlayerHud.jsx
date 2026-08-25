@@ -243,6 +243,8 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     skipLiveBy,
     goLive,
     containerRef,
+    toggleMute,
+    setVolume,
   } = usePlayer();
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
@@ -250,6 +252,9 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   // el candado de bloqueo de canal tampoco debe aparecer en el player -- ver
   // `isParentalControlEnabledForBrand` para el resto de los puntos gateados.
   const parentalControlEnabledForBrand = isParentalControlEnabledForBrand(currentBrand);
+  // Bandera de marca: botón de mute + slider de volumen (solo web/PC, ver
+  // brands.js -- features.playerVolumeControls). Default false: sin cambios.
+  const volumeControlsEnabled = currentBrand?.features?.playerVolumeControls === true;
   const [visible, setVisible] = useState(true);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
@@ -1045,6 +1050,43 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
         )}
 
         <div className="player-hud__topbar-right">
+          {!isTV && volumeControlsEnabled ? (
+            <>
+              <div className="player-hud__volume">
+                <FocusableButton
+                  type="button"
+                  className="player-hud__iconbtn"
+                  onClick={toggleMute}
+                  aria-label={
+                    state.muted
+                      ? t('player.unmute', { defaultValue: 'Activar sonido' })
+                      : t('player.mute', { defaultValue: 'Silenciar' })
+                  }
+                  title={
+                    state.muted
+                      ? t('player.unmute', { defaultValue: 'Activar sonido' })
+                      : t('player.mute', { defaultValue: 'Silenciar' })
+                  }
+                >
+                  <AppIcon
+                    name={state.muted || state.volume === 0 ? 'volumeMute' : 'volumeUp'}
+                    size="1em"
+                  />
+                </FocusableButton>
+                <input
+                  type="range"
+                  className="player-hud__volume-slider"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={state.muted ? 0 : Math.round(state.volume * 100)}
+                  onChange={(e) => setVolume(Number(e.target.value) / 100)}
+                  aria-label={t('player.volume', { defaultValue: 'Volumen' })}
+                />
+              </div>
+              <div className="player-hud__topbar-divider" aria-hidden="true" />
+            </>
+          ) : null}
           {!isTV ? (
             <FocusableButton
               type="button"

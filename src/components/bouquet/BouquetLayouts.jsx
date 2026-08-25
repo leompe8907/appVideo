@@ -60,6 +60,16 @@ function normalizeColor(color) {
 }
 
 /**
+ * Límite de montaje de `useChunkedList` para las grillas de bouquet (2026-08-24):
+ * probado sin límite en PC y TV — en PC anda perfecto, en TV se nota lento con
+ * bouquets largos (~54 canales montados de una, cada uno con su imagen). Por
+ * eso queda activo solo en TV, y solo con la ventana ya alineada a filas
+ * completas (`columns` en `useChunkedList`) — antes de ese fix, el buffer sin
+ * alinear producía filas cortadas a mitad + saltos de foco/scroll al
+ * recentrarse. En PC se deja siempre todo montado (no hace falta ahí).
+ */
+
+/**
  * Bouquet horizontal unificado: CSS Grid según customData (horizontal_grid / carrusel).
  * - flow column + scroll X: multi-fila (rows > 1) o carrusel nowrap
  * - flow row: logo_with_number con wrap alineado a la izquierda
@@ -75,7 +85,7 @@ export function BouquetHorizontalGrid({
   platformLayoutType = null,
 }) {
   const { t } = useTranslation();
-  const { isPC } = useDevice();
+  const { isPC, isTV } = useDevice();
   const title =
     bouquet?.name ??
     bouquet?.title ??
@@ -98,7 +108,9 @@ export function BouquetHorizontalGrid({
   // (si rawItems pasa de vacío a no-vacío entre renders, el orden de hooks
   // cambiaba). Ahora el hook corre incondicionalmente y el bail-out va
   // después de todos los hooks.
-  const { entries, reportFocusIndex } = useChunkedList(rawItems, { enabled: !useEmbla });
+  const { entries, reportFocusIndex } = useChunkedList(rawItems, {
+    enabled: isTV && !useEmbla,
+  });
   const { root: rootClass, track: trackClass } = getBouquetHorizontalGridClasses(layoutType);
   const trackStyle = { '--bouquet-grid-rows': gridMode.rows };
 
@@ -474,6 +486,7 @@ export function BouquetGridVertical({
   platformLayoutType = null,
 }) {
   const { t } = useTranslation();
+  const { isTV } = useDevice();
   const title =
     bouquet?.name ??
     bouquet?.title ??
@@ -482,11 +495,14 @@ export function BouquetGridVertical({
     t('bouquet.unknown');
 
   const rawItems = Array.isArray(bouquet?.items) ? bouquet.items : [];
-  const { entries, reportFocusIndex } = useChunkedList(rawItems);
+  const columnCount = resolveVerticalGridColumns(gridColumns);
+  const { entries, reportFocusIndex } = useChunkedList(rawItems, {
+    enabled: isTV,
+    columns: columnCount,
+  });
   if (rawItems.length === 0) return null;
 
   const { root: gridClass, track: trackClass } = getBouquetGridVerticalClasses(layoutType);
-  const columnCount = resolveVerticalGridColumns(gridColumns);
   const trackStyle = {
     '--bouquet-grid-columns': columnCount,
     gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,

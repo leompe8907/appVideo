@@ -400,6 +400,20 @@ export class WebEngine extends BaseEngine {
     this.player.muted(false);
   }
 
+  /** @param {number} volume 0..1 */
+  setVolume(volume) {
+    if (!this.player) return;
+    const v = Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : 1;
+    this.player.volume(v);
+  }
+
+  /** @returns {number} 0..1 */
+  getVolume() {
+    if (!this.player) return 1;
+    const v = this.player.volume();
+    return Number.isFinite(v) ? v : 1;
+  }
+
   destroy() {
     this._log('destroy()');
     if (this._suppressErrorsTimer) {

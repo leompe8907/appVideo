@@ -171,6 +171,53 @@
   transform: scale(1.04);
 }
 
+// Bandera features.playerVolumeControls (ver brands.js) -- mute + slider, solo web/PC.
+.player-hud__volume {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.player-hud__volume-slider {
+  width: 6.5em;
+  height: 3px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 0.85em;
+    height: 0.85em;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  &::-moz-range-thumb {
+    width: 0.85em;
+    height: 0.85em;
+    border: none;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  &::-moz-range-track {
+    background: transparent;
+  }
+}
+
+.player-hud__topbar-divider {
+  width: 1px;
+  height: 1.1em;
+  background: rgba(255, 255, 255, 0.28);
+}
+
 .player-hud__seek {
   pointer-events: auto;
   margin-top: 0.1rem;

@@ -1,7 +1,7 @@
 /**
  * Riel "Más vistos" en Inicio -- ranking global de canales OTT que calcula
  * el backend Wind (ver `telemetry` app en Back-Wind-V2 y
- * `services/telemetryService.js` en este repo).
+ * `services/mostWatchedChannelsService.js` en este repo).
  *
  * Independiente del muro de bouquets real (`BouquetWall`): no inyecta
  * entradas sintéticas en `epg.bouquetsWithChannels`, solo cruza el ranking
@@ -27,7 +27,7 @@ import {
   buildMostWatchedItems,
   getTopChannelsGlobal,
   isTelemetryEnabled,
-} from '../../services/telemetryService';
+} from '../../services/mostWatchedChannelsService';
 
 export function MostWatchedRail({ onChannelSelect, onChannelFocus }) {
   const { t } = useTranslation();

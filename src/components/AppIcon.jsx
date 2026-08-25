@@ -64,6 +64,13 @@ export function AppIcon({ name, size = 18, className = '', title }) {
       'M200-200v-200h80v120h120v80H200Zm360 0v-80h120v-120h80v200H560ZM200-560v-200h200v80H280v120h-80Zm480 0v-120H560v-80h200v200h-80Z',
     mail:
       'M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm320-280L160-640v400h640v-400L480-440Zm0-80 320-200H160l320 200ZM160-640v-80 480-400Z',
+    // Volumen del reproductor (no estaban en constants -- geometría propia:
+    // parlante + "chevrones" de sonido / barra diagonal de mute, todo con
+    // líneas rectas para evitar depender de paths de terceros no verificados).
+    volumeUp:
+      'M120-560L280-560L480-760L480-200L280-400L120-400Z M520-580L560-580L640-480L560-380L520-380L580-480Z M680-660L720-660L820-480L720-300L680-300L740-480Z',
+    volumeMute:
+      'M120-560L280-560L480-760L480-200L280-400L120-400Z M125-785L175-835L835-175L785-125Z',
   };
 
   const d = paths[name];

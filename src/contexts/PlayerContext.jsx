@@ -14,6 +14,7 @@ import {
   persistAudioPreference,
   persistSubtitlePreference,
 } from '../utils/playerTrackPreferences';
+import { getSavedVolumePreference, saveVolumePreference } from '../utils/playerVolumePreference';
 
 const PlayerContext = createContext(null);
 
@@ -118,22 +119,32 @@ export function PlayerProvider({ children }) {
     console.log('[PlayerContext]', ...args);
   }, []);
 
-  const [state, setState] = useState({
-    type: null, // 'service' | 'vod' | 'catchup'
-    id: null,
-    url: null,
-    item: null,
-    mediaOption: {},
-    drmConfig: {},
-    isPlaying: false,
-    isLoading: false,
-    isSeeking: false,
-    currentTime: 0,
-    duration: 0,
-    liveInitialPlayerTime: null,
-    liveInitialServerMs: null,
-    liveSecondsLate: 0,
-    error: null,
+  const [state, setState] = useState(() => {
+    // Volumen/mute: memoria global por marca (no depende del canal/VOD que
+    // se esté reproduciendo) -- ver playerVolumePreference.js. Solo lo usa
+    // la UI si el brand activa features.playerVolumeControls; si no, estos
+    // dos campos quedan en sus valores por defecto sin efecto visible.
+    const brandId = resolveBrandId(currentBrand?.brand ?? currentBrand?.id);
+    const { volume: savedVolume, muted: savedMuted } = getSavedVolumePreference(brandId);
+    return {
+      type: null, // 'service' | 'vod' | 'catchup'
+      id: null,
+      url: null,
+      item: null,
+      mediaOption: {},
+      drmConfig: {},
+      isPlaying: false,
+      isLoading: false,
+      isSeeking: false,
+      currentTime: 0,
+      duration: 0,
+      liveInitialPlayerTime: null,
+      liveInitialServerMs: null,
+      liveSecondsLate: 0,
+      error: null,
+      volume: savedVolume,
+      muted: savedMuted,
+    };
   });
 
   useEffect(() => {
@@ -449,6 +460,15 @@ export function PlayerProvider({ children }) {
       }
 
       bindEngineListeners(engine);
+
+      // Aplicar volumen/mute guardado (solo tiene efecto real en WebEngine --
+      // los engines de TV no implementan setVolume/mute, optional chaining
+      // los deja como no-op). `state` acá es el de la primera render (este
+      // efecto corre una sola vez, deps []), que ya viene de
+      // getSavedVolumePreference en el useState inicial de arriba.
+      engine.setVolume?.(state.volume);
+      if (state.muted) engine.mute?.();
+      log('engine:volume:init', { volume: state.volume, muted: state.muted });
     })().catch((err) => {
       console.error('[PlayerProvider] Error creando engine', err);
       setState((s) => ({
@@ -703,12 +723,49 @@ export function PlayerProvider({ children }) {
     return true;
   };
 
+  const persistVolume = (volume, muted) => {
+    const brandId = resolveBrandId(brandRef.current?.brand ?? brandRef.current?.id);
+    saveVolumePreference(brandId, { volume, muted });
+  };
+
   const mute = () => {
     engineRef.current?.mute?.();
+    setState((s) => {
+      persistVolume(s.volume, true);
+      return { ...s, muted: true };
+    });
   };
 
   const unmute = () => {
     engineRef.current?.unmute?.();
+    setState((s) => {
+      persistVolume(s.volume, false);
+      return { ...s, muted: false };
+    });
+  };
+
+  /** Botón único de mute: alterna según el estado actual. */
+  const toggleMute = () => {
+    if (state.muted) unmute();
+    else mute();
+  };
+
+  /**
+   * @param {number} volume 0..1 (el slider del HUD manda 0..100 -- convertir antes de llamar).
+   * Subir el volumen desde mute (>0) también desmutea, como en cualquier
+   * reproductor estándar -- si el usuario arrastra el slider, espera oír
+   * sonido de inmediato aunque haya estado muteado.
+   */
+  const setVolume = (volume) => {
+    const v = Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : 1;
+    engineRef.current?.setVolume?.(v);
+    const shouldUnmute = v > 0 && state.muted;
+    if (shouldUnmute) engineRef.current?.unmute?.();
+    setState((s) => {
+      const nextMuted = v > 0 ? false : s.muted;
+      persistVolume(v, nextMuted);
+      return { ...s, volume: v, muted: nextMuted };
+    });
   };
 
   const refreshTracks = useCallback(() => {
@@ -782,6 +839,8 @@ export function PlayerProvider({ children }) {
     goLive,
     mute,
     unmute,
+    toggleMute,
+    setVolume,
     getVideoElement: () => engineRef.current?.video ?? null,
     refreshTracks,
     selectAudioTrack,

@@ -78,6 +78,10 @@
  *     se muestra inline dentro de Mi Cuenta, en el mismo panel al lado del submenú (igual que Cambiar
  *     contraseña / Dispositivos vinculados / Eliminar cuenta), sin cambiar de pantalla. false (default,
  *     comportamiento actual): "Mensajes" navega a /home/osms como módulo independiente.
+ *   @param {boolean} [features.playerVolumeControls=false] - true: el HUD del reproductor muestra un botón
+ *     de mute + un slider de volumen (solo web/PC -- en TV el volumen lo maneja el control remoto físico,
+ *     este control no se muestra ahí). false (default, comportamiento actual): sin control de volumen en
+ *     el HUD. El volumen/mute elegido se recuerda entre sesiones (localStorage, por marca).
  *
  * @param {Object} login - Bloque unificado de configuración del Login por marca.
  *   @param {Object} login.theme - Colores y estilos del formulario (CSS: hex, rgba, gradiente o var(--primary-color)).
@@ -611,6 +615,7 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: true, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente)
+      playerVolumeControls: false, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
     },
 
     vod: {
@@ -1008,6 +1013,7 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente) -- sin efecto mientras osms sea false
+      playerVolumeControls: true, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
     },
 
     vod: {
@@ -1375,6 +1381,7 @@ export const BRANDS = [
       showRating: false, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente) -- sin efecto mientras osms sea false
+      playerVolumeControls: false, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
     },
 
     vod: {
@@ -1740,6 +1747,7 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: true, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente)
+      playerVolumeControls: false, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
     },
 
     vod: {
@@ -2140,6 +2148,7 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: true, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente)
+      playerVolumeControls: false, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
     },
 
     vod: {
@@ -2534,6 +2543,7 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: false, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente) -- sin efecto mientras osms sea false
+      playerVolumeControls: false, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
     },
 
     vod: {

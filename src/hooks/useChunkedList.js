@@ -5,19 +5,31 @@ import { useDevice } from '../contexts/DeviceContext';
  * Lógica pura de la ventana (sin React) — separada para poder testearla
  * directamente sin necesidad de montar el hook. Ver el docstring de
  * `useChunkedList` para el razonamiento completo.
- * @param {{ total: number, revealed: number, focusedIndex: number, buffer: number, shouldVirtualize: boolean }} params
+ * @param {{ total: number, revealed: number, focusedIndex: number, buffer: number, shouldVirtualize: boolean, columns?: number }} params
  * @returns {{ start: number, end: number }}
  */
-export function computeVisibleWindow({ total, revealed, focusedIndex, buffer, shouldVirtualize }) {
+export function computeVisibleWindow({ total, revealed, focusedIndex, buffer, shouldVirtualize, columns = 1 }) {
   if (!shouldVirtualize) {
     return { start: 0, end: total };
   }
+
+  // Alinear la ventana a bordes de fila completos cuando la lista es una
+  // grilla de N columnas: si el recorte cae a mitad de fila, esa fila queda
+  // con algunas tarjetas montadas y otras no, y la navegación espacial (que
+  // solo ve lo que está montado) puede "saltar" a un candidato lejano en vez
+  // de la fila siguiente. Redondeando start hacia abajo y end hacia arriba
+  // al múltiplo de `columns` más cercano, cada ventana montada siempre
+  // contiene filas completas.
+  const cols = Number.isInteger(columns) && columns > 1 ? columns : 1;
+  const alignStart = (n) => Math.max(0, Math.floor(n / cols) * cols);
+  const alignEnd = (n) => Math.min(total, Math.ceil(n / cols) * cols);
+
   if (focusedIndex < 0) {
-    return { start: 0, end: Math.min(revealed, total) };
+    return { start: 0, end: alignEnd(Math.min(revealed, total)) };
   }
   return {
-    start: Math.max(0, focusedIndex - buffer),
-    end: Math.min(total, focusedIndex + buffer + 1),
+    start: alignStart(Math.max(0, focusedIndex - buffer)),
+    end: alignEnd(Math.min(total, focusedIndex + buffer + 1)),
   };
 }
 
@@ -45,7 +57,7 @@ export function computeVisibleWindow({ total, revealed, focusedIndex, buffer, sh
  *      encuentre el próximo candidato ya montado.
  *
  * @param {Array} items
- * @param {{ threshold?: number, initial?: number, chunkSize?: number, buffer?: number, enabled?: boolean }} [options]
+ * @param {{ threshold?: number, initial?: number, chunkSize?: number, buffer?: number, enabled?: boolean, columns?: number }} [options]
  * @returns {{ entries: Array<{item: any, index: number}>, reportFocusIndex: (index: number) => void }}
  */
 export function useChunkedList(items, options = {}) {
@@ -56,6 +68,7 @@ export function useChunkedList(items, options = {}) {
     chunkSize = isTV ? 20 : 8,
     buffer = chunkSize,
     enabled = true,
+    columns = 1,
   } = options;
 
   const list = Array.isArray(items) ? items : [];
@@ -114,7 +127,7 @@ export function useChunkedList(items, options = {}) {
     [total],
   );
 
-  const { start, end } = computeVisibleWindow({ total, revealed, focusedIndex, buffer, shouldVirtualize });
+  const { start, end } = computeVisibleWindow({ total, revealed, focusedIndex, buffer, shouldVirtualize, columns });
 
   const entries = [];
   for (let i = start; i < end; i += 1) {
