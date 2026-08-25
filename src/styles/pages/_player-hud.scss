@@ -254,14 +254,26 @@
   &:active {
     transform: translateY(-50%);
   }
+
+  // El click nativo deja el <button> con foco -> `main.jsx` le agrega la
+  // clase global `.focused`, y `global.scss` define `button.focused {
+  // transform: scale(1.05) }` con más especificidad (elemento + clase) que
+  // esta regla (una sola clase) -- pisaba por completo nuestro
+  // `translateY(-50%)` y el botón "caía" a la mitad de su propia altura.
+  // Se combinan ambos transforms acá, con doble clase para ganar siempre.
+  &.focused {
+    transform: translateY(-50%) scale(1.05);
+  }
 }
 
+// Separación desde el centro del video (no desde los bordes de la pantalla)
+// -- ajustar este valor acerca/aleja el par de flechas entre sí.
 .player-hud__channel-arrow--prev {
-  left: 1.1rem;
+  left: calc(50% - 20rem);
 }
 
 .player-hud__channel-arrow--next {
-  right: 1.1rem;
+  right: calc(50% - 20rem);
 }
 
 .player-hud__seek {
