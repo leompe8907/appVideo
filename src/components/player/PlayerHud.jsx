@@ -525,18 +525,36 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     const onMouseMove = () => wakeHud();
     const onKeyDown = () => wakeHud();
     const onPointerDown = () => wakeHud();
+    // wheel/scroll cuentan como actividad (p. ej. scrolleando el listado de
+    // canales con la rueda del mouse, que no dispara mousemove/pointerdown).
+    // capture:true porque 'scroll' no burbujea desde el div interno con su
+    // propio scroll -- la fase de captura sí lo intercepta igual desde window.
+    const onWheel = () => wakeHud();
+    const onScroll = () => wakeHud();
     window.addEventListener('mousemove', onMouseMove, { passive: true });
     // capture:true para TVs/WebViews que interceptan keydown en bubbling
     window.addEventListener('keydown', onKeyDown, { capture: true });
     window.addEventListener('pointerdown', onPointerDown, { passive: true });
+    window.addEventListener('wheel', onWheel, { passive: true });
+    window.addEventListener('scroll', onScroll, { capture: true, passive: true });
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('keydown', onKeyDown, { capture: true });
       window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('scroll', onScroll, { capture: true });
       clearHideTimeout();
     };
+    // `overlay` a propósito en las deps: sin esto, los listeners quedaban con
+    // una copia vieja de `wakeHud`/`armAutoHide` de antes de abrir la lista
+    // de canales -- esa copia no sabía que había un overlay abierto (chequeo
+    // `if (overlay) return` en armAutoHide con un valor "congelado"), así que
+    // el temporizador de auto-hide se re-armaba igual y, al cumplirse,
+    // cerraba TODO (HUD + lista de canales) aunque el overlay siguiera
+    // abierto. Con `overlay` en las deps, el efecto se vuelve a suscribir
+    // con una copia fresca apenas se abre/cierra un overlay.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasContent, shouldAutoHide, forceHudVisible, hudAutoHideMs]);
+  }, [hasContent, shouldAutoHide, forceHudVisible, hudAutoHideMs, overlay]);
 
   useEffect(() => {
     if (!(state?.type === 'service' && liveWindow && hasContent)) return undefined;

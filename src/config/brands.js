@@ -1940,7 +1940,7 @@ export const BRANDS = [
 
     // EPG: configuración unificada (guía + cards)
     EPG: {
-      enabled: true, // false: oculta TODO acceso a la guía completa (menú, botón del player, búsqueda) -- ver useHomeNavItems.js / PlayerHud.jsx / SearchPage.jsx
+      enabled: false, // false: oculta TODO acceso a la guía completa (menú, botón del player, búsqueda) -- ver useHomeNavItems.js / PlayerHud.jsx / SearchPage.jsx
       daysOffset: 2, // Días de offset para la API de guía de programación
       hoursLimit: 12, // Límite de horas para la API de guía de programación
       epgLineColorTime: "#6c8eb6", //Color de la linea que indica la hora actual en la guia
@@ -2166,8 +2166,8 @@ export const BRANDS = [
       showRating: true, // Equivalente a showRating en 10foot
       osms: true, // Equivalente a osmsEnabled en 10foot
       osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente)
-      playerVolumeControls: false, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
-      playerChannelArrows: false, // true: agrega flechas de canal anterior/siguiente en el reproductor web/PC (reutiliza la misma lógica de zapping del control remoto); false (default): sin cambios (comportamiento actual)
+      playerVolumeControls: true, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
+      playerChannelArrows: true, // true: agrega flechas de canal anterior/siguiente en el reproductor web/PC (reutiliza la misma lógica de zapping del control remoto); false (default): sin cambios (comportamiento actual)
     },
 
     vod: {
