@@ -558,6 +558,7 @@ $bouquet-items-gap: 2rem;
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
     cursor: pointer;
     position: relative;
+    outline: none;
 
     .channel-card-img {
       display: block;
@@ -722,12 +723,15 @@ $bouquet-items-gap: 2rem;
       }
 
       &:hover,
+      &:focus,
+      &:focus-visible,
       &.focused {
         transform: none;
-        border-color: transparent;
-        box-shadow: none;
-        -webkit-box-shadow: none;
-        -moz-box-shadow: none;
+        border-color: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
 
         .channel-card-frame {
           border-color: $secondary-color;
@@ -813,12 +817,15 @@ $bouquet-items-gap: 2rem;
       }
 
       &:hover,
+      &:focus,
+      &:focus-visible,
       &.focused {
         transform: none;
-        border-color: transparent;
-        box-shadow: none;
-        -webkit-box-shadow: none;
-        -moz-box-shadow: none;
+        border-color: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
 
         .channel-card-lwn-frame {
           transform: translateY(-2px) scale(1.02);
@@ -933,12 +940,15 @@ $bouquet-items-gap: 2rem;
       }
 
       &:hover,
+      &:focus,
+      &:focus-visible,
       &.focused {
         transform: none;
-        border-color: transparent;
-        box-shadow: none;
-        -webkit-box-shadow: none;
-        -moz-box-shadow: none;
+        border-color: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
 
         .channel-card-frame {
           border-color: $secondary-color;

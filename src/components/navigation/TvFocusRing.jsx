@@ -10,7 +10,7 @@ const LAYOUT_ANCHOR_SELECTORS = [
 ];
 
 function isFocusRingTarget(el) {
-  if (!el || !(el instanceof HTMLElement)) return false;
+  if (!el || typeof el.querySelector !== 'function') return false;
   try {
     if (el.closest('.home-sidebar')) return false;
   } catch {
@@ -26,34 +26,31 @@ function isFocusRingTarget(el) {
 
 /** Bouquet: el anillo sigue el marco visual (logo + evento), no toda la tarjeta con texto debajo. */
 function resolveFocusRingTarget(el) {
-  if (!(el instanceof HTMLElement)) return el;
+  if (!el || typeof el.querySelector !== 'function') return el;
   if (el.classList.contains('home-ad-zone')) {
     const media = el.querySelector('.home-ad-media');
-    if (media instanceof HTMLElement) return media;
+    if (media) return media;
     const slide = el.querySelector('.home-ad-slide');
-    if (slide instanceof HTMLElement) return slide;
+    if (slide) return slide;
   }
-  if (!el.classList.contains('channel-card')) return el;
-  for (const selector of CHANNEL_CARD_RING_INNER_SELECTORS) {
-    const inner = el.querySelector(selector);
-    if (inner instanceof HTMLElement) return inner;
-  }
+  const inner = el.querySelector('.channel-card-frame, .channel-card-lwn-frame');
+  if (inner) return inner;
   return el;
 }
 
 /** Contenedores cuyo resize desplaza hermanos (p. ej. publicidad → bouquet). */
 function resolveLayoutAnchors(focusEl) {
   const anchors = new Set();
-  if (!(focusEl instanceof HTMLElement)) return anchors;
+  if (!focusEl || typeof focusEl.querySelectorAll !== 'function') return anchors;
 
   try {
     for (const selector of LAYOUT_ANCHOR_SELECTORS) {
       document.querySelectorAll(selector).forEach((node) => {
-        if (node instanceof HTMLElement) anchors.add(node);
+        if (node) anchors.add(node);
       });
     }
     const scrollRoot = focusEl.closest('.bouquet-inicio-scroll, .vod-content, .home-content-outlet');
-    if (scrollRoot instanceof HTMLElement) anchors.add(scrollRoot);
+    if (scrollRoot) anchors.add(scrollRoot);
   } catch {
     // noop
   }
@@ -110,7 +107,7 @@ export function TvFocusRing() {
       if (!ro) return;
 
       const next = new Set();
-      if (visualTarget instanceof HTMLElement) next.add(visualTarget);
+      if (visualTarget) next.add(visualTarget);
       resolveLayoutAnchors(focusEl).forEach((node) => next.add(node));
 
       const prev = observedSetRef.current;
@@ -149,7 +146,7 @@ export function TvFocusRing() {
     (el) => {
       const ring = ringRef.current;
       if (!ring) return;
-      if (!(el instanceof HTMLElement) || !isFocusRingTarget(el)) {
+      if (!el || typeof el.getBoundingClientRect !== 'function' || !isFocusRingTarget(el)) {
         hideRing();
         return;
       }
