@@ -19,8 +19,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
+import { useDevice } from '../../contexts/DeviceContext';
 import { usePreload } from '../../store/usePreload';
 import { getBouquetHorizontalGridClasses } from '../../utils/bouquetLayoutClasses';
+import { resolveBouquetLayoutForDevice } from '../../utils/bouquetLayoutConfig';
 import { EmblaHorizontalRail } from '../navigation/EmblaHorizontalRail';
 import { ChannelCard } from './BouquetLayouts';
 import {
@@ -32,8 +34,17 @@ import {
 export function MostWatchedRail({ onChannelSelect, onChannelFocus }) {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
+  const { isTV, isPC } = useDevice();
   const { epg } = usePreload();
   const [items, setItems] = useState([]);
+  // `customData` del endpoint de ranking (`getTopChannelsGlobal`) -- ahora el
+  // backend Wind ya devuelve el ranking con forma de bouquet (bouquetId,
+  // name, customData, channels), igual que cualquier otro bouquet real. Se
+  // guarda acá para resolver el diseño de tarjeta con la MISMA lógica que
+  // `BouquetWall.jsx` (`resolveBouquetLayoutForDevice`), en vez de dejar el
+  // diseño sin definir (lo que antes caía siempre a la variante 'logo' por
+  // default en `getChannelLayoutVariant`).
+  const [customData, setCustomData] = useState(null);
   const requestedRef = useRef(false);
 
   const brand = currentBrand?.brand;
@@ -43,6 +54,7 @@ export function MostWatchedRail({ onChannelSelect, onChannelFocus }) {
     // Reintentar si cambia de brand (p. ej. host multi-marca).
     requestedRef.current = false;
     setItems([]);
+    setCustomData(null);
   }, [brand]);
 
   useEffect(() => {
@@ -56,7 +68,10 @@ export function MostWatchedRail({ onChannelSelect, onChannelFocus }) {
       const response = await getTopChannelsGlobal(currentBrand, brand);
       if (cancelled || !response) return;
       const matched = buildMostWatchedItems(response, epg.streams);
-      if (!cancelled && matched.length > 0) setItems(matched);
+      if (!cancelled && matched.length > 0) {
+        setItems(matched);
+        setCustomData(response.customData ?? null);
+      }
     })();
 
     return () => {
@@ -66,10 +81,11 @@ export function MostWatchedRail({ onChannelSelect, onChannelFocus }) {
 
   if (!enabled || items.length === 0) return null;
 
-  const { root: rootClass, track: trackClass } = getBouquetHorizontalGridClasses(null);
+  const layout = resolveBouquetLayoutForDevice({ customData }, { isTV, isPC });
+  const { root: rootClass, track: trackClass } = getBouquetHorizontalGridClasses(layout.cardDesign);
 
   return (
-    <div className={rootClass} data-bouquet-id="most-watched">
+    <div className={rootClass} data-bouquet-id="most-watched" data-layout={layout.cardDesign ?? ''}>
       <h4 className="bouquet-heading">
         {t('bouquet.mostWatched', { defaultValue: 'Más vistos' })}
       </h4>
@@ -78,6 +94,8 @@ export function MostWatchedRail({ onChannelSelect, onChannelFocus }) {
           <ChannelCard
             key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
             channel={channel}
+            layoutType={layout.cardDesign}
+            logoIndex={layout.logoIndex}
             onSelect={() => onChannelSelect?.(channel)}
             onFocus={() => onChannelFocus?.(channel)}
           />

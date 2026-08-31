@@ -67,9 +67,16 @@ export function isTelemetryEnabled(brandConfig) {
  * (red, 401 persistente, JSON inválido, etc). El caller trata `null` como
  * "no hay riel que mostrar", no como un error a reportar al usuario.
  *
+ * El backend Wind devuelve esto con forma de bouquet real (bouquetId, name,
+ * priority, isMain, customData con `layouts.<device>.card_design`) además
+ * del ranking en `channels` -- se devuelve `data` tal cual, sin recortar
+ * campos, para que el caller (`MostWatchedRail.jsx`) pueda resolver el
+ * diseño de tarjeta vía `resolveBouquetLayoutForDevice` igual que cualquier
+ * otro bouquet.
+ *
  * @param {Object} brandConfig - currentBrand.
  * @param {string} brand
- * @returns {Promise<{window_days: number, channels: Array<{rank:number, channel_id:number, name:string|null, total_duration_seconds:number, total_views:number}>} | null>}
+ * @returns {Promise<{window_days: number, bouquetId?: string, name?: string, priority?: number, isMain?: boolean, customData?: string, channels: Array<{rank:number, channel_id:number, name:string|null, total_duration_seconds:number, total_views:number}>} | null>}
  */
 export async function getTopChannelsGlobal(brandConfig, brand) {
   if (!isTelemetryEnabled(brandConfig)) return null;
