@@ -98,15 +98,25 @@ export async function requestPasswordReset(brandConfig, email) {
  * (subscriber_code) se resuelve del storage local -- ya lo persiste el
  * login (ver `deviceAuthService.persistDeviceSessionAuth`), el usuario
  * nunca tiene que escribirlo para esto.
+ *
+ * `oldPass` es obligatorio desde 2026-08-28 (ver
+ * docs/GUIA_INTEGRACION_UNIFICADA.md sección 5.1, backend Wind) -- el
+ * backend la verifica contra PanAccess antes de aplicar el cambio; si no
+ * coincide responde 400 con `code: "old_password_incorrect"`, y tras 5
+ * intentos fallidos, 429 con `code: "old_password_locked"`. `err.code`
+ * (ver `parseJsonResponse` de más arriba) ya expone ese código tal cual
+ * para que el caller (`ChangePasswordPanel.jsx`) pueda distinguirlo si
+ * hace falta, aunque `err.message` ya trae el texto legible que manda el
+ * backend.
  */
-export async function changePassword(brandConfig, brand, newPass) {
+export async function changePassword(brandConfig, brand, oldPass, newPass) {
   const code = getDeviceSessionSubscriberCode(brand);
   if (!code) {
     throw new Error('No se encontró el código de suscriptor de esta sesión.');
   }
   return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/password/', {
     method: 'POST',
-    body: JSON.stringify({ code, newPass }),
+    body: JSON.stringify({ code, oldPass, newPass }),
   });
 }
 

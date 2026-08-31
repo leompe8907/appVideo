@@ -13,7 +13,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { changePassword } from '../../services/accountSecurityService';
 import { clearSessionBeforeNewLogin } from '../../services/loginFlow';
-import { getCredentials } from '../../utils/userSession';
 // Los estilos de este panel viven en styles/pages/_mi-cuenta.scss (importado
 // desde MiCuentaPage.jsx), no acá -- ver el comentario en ese archivo sobre
 // por qué (chunk de CSS separado que se rompía en el build de producción).
@@ -129,19 +128,19 @@ export function ChangePasswordPanel({ brandConfig, brand }) {
     if (isSubmitting) return;
     setError('');
 
-    // Verificación local contra la contraseña guardada en este dispositivo
-    // (ver userSession.js -- se cachea cifrada tras el login para reanudar
-    // sesión sin pedirla de nuevo). El backend de cambio de contraseña no
-    // valida la actual, así que este chequeo es la única barrera real: si
-    // no coincide, no se llega a llamar a changePassword().
+    // El backend (ver accountSecurityService.changePassword) ya verifica
+    // `oldPass` de verdad contra PanAccess -- acá solo se exige que el
+    // campo no esté vacío antes del round-trip; la validación real (y el
+    // mensaje "la contraseña actual no es correcta"/bloqueo por intentos)
+    // llega en la respuesta de `changePassword()` más abajo (`err.code`
+    // `old_password_incorrect`/`old_password_locked`). Antes esto se
+    // comparaba contra una copia cacheada localmente en el dispositivo
+    // (`getCredentials`), lo cual podía rechazar un cambio válido si esa
+    // copia había quedado desactualizada (p. ej. la contraseña ya se
+    // había cambiado desde otro dispositivo/el dashboard web).
     const trimmedCurrent = currentPass.trim();
     if (!trimmedCurrent) {
       setError(t('account.changePasswordCurrentRequired', { defaultValue: 'Ingresa tu contraseña actual.' }));
-      return;
-    }
-    const stored = getCredentials(brand);
-    if (!stored?.password || trimmedCurrent !== stored.password) {
-      setError(t('account.changePasswordCurrentWrong', { defaultValue: 'La contraseña actual no es correcta.' }));
       return;
     }
 
@@ -168,7 +167,7 @@ export function ChangePasswordPanel({ brandConfig, brand }) {
 
     setIsSubmitting(true);
     try {
-      const result = await changePassword(brandConfig, brand, newPass);
+      const result = await changePassword(brandConfig, brand, trimmedCurrent, newPass);
       if (!result?.success) {
         throw new Error(
           result?.message || t('account.changePasswordError', { defaultValue: 'No se pudo cambiar la contraseña.' }),

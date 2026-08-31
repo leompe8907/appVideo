@@ -337,7 +337,7 @@ export const BRANDS = [
       },
       // --- Login social (Google / Facebook); oculto en TV ---
       socialLogin: {
-        backendBaseUrl: "http://backend.wind.do", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
+        backendBaseUrl: "https://backend.wind.do", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
         google: {
           enabled: true, // Muestra botón Google (solo escritorio)
           redirectUrl: "/wind/auth/google/", // Path relativo a backendBaseUrl o URL absoluta del POST OAuth
@@ -355,7 +355,7 @@ export const BRANDS = [
       // --- "Dispositivos vinculados" (Fase 3, hoy backend Wind) -- opt-in, ver deviceAuthService.js ---
       deviceSession: {
         enabled: false, // true: login manual/social/TV-pareada también autentica contra /api/auth/login/ y registra el dispositivo por WS (/ws/device/). Activar explícitamente cuando el equipo confirme el rollout en este brand.
-        baseUrl: "", // vacío = reutiliza socialLogin.backendBaseUrl ("http://backend.wind.do") y luego udid.baseUrl
+        baseUrl: "", // vacío = reutiliza socialLogin.backendBaseUrl ("https://backend.wind.do") y luego udid.baseUrl
         wsUrl: "", // vacío = se deriva de la base resuelta arriba + /ws/device/
       },
       telemetry: {
@@ -1874,7 +1874,8 @@ export const BRANDS = [
         maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
         reconnectMs: [3000, 6000, 10000], // Delays entre reintentos (ms)
         heartbeatMs: 30000, // Intervalo de ping WebSocket (ms)
-        privateKeyUrl: "", // Ruta pública PEM para descifrar encrypted_credentials
+        privateKeyUrl: "", // Ruta pública PEM para descifrar encrypted_credentials -- sin uso mientras enabled=false
+        tempTokenRequired: true, // Inerte mientras enabled=false (useUdidLoginFlow corta antes de leer esto) -- preparado a propósito para que, si algún día se habilita el pareo UDID para esta marca, arranque directo con el esquema moderno (llave efímera + AES-GCM) en vez de caer en el esquema legado por privateKeyUrl (que esta marca no tiene configurado). Ver docs/AUDITORIA_CONSOLIDADA_2026-08-24.md, Medio #8.
       },
       // --- Login social (Google / Facebook); oculto en TV ---
       socialLogin: {
