@@ -21,6 +21,20 @@ export function buildHlsPlaybackConfig(playbackUrl = '', getSessionId) {
     maxMaxBufferLength: 60,
     backBufferLength: 30,
     enableWorker: false,
+    // Colchón de buffer en vivo: antes solo se aplicaba a hosts de Wind
+    // (middleware.wind.do). Se generaliza a TODOS los operadores porque el
+    // stall (`bufferStalledError`, no fatal, hls.js recupera solo) se
+    // reprodujo igual con un operador distinto (multiplustv, cv10.panaccess.
+    // com) apenas arranca un canal en vivo cuya playlist trae una ventana
+    // corta (`LEVEL_LOADED fragCount: 5` en el ejemplo real) -- con pocos
+    // segmentos disponibles, arrancar muy pegado al borde en vivo deja poco
+    // margen antes de alcanzarlo, y cualquier mínima demora de red hace que
+    // la reproducción se quede sin buffer un instante. `liveMaxLatencyDurationCount`
+    // en particular no tenía valor propio antes de este cambio (default de
+    // hls.js: Infinity, sin lógica de resync) para ningún operador que no
+    // fuera Wind.
+    liveSyncDurationCount: 3,
+    liveMaxLatencyDurationCount: 6,
   };
 
   if (isWindMiddlewareHost(playbackUrl)) {
@@ -28,8 +42,6 @@ export function buildHlsPlaybackConfig(playbackUrl = '', getSessionId) {
       enableSoftwareAES: true,
       startLevel: 0,
       capLevelToPlayerSize: false,
-      liveSyncDurationCount: 3,
-      liveMaxLatencyDurationCount: 6,
       maxBufferLength: 20,
       maxMaxBufferLength: 40,
     });

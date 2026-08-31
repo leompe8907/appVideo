@@ -12,13 +12,29 @@ export function middlewareNeedsSession(url) {
 }
 
 /**
- * URI de clave AES-128 servida por este middleware (`index.php?requestMode=
- * mekey&...&chunk=N...`) — una key DISTINTA por cada segmento (`chunk=`
- * cambia por .ts). Se usa para detectar cuándo aplicar el workaround de IV
- * fijo en `HlsPlaybackController` (ver ahí el porqué).
+ * URI de clave AES-128 servida por este middleware. `mekey`
+ * (`index.php?requestMode=mekey&...&chunk=N...`) es la de streams en vivo —
+ * una key DISTINTA por cada segmento (`chunk=` cambia por .ts). Catchup usa
+ * una acción distinta, `f=getCatchupKey` (confirmado en manifiestos reales
+ * del operador multiplustv, mismo CDN que `HlsPlaybackController.js`
+ * documenta como referencia) — antes de agregar este caso, el catchup de ese
+ * operador (y potencialmente cualquier otro que use la misma key "envuelta")
+ * bajaba los segmentos bien (200 OK) pero nunca reproducía: la key llegaba
+ * sin desenvolver a hls.js, que descifraba mal cada fragmento, resultando en
+ * `fragParsingError` infinito (ver `PanaccessKeyUnwrapLoader` en
+ * `HlsPlaybackController.js`, que depende de esta función para saber cuándo
+ * aplicar el unwrap). Se agrega `getVodKey` por el mismo patrón usado para
+ * las URLs de manifiesto (`getStreamM3u8`/`getVodM3u8`/`getCatchupM3u8`),
+ * aunque todavía no hay un caso real confirmado que lo dispare.
  */
 export function isPanaccessRotatingKeyUri(url) {
-  return typeof url === 'string' && /requestmode=mekey/i.test(url);
+  if (typeof url !== 'string') return false;
+  const lower = url.toLowerCase();
+  return (
+    lower.includes('requestmode=mekey') ||
+    lower.includes('f=getcatchupkey') ||
+    lower.includes('f=getvodkey')
+  );
 }
 
 function withSessionId(url, sessionId) {
