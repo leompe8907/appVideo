@@ -3,11 +3,22 @@
  * el backend Wind (ver `telemetry` app en Back-Wind-V2 y
  * `services/mostWatchedChannelsService.js` en este repo).
  *
- * Independiente del muro de bouquets real (`BouquetWall`): no inyecta
- * entradas sintéticas en `epg.bouquetsWithChannels`, solo cruza el ranking
- * contra `epg.streams` ya cargado por el preload (mismo patrón que
- * `VodRecommendedHomeRail`). Reutiliza `ChannelCard` de `BouquetLayouts.jsx`
- * para que las tarjetas se vean igual que en el resto del muro.
+ * No inyecta entradas sintéticas en `epg.bouquetsWithChannels` -- solo cruza
+ * el ranking contra `epg.streams` ya cargado por el preload (mismo patrón
+ * que `VodRecommendedHomeRail`) y arma un objeto bouquet sintético en
+ * memoria para reusar `BouquetHorizontalGrid` (`BouquetLayouts.jsx`) TAL
+ * CUAL, en vez de reimplementar el render con `EmblaHorizontalRail` +
+ * `ChannelCard` sueltos como antes. Esa reimplementación manual dejaba las
+ * tarjetas sin ancho definido (por pasarle a Embla una clase de contenedor
+ * que no correspondía) y como consecuencia los botones de flecha quedaban
+ * siempre deshabilitados -- reusar el mismo componente que usa el resto del
+ * muro garantiza paridad total (ancho de tarjeta, flechas, y también
+ * comportamiento en TV con lista virtualizada) sin duplicar esa lógica.
+ *
+ * Se renderiza como el último ítem de `.bouquet-wall` (ver `BouquetWall.jsx`,
+ * variant "inicio") para heredar el mismo espaciado entre bouquets
+ * (`bouquet-stack-spacing`) en vez de quedar como hermano suelto con un
+ * padding distinto.
  *
  * Se activa por brand (`login.telemetry.enabled` en `brands.js`, hoy solo
  * Wind). Si el brand no lo activa, el usuario no tiene sesión de
@@ -21,10 +32,8 @@ import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { usePreload } from '../../store/usePreload';
-import { getBouquetHorizontalGridClasses } from '../../utils/bouquetLayoutClasses';
 import { resolveBouquetLayoutForDevice } from '../../utils/bouquetLayoutConfig';
-import { EmblaHorizontalRail } from '../navigation/EmblaHorizontalRail';
-import { ChannelCard } from './BouquetLayouts';
+import { BouquetHorizontalGrid } from './BouquetLayouts';
 import {
   buildMostWatchedItems,
   getTopChannelsGlobal,
@@ -81,27 +90,25 @@ export function MostWatchedRail({ onChannelSelect, onChannelFocus }) {
 
   if (!enabled || items.length === 0) return null;
 
-  const layout = resolveBouquetLayoutForDevice({ customData }, { isTV, isPC });
-  const { root: rootClass, track: trackClass } = getBouquetHorizontalGridClasses(layout.cardDesign);
+  const bouquet = {
+    bouquetId: 'most-watched',
+    name: t('bouquet.mostWatched', { defaultValue: 'Más vistos' }),
+    items,
+    customData,
+  };
+  const layout = resolveBouquetLayoutForDevice(bouquet, { isTV, isPC });
 
   return (
-    <div className={rootClass} data-bouquet-id="most-watched" data-layout={layout.cardDesign ?? ''}>
-      <h4 className="bouquet-heading">
-        {t('bouquet.mostWatched', { defaultValue: 'Más vistos' })}
-      </h4>
-      <EmblaHorizontalRail className={trackClass}>
-        {items.map((channel, index) => (
-          <ChannelCard
-            key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
-            channel={channel}
-            layoutType={layout.cardDesign}
-            logoIndex={layout.logoIndex}
-            onSelect={() => onChannelSelect?.(channel)}
-            onFocus={() => onChannelFocus?.(channel)}
-          />
-        ))}
-      </EmblaHorizontalRail>
-    </div>
+    <BouquetHorizontalGrid
+      bouquet={bouquet}
+      layoutType={layout.cardDesign}
+      logoIndex={layout.logoIndex}
+      gridRows={layout.gridRows}
+      containerType={layout.containerType}
+      platformLayoutType={layout.platformLayoutType}
+      onChannelSelect={onChannelSelect}
+      onChannelFocus={onChannelFocus}
+    />
   );
 }
 

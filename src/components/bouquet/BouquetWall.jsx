@@ -11,6 +11,7 @@ import {
   BouquetHorizontalGrid,
   BouquetGridVertical,
 } from './BouquetLayouts';
+import MostWatchedRail from './MostWatchedRail';
 
 /**
  * BouquetWall: filas de canales por bouquet (home 10foot).
@@ -72,6 +73,18 @@ export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio
 
         return <BouquetHorizontalGrid key={key} {...layoutProps} />;
       })}
+      {/* Se renderiza como último ítem del wall (no como hermano suelto en
+          BouquetPage.jsx) para heredar el mismo `margin-block-end` /
+          `:last-child` que aplica `bouquet-stack-spacing` a los bouquets de
+          arriba -- si termina siendo el último elemento real, queda sin
+          margen inferior igual que cualquier bouquet; si no, con el margen
+          estándar de 2rem. Solo aplica al variant "inicio" (donde vivía
+          antes); MostWatchedRail se auto-oculta (retorna null) si el brand
+          no tiene telemetry habilitado o no hay ranking, así que no agrega
+          nada al DOM en variant "servicios" ni cuando no hay datos. */}
+      {variant === 'inicio' && (
+        <MostWatchedRail onChannelSelect={onChannelSelect} onChannelFocus={onChannelFocus} />
+      )}
     </div>
   );
 }
