@@ -7,6 +7,7 @@ import { validateSessionIfDue } from '../utils/sessionValidator';
 import { isDeviceSessionEnabled } from '../services/deviceAuthService';
 import { isDeviceSessionActive, setOnDeviceSessionUnexpectedClose } from '../services/deviceSessionService';
 import { maybeEstablishDeviceSession } from '../services/loginFlow';
+import { syncPreferencesFromBackend } from '../services/preferencesSyncService';
 
 /** Tiempo máximo en milisegundos en background antes de forzar revalidación silenciosa de token (30 min) */
 const MAX_BACKGROUND_MS = 30 * 60 * 1000;
@@ -151,7 +152,13 @@ export function useAppLifecycle() {
   // viva -- ver isDeviceSessionActive()).
   useEffect(() => {
     if (!currentBrand) return undefined;
-    const timer = setTimeout(() => ensureDeviceSessionConnected(currentBrand), 1500);
+    const timer = setTimeout(() => {
+      ensureDeviceSessionConnected(currentBrand);
+      // Control parental + favoritos guardados en otros dispositivos (ver
+      // docs/SINCRONIZACION_PREFERENCIAS_2026-08-31.md, Back-Wind-V2) --
+      // fire-and-forget, mismo criterio que el resto de este watchdog.
+      syncPreferencesFromBackend();
+    }, 1500);
     return () => clearTimeout(timer);
   }, [currentBrand]);
 
@@ -252,6 +259,11 @@ export function useAppLifecycle() {
         // alguien más dispare un login/reactivación completo (ver
         // ensureDeviceSessionConnected arriba).
         ensureDeviceSessionConnected(currentBrand);
+
+        // Mismo motivo: si otro dispositivo cambió control parental o
+        // favoritos mientras esta app estaba en background, traerlo al
+        // volver (ver docs/SINCRONIZACION_PREFERENCIAS_2026-08-31.md).
+        syncPreferencesFromBackend();
 
         // Reanudar reproductor si estaba activo antes del suspend.
         // `play()` requiere el objeto { type, id, url, ... } — no tiene

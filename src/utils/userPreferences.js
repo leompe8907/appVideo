@@ -3,6 +3,7 @@
  */
 
 import { getBrandItem, removeBrandItem, resolveBrandId, setBrandItem } from './brandStorage';
+import { pushPreferences } from '../services/preferencesSyncService';
 
 const KEYS = {
   favorites: 'USER_FAVORITES_KEY',
@@ -30,13 +31,28 @@ export function getFavorites(brandId) {
   }
 }
 
-export function setFavorites(brandId, favorites) {
+/**
+ * @param {string} brandId
+ * @param {Array<number>|null} favorites
+ * @param {{skipSync?: boolean}} [opts] - `skipSync: true` cuando el valor ya
+ *   vino del backend (ver `preferencesSyncService.syncPreferencesFromBackend`)
+ *   -- evita un push inmediato de vuelta con el mismo dato que se acaba de
+ *   recibir.
+ */
+export function setFavorites(brandId, favorites, { skipSync = false } = {}) {
   const id = brand(brandId);
-  if (favorites == null || !Array.isArray(favorites)) {
+  const list = favorites != null && Array.isArray(favorites) ? favorites : null;
+  if (list == null) {
     removeBrandItem(id, KEYS.favorites);
-    return;
+  } else {
+    setBrandItem(id, KEYS.favorites, JSON.stringify(list));
   }
-  setBrandItem(id, KEYS.favorites, JSON.stringify(favorites));
+
+  if (!skipSync) {
+    // Fire-and-forget: sincronizar entre dispositivos nunca debe bloquear
+    // ni poder romper el guardado local, que ya ocurrió arriba.
+    pushPreferences({ favorites: (list || []).map(String) });
+  }
 }
 
 export function hasFavorite(brandId, lcn) {

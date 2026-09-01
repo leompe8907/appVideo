@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { derivePinHash, timingSafeEqual } from '../utils/pinHash';
 import { getBrandItem, resolveBrandId, setBrandItem } from '../utils/brandStorage';
 import { getActiveBrandConfig, isParentalControlEnabledForBrand } from '../config/brandConfig';
+import { pushPreferences } from '../services/preferencesSyncService';
 
 const DEFAULT_UNLOCK_TTL_MS = 15 * 60 * 1000;
 const DEFAULT_RATING_UNLOCK_TTL_MS = 15 * 60 * 1000;
@@ -76,8 +77,10 @@ export const useParentalStore = create((set, get) => {
     }));
   };
 
-  const persist = () => {
-    const s = get();
+  // Blobs completos que ya escribe `localStorage` HOY -- incluye los campos
+  // de desbloqueo transitorio (`unlockUntilMs`/etc), que tiene sentido que
+  // sobrevivan a un refresh de página EN ESTE MISMO dispositivo.
+  const persistLocalOnly = (s) => {
     safeWrite({
       version: STORAGE_VERSION,
       enabled: s.enabled === true,
@@ -96,6 +99,30 @@ export const useParentalStore = create((set, get) => {
     });
   };
 
+  // Subconjunto "durable" que sí viaja a otros dispositivos -- deliberadamente
+  // SIN los campos de desbloqueo transitorio: un desbloqueo temporal en este
+  // dispositivo no debe "desbloquear" el resto (ver
+  // docs/SINCRONIZACION_PREFERENCIAS_2026-08-31.md, Back-Wind-V2).
+  const buildDurableParentalPayload = (s) => ({
+    enabled: s.enabled === true,
+    pinHash: s.pinHash,
+    pinSalt: s.pinSalt,
+    pinMethod: s.pinMethod,
+    pinIterations: s.pinIterations,
+    blockedChannelIds: Array.isArray(s.blockedChannelIds) ? s.blockedChannelIds : [],
+    ratingEnabled: s.ratingEnabled === true,
+    ratingAllowedMax: s.ratingAllowedMax,
+    ratingApplyToLive: s.ratingApplyToLive !== false,
+  });
+
+  const persist = () => {
+    const s = get();
+    persistLocalOnly(s);
+    // Fire-and-forget: sincronizar entre dispositivos nunca debe bloquear
+    // ni poder romper el guardado local, que ya ocurrió arriba.
+    pushPreferences({ parental: buildDurableParentalPayload(s) });
+  };
+
   // Hidratar best-effort al crear el store (no depende de React)
   queueMicrotask(() => hydrate());
 
@@ -104,6 +131,35 @@ export const useParentalStore = create((set, get) => {
 
     hydrate,
     persist,
+
+    /**
+     * Aplica una config traída del backend (ver
+     * `preferencesSyncService.syncPreferencesFromBackend`) -- mismo shape
+     * que `buildDurableParentalPayload` de arriba. Solo persiste local
+     * (`persistLocalOnly`), a propósito: no vuelve a hacer push de lo que
+     * se acaba de recibir (evitaría un round-trip inútil, o peor, un loop
+     * si dos dispositivos se sincronizaran entre sí en simultáneo).
+     */
+    hydrateFromRemote: (remote) => {
+      if (!remote || typeof remote !== 'object') return;
+      set((s) => ({
+        ...s,
+        enabled: remote.enabled === true,
+        pinHash: typeof remote.pinHash === 'string' ? remote.pinHash : null,
+        pinSalt: typeof remote.pinSalt === 'string' ? remote.pinSalt : null,
+        pinMethod: typeof remote.pinMethod === 'string' ? remote.pinMethod : null,
+        pinIterations: Number.isFinite(Number(remote.pinIterations)) ? Number(remote.pinIterations) : 0,
+        blockedChannelIds: Array.isArray(remote.blockedChannelIds)
+          ? remote.blockedChannelIds.map(String)
+          : [],
+        ratingEnabled: remote.ratingEnabled === true,
+        ratingAllowedMax: Number.isFinite(Number(remote.ratingAllowedMax))
+          ? Number(remote.ratingAllowedMax)
+          : 18,
+        ratingApplyToLive: remote.ratingApplyToLive !== false,
+      }));
+      persistLocalOnly(get());
+    },
 
     resetOnLogout: () => {
       set({ ...initial });
