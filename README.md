@@ -19,6 +19,8 @@ cp .env.example .env.local
 | `VITE_TV_PLATFORM` | No | Fuerza bootstrap TV: `tizen`, `webos`, `lg`, `samsung` |
 | `VITE_TV_DEPLOY` | No | `true` activa engines nativos Samsung/LG en build TV (Etapa 2) |
 | `VITE_ERROR_REPORT_URL` | No | Endpoint HTTP donde se envían los errores capturados (`src/utils/errorReporting.js`). Sin definir, solo se guardan localmente (localStorage) |
+| `VITE_APP_LOGS_INGEST_KEY` | No | Secreto compartido (`X-App-Log-Key`) para reportar errores al backend Wind (`POST /api/v1/logs/`, `src/utils/errorReporting.js`). Sin definir, ese destino se omite -- pedir el valor al equipo de backend, ver `docs/GUIA_INTEGRACION_UNIFICADA.md` (Back-Wind-V2) sección 7 |
+| `VITE_RECAPTCHA_SITE_KEY_<MARCA>` | No | Site key pública de reCAPTCHA v3 por marca (`src/services/recaptchaService.js` + `resolveRecaptchaSiteKey()` en `src/config/resolveBrandToken.js`, mismo esquema que `VITE_BRAND_TOKEN_<MARCA>`) -- usada por "olvidé mi contraseña" y "eliminar cuenta" (solo en brands con `login.deviceSession.enabled: true`, hoy solo `wind`). `VITE_RECAPTCHA_SITE_KEY` (sin sufijo de marca) sirve de fallback en builds de una sola marca. Sin ninguna de las dos, no se genera token y esas llamadas se mandan sin `recaptcha_token` (el backend Wind decide si lo exige según tenga `RECAPTCHA_SECRET_KEY` configurado) |
 
 Los tokens **no** van en `src/config/brands.js`. El CI falla si detecta tokens hardcodeados (`pnpm run check:secrets`).
 

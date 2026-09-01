@@ -104,6 +104,43 @@ export function resolveBrandDrmFromProcessEnv(brandSlug) {
 // agregar este archivo al override de globals.node en eslint.config.js
 // para no habilitar sin querer otros globals de Node en `resolveBrandToken`
 // (la función de arriba), que sí corre en el cliente.
+/**
+ * Resuelve la site key pública de reCAPTCHA v3 de una marca desde variables
+ * de entorno Vite. Mismo esquema que VITE_BRAND_TOKEN_<SLUG> de arriba:
+ * VITE_RECAPTCHA_SITE_KEY_<SLUG>, con fallback a VITE_RECAPTCHA_SITE_KEY
+ * (builds de una sola marca). Usada por `recaptchaService.js` -- cada
+ * cliente puede tener su propio proyecto de Google Cloud / site key en vez
+ * de compartir uno global; sin ninguna de las dos, `getRecaptchaToken()`
+ * devuelve `null` (opt-in, no bloquea nada).
+ */
+function brandSlugToRecaptchaEnvKey(slug) {
+  return `VITE_RECAPTCHA_SITE_KEY_${String(slug || '')
+    .trim()
+    .toUpperCase()
+    .replace(/-/g, '_')}`;
+}
+
+export function resolveRecaptchaSiteKey(brandSlug) {
+  const slug = String(brandSlug || '').trim();
+
+  const env = typeof import.meta !== 'undefined' ? import.meta.env : {};
+
+  if (slug) {
+    const specificKey = brandSlugToRecaptchaEnvKey(slug);
+    const specific = env[specificKey];
+    if (specific && String(specific).trim() !== '') {
+      return String(specific).trim();
+    }
+  }
+
+  const fallback = env.VITE_RECAPTCHA_SITE_KEY;
+  if (fallback && String(fallback).trim() !== '') {
+    return String(fallback).trim();
+  }
+
+  return '';
+}
+
 /* global process */
 export function resolveBrandTokenFromProcessEnv(brandSlug) {
   const slug = String(brandSlug || '').trim();

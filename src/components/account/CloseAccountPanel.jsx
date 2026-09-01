@@ -7,9 +7,10 @@
  * fricción a propósito -- escribir una palabra de confirmación exacta,
  * más un `ConfirmModal` final -- antes de disparar la llamada.
  *
- * NOTA: si el backend de destino tiene reCAPTCHA obligatorio
- * (`RECAPTCHA_SECRET_KEY` configurado), esta llamada fallará con
- * `RecaptchaFailed` -- ver el comentario en `accountSecurityService.js`.
+ * reCAPTCHA v3 (ver `accountSecurityService.js`/`recaptchaService.js`): se
+ * genera y se manda solo si `VITE_RECAPTCHA_SITE_KEY` está configurada acá
+ * y el backend de destino tiene `RECAPTCHA_SECRET_KEY` -- sin ambas, no
+ * bloquea nada.
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';

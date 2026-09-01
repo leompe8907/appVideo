@@ -18,18 +18,22 @@
  *   - Cerrar cuenta desaprovisiona el suscriptor en PanAccess -- es
  *     irreversible.
  *
- * NOTA -- reCAPTCHA: `closeAccount` acepta backend-side un `recaptcha_token`
- * opcional (solo lo exige el backend si tiene `RECAPTCHA_SECRET_KEY`
- * configurado, ver `wind/utils/recaptcha.py`). Este módulo NO integra el
- * SDK de reCAPTCHA v3 (cargar script de Google, generar token por acción) --
- * si el entorno de destino lo exige, `closeAccount` fallará con
- * `RecaptchaFailed` hasta que se agregue esa pieza por separado.
+ * reCAPTCHA: `requestPasswordReset` y `closeAccount` mandan `recaptcha_token`
+ * (reCAPTCHA v3, generado por acción vía `recaptchaService.js`, con site key
+ * por marca -- ver `resolveRecaptchaSiteKey()`). El backend solo lo exige si
+ * tiene `RECAPTCHA_SECRET_KEY` configurado (ver `wind/utils/recaptcha.py`)
+ * -- opt-in de los dos lados: sin site key configurada para esta marca (ni
+ * fallback `VITE_RECAPTCHA_SITE_KEY`), `getRecaptchaToken()` devuelve `null`
+ * y simplemente no se manda el campo; sin `RECAPTCHA_SECRET_KEY` allá, el
+ * backend no lo pide. `changePassword` no lo necesita -- el backend no lo
+ * exige en ese endpoint (ver GUIA_INTEGRACION_UNIFICADA.md sección 5.1).
  */
 import {
   authorizedDeviceRequest,
   getDeviceSessionSubscriberCode,
   resolveDeviceAuthBaseUrl,
 } from './deviceAuthService';
+import { getRecaptchaToken } from './recaptchaService';
 
 async function parseJsonResponse(res, fallbackMessage) {
   const text = await res.text();
@@ -85,10 +89,14 @@ export async function requestPasswordReset(brandConfig, email) {
   if (!base) {
     throw new Error('Falta configurar la base del backend (login.deviceSession.baseUrl).');
   }
+  const recaptchaToken = await getRecaptchaToken('forgot_password', brandConfig?.brand);
   const res = await fetch(`${base}/api/auth/password/forgot/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: String(email || '').trim() }),
+    body: JSON.stringify({
+      email: String(email || '').trim(),
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
+    }),
   });
   return parseJsonResponse(res, 'No se pudo solicitar la recuperación de contraseña.');
 }
@@ -136,12 +144,14 @@ export async function closeAccount(brandConfig, brand, { confirm, reason } = {})
   if (!code) {
     throw new Error('No se encontró el código de suscriptor de esta sesión.');
   }
+  const recaptchaToken = await getRecaptchaToken('close_account', brand);
   return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/account/close/', {
     method: 'POST',
     body: JSON.stringify({
       code,
       confirm: confirm ?? code,
       reason: reason || 'user_app_close',
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
     }),
   });
 }
