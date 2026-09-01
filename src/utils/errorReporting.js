@@ -107,7 +107,7 @@ async function sendToDiagnosticsBackend(entry) {
     const [{ getActiveBrandConfig }, { resolveBrandId }, deviceAuth] = await Promise.all([
       import('../config/brandConfig'),
       import('./brandStorage'),
-      import('./deviceAuthService'),
+      import('../services/deviceAuthService'),
     ]);
 
     const brandConfig = getActiveBrandConfig();
