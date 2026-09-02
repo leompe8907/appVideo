@@ -33,6 +33,7 @@ import {
   resolveBrandId,
   setBrandItem,
 } from '../utils/brandStorage';
+import { getRecaptchaToken } from './recaptchaService';
 
 const STORAGE_KEYS = {
   access: 'deviceSession.access',
@@ -107,6 +108,12 @@ async function parseJsonResponse(res, fallbackMessage) {
  * `clientLogin` (login1/password, o el email+password de un registro
  * manual/social), sin transformarlas.
  *
+ * reCAPTCHA v3 (2026-09-01, extensión de Alto #7 -- ver
+ * docs/RECAPTCHA_LOGIN_Y_CAMBIO_PASSWORD_2026-09-01.md en Back-Wind-V2):
+ * manda `recaptcha_token` igual que `requestPasswordReset`/`closeAccount`
+ * (`accountSecurityService.js`) -- opt-in de los dos lados, sin site key
+ * configurada para esta marca simplemente no se manda el campo.
+ *
  * @param {Object} brandConfig - currentBrand.
  * @param {{username: string, password: string}} credentials
  * @returns {Promise<{access: string, refresh: string, user: Object}>}
@@ -116,12 +123,14 @@ export async function loginManualForDeviceSession(brandConfig, { username, passw
   if (!base) {
     throw new Error('Falta configurar la base del backend (login.deviceSession.baseUrl).');
   }
+  const recaptchaToken = await getRecaptchaToken('login', brandConfig?.brand);
   const res = await fetch(`${base}/api/auth/login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       username: String(username || '').trim(),
       password: String(password || ''),
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
     }),
   });
   return parseJsonResponse(res, 'Error autenticando con el backend.');

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   filterBouquetsForInicio,
   filterBouquetsForTvRadioServices,
+  sortBouquetsByPriority,
 } from '../../services/tvDataService';
 import { useDevice } from '../../contexts/DeviceContext';
 import { usePreload } from '../../store/usePreload';
@@ -11,7 +12,7 @@ import {
   BouquetHorizontalGrid,
   BouquetGridVertical,
 } from './BouquetLayouts';
-import MostWatchedRail from './MostWatchedRail';
+import { useMostWatchedBouquet } from '../../hooks/useMostWatchedBouquet';
 
 /**
  * BouquetWall: filas de canales por bouquet (home 10foot).
@@ -23,16 +24,27 @@ export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio
   const { t } = useTranslation();
   const { isTV, isPC } = useDevice();
   const { epg } = usePreload();
+  // Se llama siempre (regla de hooks), pero solo se mezcla al resultado en
+  // variant "inicio" -- el hook mismo devuelve null si el brand no tiene
+  // telemetry habilitado, así que en "servicios" es un no-op sin costo extra.
+  const mostWatchedBouquet = useMostWatchedBouquet();
 
   const bouquets = useMemo(() => {
     if (epg.status !== 'ready') return [];
     const list = epg.bouquetsWithChannels || [];
-    if (list.length === 0) return [];
     // Tras preload, bouquet.items ya comparten referencia con epg.streams y traen epgItems.
-    return variant === 'servicios'
+    const base = variant === 'servicios'
       ? filterBouquetsForTvRadioServices(list)
       : filterBouquetsForInicio(list);
-  }, [epg.status, epg.bouquetsWithChannels, variant]);
+
+    if (variant !== 'inicio' || !mostWatchedBouquet) return base;
+
+    // "Más vistos" compite por posición según su `priority` real (viene del
+    // mismo backend que los demás bouquets) en vez de quedar siempre fijo al
+    // final -- re-ordena el conjunto completo con la misma función que ya
+    // usan `filterBouquetsForInicio`/`filterBouquetsForTvRadioServices`.
+    return sortBouquetsByPriority([...base, mostWatchedBouquet]);
+  }, [epg.status, epg.bouquetsWithChannels, variant, mostWatchedBouquet]);
 
   if (epg.status === 'error') {
     return (
@@ -73,18 +85,6 @@ export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio
 
         return <BouquetHorizontalGrid key={key} {...layoutProps} />;
       })}
-      {/* Se renderiza como último ítem del wall (no como hermano suelto en
-          BouquetPage.jsx) para heredar el mismo `margin-block-end` /
-          `:last-child` que aplica `bouquet-stack-spacing` a los bouquets de
-          arriba -- si termina siendo el último elemento real, queda sin
-          margen inferior igual que cualquier bouquet; si no, con el margen
-          estándar de 2rem. Solo aplica al variant "inicio" (donde vivía
-          antes); MostWatchedRail se auto-oculta (retorna null) si el brand
-          no tiene telemetry habilitado o no hay ranking, así que no agrega
-          nada al DOM en variant "servicios" ni cuando no hay datos. */}
-      {variant === 'inicio' && (
-        <MostWatchedRail onChannelSelect={onChannelSelect} onChannelFocus={onChannelFocus} />
-      )}
     </div>
   );
 }

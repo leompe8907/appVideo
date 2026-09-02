@@ -9,7 +9,7 @@
  * módulos habían quedado pisados bajo el mismo nombre de archivo
  * (`telemetryService.js`), lo que rompía `PlayerContext.jsx` en cada carga
  * de la app (`telemetryService.init is not a function`). Son conceptos
- * distintos con consumidores distintos (`MostWatchedRail.jsx` acá,
+ * distintos con consumidores distintos (`useMostWatchedBouquet.js` acá,
  * `PlayerContext.jsx` en el otro) -- de ahí el archivo separado.
  *
  * Reutiliza el mismo JWT y la misma base que `deviceSessionService.js` /
@@ -17,7 +17,7 @@
  * Se activa por brand con `login.telemetry.enabled` en `brands.js`; si el
  * brand no lo activa, o no tiene sesión de dispositivo, o la llamada falla
  * por cualquier motivo, este módulo nunca lanza: siempre devuelve `null`/`[]`
- * y el riel simplemente no se muestra (ver `MostWatchedRail.jsx`).
+ * y el riel simplemente no se muestra (ver `hooks/useMostWatchedBouquet.js`).
  */
 
 import {
@@ -70,7 +70,7 @@ export function isTelemetryEnabled(brandConfig) {
  * El backend Wind devuelve esto con forma de bouquet real (bouquetId, name,
  * priority, isMain, customData con `layouts.<device>.card_design`) además
  * del ranking en `channels` -- se devuelve `data` tal cual, sin recortar
- * campos, para que el caller (`MostWatchedRail.jsx`) pueda resolver el
+ * campos, para que el caller (`hooks/useMostWatchedBouquet.js`) pueda resolver el
  * diseño de tarjeta vía `resolveBouquetLayoutForDevice` igual que cualquier
  * otro bouquet.
  *

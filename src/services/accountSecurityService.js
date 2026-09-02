@@ -18,15 +18,16 @@
  *   - Cerrar cuenta desaprovisiona el suscriptor en PanAccess -- es
  *     irreversible.
  *
- * reCAPTCHA: `requestPasswordReset` y `closeAccount` mandan `recaptcha_token`
- * (reCAPTCHA v3, generado por acción vía `recaptchaService.js`, con site key
- * por marca -- ver `resolveRecaptchaSiteKey()`). El backend solo lo exige si
- * tiene `RECAPTCHA_SECRET_KEY` configurado (ver `wind/utils/recaptcha.py`)
- * -- opt-in de los dos lados: sin site key configurada para esta marca (ni
+ * reCAPTCHA: `requestPasswordReset`, `closeAccount` y (desde 2026-09-01,
+ * extensión de Alto #7 -- ver docs/RECAPTCHA_LOGIN_Y_CAMBIO_PASSWORD_2026-09-01.md
+ * en Back-Wind-V2) `changePassword` mandan `recaptcha_token` (reCAPTCHA v3,
+ * generado por acción vía `recaptchaService.js`, con site key por marca --
+ * ver `resolveRecaptchaSiteKey()`). El backend solo lo exige si tiene
+ * `RECAPTCHA_SECRET_KEY` configurado (ver `wind/utils/recaptcha.py`) --
+ * opt-in de los dos lados: sin site key configurada para esta marca (ni
  * fallback `VITE_RECAPTCHA_SITE_KEY`), `getRecaptchaToken()` devuelve `null`
  * y simplemente no se manda el campo; sin `RECAPTCHA_SECRET_KEY` allá, el
- * backend no lo pide. `changePassword` no lo necesita -- el backend no lo
- * exige en ese endpoint (ver GUIA_INTEGRACION_UNIFICADA.md sección 5.1).
+ * backend no lo pide.
  */
 import {
   authorizedDeviceRequest,
@@ -122,9 +123,15 @@ export async function changePassword(brandConfig, brand, oldPass, newPass) {
   if (!code) {
     throw new Error('No se encontró el código de suscriptor de esta sesión.');
   }
+  const recaptchaToken = await getRecaptchaToken('change_password', brand);
   return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/password/', {
     method: 'POST',
-    body: JSON.stringify({ code, oldPass, newPass }),
+    body: JSON.stringify({
+      code,
+      oldPass,
+      newPass,
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
+    }),
   });
 }
 

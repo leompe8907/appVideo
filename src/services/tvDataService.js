@@ -169,7 +169,12 @@ function getBouquetPriorityValue(bouquet) {
   return null;
 }
 
-function sortBouquetsByPriority(bouquets) {
+/**
+ * Exportada para que `BouquetWall.jsx` pueda re-ordenar el riel sintético de
+ * "Más vistos" (`useMostWatchedBouquet`) junto con los bouquets reales según
+ * el mismo `priority` -- antes solo se usaba internamente acá.
+ */
+export function sortBouquetsByPriority(bouquets) {
   const arr = Array.isArray(bouquets) ? [...bouquets] : [];
   arr.sort((a, b) => {
     const pa = getBouquetPriorityValue(a);
