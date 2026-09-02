@@ -120,11 +120,20 @@ export function useChunkedList(items, options = {}) {
 
   const reportFocusIndex = useCallback(
     (index) => {
+      // Sin virtualización (PC/Embla, o listas cortas) `computeVisibleWindow`
+      // ignora `focusedIndex` por completo (early-return `!shouldVirtualize`
+      // arriba) -- rastrearlo igual solo forzaba un `setState` (y por lo
+      // tanto un re-render de TODA la fila, recreando cada `ChannelCard`) en
+      // cada `onMouseEnter` de cada tarjeta, incluso mientras el usuario
+      // arrastraba/scrolleaba el carril con el mouse. Eso competía por el
+      // hilo principal justo durante el drag de Embla y se sentía como que
+      // el scroll "se trababa" al pasar el mouse sobre una tarjeta.
+      if (!shouldVirtualize) return;
       if (!Number.isInteger(index) || index < 0 || index >= total) return;
       focusedIndexRef.current = index;
       setFocusedIndex(index);
     },
-    [total],
+    [shouldVirtualize, total],
   );
 
   const { start, end } = computeVisibleWindow({ total, revealed, focusedIndex, buffer, shouldVirtualize, columns });

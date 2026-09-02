@@ -1865,17 +1865,17 @@ export const BRANDS = [
       },
       // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
-        enabled: false, // Muestra botón y flujo UDID
-        baseUrl: "", // Base HTTP del backend UDID
-        requestPath: "", // Endpoint POST para solicitar código UDID
-        wsUrl: "", // WebSocket para recibir credenciales cifradas
+        enabled: true, // Activado 2026-09-02 -- backend Wind ya soporta el flujo completo (ver docs/ACTIVACION_UDID_WIND_2026-09-02.md)
+        baseUrl: "https://backend.wind.do", // Base HTTP del backend UDID (mismo backend que socialLogin.backendBaseUrl)
+        requestPath: "/wind/request-udid-manual/", // Endpoint POST para solicitar código UDID -- explícito a propósito: el default del hook (/udid/...) NO existe en este backend (rutas reales bajo /wind/, ver wind/urls.py); dejarlo vacío o confiar en el default rompe el pareo con 404.
+        wsUrl: "wss://backend.wind.do/ws/auth/", // WebSocket para recibir credenciales cifradas -- sin prefijo /wind/ (ver panaccess_wind_integration/asgi.py, URLRouter sin prefijo para wind.routing)
         appType: "10foot", // Tipo de app enviado al backend
         appVersion: "1.0", // Versión enviada al backend
         maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
         reconnectMs: [3000, 6000, 10000], // Delays entre reintentos (ms)
         heartbeatMs: 30000, // Intervalo de ping WebSocket (ms)
-        privateKeyUrl: "", // Ruta pública PEM para descifrar encrypted_credentials -- sin uso mientras enabled=false
-        tempTokenRequired: true, // Inerte mientras enabled=false (useUdidLoginFlow corta antes de leer esto) -- preparado a propósito para que, si algún día se habilita el pareo UDID para esta marca, arranque directo con el esquema moderno (llave efímera + AES-GCM) en vez de caer en el esquema legado por privateKeyUrl (que esta marca no tiene configurado). Ver docs/AUDITORIA_CONSOLIDADA_2026-08-24.md, Medio #8.
+        privateKeyUrl: "", // Esquema legado no usado -- tempTokenRequired=true fuerza el esquema moderno (llave efímera + AES-GCM) abajo
+        tempTokenRequired: true, // Arranca directo con el esquema moderno (llave efímera + AES-GCM, Medio #8) en vez del legado por privateKeyUrl.
       },
       // --- Login social (Google / Facebook); oculto en TV ---
       socialLogin: {
