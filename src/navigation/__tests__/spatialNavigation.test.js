@@ -162,3 +162,39 @@ describe('findNextFocusable / moveFocus — geometría direccional', () => {
     expect(document.activeElement).toBe(from);
   });
 });
+
+describe(
+  'findNextFocusable / moveFocus — candidato montado pero fuera de pantalla ' +
+    '(regresión: "medio scroll" en TV que necesitaba una segunda pulsación)',
+  () => {
+    beforeEach(() => {
+      document.body.innerHTML = '';
+      window.innerHeight = 800;
+    });
+
+    it(
+      'DOWN encuentra un candidato ya montado por debajo del borde visible en UNA sola ' +
+        'búsqueda -- antes se descartaba por el filtro "fuera de pantalla" de isVisibleFocusable',
+      () => {
+        const from = makeButton('from', { top: 0, left: 0, width: 100, height: 40 });
+        // Bien por debajo de window.innerHeight (800) + margen (50): antes del fix, excluido.
+        const belowFold = makeButton('below-fold', { top: 900, left: 0, width: 100, height: 40 });
+        from.focus();
+
+        const next = findNextFocusable(from, 'down');
+        expect(next).toBe(belowFold);
+      },
+    );
+
+    it('moveFocus mueve el foco real en un solo paso a un candidato fuera de pantalla', () => {
+      const from = makeButton('from', { top: 0, left: 0, width: 100, height: 40 });
+      const belowFold = makeButton('below-fold', { top: 900, left: 0, width: 100, height: 40 });
+      from.focus();
+
+      const moved = moveFocus('down', document.body);
+
+      expect(moved).toBe(true);
+      expect(document.activeElement).toBe(belowFold);
+    });
+  },
+);

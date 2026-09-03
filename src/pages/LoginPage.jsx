@@ -272,14 +272,29 @@ export function LoginPage() {
     let cancelled = false;
     const buildUdidQr = async () => {
       try {
-        // temp_token va en el QR junto al code -- es el secreto real del
-        // pareo (ver auditoría del backend: el code de 8 caracteres ya no
-        // alcanza por sí solo). Si el backend todavía no lo manda (versión
-        // vieja), udidFlow.tempToken queda '' y el QR sigue funcionando
-        // igual que antes contra ese backend.
-        const payload = udidFlow.tempToken
-          ? `${appName}:${udidFlow.code}:${udidFlow.tempToken}`
-          : `${appName}:${udidFlow.code}`;
+        // Formato del QR (hallazgo #34, ver Back-Wind-V2/docs/
+        // PROPUESTA_FORMATO_QR_UDID_2026-09-02.md): antes era un string
+        // plano "{appName}:{code}:{temp_token}" que solo la propia app
+        // sabía parsear -- escanearlo con cualquier otra cámara no hacía
+        // nada. Ahora es una URL real (/wind/l/v1/<udid>/) que el backend
+        // resuelve: cualquier cámara la abre en un navegador y termina en
+        // "Vincular dispositivo" (auto-servicio), y una futura app nativa
+        // con Universal/App Links configurados la interceptaría antes,
+        // leyendo `t` (temp_token) para su propio flujo de login social
+        // (sección 2.2 de esa guía) -- ninguno de los dos casos cambia acá.
+        // `temp_token` sigue siendo el secreto real; la URL solo lo
+        // transporta, igual que antes lo transportaba el string plano.
+        const base = String(effectiveUdidConfig?.baseUrl || '').replace(/\/$/, '');
+        const payload = base
+          ? `${base}/wind/l/v1/${encodeURIComponent(udidFlow.code)}/${
+              udidFlow.tempToken ? `?t=${encodeURIComponent(udidFlow.tempToken)}` : ''
+            }`
+          // Sin baseUrl configurado (no debería pasar si `enabled: true`,
+          // pero por si acaso) cae al formato viejo en vez de generar un
+          // QR con una URL relativa sin sentido.
+          : udidFlow.tempToken
+            ? `${appName}:${udidFlow.code}:${udidFlow.tempToken}`
+            : `${appName}:${udidFlow.code}`;
         const dataUrl = await QRCode.toDataURL(payload, { width: 200, margin: 1 });
         if (cancelled) return;
         setUdidQrImageSrc(dataUrl);
@@ -292,7 +307,7 @@ export function LoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [appName, isUdidModalOpen, udidFlow.code, udidFlow.tempToken]);
+  }, [appName, isUdidModalOpen, udidFlow.code, udidFlow.tempToken, effectiveUdidConfig?.baseUrl]);
 
   const handleOpenForgotPassword = () => {
     if (!canShowForgotPassword) return;

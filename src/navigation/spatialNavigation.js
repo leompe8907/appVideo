@@ -37,9 +37,11 @@ export const FOCUSABLE_SELECTOR = [
 
 /**
  * @param {Element | null | undefined} el
+ * @param {{ requireOnScreen?: boolean }} [opts]
  * @returns {boolean}
  */
-export function isVisibleFocusable(el) {
+function isFocusableGeometry(el, opts = {}) {
+  const requireOnScreen = opts.requireOnScreen !== false;
   if (!(el instanceof HTMLElement)) return false;
   if (el.hasAttribute('disabled')) return false;
   if (el.getAttribute('aria-hidden') === 'true') return false;
@@ -51,9 +53,11 @@ export function isVisibleFocusable(el) {
     }
     const r = el.getBoundingClientRect();
     if (r.width < 2 || r.height < 2) return false;
-    // Fuera de la ventana visible (scrolleado lejos): no es un candidato útil de foco directo.
-    if (r.bottom < -50 || r.top > window.innerHeight + 50) return false;
-    if (r.right < -50 || r.left > window.innerWidth + 50) return false;
+    if (requireOnScreen) {
+      // Fuera de la ventana visible (scrolleado lejos): no es un candidato útil de foco directo.
+      if (r.bottom < -50 || r.top > window.innerHeight + 50) return false;
+      if (r.right < -50 || r.left > window.innerWidth + 50) return false;
+    }
     return true;
   } catch {
     return false;
@@ -61,16 +65,44 @@ export function isVisibleFocusable(el) {
 }
 
 /**
- * Candidatos enfocables visibles dentro de un `root` (por defecto, todo el documento).
+ * @param {Element | null | undefined} el
+ * @returns {boolean}
+ */
+export function isVisibleFocusable(el) {
+  return isFocusableGeometry(el, { requireOnScreen: true });
+}
+
+/**
+ * Candidatos enfocables dentro de un `root` (por defecto, todo el documento).
+ *
+ * `requireOnScreen` (default `true`, mismo comportamiento de siempre) filtra
+ * cualquier candidato fuera del viewport -- correcto para "poner el primer
+ * foco" (`focusFirstIn`, rama sin-foco-previo de `moveFocus`), donde SÍ
+ * queremos algo que ya se vea. Pero `findNextFocusable` (navegación
+ * direccional con una tecla) lo pasa en `false`: la siguiente fila puede
+ * estar montada (gracias al buffer de `useChunkedList`) pero un poco por
+ * debajo del borde visible, y ese filtro la descartaba como candidata --
+ * `moveFocus` entonces no encontraba nada, no llamaba `preventDefault()`, y
+ * el navegador hacía su scroll nativo de flecha (un scroll parcial, "a
+ * medias") SIN mover el foco. Recién en la SEGUNDA pulsación, con la fila ya
+ * dentro del margen de 50px, el foco se movía. El algoritmo de puntaje
+ * (`scoreCandidate`) ya elige el candidato geométricamente más cercano en esa
+ * dirección aunque esté fuera de pantalla, y `moveFocus` ya hace el scroll de
+ * corrección después de enfocar (`scrollIntoViewWithinAncestors`) -- así que
+ * no hacía falta esta restricción para la búsqueda direccional, y sacarla
+ * hace que un solo paso de navegación alcance siempre, como ya buscaba
+ * garantizar el buffer de `useChunkedList` (ver su propio docstring).
  * @param {HTMLElement | Document | null | undefined} root
+ * @param {{ requireOnScreen?: boolean }} [opts]
  * @returns {HTMLElement[]}
  */
-export function getFocusableCandidates(root) {
+export function getFocusableCandidates(root, opts = {}) {
+  const requireOnScreen = opts.requireOnScreen !== false;
   const scope = root instanceof HTMLElement ? root : document.body;
   if (!scope) return [];
   try {
     const nodes = Array.from(scope.querySelectorAll(FOCUSABLE_SELECTOR));
-    return nodes.filter(isVisibleFocusable);
+    return nodes.filter((el) => isFocusableGeometry(el, { requireOnScreen }));
   } catch {
     return [];
   }
@@ -129,7 +161,9 @@ export function findNextFocusable(currentEl, direction, root) {
     return null;
   }
 
-  const candidates = getFocusableCandidates(root).filter((el) => el !== currentEl);
+  const candidates = getFocusableCandidates(root, { requireOnScreen: false }).filter(
+    (el) => el !== currentEl,
+  );
 
   let best = null;
   let bestScore = Infinity;

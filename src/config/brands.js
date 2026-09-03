@@ -1865,7 +1865,7 @@ export const BRANDS = [
       },
       // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
       udid: {
-        enabled: true, // Activado 2026-09-02 -- backend Wind ya soporta el flujo completo (ver docs/ACTIVACION_UDID_WIND_2026-09-02.md)
+        enabled: false, // Activado 2026-09-02 -- backend Wind ya soporta el flujo completo (ver docs/ACTIVACION_UDID_WIND_2026-09-02.md)
         baseUrl: "https://backend.wind.do", // Base HTTP del backend UDID (mismo backend que socialLogin.backendBaseUrl)
         requestPath: "/wind/request-udid-manual/", // Endpoint POST para solicitar código UDID -- explícito a propósito: el default del hook (/udid/...) NO existe en este backend (rutas reales bajo /wind/, ver wind/urls.py); dejarlo vacío o confiar en el default rompe el pareo con 404.
         wsUrl: "wss://backend.wind.do/ws/auth/", // WebSocket para recibir credenciales cifradas -- sin prefijo /wind/ (ver panaccess_wind_integration/asgi.py, URLRouter sin prefijo para wind.routing)
