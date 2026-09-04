@@ -30,6 +30,11 @@ export class WebEngine extends BaseEngine {
     this._lastTracksSnapshotKey = '';
     this._suppressPlayerErrors = false;
     this._suppressErrorsTimer = null;
+    // Última preferencia de volumen/mute conocida (la setea PlayerContext vía
+    // setVolume()/mute()/unmute()). Se guarda acá porque video.js pisa estos
+    // valores en cada load() -- ver nota en load()/_reapplyVolumePreference().
+    this._volume = 1;
+    this._muted = false;
   }
 
   /** CODE:4 al vaciar src tras close/reset; no es fallo de reproducci├│n. */
@@ -289,6 +294,15 @@ export class WebEngine extends BaseEngine {
     const useHls = isHlsUrl(url);
 
     const emitLoadedAndMaybePlay = () => {
+      // FIX volumen/mute al cambiar de canal: _teardownMedia() (arriba) llama
+      // a player.reset(), y video.js internamente fuerza volume(1.0) y
+      // reconstruye el tech con el `muted` de la config original de
+      // construcción (no el que el usuario haya seteado en runtime) -- ver
+      // resetVolumeBar_()/loadTech_() en video.js. Sin esto, cada cambio de
+      // canal "olvidaba" el volumen/mute que el usuario había elegido. Se
+      // reaplica ACÁ (antes de play()) para que no haya ni un instante de
+      // audio a volumen completo/desmuteado antes de corregirse.
+      this._reapplyVolumePreference();
       this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADED, type });
       this._emitTracksChange();
       if (autoPlay) this.play();
@@ -391,20 +405,39 @@ export class WebEngine extends BaseEngine {
   }
 
   mute() {
+    this._muted = true;
     if (!this.player) return;
     this.player.muted(true);
   }
 
   unmute() {
+    this._muted = false;
     if (!this.player) return;
     this.player.muted(false);
   }
 
   /** @param {number} volume 0..1 */
   setVolume(volume) {
-    if (!this.player) return;
     const v = Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : 1;
+    this._volume = v;
+    if (!this.player) return;
     this.player.volume(v);
+  }
+
+  /**
+   * Reaplica el último volumen/mute conocido (seteado por PlayerContext vía
+   * setVolume()/mute()/unmute()) sobre el player real. Necesario después de
+   * cada load() porque player.reset() (dentro de _teardownMedia()) resetea
+   * volumen/mute a sus valores por defecto -- ver comentario en load().
+   */
+  _reapplyVolumePreference() {
+    if (!this.player) return;
+    try {
+      this.player.volume(this._volume);
+      this.player.muted(this._muted);
+    } catch {
+      // noop -- mismo criterio defensivo que el resto de los métodos de este engine.
+    }
   }
 
   /** @returns {number} 0..1 */

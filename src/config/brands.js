@@ -2597,6 +2597,403 @@ export const BRANDS = [
       spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
     },
   },
+    // SatTV
+  {
+    brand: "sattv",
+    appName: "Cable Satelite",
+    os: 'HTML5',
+    appVersion: '1',    
+    branding: 'Panaccess',
+    developedBy: "Cable Satelite",
+    version: "1.0.0",
+
+    login: {
+      // --- Tema visual (colores CSS: hex, rgba, gradiente o var(--primary-color)) ---
+      theme: {
+        cardBackground: "rgba(255, 255, 255, 0.05)", // Fondo de la tarjeta central del formulario
+        submitBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo del botón principal "Entrar"
+        submitText: "#ffffff", // Texto del botón "Entrar"
+        registerBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Registrarse" (QR)
+        registerText: "#ffffff", // Texto del botón "Registrarse"
+        udidBg: "rgba(255, 255, 255, 0.12)", // Fondo del botón "Login UDID"
+        udidText: "#ffffff", // Texto del botón UDID
+        toggleBg: "rgba(255, 255, 255, 0.1)", // Fondo del botón mostrar/ocultar contraseña
+        toggleText: "rgba(255, 255, 255, 0.7)", // Texto del toggle de contraseña
+        inputs: {
+          bg: "rgba(255, 255, 255, 0.1)", // Fondo campos usuario/contraseña
+          border: "rgba(255, 255, 255, 0.2)", // Borde de los campos
+          text: "#ffffff", // Color del texto escrito
+          placeholder: "rgba(255, 255, 255, 0.4)", // Color del placeholder
+          focusedBg: "rgba(255, 255, 255, 0.15)", // Fondo cuando el campo tiene foco (TV/teclado)
+          focusedBorder: null, // Borde con foco; null = usa ui.primaryColor
+          focusedShadow: null, // Sombra con foco; null = usa anillo primaryColor
+        },
+        social: {
+          bg: "rgba(255, 255, 255, 0.08)", // Fondo botones Google/Facebook (fallback custom)
+          border: "rgba(255, 255, 255, 0.22)", // Borde botones sociales
+          text: "rgba(255, 255, 255, 0.92)", // Texto botones sociales
+        },
+        modalCloseBg: "linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%)", // Fondo botón cerrar modal QR/UDID
+        modalCloseText: "#ffffff", // Texto botón cerrar modal
+        linkColor: null, // Color enlaces (olvidé contraseña, suscríbete); null = ui.primaryColor
+        dividerColor: "rgba(255, 255, 255, 0.25)", // Línea del separador "o"
+        forgotPasswordModal: {
+          background: "#141414",
+          borderColor: "rgba(255, 255, 255, 0.16)",
+          titleColor: "#ffffff",
+          textColor: "rgba(255, 255, 255, 0.82)",
+          iconBg: "rgba(var(--primary-color-rgb, 102, 126, 234), 0.16)",
+          iconColor: "var(--primary-color, #667eea)",
+          successIconBg: "rgba(99, 153, 34, 0.18)",
+          successIconColor: "#97c459",
+          inputIconColor: "rgba(255, 255, 255, 0.4)",
+        },
+      },
+      // --- Imagen de fondo de pantalla completa ---
+      backgroundImage: {
+        enabled: false, // true: usa assetPath; false: usa assets.background o background.png por defecto
+        assetPath: "backgroundalt.webp", // Archivo en la carpeta de assets de la marca
+      },
+      // --- Registro por código QR ---
+      qrRegister: {
+        enabled: false, // Muestra botón y modal de registro con QR
+        url: "https://shop.fotelka.tv/?c=customer&p=register", // URL codificada en el QR de registro
+      },
+      // --- Enlace "Olvidé contraseña" ---
+      forgotPassword: {
+        enabled: false, // Muestra enlace debajo del campo contraseña
+        url: "", // URL destino al hacer clic; vacío = no navega
+      },
+      // --- Login remoto por UDID (TV escanea QR, móvil/web confirma) ---
+      udid: {
+        enabled: true, // Muestra botón y flujo UDID
+        baseUrl: "", // Base HTTP del backend UDID
+        requestPath: "", // Endpoint POST para solicitar código UDID
+        wsUrl: "", // WebSocket para recibir credenciales cifradas
+        appType: "10foot", // Tipo de app enviado al backend
+        appVersion: "1.0", // Versión enviada al backend
+        maxReconnectAttempts: 3, // Reintentos máximos de reconexión WebSocket
+        reconnectMs: [3000, 6000, 10000], // Delays entre reintentos (ms)
+        heartbeatMs: 30000, // Intervalo de ping WebSocket (ms)
+        privateKeyUrl: "", // Ruta pública PEM para descifrar encrypted_credentials
+      },
+      // --- Login social (Google / Facebook); oculto en TV ---
+      socialLogin: {
+        backendBaseUrl: "http://127.0.0.1:8000/", // Base común; alternativa env: VITE_SOCIAL_AUTH_BASE_URL
+        google: {
+          enabled: true, // Muestra botón Google (solo escritorio)
+          redirectUrl: "/wind/auth/google/", // Path relativo a backendBaseUrl o URL absoluta del POST OAuth
+          accessToken: "803252352997-o8lj65s1h9ga2he9hu02vbflc4h749hv.apps.googleusercontent.com", // Google OAuth client_id
+          preferCustomButton: true, // true: botón custom con theme.social; false: widget GIS nativo
+          backendBaseUrl: "", // Base específica Google; vacío = usa socialLogin.backendBaseUrl
+        },
+        facebook: {
+          enabled: true, // Muestra botón Facebook (solo escritorio)
+          redirectUrl: "", // Path relativo o URL absoluta del POST OAuth
+          accessToken: "", // Facebook App ID
+          backendBaseUrl: "", // Base específica Facebook; vacío = usa socialLogin.backendBaseUrl
+        },
+      },
+      // --- "Dispositivos vinculados" (Fase 3, hoy backend Wind) -- opt-in, ver deviceAuthService.js ---
+      deviceSession: {
+        enabled: false,
+        baseUrl: "",
+        wsUrl: "",
+      },
+      telemetry: {
+        enabled: false,
+        baseUrl: "",
+      },
+    },
+
+        // Mi cuenta (/home/mi-cuenta): colores de fondo y links configurables por marca
+    account: {
+      theme: {
+        sidebarBg: "#0b2a4a",
+        contentBg: "#061a2e",
+        panelText: "rgba(255, 255, 255, 0.88)",
+        activeItemBg: "#5c8fc4",
+        activeItemText: "#ffffff",
+        dividerColor: "rgba(255, 255, 255, 0.18)",
+        contentTitleColor: "#8fb9e8",
+        qrBackground: "#9dc3ec",
+        stepNumberBg: "#12365c",
+        stepNumberText: "#ffffff",
+        dangerText: "#ff8080",
+      },
+      links: {
+        changePassword: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=reset_password" },
+        linkedDevices: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=devices" },
+        subscription: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=subscription" },
+        deleteAccount: { enabled: true, url: "https://shop.fotelka.tv/?c=customer&p=delete_account" },
+      },
+      sections: {
+        parentalControl: true,
+        about: true,
+        refresh: true,
+        logout: true,
+        exitApp: true,
+      },
+    },
+
+    // EPG: configuración unificada (guía + cards)
+    EPG: {
+      enabled: true, // false: oculta TODO acceso a la guía completa (menú, botón del player, búsqueda) -- ver useHomeNavItems.js / PlayerHud.jsx / SearchPage.jsx
+      daysOffset: 2, // Días de offset para la API de guía de programación
+      hoursLimit: 12, // Límite de horas para la API de guía de programación
+      epgLineColorTime: "#3333FF",
+      reminderLeadSeconds: 60,
+      reminderShowWhilePlaying: false,
+      // EPG (cards) - flags/colores de la guía estilo cards (migrado desde legacy)
+      epgPast: false,
+      epgPagesPastEnabled: true,
+      epgCardsChannelActiveBg: "rgb(0 0 0)",
+      epgCardsHeaderBg: "rgb(0 0 0)", // Color de fondo de la cabecera de la guía de canales
+      epgCardsProgramLiveBg: "#6C8EB6",
+      epgCardsProgramLiveProgressBg: "#6C8EB6",// Color de la barra de progreso (programa en vivo / "Ahora")
+      epgCardsLaterGlobal: true,
+      // Control del cierre de modal al reproducir en vivo:
+      // true = siempre cierra, false = nunca cierra, omitido/auto = cierra solo en TV.
+      epgCloseModalOnPlayLive: 'auto',
+    },
+
+    // Catchup: Legacy (grid) o Rails (carriles por canal).
+    catchup: {
+      enabled: true,
+      ui: {
+        activeLayout: 'rails',
+        showAllLayouts: false,
+      },
+      layouts: {
+        legacy: { enabled: true },
+        rails: { enabled: true },
+      },
+    },
+
+    // Player: control técnico de selección de engine por marca.
+    player: {
+      nativeAdaptersEnabled: false,
+      enginePolicy: 'auto',
+      telemetryEnabled: true,
+      hudAutoHideMs: 6000,
+      // Inactividad (detener playback + screensaver):
+      // - Timeout principal: clientConfig.device.parameters.X_INACTIVITY_TIMEOUT_SEC (getClientConfig).
+      // - inactivityTestTimeoutSec: solo en DEV, override QA si clientConfig no trae valor.
+      // - inactivityGraceSec: fallback si no hay X_INACTIVITY_GRACE_SEC en clientConfig.
+      inactivityTestTimeoutSec: 0,
+      inactivityGraceSec: 60,
+      screensaverRotateMs: 9000,
+      showPlaybackButtonsOnLive: false,
+      showSeekbarOnLive: false,
+      closeChannelSidebarOnSelect: false,
+      channelChangeWithArrows: true,
+    },
+
+    // Configuración de UI/Tema
+    ui: {
+      // Splash
+      splashDuration: 3000, // Duración en milisegundos
+      splashAnimado: false, // Si es true busca .gif o video (ver splashVideo), si es false busca .png/.webp/.jpg
+      // Focus visible (PC + TV) - personalizable por marca
+      focus: {
+        enabled: true,
+        color: "#3AA3AE",
+        scale: 1.05,
+        ring: '0 0 0 4px rgba(var(--primary-color-rgb, 102, 126, 234), 0.7)',
+        ring2: '0 0 0 8px rgba(var(--primary-color-rgb, 102, 126, 234), 0.35)',
+        shadow: '0 12px 30px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55)',
+      },
+      // EPG
+      epgLineColorTime: "#3333FF",
+      // Colores
+      primaryColor: "#3AA3AE",
+      secondaryColor: "#2C7F88",
+      theme: "dark",
+      // Fuente
+      fontFamily: "Roboto, sans-serif",
+      // Player loading overlay
+      playerLoading: {
+        premium: true,
+      },
+      // Sidebar Home (estructura uniforme entre marcas)
+      sidebar: {
+        backgroundColor: '#012B4F',
+        textColor: 'rgba(255, 255, 255, 0.82)',
+        submenuBackgroundColor: 'rgb(0, 0, 0)',
+        submenuTextColor: 'rgba(255, 255, 255, 0.85)',
+        fixed: true,
+      },
+      // Buscador (/home/buscador)
+      search: {
+        overlayBg: 'rgba(0, 0, 0, 0.55)',
+        panelBg: 'rgba(1, 43, 79, 0.96)',
+        header: {
+          bg: '#0a2d4f',
+          text: '#ffffff',
+        },
+        input: {
+          bg: 'transparent',
+          text: '#ffffff',
+          placeholder: 'rgba(255, 255, 255, 0.45)',
+          focusedBg: 'rgba(58, 163, 174, 0.12)',
+          focusedBorder: '#3AA3AE',
+          focusedShadow: '0 0 0 2px rgba(58, 163, 174, 0.45)',
+        },
+        clearButton: {
+          bg: '#c0392b',
+          text: '#ffffff',
+          hoverBg: '#e74c3c',
+        },
+        tabs: {
+          bg: 'rgba(255, 255, 255, 0.08)',
+          text: 'rgba(255, 255, 255, 0.9)',
+          hoverBg: 'rgba(255, 255, 255, 0.18)',
+          activeBg: '#3AA3AE',
+          activeText: '#ffffff',
+          activeHoverBg: '#2C7F88',
+        },
+        results: {
+          areaBg: '#061a2e',
+          cardBg: '#0a2d4f',
+          cardBorder: '#1a4a6e',
+          cardHoverBg: '#134a6b',
+          cardFocusBorder: '#3AA3AE',
+          titleText: '#ffffff',
+          metaText: 'rgba(255, 255, 255, 0.65)',
+          sectionTitleBg: 'rgba(58, 163, 174, 0.12)',
+          thumbBg: 'rgba(255, 255, 255, 0.06)',
+        },
+        empty: {
+          text: 'rgba(255, 255, 255, 0.75)',
+          countText: 'rgba(255, 255, 255, 0.65)',
+        },
+      },
+    },
+
+    // Configuración específica de bouquets
+    bouquets: {
+      timeshipColor: "#3333FF",
+    },
+
+    // Cabecera Inicio (tres columnas); banderas por área (contenido se define luego).
+    layout: {
+      shell: {
+        pc: "sidebar", // "sidebar" | "topbar"
+        tv: "sidebar", // "sidebar" | "topbar"
+      },
+      // Distribución del topbar en 3 zonas (solo aplica si layout.shell.* === "topbar").
+      // Mismo patrón que header.areas: cada zona define qué contenido muestra.
+      topbar: {
+        areas: {
+          left: { content: "logo" }, // "logo" | "nav" | "account" | "none"
+          center: { content: "nav" },
+          right: { content: "account" },
+        },
+      },
+      navOrder: ["search", "inicio", "channels", "vod", "epg", "catchup"],
+    },
+
+    header: {
+      activado: { pc: true, tv: true },
+      areas: {
+        left: { 
+          enabled: true, 
+          showLogo: true, 
+          showTime: false,
+          contentAlign: 'left'
+        },
+        center: { 
+          enabled: true, 
+          showLogo: false, 
+          showTime: false,
+          contentAlign: 'center'
+        },
+        right: { 
+          enabled: true, 
+          showLogo: false, 
+          showTime: true,
+          contentAlign: 'right'
+        },
+      },
+      subheader: {
+        activado: { pc: true, tv: true },
+        enabled: false,
+        areas: {
+          left: { 
+            enabled: true, 
+            showServiceInfo: true,
+            contentAlign: 'left'
+          },
+          center: { 
+            enabled: true, 
+            showServiceInfo: false,
+            contentAlign: 'right'
+          },
+          right: { 
+            enabled: true, 
+            showServiceInfo: false,
+            contentAlign: 'right'
+          },
+        },
+      },
+    },
+
+    // Flags de HomeShell (header + ads por sección)
+    homeShell: {
+      header: {
+        inicio: true,
+        serviciosTvRadio: true,
+        vod: true,
+        catchup: true,
+      },
+      ads: {
+        inicio: true,
+        serviciosTvRadio: false,
+        vod: false,
+        catchup: false,
+        topInBouquets: false,
+      },
+    },
+    
+    // Features habilitadas/deshabilitadas
+    features: {
+      profiles: false,
+      showRating: true, // Equivalente a showRating en 10foot
+      osms: false, // Equivalente a osmsEnabled en 10foot
+      osmsInline: true, // Mensajería inline en Mi Cuenta, al lado del submenú (en vez de módulo independiente) -- sin efecto mientras osms sea false
+      playerVolumeControls: false, // true: agrega botón de mute + slider de volumen en el reproductor web/PC; false (default): sin cambios (comportamiento actual)
+      playerChannelArrows: false, // true: agrega flechas de canal anterior/siguiente en el reproductor web/PC (reutiliza la misma lógica de zapping del control remoto); false (default): sin cambios (comportamiento actual)
+    },
+
+    vod: {
+      layout: "hero", // "hero" | "classic"
+      add: true,
+      vodDetail: {
+        descriptionMaxLength: 180, // Caracteres máximos de la descripción antes de "Leer más" (0 = sin límite)
+        showReleaseYear: true, // Mostrar año de estreno en la metadata
+        showDuration: true, // Mostrar duración (min) en la metadata
+        showParentalRating: true, // Mostrar badge de clasificación por edades
+        showCategories: true, // Mostrar etiquetas de categorías
+        showStarRating: true, // Mostrar valoración en estrellas
+        showDescription: true, // Mostrar bloque de descripción
+        playButtonColor: null, // Color del botón Reproducir (hex/css)
+        starRatingColor: null, // Color de las estrellas rellenas (hex/css)
+        heroGradientOpacity: 0.95, // Opacidad del gradiente inferior del hero (0–1)    
+        posterWidthMin: 100, // Ancho mínimo del poster en px
+        posterWidthMax: 200, // Ancho máximo del poster en px
+        categoryTagBackground: "rgba(255, 255, 255, 0.12)", // Color/fondo de las etiquetas de categoría (css)
+        categoryTagBorderColor: "rgba(255, 255, 255, 0.2)", // Borde de las etiquetas de categoría (css)
+        parentalBadgeBorderColor: "rgba(255, 255, 255, 0.5)", // Borde del badge de clasificación por edades (css)
+        contentPosition: "middle", // "top" | "middle" | "bottom" - posición vertical del bloque poster + info
+      },
+    },
+    // API: true = hashear contraseña en cliente (Panaccess); false = enviar en claro (ej. intv)
+    hashPasswordBeforeLogin: false,
+    debug: {
+      spatialNav: false, // Logs en consola (default: solo en DEV)
+      spatialNavVisual: false, // Debug visual (marcos rojos) (default: false)
+    },
+  },
 ];
 
 /**
