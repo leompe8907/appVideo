@@ -649,7 +649,17 @@ export function PlayerProvider({ children }) {
     playbackRef.current = { type: null, id: null, url: null, item: null };
     resetTrackMemoryForPlayback();
     recoveryRef.current = { inProgress: false, lastKey: '' };
-    setState({
+    // FIX: antes esto era un setState({...}) sin spread de `s` -- un
+    // reemplazo COMPLETO del estado. Como el objeto nuevo no incluía
+    // volume/muted, quedaban en `undefined` acá y se arrastraban a la
+    // siguiente reproducción (play() sí hace spread de `s`). El audio real
+    // seguía bien porque WebEngine guarda su propio _volume/_muted aparte,
+    // pero el ícono/slider del HUD (que leen volume/muted de este estado)
+    // quedaban mostrando el default. Con spread de `s`, volume/muted (y
+    // cualquier otro campo no listado acá) se preservan, igual que en
+    // play()/stop().
+    setState((s) => ({
+      ...s,
       type: null,
       id: null,
       url: null,
@@ -665,7 +675,7 @@ export function PlayerProvider({ children }) {
       liveInitialServerMs: null,
       liveSecondsLate: 0,
       error: null,
-    });
+    }));
     setTracks({ audio: [], text: [], selectedAudioId: null, selectedTextId: null, textEnabled: false });
     setSubtitleCueText('');
   };
