@@ -149,8 +149,16 @@ function ChannelSidebar({
   useEffect(() => {
     if (!open) return undefined;
     const timer = setTimeout(() => {
-      const first = listRef.current?.querySelector(PLAYER_CHANNEL_SELECTOR);
-      focusElementSafe(first);
+      const list = listRef.current;
+      // Foco inicial: priorizar el canal que se está reproduciendo (fila con
+      // --active, ver isActive más abajo), no el primero de la lista a
+      // secas. Antes, cada vez que se reabría el panel el foco arrancaba
+      // siempre desde cero en el primer canal, sin importar cuál se hubiera
+      // elegido la vez anterior. Si por algo el canal activo no está en esta
+      // lista (ej. todavía cargando), cae al primero como antes.
+      const active = list?.querySelector(`${PLAYER_CHANNEL_SELECTOR}.player-channel-sidebar__row--active`);
+      const target = active || list?.querySelector(PLAYER_CHANNEL_SELECTOR);
+      focusElementSafe(target);
     }, 100);
     return () => clearTimeout(timer);
   }, [open]);
