@@ -96,6 +96,13 @@ export async function requestPasswordReset(brandConfig, email) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email: String(email || '').trim(),
+      // origin=app (2026-09-09, ver docs/REDIRECT_OLVIDAR_CONTRASENA_2026-09-09.md
+      // en Back-Wind-V2): este modal es 100% nativo (nunca abre la página del
+      // backend para pedir el enlace), pero el link de confirmación por
+      // correo sí abre esa página -- esta banderita le llega hasta ahí para
+      // que, al terminar, redirija de vuelta a la app/windtv en vez de
+      // quedarse en el login de prueba del backend.
+      origin: 'app',
       ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
     }),
   });

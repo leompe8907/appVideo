@@ -70,6 +70,17 @@ export function LoginPage() {
   const forgotPasswordConfig = currentBrand?.login?.forgotPassword;
   const forgotPasswordUrl =
     typeof forgotPasswordConfig?.url === 'string' ? forgotPasswordConfig.url.trim() : '';
+  // origin=app (2026-09-09, ver docs/REDIRECT_OLVIDAR_CONTRASENA_2026-09-09.md
+  // en Back-Wind-V2): estos dos caminos (QR de TV, redirect directo en PC)
+  // mandan al usuario a la página de "olvidé contraseña" del backend -- se
+  // le agrega esta banderita para que, al terminar todo el flujo (después
+  // de tocar el link del correo), vuelva a la app/windtv en vez de
+  // quedarse en el login de prueba del backend. Inofensivo si `forgotPasswordUrl`
+  // apunta a un sistema de otra marca que no sea nuestro backend: un query
+  // param que no reconoce simplemente lo ignora.
+  const forgotPasswordUrlWithOrigin = forgotPasswordUrl
+    ? `${forgotPasswordUrl}${forgotPasswordUrl.includes('?') ? '&' : '?'}origin=app`
+    : forgotPasswordUrl;
   // Nativo: si el brand tiene el backend de "dispositivos vinculados"/cuenta
   // (`login.deviceSession.enabled`, ver `deviceAuthService.js`) y no estamos
   // en TV, se resuelve con un formulario dentro de la misma app en vez de
@@ -244,7 +255,7 @@ export function LoginPage() {
     let cancelled = false;
     const buildQr = async () => {
       try {
-        const dataUrl = await QRCode.toDataURL(forgotPasswordUrl, {
+        const dataUrl = await QRCode.toDataURL(forgotPasswordUrlWithOrigin, {
           width: 256,
           margin: 1,
         });
@@ -262,7 +273,7 @@ export function LoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [isForgotQrModalOpen, canShowForgotPassword, forgotPasswordUrl, t]);
+  }, [isForgotQrModalOpen, canShowForgotPassword, forgotPasswordUrlWithOrigin, t]);
 
   useEffect(() => {
     if (!isUdidModalOpen || !udidFlow.code) {
@@ -328,7 +339,7 @@ export function LoginPage() {
       setIsForgotQrModalOpen(true);
       return;
     }
-    window.location.assign(forgotPasswordUrl);
+    window.location.assign(forgotPasswordUrlWithOrigin);
   };
 
   const handleCloseForgotNativeModal = useCallback(() => {
