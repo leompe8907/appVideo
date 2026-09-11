@@ -44,6 +44,27 @@ function isRestorableFocusTarget(el, mainEl) {
 }
 
 /**
+ * Busca la tarjeta de canal (`data-id`, ver BouquetLayouts.jsx) que corresponde
+ * al canal que está sonando AHORA, en vez de reusar la referencia recordada al
+ * abrir el player (que queda desactualizada si el usuario hizo zapping
+ * adentro del player -- ese cambio nunca toca la grilla de Inicio).
+ * @param {HTMLElement | null | undefined} mainEl
+ * @param {string | number | null | undefined} channelId
+ * @returns {HTMLElement | null}
+ */
+function getChannelCardFocusTarget(mainEl, channelId) {
+  if (!(mainEl instanceof HTMLElement)) return null;
+  if (channelId === null || channelId === undefined || channelId === '') return null;
+  try {
+    const selector = `[data-id="${CSS.escape(String(channelId))}"]`;
+    const candidate = mainEl.querySelector(selector);
+    return isRestorableFocusTarget(candidate, mainEl) ? candidate : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * @param {HTMLElement} el
  * @param {HTMLElement} mainEl
  */
@@ -75,11 +96,16 @@ export function getRestoredMainFocusTargetIfValid(mainEl) {
  * Tras cerrar el reproductor: reintenta enfocar el último elemento del `main` hasta que el shell
  * sea visible y el foco se aplique (el shell puede seguir oculto un frame tras `isPlayerActive`).
  *
- * @param {{ maxAttempts?: number }} [opts]
+ * @param {{ maxAttempts?: number, channelId?: string | number | null }} [opts]
+ *   `channelId`: id del último canal en vivo reproducido (antes de que close()
+ *   lo limpie a null) -- si su tarjeta sigue visible en la grilla, se prioriza
+ *   sobre el elemento recordado al abrir (que sería el del canal de ENTRADA,
+ *   no el actual, si hubo zapping en el medio).
  * @returns {() => void} cancelar reintentos
  */
 export function scheduleRestoreMainShellFocus(opts = {}) {
   const maxAttempts = typeof opts.maxAttempts === 'number' ? opts.maxAttempts : 24;
+  const channelId = opts.channelId ?? null;
   let cancelled = false;
   let attempt = 0;
 
@@ -89,6 +115,12 @@ export function scheduleRestoreMainShellFocus(opts = {}) {
     if (!(main instanceof HTMLElement)) {
       attempt += 1;
       if (attempt < maxAttempts) requestAnimationFrame(tryOnce);
+      return;
+    }
+
+    const channelCard = getChannelCardFocusTarget(main, channelId);
+    if (channelCard && focusElementSafe(channelCard)) {
+      scrollRestoredElementIntoView(channelCard, main);
       return;
     }
 

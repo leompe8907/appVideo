@@ -1,4 +1,4 @@
-import { Children, useCallback, useEffect, useMemo, useState } from 'react';
+import { Children, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useDevice } from '../../contexts/DeviceContext';
@@ -70,6 +70,34 @@ function EmblaRailWithArrows({ className = '', children, ...rest }) {
   const slides = Children.toArray(children);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
+
+  // `emblaRef` (alias interno `setViewport` en embla-carousel-react) es un
+  // CALLBACK ref -- un setter de estado, no un ref-objeto -- así que NO tiene
+  // `.current`. Hace falta un ref propio para quedarse con el nodo DOM real
+  // del viewport (ver setViewportRef más abajo).
+  const viewportNodeRef = useRef(null);
+  const setViewportRef = useCallback(
+    (node) => {
+      emblaRef(node);
+      viewportNodeRef.current = node;
+    },
+    [emblaRef]
+  );
+
+  // Expone la instancia de Embla en su propio nodo DOM (ya tiene
+  // `data-embla-viewport`) para que código fuera de React -- ej.
+  // homeShellNavigation.js, al restaurar el foco tras cerrar el player --
+  // pueda llevar una tarjeta a la vista sin necesitar el hook. Embla mueve
+  // las tarjetas con `transform` sobre un contenedor `overflow: hidden` (ver
+  // EMBLA_OPTIONS/SCSS), así que `scrollLeft` no sirve acá.
+  useEffect(() => {
+    const node = viewportNodeRef.current;
+    if (!node) return undefined;
+    node.__emblaApi = emblaApi || null;
+    return () => {
+      if (node.__emblaApi === emblaApi) node.__emblaApi = null;
+    };
+  }, [emblaApi]);
 
   const syncArrows = useCallback(() => {
     if (!emblaApi) return;
@@ -168,7 +196,7 @@ function EmblaRailWithArrows({ className = '', children, ...rest }) {
           ‹
         </span>
       </button>
-      <div ref={emblaRef} className={viewportClass} data-embla-viewport {...rest}>
+      <div ref={setViewportRef} className={viewportClass} data-embla-viewport {...rest}>
         <div className="embla-container">
           {slides.map((child, index) => (
             <div className="embla-slide" key={child?.key ?? `slide-${index}`}>

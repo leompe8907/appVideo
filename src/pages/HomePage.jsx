@@ -42,6 +42,27 @@ export function HomePage() {
   const isPlayerActive = Boolean(playerState?.url);
   const showPlayerLoading = usePlayerLoadingVisible(isPlayerActive, containerRef, playerState);
   const wasPlayerActiveRef = useRef(false);
+  // Último canal EN VIVO reproducido (se actualiza en cada zap, mientras el
+  // player está activo). close() limpia playerState.id/type a null, así que
+  // para saber a qué tarjeta volver hace falta este ref -- leído recién al
+  // restaurar el foco, cuando playerState.id ya no sirve.
+  // lastContentWasServiceRef distingue "la última reproducción real fue un
+  // canal en vivo" de "fue VOD/catchup" -- sin esto, un id de canal viejo
+  // (de una sesión de TV anterior) podría reusarse por error al cerrar un
+  // VOD, pisando el comportamiento correcto de ese caso (foco recordado).
+  const lastServiceIdRef = useRef(null);
+  const lastContentWasServiceRef = useRef(false);
+  useEffect(() => {
+    // Ignorar la transición a null que hace close() -- interesa el último
+    // contenido REAL, no el estado ya limpiado.
+    if (!playerState?.type) return;
+    if (playerState.type === 'service' && playerState.id != null) {
+      lastServiceIdRef.current = playerState.id;
+      lastContentWasServiceRef.current = true;
+    } else {
+      lastContentWasServiceRef.current = false;
+    }
+  }, [playerState?.type, playerState?.id]);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const { currentBrand } = useBrand();
   const { isTV } = useDevice();
@@ -105,7 +126,9 @@ export function HomePage() {
     wasPlayerActiveRef.current = isPlayerActive;
     if (isPlayerActive || !wasActive) return undefined;
     if (document.querySelector('.vod-detail-overlay[role="dialog"]')) return undefined;
-    return scheduleRestoreMainShellFocus();
+    return scheduleRestoreMainShellFocus({
+      channelId: lastContentWasServiceRef.current ? lastServiceIdRef.current : null,
+    });
   }, [isPlayerActive]);
 
   useLayoutEffect(() => {

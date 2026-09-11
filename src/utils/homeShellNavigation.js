@@ -44,8 +44,36 @@ function isScrollableContainer(el) {
 }
 
 /**
+ * Carriles horizontales de PC (EmblaHorizontalRail.jsx) mueven las tarjetas
+ * con `transform` sobre un viewport `overflow: hidden` a propósito -- no
+ * usan scrollLeft, así que `isScrollableContainer` nunca los detecta (y por
+ * eso una tarjeta fuera de la porción visible del carril quedaba con foco
+ * aplicado pero invisible). El viewport expone su instancia de Embla en
+ * `__emblaApi` (ver EmblaHorizontalRail.jsx) para poder resolverlo acá.
+ * @param {HTMLElement} el
+ * @param {HTMLElement} emblaViewportEl nodo con `data-embla-viewport`
+ */
+function scrollEmblaAncestorIntoView(el, emblaViewportEl) {
+  const emblaApi = emblaViewportEl.__emblaApi;
+  if (!emblaApi) return;
+  try {
+    const slideNode = el.closest('.embla-slide');
+    if (!slideNode) return;
+    const slideNodes = emblaApi.slideNodes?.() || [];
+    const index = slideNodes.indexOf(slideNode);
+    if (index === -1) return;
+    // jump=true: salto directo sin animación -- esto restaura un estado ya
+    // elegido por el usuario, no es un gesto de scroll nuevo que deba verse.
+    emblaApi.scrollTo(index, true);
+  } catch {
+    // noop -- mismo criterio defensivo que el resto de este archivo.
+  }
+}
+
+/**
  * Desplaza cada ancestro con scroll entre `el` y `topAncestor` (incl.) para que `el` quede
  * dentro del viewport del contenedor (márgenes en px). Orden: de adentro hacia afuera.
+ * Contempla tanto contenedores con scroll nativo como carriles Embla (PC).
  * @param {HTMLElement} el
  * @param {HTMLElement} topAncestor
  * @param {{ margin?: number }} [opts]
@@ -55,17 +83,26 @@ export function scrollElementIntoVisibleScrollAncestors(el, topAncestor, opts = 
   if (!topAncestor.contains(el)) return;
   const margin = typeof opts.margin === 'number' ? opts.margin : 20;
 
-  /** @type {HTMLElement[]} */
+  /** @type {Array<{ embla: boolean, node: HTMLElement }>} */
   const chain = [];
   let p = el.parentElement;
   while (p) {
     if (!topAncestor.contains(p)) break;
-    if (isScrollableContainer(p)) chain.push(p);
+    if (p.hasAttribute('data-embla-viewport')) {
+      chain.push({ embla: true, node: p });
+    } else if (isScrollableContainer(p)) {
+      chain.push({ embla: false, node: p });
+    }
     if (p === topAncestor) break;
     p = p.parentElement;
   }
 
-  for (const container of chain) {
+  for (const entry of chain) {
+    if (entry.embla) {
+      scrollEmblaAncestorIntoView(el, entry.node);
+      continue;
+    }
+    const container = entry.node;
     try {
       const style = window.getComputedStyle(container);
       const canY = style.overflowY === 'auto' || style.overflowY === 'scroll';
