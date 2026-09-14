@@ -3,15 +3,30 @@
  * brand tiene `login.deviceSession.enabled` (ver `MiCuentaPage.jsx`) -- en
  * TV o brands sin este backend se sigue usando el QR existente.
  *
+ * Dos flujos posibles, elegidos por marca (2026-09-14, ver
+ * docs/CAMBIO_CONTRASENA_OTP_2026-09-14.md en Back-Wind-V2) vía
+ * `login.deviceSession.changePasswordFlow` en `src/config/brands/<slug>.js`:
+ *   - 'otp' (default): código de 6 dígitos por correo, sin pedir la
+ *     contraseña actual -- `OtpChangePasswordFlow` más abajo.
+ *   - 'old_password': formulario original (contraseña actual + nueva) --
+ *     `OldPasswordChangeFlow` más abajo.
+ * El backend mantiene los dos endpoints activos siempre para cualquier
+ * marca -- este parámetro solo decide qué UI se muestra, no depende de
+ * ningún flag del lado del servidor (ver `FeatureConfig.CHANGE_PASSWORD_OTP_ENABLED`,
+ * que es un freno de emergencia aparte, no un selector).
+ *
  * El backend invalida TODOS los JWT y revoca todos los dispositivos
- * vinculados al cambiar la contraseña (ver `accountSecurityService.js`),
- * así que tras un éxito forzamos logout completo -- no hay forma de
- * "seguir logueado" con la contraseña vieja en caché local.
+ * vinculados al cambiar la contraseña (mismo `sync_password_locally` en
+ * los dos flujos), así que ambos fuerzan logout completo tras un éxito.
  */
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { changePassword } from '../../services/accountSecurityService';
+import {
+  changePassword,
+  confirmPasswordChangeOtp,
+  requestPasswordChangeOtp,
+} from '../../services/accountSecurityService';
 import { clearSessionBeforeNewLogin } from '../../services/loginFlow';
 // Los estilos de este panel viven en styles/pages/_mi-cuenta.scss (importado
 // desde MiCuentaPage.jsx), no acá -- ver el comentario en ese archivo sobre
@@ -19,14 +34,12 @@ import { clearSessionBeforeNewLogin } from '../../services/loginFlow';
 
 const MIN_LENGTH = 8;
 const MAX_LENGTH = 255;
+const OTP_LENGTH = 6;
 
 // Política de contraseña -- debe mantenerse sincronizada con
 // wind/utils/password_policy.py (backend, Wind). Es solo un atajo para dar
 // feedback inmediato antes del round-trip; el backend sigue siendo la
-// fuente de verdad y valida esto mismo de nuevo (si esta validación local
-// quedara desactualizada respecto al backend, el peor caso es un 400 con
-// `code=password_rejected_by_panaccess`/`password_policy_violation`, no un
-// error silencioso).
+// fuente de verdad y valida esto mismo de nuevo.
 const PASSWORD_ALLOWED_CHARS_RE = /^[A-Za-z0-9_!@#$%^&*()+=[\]{};:'",.<>/?~`|\\-]+$/;
 const PASSWORD_HAS_UPPER_RE = /[A-Z]/;
 const PASSWORD_HAS_DIGIT_RE = /[0-9]/;
@@ -46,6 +59,19 @@ function getPasswordPolicyErrorKey(password) {
   }
   return null;
 }
+
+const PASSWORD_POLICY_ERROR_DEFAULTS = {
+  changePasswordTooShort: `La contraseña debe tener entre ${MIN_LENGTH} y ${MAX_LENGTH} caracteres.`,
+  changePasswordInvalidChars: 'La contraseña tiene caracteres no permitidos.',
+  changePasswordMissingUpper: 'La contraseña debe incluir al menos una letra mayúscula.',
+  changePasswordMissingNumber: 'La contraseña debe incluir al menos un número.',
+};
+
+// Códigos de error del paso de OTP (ver wind/services/password_change_otp.py
+// en Back-Wind-V2) que deben devolver al usuario al paso "verify" en vez de
+// mostrarse en el paso de nueva contraseña -- son problemas del código, no
+// de la contraseña que acaba de escribir.
+const OTP_STEP_ERROR_CODES = new Set(['otp_incorrect', 'otp_locked', 'otp_missing_or_expired']);
 
 /** Input de contraseña con botón de mostrar/ocultar interno (ver `.account-security-password-field` en _account-security.scss). */
 function PasswordToggleInput({
@@ -95,7 +121,11 @@ function PasswordToggleInput({
   );
 }
 
-export function ChangePasswordPanel({ brandConfig, brand }) {
+/**
+ * Flujo original: pide la contraseña actual + la nueva en un solo paso.
+ * Seleccionado con `login.deviceSession.changePasswordFlow: 'old_password'`.
+ */
+function OldPasswordChangeFlow({ brandConfig, brand }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [currentPass, setCurrentPass] = useState('');
@@ -128,16 +158,6 @@ export function ChangePasswordPanel({ brandConfig, brand }) {
     if (isSubmitting) return;
     setError('');
 
-    // El backend (ver accountSecurityService.changePassword) ya verifica
-    // `oldPass` de verdad contra PanAccess -- acá solo se exige que el
-    // campo no esté vacío antes del round-trip; la validación real (y el
-    // mensaje "la contraseña actual no es correcta"/bloqueo por intentos)
-    // llega en la respuesta de `changePassword()` más abajo (`err.code`
-    // `old_password_incorrect`/`old_password_locked`). Antes esto se
-    // comparaba contra una copia cacheada localmente en el dispositivo
-    // (`getCredentials`), lo cual podía rechazar un cambio válido si esa
-    // copia había quedado desactualizada (p. ej. la contraseña ya se
-    // había cambiado desde otro dispositivo/el dashboard web).
     const trimmedCurrent = currentPass.trim();
     if (!trimmedCurrent) {
       setError(t('account.changePasswordCurrentRequired', { defaultValue: 'Ingresa tu contraseña actual.' }));
@@ -146,15 +166,9 @@ export function ChangePasswordPanel({ brandConfig, brand }) {
 
     const policyErrorKey = getPasswordPolicyErrorKey(newPass);
     if (policyErrorKey) {
-      const defaults = {
-        changePasswordTooShort: `La contraseña debe tener entre ${MIN_LENGTH} y ${MAX_LENGTH} caracteres.`,
-        changePasswordInvalidChars: 'La contraseña tiene caracteres no permitidos.',
-        changePasswordMissingUpper: 'La contraseña debe incluir al menos una letra mayúscula.',
-        changePasswordMissingNumber: 'La contraseña debe incluir al menos un número.',
-      };
       setError(
         t(`account.${policyErrorKey}`, {
-          defaultValue: defaults[policyErrorKey],
+          defaultValue: PASSWORD_POLICY_ERROR_DEFAULTS[policyErrorKey],
           count: MIN_LENGTH,
         }),
       );
@@ -267,6 +281,301 @@ export function ChangePasswordPanel({ brandConfig, brand }) {
       </button>
     </form>
   );
+}
+
+/**
+ * Flujo nuevo (2026-09-14): código OTP por correo, 4 pasos. Default para
+ * cualquier marca que no fije `changePasswordFlow: 'old_password'`.
+ */
+function OtpChangePasswordFlow({ brandConfig, brand }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const [step, setStep] = useState('request'); // request | verify | new_password | success
+  const [maskedEmail, setMaskedEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const goToLogin = () => {
+    clearSessionBeforeNewLogin();
+    navigate('/login', { replace: true });
+  };
+
+  useEffect(() => {
+    if (step === 'success') {
+      const timer = setTimeout(() => {
+        goToLogin();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  const resetToRequest = () => {
+    setStep('request');
+    setOtpCode('');
+    setNewPass('');
+    setConfirmPass('');
+    setError('');
+  };
+
+  const handleSendCode = async (e) => {
+    e?.preventDefault?.();
+    if (isSubmitting) return;
+    setError('');
+    setIsSubmitting(true);
+    try {
+      const result = await requestPasswordChangeOtp(brandConfig, brand);
+      if (!result?.success) {
+        throw new Error(
+          result?.message || t('account.changeOtpRequestError', { defaultValue: 'No se pudo enviar el código.' }),
+        );
+      }
+      setMaskedEmail(result.masked_email || '');
+      setStep('verify');
+    } catch (err) {
+      setError(err?.message || t('account.changeOtpRequestError', { defaultValue: 'No se pudo enviar el código.' }));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleContinueFromCode = (e) => {
+    e.preventDefault();
+    setError('');
+    const trimmed = otpCode.trim();
+    if (trimmed.length !== OTP_LENGTH || !/^\d+$/.test(trimmed)) {
+      setError(
+        t('account.changeOtpInvalidFormat', { defaultValue: `Ingresa los ${OTP_LENGTH} dígitos del código.` }),
+      );
+      return;
+    }
+    setStep('new_password');
+  };
+
+  const handleSubmitNewPassword = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    setError('');
+
+    const policyErrorKey = getPasswordPolicyErrorKey(newPass);
+    if (policyErrorKey) {
+      setError(
+        t(`account.${policyErrorKey}`, {
+          defaultValue: PASSWORD_POLICY_ERROR_DEFAULTS[policyErrorKey],
+          count: MIN_LENGTH,
+        }),
+      );
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setError(t('account.changePasswordMismatch', { defaultValue: 'Las contraseñas no coinciden.' }));
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await confirmPasswordChangeOtp(brandConfig, brand, otpCode.trim(), newPass);
+      if (!result?.success) {
+        throw new Error(
+          result?.message || t('account.changePasswordError', { defaultValue: 'No se pudo cambiar la contraseña.' }),
+        );
+      }
+      setStep('success');
+    } catch (err) {
+      const message = err?.message || t('account.changePasswordError', { defaultValue: 'No se pudo cambiar la contraseña.' });
+      if (OTP_STEP_ERROR_CODES.has(err?.code)) {
+        // Problema con el código, no con la contraseña -- lo mandamos de
+        // vuelta al paso de verificación en vez de dejarlo acá (ver
+        // OTP_STEP_ERROR_CODES arriba).
+        setStep('verify');
+        setError(message);
+      } else {
+        // p. ej. password_rejected_by_panaccess -- el código sigue siendo
+        // válido (el backend no lo consume en este caso), así que se queda
+        // acá para que pueda reintentar con otra contraseña sin pedir un
+        // código nuevo.
+        setError(message);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (step === 'success') {
+    return (
+      <div className="account-security-panel">
+        <div className="account-security-success">
+          {t('account.changeOtpSuccess', {
+            defaultValue:
+              '¡Contraseña actualizada! Se cerró sesión en todos tus dispositivos por tu seguridad. Inicia sesión de nuevo con tu nueva contraseña.',
+          })}
+        </div>
+        <button type="button" className="account-security-btn account-security-btn--primary" onClick={goToLogin}>
+          {t('account.goToWindTV', { defaultValue: 'Ir a WindTV' })}
+        </button>
+      </div>
+    );
+  }
+
+  if (step === 'verify') {
+    return (
+      <form className="account-security-panel" onSubmit={handleContinueFromCode}>
+        <p className="account-security-hint">
+          {t('account.changeOtpVerifyHint', {
+            defaultValue: maskedEmail
+              ? `Hemos enviado a tu correo ${maskedEmail} un código de ${OTP_LENGTH} dígitos. No olvides revisar la bandeja de spam.`
+              : `Hemos enviado un código de ${OTP_LENGTH} dígitos a tu correo. No olvides revisar la bandeja de spam.`,
+          })}
+        </p>
+
+        <label className="account-security-label" htmlFor="change-password-otp">
+          {t('account.changeOtpCodeLabel', { defaultValue: 'Código de acceso único' })}
+        </label>
+        <input
+          id="change-password-otp"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="one-time-code"
+          className="account-security-input"
+          style={{ letterSpacing: '0.5em', textAlign: 'center', fontSize: '1.2em' }}
+          value={otpCode}
+          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, OTP_LENGTH))}
+          maxLength={OTP_LENGTH}
+          disabled={isSubmitting}
+          required
+        />
+
+        {error && <div className="account-security-error">{error}</div>}
+
+        <button type="submit" className="account-security-btn account-security-btn--primary" disabled={isSubmitting}>
+          {t('account.changeOtpContinue', { defaultValue: 'Continuar' })}
+        </button>
+        <button
+          type="button"
+          className="account-security-btn account-security-btn--ghost"
+          disabled={isSubmitting}
+          onClick={resetToRequest}
+        >
+          {t('account.changeOtpCancel', { defaultValue: 'Cancelar' })}
+        </button>
+        <button
+          type="button"
+          className="account-security-btn account-security-btn--ghost"
+          disabled={isSubmitting}
+          onClick={handleSendCode}
+        >
+          {t('account.changeOtpResend', { defaultValue: '¿No recibiste el código? Enviar de nuevo' })}
+        </button>
+      </form>
+    );
+  }
+
+  if (step === 'new_password') {
+    return (
+      <form className="account-security-panel" onSubmit={handleSubmitNewPassword}>
+        <p className="account-security-hint">
+          {t('account.changeOtpNewPasswordHint', {
+            defaultValue: 'Ingresa tu nueva contraseña.',
+          })}
+        </p>
+
+        <label className="account-security-label" htmlFor="change-password-new">
+          {t('account.changePasswordNewLabel', { defaultValue: 'Nueva contraseña' })}
+        </label>
+        <PasswordToggleInput
+          id="change-password-new"
+          value={newPass}
+          onChange={(e) => setNewPass(e.target.value)}
+          autoComplete="new-password"
+          minLength={MIN_LENGTH}
+          maxLength={MAX_LENGTH}
+          disabled={isSubmitting}
+          required
+          show={showNewPass}
+          onToggleShow={() => setShowNewPass((s) => !s)}
+          t={t}
+        />
+        <p className="account-security-field-hint">
+          {t('account.changePasswordRulesHint', {
+            defaultValue:
+              'Entre 8 y 255 caracteres, con al menos una mayúscula y un número. También puedes usar símbolos como ! @ # $ % ^ & * ( ) + = - _ [ ] { } ; : \' " , . < > / ? ~ ` |',
+          })}
+        </p>
+
+        <label className="account-security-label" htmlFor="change-password-confirm">
+          {t('account.changePasswordConfirmLabel', { defaultValue: 'Confirmar nueva contraseña' })}
+        </label>
+        <PasswordToggleInput
+          id="change-password-confirm"
+          value={confirmPass}
+          onChange={(e) => setConfirmPass(e.target.value)}
+          autoComplete="new-password"
+          disabled={isSubmitting}
+          required
+          show={showConfirmPass}
+          onToggleShow={() => setShowConfirmPass((s) => !s)}
+          t={t}
+        />
+
+        {error && <div className="account-security-error">{error}</div>}
+
+        <button type="submit" className="account-security-btn account-security-btn--primary" disabled={isSubmitting}>
+          {isSubmitting
+            ? t('account.changePasswordSubmitting', { defaultValue: 'Actualizando...' })
+            : t('account.changeOtpSave', { defaultValue: 'Guardar contraseña' })}
+        </button>
+        <button
+          type="button"
+          className="account-security-btn account-security-btn--ghost"
+          disabled={isSubmitting}
+          onClick={() => {
+            setError('');
+            setStep('verify');
+          }}
+        >
+          {t('account.changeOtpBack', { defaultValue: 'Atrás' })}
+        </button>
+      </form>
+    );
+  }
+
+  // step === 'request'
+  return (
+    <form className="account-security-panel" onSubmit={handleSendCode}>
+      <p className="account-security-hint">
+        {t('account.changeOtpRequestHint', {
+          defaultValue: 'Enviaremos un código de verificación a tu correo electrónico.',
+        })}
+      </p>
+
+      {error && <div className="account-security-error">{error}</div>}
+
+      <button type="submit" className="account-security-btn account-security-btn--primary" disabled={isSubmitting}>
+        {isSubmitting
+          ? t('account.changeOtpSending', { defaultValue: 'Enviando...' })
+          : t('account.changeOtpSendCode', { defaultValue: 'Enviar código' })}
+      </button>
+    </form>
+  );
+}
+
+export function ChangePasswordPanel({ brandConfig, brand }) {
+  // 'old_password' es el único valor que activa el flujo viejo -- cualquier
+  // otra cosa (incluido no definirlo, marcas nuevas, typos) cae en 'otp' por
+  // defecto (ver login.deviceSession.changePasswordFlow en config/brands.js).
+  const flow = brandConfig?.login?.deviceSession?.changePasswordFlow === 'old_password' ? 'old_password' : 'otp';
+
+  if (flow === 'old_password') {
+    return <OldPasswordChangeFlow brandConfig={brandConfig} brand={brand} />;
+  }
+  return <OtpChangePasswordFlow brandConfig={brandConfig} brand={brand} />;
 }
 
 export default ChangePasswordPanel;

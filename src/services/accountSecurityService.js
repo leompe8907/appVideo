@@ -143,6 +143,55 @@ export async function changePassword(brandConfig, brand, oldPass, newPass) {
 }
 
 /**
+ * Cambiar contraseña con código OTP (2026-09-14) -- flujo nuevo, alternativo
+ * a `changePassword()` (oldPass) de más arriba. NO lo reemplaza: el backend
+ * mantiene los dos endpoints activos a propósito (ver
+ * docs/CAMBIO_CONTRASENA_OTP_2026-09-14.md en Back-Wind-V2) -- este archivo
+ * ahora solo llama al nuevo desde `ChangePasswordPanel.jsx`, pero
+ * `changePassword()` se deja sin tocar por si hace falta en el futuro
+ * (rollback rápido sin depender de un redeploy del backend).
+ *
+ * Paso 1: pide que se mande el código de 6 dígitos por correo.
+ */
+export async function requestPasswordChangeOtp(brandConfig, brand) {
+  const code = getDeviceSessionSubscriberCode(brand);
+  if (!code) {
+    throw new Error('No se encontró el código de suscriptor de esta sesión.');
+  }
+  const recaptchaToken = await getRecaptchaToken('change_password_otp_request', brand);
+  return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/password/otp/request-code/', {
+    method: 'POST',
+    body: JSON.stringify({
+      code,
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
+    }),
+  });
+}
+
+/**
+ * Paso 2: confirma el código de 6 dígitos + la nueva contraseña. Mismos
+ * efectos secundarios que `changePassword()` (invalida JWT, revoca todos
+ * los dispositivos vinculados) -- ver `sync_password_locally` en el
+ * backend, que comparten los dos flujos.
+ */
+export async function confirmPasswordChangeOtp(brandConfig, brand, otpCode, newPass) {
+  const code = getDeviceSessionSubscriberCode(brand);
+  if (!code) {
+    throw new Error('No se encontró el código de suscriptor de esta sesión.');
+  }
+  const recaptchaToken = await getRecaptchaToken('change_password_otp_confirm', brand);
+  return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/password/otp/confirm/', {
+    method: 'POST',
+    body: JSON.stringify({
+      code,
+      otpCode,
+      newPass,
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
+    }),
+  });
+}
+
+/**
  * Cierra la cuenta del suscriptor autenticado. Irreversible.
  *
  * @param {Object} brandConfig
