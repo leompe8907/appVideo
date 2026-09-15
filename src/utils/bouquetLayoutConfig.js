@@ -24,6 +24,7 @@ export const DEFAULT_CARD_DESIGN = 'service_layout_logo_normal';
  * @property {number} gridColumns
  * @property {string} logoIndex
  * @property {string | null} platformLayoutType
+ * @property {string | null} backgroundColor
  */
 
 /** Alias de card_design → nombre canónico service_layout_* */
@@ -207,7 +208,7 @@ export function resolveHorizontalGridRows(rows) {
 
 /**
  * @param {*} entry
- * @returns {{ type: string; cardDesign: string; rows: number; columns: number | null; logoIndex: string }}
+ * @returns {{ type: string; cardDesign: string; rows: number; columns: number | null; logoIndex: string; backgroundColor: string | null }}
  */
 function normalizePlatformEntry(entry) {
   if (!entry || typeof entry !== 'object') {
@@ -217,6 +218,7 @@ function normalizePlatformEntry(entry) {
       rows: 1,
       columns: null,
       logoIndex: '1',
+      backgroundColor: null,
     };
   }
 
@@ -248,12 +250,19 @@ function normalizePlatformEntry(entry) {
 
   const logoIndex = String(entry.logo_index ?? entry.logoIndex ?? '1').trim() || '1';
 
+  const backgroundColorRaw = entry.background_color ?? entry.backgroundColor;
+  const backgroundColor =
+    typeof backgroundColorRaw === 'string' && backgroundColorRaw.trim()
+      ? backgroundColorRaw.trim()
+      : null;
+
   return {
     type,
     cardDesign: normalizeCardDesign(cardRaw),
     rows,
     columns,
     logoIndex,
+    backgroundColor,
   };
 }
 
@@ -368,6 +377,7 @@ function platformEntryToResolved(entry) {
     gridColumns,
     logoIndex: entry.logoIndex,
     platformLayoutType: type,
+    backgroundColor: entry.backgroundColor ?? null,
   };
 }
 
@@ -387,6 +397,7 @@ export function legacyLayoutTypeToResolved(legacyType) {
       gridColumns: 1,
       logoIndex: '1',
       platformLayoutType: 'service_layout_grid_horizontal',
+      backgroundColor: null,
     };
   }
 
@@ -399,6 +410,7 @@ export function legacyLayoutTypeToResolved(legacyType) {
       gridColumns: 1,
       logoIndex: '1',
       platformLayoutType: 'service_layout_grid_vertical',
+      backgroundColor: null,
     };
   }
 
@@ -410,6 +422,7 @@ export function legacyLayoutTypeToResolved(legacyType) {
     gridColumns: 1,
     logoIndex: '1',
     platformLayoutType: null,
+    backgroundColor: null,
   };
 }
 

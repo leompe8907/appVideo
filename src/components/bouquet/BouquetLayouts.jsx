@@ -83,6 +83,7 @@ export function BouquetHorizontalGrid({
   gridRows = 1,
   containerType = 'horizontal_carousel',
   platformLayoutType = null,
+  backgroundColor = null,
 }) {
   const { t } = useTranslation();
   const { isPC, isTV } = useDevice();
@@ -122,6 +123,7 @@ export function BouquetHorizontalGrid({
       channel={channel}
       layoutType={layoutType}
       logoIndex={logoIndex}
+      backgroundColor={backgroundColor}
       onSelect={() => onChannelSelect?.(channel, bouquet)}
       onFocus={() => {
         reportFocusIndex(index);
@@ -191,7 +193,7 @@ export const BouquetGridHorizontal = BouquetHorizontalGrid;
  * - event_line: igual que event pero con tamaño mayor
  * - logo_with_number: logo centrado en tarjeta + LCN abajo a la derecha + nombre debajo
  */
-export function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }) {
+export function ChannelCard({ channel, layoutType, logoIndex = '1', backgroundColor = null, onSelect, onFocus }) {
   const { isTV } = useDevice();
   const parental = useParental();
   const focusedRef = useRef(false);
@@ -205,6 +207,12 @@ export function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, on
         ? { backgroundColor: bgColor }
         : {};
   const logoWithNumberFrameStyle = bgColor ? { backgroundColor: bgColor } : undefined;
+  // Color de fondo por BOUQUET (customData.layouts.<device>.background_color, ej.
+  // "Más vistos") para el rectángulo del logo en event_and_logo -- independiente
+  // del `bgColor` por canal de arriba, que ese variant no usa. Si no viene,
+  // se deja sin inline style y manda el `#0a0a0a` fijo del CSS de siempre.
+  const bouquetLogoBgColor = variant === 'event_and_logo' ? normalizeColor(backgroundColor) : null;
+  const logoTopStyle = bouquetLogoBgColor ? { backgroundColor: bouquetLogoBgColor } : undefined;
   const channelLcn =
     channel.lcn ?? channel.LCN ?? channel.logicalChannelNumber ?? channel.logical_channel_number;
   const showLcn = channelLcn != null && String(channelLcn).trim() !== '';
@@ -339,7 +347,7 @@ export function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, on
         <>
           <div className="channel-card-frame">
             {(logoImage || placeholderImageUrl) && (
-              <div className="channel-card-logo-top">
+              <div className="channel-card-logo-top" style={logoTopStyle}>
                 <img
                   src={logoImage || placeholderImageUrl}
                   alt={channel.name || ''}
@@ -484,6 +492,7 @@ export function BouquetGridVertical({
   gridColumns = 1,
   containerType = 'vertical_grid',
   platformLayoutType = null,
+  backgroundColor = null,
 }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
@@ -525,6 +534,7 @@ export function BouquetGridVertical({
             channel={channel}
             layoutType={layoutType}
             logoIndex={logoIndex}
+            backgroundColor={backgroundColor}
             onSelect={() => onChannelSelect?.(channel, bouquet)}
             onFocus={() => {
               reportFocusIndex(index);

@@ -75,6 +75,7 @@ export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio
           gridColumns: layout.gridColumns,
           containerType: layout.containerType,
           platformLayoutType: layout.platformLayoutType,
+          backgroundColor: layout.backgroundColor,
           onChannelSelect,
           onChannelFocus,
         };
