@@ -246,3 +246,83 @@
   font-size: 0.82rem;
   opacity: 0.75;
 }
+
+// ============================================================
+// Paso "request" del flujo OTP de cambiar contraseña (ver
+// ChangePasswordPanel.jsx / docs/Cambio de contraseña con código OTP.pdf).
+// Todo lo de acá abajo son modificadores escopados a ESTE paso puntual --
+// no tocan `.account-security-panel`/`.account-security-hint`/
+// `.account-security-input`/`.account-security-btn` base, así que no
+// afectan los otros pasos del flujo ni LinkedDevicesPanel/CloseAccountPanel.
+// Van al FINAL del archivo a propósito: con la misma especificidad que las
+// clases base (un solo selector de clase cada una), la que gana en un
+// empate es la que aparece último en la hoja de estilos -- si estas reglas
+// quedaban antes que la base, la base las pisaba (pasó con `--plain`).
+// ============================================================
+$account-security-request-width: 22rem;
+
+.account-security-panel--centered {
+  align-items: center;
+  text-align: center;
+  // Centrado horizontal (margin auto) Y vertical (min-height + justify-content)
+  // dentro de `.mi-cuenta-content` -- el min-height aproxima el alto
+  // disponible bajo el título; no es exacto (no tocamos MiCuentaPage.jsx para
+  // no afectar otros paneles/pasos) pero centra bien en los tamaños de
+  // pantalla usuales.
+  justify-content: center;
+  min-height: 60vh;
+  margin: 0 auto;
+}
+
+// Ícono circular (candado abierto) -- ver diseño. Nuevo, no reemplaza nada.
+.account-security-icon {
+  flex-shrink: 0;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.25);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 1.9rem 1.9rem;
+}
+
+.account-security-icon--lock {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'/%3E%3C/svg%3E");
+}
+
+// Variante sin fondo/padding de `.account-security-hint` -- el diseño no
+// tiene el banner con fondo, solo texto centrado. Mismo ancho que el input y
+// el botón de abajo para que los 3 elementos queden alineados entre sí.
+.account-security-hint--plain {
+  background: none;
+  padding: 0;
+  text-align: center;
+  opacity: 0.85;
+  font-size: 1.05rem;
+  width: 100%;
+  max-width: $account-security-request-width;
+}
+
+.account-security-input--centered {
+  width: 100%;
+  max-width: $account-security-request-width;
+  box-sizing: border-box;
+  text-align: center;
+  font-size: 1rem;
+  padding: 13px 16px;
+}
+
+// Botón tipo píldora -- mismo ancho que arriba para quedar alineado.
+// `.account-security-btn` base sigue con align-self:flex-start para los
+// demás pasos/paneles, sin tocar.
+.account-security-btn--pill {
+  align-self: center;
+  width: 100%;
+  max-width: $account-security-request-width;
+  box-sizing: border-box;
+  border-radius: 999px;
+  text-align: center;
+  padding: 13px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+}

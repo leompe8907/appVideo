@@ -98,9 +98,9 @@ export default {
       }
     },
     "deviceSession": {
-      "enabled": false,
-      "baseUrl": "",
-      "wsUrl": "",
+      "enabled": true,
+      "baseUrl": "https://backend.wind.do/",
+      "wsUrl": "wss://backend.wind.do/ws/device/",
       "changePasswordFlow": "otp"
     },
     "telemetry": {
@@ -125,7 +125,7 @@ export default {
     "links": {
       "changePassword": {
         "enabled": true,
-        "url": ""
+        "url": "https://backend.wind.do/wind/login/"
       },
       "linkedDevices": {
         "enabled": true,
@@ -268,7 +268,7 @@ export default {
   },
   "layout": {
     "shell": {
-      "pc": "sidebar",
+      "pc": "topbar",
       "tv": "sidebar"
     },
     "topbar": {

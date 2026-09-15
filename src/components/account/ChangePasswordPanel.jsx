@@ -293,6 +293,12 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
 
   const [step, setStep] = useState('request'); // request | verify | new_password | success
   const [maskedEmail, setMaskedEmail] = useState('');
+  // Input de correo del paso "request" (ver diseño). El backend hoy NO
+  // recibe este valor -- requestPasswordChangeOtp() identifica la cuenta por
+  // sesión (subscriber code), no por email escrito. Se pide igual porque así
+  // lo definió el diseño; si el backend en el futuro necesita este dato para
+  // algo, hay que pasarlo explícitamente en handleSendCode de más abajo.
+  const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
@@ -548,19 +554,36 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
 
   // step === 'request'
   return (
-    <form className="account-security-panel" onSubmit={handleSendCode}>
-      <p className="account-security-hint">
+    <form className="account-security-panel account-security-panel--centered" onSubmit={handleSendCode}>
+      <div className="account-security-icon account-security-icon--lock" aria-hidden="true" />
+
+      <p className="account-security-hint account-security-hint--plain">
         {t('account.changeOtpRequestHint', {
           defaultValue: 'Enviaremos un código de verificación a tu correo electrónico.',
         })}
       </p>
 
+      <input
+        type="email"
+        className="account-security-input account-security-input--centered"
+        placeholder={t('account.changeOtpEmailPlaceholder', { defaultValue: 'Escribe tu correo' })}
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        autoComplete="email"
+        disabled={isSubmitting}
+        required
+      />
+
       {error && <div className="account-security-error">{error}</div>}
 
-      <button type="submit" className="account-security-btn account-security-btn--primary" disabled={isSubmitting}>
+      <button
+        type="submit"
+        className="account-security-btn account-security-btn--primary account-security-btn--pill"
+        disabled={isSubmitting}
+      >
         {isSubmitting
           ? t('account.changeOtpSending', { defaultValue: 'Enviando...' })
-          : t('account.changeOtpSendCode', { defaultValue: 'Enviar código' })}
+          : t('account.changeOtpSendCode', { defaultValue: 'Enviar correo' })}
       </button>
     </form>
   );
