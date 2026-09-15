@@ -7,8 +7,13 @@ import { navigationRouter } from '../navigation/NavigationRouter';
  * Zapping en vivo (paridad 10foot, sin excepción fotelka en flechas).
  *
  * - CH+ / CH−: siempre con live y reproductor maximizado (como scene.js PUP/PDOWN).
- * - ↑/↓: solo si `arrowKeysEnabled` (player.channelChangeWithArrows).
- * - channelUp → +1 en lista; channelDown → −1 (LCN ascendente, lcn 0 al final).
+ * - ↑/↓: solo si `arrowKeysEnabled` (player.channelChangeWithArrows) -- uso real: TV.
+ * - ←/→: solo si `horizontalArrowKeysEnabled` (mismo flag `channelChangeWithArrows`,
+ *   pero pasado en horizontal) -- uso real: PC. En PC las flechas ↑/↓ quedan
+ *   libres para volumen (ver el handler de volumen registrado aparte en
+ *   PlayerHud.jsx), por eso el zapping por flecha en PC usa el eje horizontal
+ *   en vez del vertical que sí usa TV.
+ * - channelUp / → → +1 en lista; channelDown / ← → −1 (LCN ascendente, lcn 0 al final).
  *
  * Se registra como handler de zona 'global' en `NavigationRouter` en vez de
  * instalar su propio `window.addEventListener('keydown')` — antes este hook,
@@ -19,6 +24,7 @@ import { navigationRouter } from '../navigation/NavigationRouter';
  */
 export function usePlayerChannelZapping({
   arrowKeysEnabled = false,
+  horizontalArrowKeysEnabled = false,
   channelKeysEnabled = true,
   isLiveService,
   isPlaybackMaximized,
@@ -61,7 +67,7 @@ export function usePlayerChannelZapping({
     const canZap =
       isLiveService &&
       isPlaybackMaximized &&
-      (arrowKeysEnabled || channelKeysEnabled);
+      (arrowKeysEnabled || horizontalArrowKeysEnabled || channelKeysEnabled);
     if (!canZap) return undefined;
 
     // Handler de zona: `NavigationRouter` ya filtró altKey/ctrlKey/metaKey y
@@ -89,6 +95,10 @@ export function usePlayerChannelZapping({
         direction = 'up';
       } else if (arrowKeysEnabled && action === TV_ACTION.DOWN) {
         direction = 'down';
+      } else if (horizontalArrowKeysEnabled && action === TV_ACTION.RIGHT) {
+        direction = 'up';
+      } else if (horizontalArrowKeysEnabled && action === TV_ACTION.LEFT) {
+        direction = 'down';
       }
 
       if (!direction) return false;
@@ -99,6 +109,7 @@ export function usePlayerChannelZapping({
     return navigationRouter.register('global', handler);
   }, [
     arrowKeysEnabled,
+    horizontalArrowKeysEnabled,
     channelKeysEnabled,
     isLiveService,
     isPlaybackMaximized,

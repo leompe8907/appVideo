@@ -23,6 +23,7 @@ import {
   PLAYER_TRACK_SELECTOR,
 } from '../../hooks/usePlayerHudTvNavigation';
 import { usePlayerChannelZapping } from '../../hooks/usePlayerChannelZapping';
+import { usePlayerVolumeKeys } from '../../hooks/usePlayerVolumeKeys';
 import {
   FULLSCREEN_CHANGE_EVENTS,
   enterAppFullscreen,
@@ -743,7 +744,11 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   );
 
   const { zapByDirection } = usePlayerChannelZapping({
-    arrowKeysEnabled: channelChangeWithArrows,
+    // TV: ↑/↓ (sin cambios). PC: ←/→ -- en PC, ↑/↓ ahora controlan volumen
+    // (ver el handler de volumen más abajo), así que el zapping por flecha
+    // pasa al eje horizontal para no pisarse con eso.
+    arrowKeysEnabled: isTV && channelChangeWithArrows,
+    horizontalArrowKeysEnabled: !isTV && channelChangeWithArrows,
     channelKeysEnabled: true,
     isLiveService,
     isPlaybackMaximized: isPlaybackMaximized && hasContent,
@@ -751,6 +756,21 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     channels: channelList,
     currentServiceId: state?.type === 'service' ? state?.id ?? state?.item?.id : null,
     onZapToChannel: handleZapToChannel,
+    onWakeHud: wakeHud,
+  });
+
+  // ↑/↓ del teclado = volumen, solo PC -- mismo flag que el botón de mute +
+  // slider del HUD (ver `volumeControlsEnabled` más arriba). Sin restringir a
+  // "en vivo": a diferencia del zapping (que no aplica a VOD/catchup), el
+  // volumen tiene sentido para cualquier tipo de contenido reproduciéndose.
+  // En TV este hook ni se activa: no hay volumen de app que subir/bajar (ver
+  // comentario en usePlayerVolumeKeys.js).
+  usePlayerVolumeKeys({
+    enabled: !isTV && volumeControlsEnabled && hasContent,
+    overlay,
+    volume: state?.volume,
+    muted: state?.muted,
+    setVolume,
     onWakeHud: wakeHud,
   });
 
