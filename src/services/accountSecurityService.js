@@ -153,7 +153,7 @@ export async function changePassword(brandConfig, brand, oldPass, newPass) {
  *
  * Paso 1: pide que se mande el código de 6 dígitos por correo.
  */
-export async function requestPasswordChangeOtp(brandConfig, brand) {
+export async function requestPasswordChangeOtp(brandConfig, brand, email) {
   const code = getDeviceSessionSubscriberCode(brand);
   if (!code) {
     throw new Error('No se encontró el código de suscriptor de esta sesión.');
@@ -163,6 +163,7 @@ export async function requestPasswordChangeOtp(brandConfig, brand) {
     method: 'POST',
     body: JSON.stringify({
       code,
+      email,
       ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
     }),
   });

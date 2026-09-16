@@ -293,11 +293,12 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
 
   const [step, setStep] = useState('request'); // request | verify | new_password | success
   const [maskedEmail, setMaskedEmail] = useState('');
-  // Input de correo del paso "request" (ver diseño). El backend hoy NO
-  // recibe este valor -- requestPasswordChangeOtp() identifica la cuenta por
-  // sesión (subscriber code), no por email escrito. Se pide igual porque así
-  // lo definió el diseño; si el backend en el futuro necesita este dato para
-  // algo, hay que pasarlo explícitamente en handleSendCode de más abajo.
+  // Input de correo del paso "request" (2026-09-16, patrón estilo Netflix
+  // para acciones sensibles): el usuario re-escribe su correo como paso de
+  // confirmación. El backend valida que coincida con el de la cuenta
+  // autenticada (request.user.email) -- si no coincide, no genera ni envía
+  // ningún código y devuelve error, que se muestra abajo sin salir de este
+  // paso (ver profile_password_otp_request_view en Back-Wind-V2).
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [newPass, setNewPass] = useState('');
@@ -336,7 +337,7 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
     setError('');
     setIsSubmitting(true);
     try {
-      const result = await requestPasswordChangeOtp(brandConfig, brand);
+      const result = await requestPasswordChangeOtp(brandConfig, brand, email.trim());
       if (!result?.success) {
         throw new Error(
           result?.message || t('account.changeOtpRequestError', { defaultValue: 'No se pudo enviar el código.' }),
