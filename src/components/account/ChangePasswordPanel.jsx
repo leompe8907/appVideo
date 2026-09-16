@@ -73,6 +73,72 @@ const PASSWORD_POLICY_ERROR_DEFAULTS = {
 // de la contraseña que acaba de escribir.
 const OTP_STEP_ERROR_CODES = new Set(['otp_incorrect', 'otp_locked', 'otp_missing_or_expired']);
 
+/**
+ * Mapa `code` (ver deviceAuthService.js::parseJsonResponse, que adjunta el
+ * JSON del backend en `err.data`) -> key de i18next, para los dos pasos que
+ * llaman al backend en este flujo (2026-09-16). Antes se mostraba
+ * `err.message` crudo (siempre en español, texto fijo del backend) sin
+ * pasar por `t()` -- por eso nunca se traducía a en/pt aunque el resto de
+ * la UI sí. `translateOtpError()` de abajo es el único punto que debe
+ * usarse para mostrarle un error de este flujo al usuario.
+ */
+const OTP_ERROR_I18N = {
+  email_mismatch: { key: 'changeOtpEmailMismatch', defaultValue: 'El correo no coincide con tu cuenta.' },
+  no_email: {
+    key: 'changeOtpNoEmail',
+    defaultValue: 'Tu cuenta no tiene un correo registrado para enviar el código.',
+  },
+  otp_cooldown: {
+    key: 'changeOtpCooldown',
+    defaultValue: 'Ya te enviamos un código hace poco. Espera un momento antes de pedir otro.',
+  },
+  otp_email_failed: {
+    key: 'changeOtpEmailFailed',
+    defaultValue: 'No se pudo enviar el código. Intenta de nuevo en unos segundos.',
+  },
+  otp_incorrect: { key: 'changeOtpIncorrect', defaultValue: 'El código no es correcto.' },
+  otp_missing_or_expired: {
+    key: 'changeOtpMissingOrExpired',
+    defaultValue: 'El código expiró o no se ha solicitado ninguno. Pide uno nuevo.',
+  },
+  otp_locked: {
+    key: 'changeOtpLocked',
+    defaultValue: 'Demasiados intentos fallidos con este código. Pide uno nuevo.',
+  },
+  password_policy_violation: {
+    key: 'changeOtpPasswordPolicyViolation',
+    defaultValue: 'La nueva contraseña no cumple con la política requerida.',
+  },
+  password_rejected_by_panaccess: {
+    key: 'changeOtpPasswordRejected',
+    defaultValue: 'El servidor rechazó la nueva contraseña. Intenta con otra.',
+  },
+  panaccess_integration_error: {
+    key: 'changeOtpPanaccessError',
+    defaultValue: 'Ocurrió un problema al comunicarse con el servidor. Intenta de nuevo.',
+  },
+  panaccess_unavailable: {
+    key: 'changeOtpPanaccessUnavailable',
+    defaultValue: 'El servidor no está disponible en este momento. Intenta más tarde.',
+  },
+  panaccess_timeout: {
+    key: 'changeOtpPanaccessTimeout',
+    defaultValue: 'La conexión con el servidor tardó demasiado. Intenta de nuevo.',
+  },
+};
+
+/**
+ * Traduce el `code` de una respuesta de error del backend (este flujo OTP)
+ * a un mensaje en el idioma activo. Si no hay `code` reconocido, cae al
+ * `fallbackMessage` (típicamente `err.message`, el texto del backend) para
+ * no dejar al usuario sin ningún mensaje ante un código nuevo/inesperado.
+ */
+function translateOtpError(t, code, fallbackMessage) {
+  const entry = code ? OTP_ERROR_I18N[code] : null;
+  if (!entry) return fallbackMessage;
+  return t(`account.${entry.key}`, { defaultValue: entry.defaultValue });
+}
+
 /** Input de contraseña con botón de mostrar/ocultar interno (ver `.account-security-password-field` en _account-security.scss). */
 function PasswordToggleInput({
   id,
@@ -346,7 +412,8 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
       setMaskedEmail(result.masked_email || '');
       setStep('verify');
     } catch (err) {
-      setError(err?.message || t('account.changeOtpRequestError', { defaultValue: 'No se pudo enviar el código.' }));
+      const fallback = err?.message || t('account.changeOtpRequestError', { defaultValue: 'No se pudo enviar el código.' });
+      setError(translateOtpError(t, err?.data?.code, fallback));
     } finally {
       setIsSubmitting(false);
     }
@@ -395,8 +462,14 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
       }
       setStep('success');
     } catch (err) {
-      const message = err?.message || t('account.changePasswordError', { defaultValue: 'No se pudo cambiar la contraseña.' });
-      if (OTP_STEP_ERROR_CODES.has(err?.code)) {
+      // Antes: `err?.code`, que nunca existía (parseJsonResponse adjunta el
+      // JSON del backend en `err.data`, no en `err.code` directamente) --
+      // el ruteo de vuelta al paso "verify" nunca se activaba en la
+      // práctica. Corregido junto con la traducción (2026-09-16).
+      const code = err?.data?.code;
+      const fallback = err?.message || t('account.changePasswordError', { defaultValue: 'No se pudo cambiar la contraseña.' });
+      const message = translateOtpError(t, code, fallback);
+      if (OTP_STEP_ERROR_CODES.has(code)) {
         // Problema con el código, no con la contraseña -- lo mandamos de
         // vuelta al paso de verificación en vez de dejarlo acá (ver
         // OTP_STEP_ERROR_CODES arriba).
@@ -434,11 +507,16 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
     return (
       <form className="account-security-panel" onSubmit={handleContinueFromCode}>
         <p className="account-security-hint">
-          {t('account.changeOtpVerifyHint', {
-            defaultValue: maskedEmail
-              ? `Hemos enviado a tu correo ${maskedEmail} un código de ${OTP_LENGTH} dígitos. No olvides revisar la bandeja de spam.`
-              : `Hemos enviado un código de ${OTP_LENGTH} dígitos a tu correo. No olvides revisar la bandeja de spam.`,
-          })}
+          {maskedEmail
+            ? t('account.changeOtpVerifyHintWithEmail', {
+                email: maskedEmail,
+                count: OTP_LENGTH,
+                defaultValue: `Hemos enviado a tu correo ${maskedEmail} un código de ${OTP_LENGTH} dígitos. No olvides revisar la bandeja de spam.`,
+              })
+            : t('account.changeOtpVerifyHintNoEmail', {
+                count: OTP_LENGTH,
+                defaultValue: `Hemos enviado un código de ${OTP_LENGTH} dígitos a tu correo. No olvides revisar la bandeja de spam.`,
+              })}
         </p>
 
         <label className="account-security-label" htmlFor="change-password-otp">
