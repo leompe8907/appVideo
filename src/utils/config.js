@@ -246,7 +246,14 @@ export function applyTheme(brandConfig) {
       if ([r, g, b].some((n) => Number.isNaN(n))) return null;
       return `${r}, ${g}, ${b}`;
     }
-    if (hex.length === 6) {
+    // 6 dígitos (#RRGGBB) u 8 (#RRGGBBAA, ej. secondaryColor de wind:
+    // "#00107bd9") -- en ambos casos solo nos interesa el RGB, el canal
+    // alpha del 8vo caso se descarta porque la opacidad ya se controla
+    // aparte en cada uso (`rgba(var(--x-color-rgb), 0.45)`, etc.). Antes
+    // solo se aceptaba length 6, así que un secondaryColor de 8 dígitos
+    // devolvía `null` acá y `--secondary-color-rgb` nunca se sobreescribía
+    // (quedaba pegado en el default morado de global.scss).
+    if (hex.length === 6 || hex.length === 8) {
       const r = parseInt(hex.slice(0, 2), 16);
       const g = parseInt(hex.slice(2, 4), 16);
       const b = parseInt(hex.slice(4, 6), 16);
