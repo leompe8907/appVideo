@@ -74,3 +74,104 @@
   }
 }
 
+// ============================================================
+// Variante "danger" (popup "¿Estás seguro?" de Eliminar cuenta, ver
+// CloseAccountPanel.jsx) -- opt-in vía prop `variant="danger"` en
+// ConfirmModal.jsx. Todo acá va escopado bajo `.confirm-modal--danger` para
+// no afectar el ConfirmModal genérico que usan HomePage, Dispositivos
+// vinculados, Configuración parental, etc.
+// ============================================================
+
+// Fondo del overlay con el color SECUNDARIO de la marca (en vez del negro
+// translúcido genérico) -- usa `--secondary-color-rgb` (ya derivado por
+// utils/config.js desde `theme.secondaryColor`) para mantener la
+// transparencia del backdrop.
+.confirm-modal-overlay--danger {
+  background: rgba(var(--secondary-color-rgb, 44, 127, 136), 0.85);
+}
+
+.confirm-modal--danger {
+  max-width: 27rem;
+  width: 100%;
+  height: 30rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 1rem;
+  padding: 2rem 1.75rem 1.75rem;
+  text-align: center;
+  // Fondo de la tarjeta del popup con el color PRIMARIO de la marca (antes
+  // heredaba el gris oscuro genérico de `.confirm-modal`).
+  background: var(--primary-color, #3aa3ae);
+}
+
+.confirm-modal__icon {
+  width: 3.25rem;
+  height: 3.25rem;
+  margin: 0 auto 1rem;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.confirm-modal__icon--warning {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ff5a5a' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5 1.5 21.5h21L12 2.5zm0 6.75a1 1 0 011 1v5a1 1 0 01-2 0v-5a1 1 0 011-1zm0 9.75a1.25 1.25 0 110 2.5 1.25 1.25 0 010-2.5z'/%3E%3C/svg%3E");
+}
+
+.confirm-modal--danger .confirm-modal__title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+}
+
+.confirm-modal--danger .confirm-modal__message {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  opacity: 0.85;
+  margin-bottom: 1.5rem;
+}
+
+.confirm-modal--danger .confirm-modal__actions {
+  flex-direction: column;
+  align-items: stretch;
+
+  > * {
+    margin: 0 0 0.85rem;
+  }
+}
+
+.confirm-modal--danger .confirm-modal__btn--primary {
+  border: none;
+  border-radius: 999px;
+  padding: 0.9rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #cfe3fb;
+  color: #16324f;
+
+  &:hover,
+  &:focus-visible {
+    background: #bcd6f7;
+    border-color: transparent;
+  }
+}
+
+.confirm-modal--danger .confirm-modal__btn--link {
+  background: none;
+  border: none;
+  // Antes 0 -- el anillo de foco/hover global (`.focused`, ver global.scss)
+  // dibuja un box-shadow que sigue el border-radius del elemento; en 0
+  // quedaba con esquinas cuadradas alrededor del texto del link al enfocar.
+  border-radius: 16px;
+  padding: 0.35rem;
+  font-size: 0.92rem;
+  align-self: center;
+  color: #6fa8f0;
+
+  &:hover,
+  &:focus-visible {
+    background: none;
+    color: #8dbdf5;
+  }
+}
+

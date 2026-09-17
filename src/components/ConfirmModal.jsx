@@ -21,6 +21,14 @@ export function ConfirmModal({
   cancelText,
   onConfirm,
   onCancel,
+  // Variante opcional "danger" (popup "¿Estás seguro?" de Eliminar cuenta,
+  // ver CloseAccountPanel.jsx): ícono + título grande + botón píldora +
+  // "Cancelar" como link, todo activado por prop -- por defecto (sin pasar
+  // `variant`) el modal se ve exactamente igual que en el resto de la app
+  // (HomePage, Dispositivos vinculados, Configuración parental, etc.).
+  variant = null,
+  icon = null,
+  cancelAsLink = false,
 }) {
   const rootRef = useRef(null);
   const confirmBtnRef = useRef(null);
@@ -59,10 +67,22 @@ export function ConfirmModal({
   if (!open) return null;
 
   const showCancel = typeof onCancel === 'function';
+  const modalClassName = ['confirm-modal', variant ? `confirm-modal--${variant}` : '']
+    .filter(Boolean)
+    .join(' ');
+  const overlayClassName = ['confirm-modal-overlay', variant ? `confirm-modal-overlay--${variant}` : '']
+    .filter(Boolean)
+    .join(' ');
+  const cancelClassName = cancelAsLink
+    ? 'confirm-modal__btn confirm-modal__btn--link'
+    : 'confirm-modal__btn';
 
   return createPortal(
-    <div ref={rootRef} className="confirm-modal-overlay" role="dialog" aria-modal="true">
-      <div className="confirm-modal">
+    <div ref={rootRef} className={overlayClassName} role="dialog" aria-modal="true">
+      <div className={modalClassName}>
+        {icon === 'warning' ? (
+          <div className="confirm-modal__icon confirm-modal__icon--warning" aria-hidden="true" />
+        ) : null}
         {title ? <h4 className="confirm-modal__title">{title}</h4> : null}
         {message ? <p className="confirm-modal__message">{message}</p> : null}
         <div className="confirm-modal__actions">
@@ -78,7 +98,7 @@ export function ConfirmModal({
             <button
               type="button"
               ref={cancelBtnRef}
-              className="confirm-modal__btn"
+              className={cancelClassName}
               onClick={onCancel}
             >
               {cancelText || 'Cancelar'}

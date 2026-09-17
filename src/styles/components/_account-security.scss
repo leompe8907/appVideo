@@ -326,3 +326,225 @@ $account-security-request-width: 22rem;
   font-size: 1rem;
   font-weight: 600;
 }
+
+// ============================================================
+// Flujo de "eliminar cuenta" con confirmación por correo (2026-09-17, ver
+// CloseAccountPanel.jsx). Igual que el bloque de arriba, van al final a
+// propósito por la regla de especificidad de empates en CSS.
+// ============================================================
+
+// Checklist de consecuencias en el paso de advertencia (mockup del
+// cliente) -- bullets redondos (el mockup del 2026-09-17 sí los usa,
+// a diferencia de la versión anterior que usaba guion).
+.account-security-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 1.02rem;
+  line-height: 1.6;
+  opacity: 0.85;
+
+  > *:not(:last-child) {
+    margin-bottom: 4px;
+  }
+
+  li::before {
+    content: '• ';
+    opacity: 0.6;
+  }
+}
+
+.account-security-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 1rem;
+  line-height: 1.5;
+  cursor: pointer;
+
+  input[type='checkbox'] {
+    flex-shrink: 0;
+    width: 1.35rem;
+    height: 1.35rem;
+    margin-top: 0.15rem;
+    accent-color: var(--account-active-bg, #5c8fc4);
+    cursor: pointer;
+  }
+}
+
+// Ícono circular (sobre/correo) para la pantalla "revisa tu correo" --
+// mismo tratamiento que `.account-security-icon--lock`.
+.account-security-icon--mail {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75'/%3E%3C/svg%3E");
+}
+
+// ============================================================
+// Tarjeta de advertencia del paso `warning` (mockup "Eliminar cuenta",
+// 2026-09-17): ícono + título + texto, dentro de una caja con tinte rojo.
+// No reutiliza `.account-security-hint--danger` (era un párrafo suelto,
+// sin ícono ni layout en fila) -- clases nuevas y autocontenidas.
+// ============================================================
+
+// Centra el bloque completo del paso `warning` en la página (a pedido del
+// cliente) -- solo horizontal (margin auto), sin `text-align: center` ni
+// `align-items: center` como `.account-security-panel--centered`: acá adentro
+// hay tarjeta + lista + checkbox alineados a la izquierda entre sí, que se
+// verían mal centrados individualmente; lo que se centra es el bloque entero.
+.account-security-panel--warning-centered {
+  margin: 0 auto;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.account-security-danger-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: rgba(255, 90, 90, 0.1);
+  border: 1px solid rgba(255, 90, 90, 0.3);
+
+  // El ícono de esta tarjeta va en caja de esquinas redondeadas, no circular
+  // como `.account-security-icon--lock`/`--mail` -- por eso no hereda
+  // `border-radius: 50%` de `.account-security-icon`. Tampoco hereda el
+  // tamaño 4.5rem (pensado para el ícono grande y solo del paso de OTP): acá
+  // va más chico, al lado de texto, no como protagonista único de la pantalla.
+  .account-security-icon {
+    width: 5.75rem;
+    height: 5.75rem;
+    border-radius: 16px;
+    background-color: rgba(255, 90, 90, 0.18);
+    background-size: 2.9rem 2.9rem;
+  }
+}
+
+.account-security-icon--warning {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ff8a8a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 4.42c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z'/%3E%3C/svg%3E");
+}
+
+.account-security-danger-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.account-security-danger-card__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--account-panel-text, #ffffff);
+}
+
+.account-security-danger-card__text {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+// Texto de cuerpo normal (ni banner con fondo como `.account-security-hint`,
+// ni tan chico/tenue como `.account-security-field-hint`) -- para la nota de
+// fecha de corte del mockup, que se ve del mismo peso que la lista de arriba.
+.account-security-text {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  opacity: 0.85;
+}
+
+// Píldora "de a dos en fila" -- a diferencia de `.account-security-btn--pill`
+// (pensado para un solo botón centrado a ancho fijo, ver flujo OTP), esta
+// reparte el espacio disponible 50/50 entre los dos botones de la fila
+// sin fijar un ancho propio.
+.account-security-btn--pill-split {
+  flex: 1;
+  border-radius: 999px;
+  text-align: center;
+  padding: 16px 26px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+// El mockup usa un rojo/coral más saturado con texto blanco -- el
+// `.account-security-btn--danger` base (rosa pálido + texto oscuro) se
+// mantiene para no afectar otros usos futuros de esa clase; acá se pisa
+// solo cuando va combinada con `--pill-split`.
+.account-security-btn--danger.account-security-btn--pill-split {
+  background: #e6493f;
+  color: #ffffff;
+}
+
+// ============================================================
+// Paso `check_email` ("Revisa tu correo electrónico", mockup 2026-09-17)
+// ============================================================
+
+// Título del paso -- reemplaza el `style` inline que tenía antes en el JSX.
+.account-security-title {
+  font-weight: 700;
+  font-size: 1.25rem;
+  opacity: 1;
+}
+
+// Ícono de sobre con insignia de check verde superpuesta (a diferencia de
+// `.account-security-icon--mail`, que es solo el sobre). Se dibuja como un
+// solo SVG (sobre + círculo + check) en vez de dos elementos superpuestos,
+// más simple de mantener.
+.account-security-icon--mail-check {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M21.75 6.75v7.5a2.25 2.25 0 01-2.25 2.25h-9m-8.25-9.75v7.5a2.25 2.25 0 002.25 2.25h1.5m14.25-12A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-6.462 3.974M2.25 6.75v.243a2.25 2.25 0 001.07 1.916l6.462 3.974m0 0 1.844 1.134a2.25 2.25 0 002.36 0l.386-.237'/%3E%3Ccircle cx='18.5' cy='17.5' r='4.5' fill='%2334c759'/%3E%3Cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m16.5 17.5 1.4 1.4 2.6-2.9'/%3E%3C/svg%3E");
+}
+
+// Caja/pill con el email enmascarado, separada de la oración de arriba (antes
+// iban en un solo string interpolado).
+.account-security-email-badge {
+  width: 100%;
+  max-width: 22rem;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--account-panel-text, #ffffff);
+}
+
+// Aviso de spam en cursiva, al mismo peso que el resto del texto del paso
+// (antes usaba `.account-security-field-hint`, más chico/opaco).
+.account-security-hint--italic {
+  font-style: italic;
+}
+
+// ============================================================
+// Paso `email` de Eliminar cuenta (CloseAccountPanel.jsx) -- mismo
+// tratamiento de tamaño que `warning`/`check_email` para que los 3 pasos
+// del flujo queden consistentes. Escopado bajo
+// `.account-security-panel--delete-email`: las clases base que reusa
+// (`--hint--plain`, `--input--centered`, `--btn--pill`) también las usa el
+// paso "request" de Cambiar contraseña (ChangePasswordPanel.jsx), ya
+// aprobado y cerrado con el cliente -- no se toca su tamaño.
+// ============================================================
+.account-security-panel--delete-email {
+  .account-security-icon {
+    width: 5.5rem;
+    height: 5.5rem;
+    background-size: 2.3rem 2.3rem;
+  }
+
+  .account-security-hint--plain {
+    font-size: 1.15rem;
+  }
+
+  .account-security-input--centered {
+    font-size: 1.1rem;
+    padding: 16px 18px;
+  }
+
+  // Los botones de este paso van en fila (Cancelar / Enviar correo de
+  // confirmación), no apilados como antes -- ver `.account-security-btn--pill-split`.
+  .account-security-btn--pill-split {
+    font-size: 1.05rem;
+    padding: 16px 20px;
+  }
+}

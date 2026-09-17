@@ -206,8 +206,8 @@ export default {
       "shadow": "0 12px 30px rgba(var(--primary-color-rgb, 102, 126, 234), 0.55)"
     },
     "epgLineColorTime": "#3333FF",
-    "primaryColor": "#3AA3AE",
-    "secondaryColor": "#2C7F88",
+    "primaryColor": "#000737",
+    "secondaryColor": "#00107bd9",
     "theme": "dark",
     "fontFamily": "Roboto, sans-serif",
     "playerLoading": {

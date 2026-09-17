@@ -219,3 +219,41 @@ export async function closeAccount(brandConfig, brand, { confirm, reason } = {})
     }),
   });
 }
+
+/**
+ * Nuevo flujo de eliminación de cuenta con confirmación por correo
+ * (2026-09-08/09, ver docs/NUEVO_FLUJO_ELIMINACION_CUENTA_2026-09-08.md en
+ * Back-Wind-V2) -- reemplaza a `closeAccount()` en la UI (`CloseAccountPanel.jsx`).
+ * No cierra nada de inmediato: solo manda un correo con un enlace de
+ * confirmación (24h de vigencia); el corte real de acceso queda diferido a
+ * la fecha de corte de la suscripción, que ya viene en la respuesta
+ * (`scheduled_for`) para mostrarla en la pantalla "revisa tu correo" sin
+ * pedirla aparte. `closeAccount()` (cierre inmediato) se deja intacta, sin
+ * usar desde acá, por si hace falta revertir rápido.
+ *
+ * `email` (2026-09-17, a pedido del cliente -- casos de usuarios "curiosos"
+ * que eliminaban su cuenta sin querer): paso adicional de confirmación,
+ * mismo patrón que `requestPasswordChangeOtp()`. El backend valida que
+ * coincida con el correo real de la cuenta -- si no coincide, responde
+ * `code: "email_mismatch"` sin mandar ningún correo.
+ *
+ * Llamar de nuevo con el mismo `code`/`email` mientras la solicitud siga sin
+ * confirmar reenvía el correo (botón "Reenviar correo" del mockup) -- el
+ * backend no duplica la solicitud.
+ */
+export async function requestAccountDeletion(brandConfig, brand, { email, reason } = {}) {
+  const code = getDeviceSessionSubscriberCode(brand);
+  if (!code) {
+    throw new Error('No se encontró el código de suscriptor de esta sesión.');
+  }
+  const recaptchaToken = await getRecaptchaToken('request_account_deletion', brand);
+  return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/account/close/request/', {
+    method: 'POST',
+    body: JSON.stringify({
+      code,
+      email,
+      reason: reason || 'user_app_delete_request',
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
+    }),
+  });
+}
