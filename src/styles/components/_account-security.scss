@@ -548,3 +548,79 @@ $account-security-request-width: 22rem;
     padding: 16px 20px;
   }
 }
+
+// ============================================================
+// Paso `verify` de Cambiar contraseña -- OTP (ChangePasswordPanel.jsx,
+// mockup "Opción 1" elegido 2026-09-18: casillas de dígitos en vez de un
+// input de texto plano). Escopado bajo `.account-security-panel--otp-verify`
+// por la misma razón que `--delete-email`: reusa clases base
+// (`--hint--plain`, `--icon`, `--btn--pill`) que también usa el paso
+// `request` de este mismo flujo, ya cerrado -- no se le cambia el tamaño.
+// ============================================================
+.account-security-panel--otp-verify {
+  .account-security-icon {
+    width: 5rem;
+    height: 5rem;
+    background-size: 2.1rem 2.1rem;
+  }
+
+  .account-security-hint--plain {
+    font-size: 1.05rem;
+  }
+
+  .account-security-btn--pill {
+    font-size: 1.05rem;
+    padding: 16px 24px;
+  }
+}
+
+.account-security-otp-boxes {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.account-security-otp-box {
+  width: 44px;
+  height: 54px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--account-panel-text, #ffffff);
+  font-size: 1.3rem;
+  font-weight: 500;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.account-security-otp-box:focus-visible {
+  outline: none;
+  border-color: var(--account-active-bg, #5c8fc4);
+  border-width: 2px;
+}
+
+.account-security-otp-box:disabled {
+  opacity: 0.5;
+}
+
+// Link de texto (a diferencia de `.account-security-btn`, sin fondo ni
+// borde) -- para "¿No recibiste el código? Enviar de nuevo".
+.account-security-link {
+  align-self: center;
+  background: none;
+  border: none;
+  padding: 4px;
+  font-size: 0.92rem;
+  color: #6fa8f0;
+  cursor: pointer;
+}
+
+.account-security-link:hover,
+.account-security-link:focus-visible {
+  color: #8dbdf5;
+}
+
+.account-security-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

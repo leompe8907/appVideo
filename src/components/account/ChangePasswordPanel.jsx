@@ -19,7 +19,7 @@
  * vinculados al cambiar la contraseña (mismo `sync_password_locally` en
  * los dos flujos), así que ambos fuerzan logout completo tras un éxito.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -183,6 +183,89 @@ function PasswordToggleInput({
           aria-hidden="true"
         />
       </button>
+    </div>
+  );
+}
+
+/**
+ * Código OTP como 6 casillas individuales (una por dígito), en vez de un
+ * solo `<input>` de texto -- diseño elegido 2026-09-18 (mockup "Opción 1"),
+ * ver paso `verify` de `OtpChangePasswordFlow` más abajo. Mantiene el mismo
+ * contrato que un input normal: `value`/`onChange` con un string de dígitos
+ * (así `handleContinueFromCode`/`confirmPasswordChangeOtp` no necesitan
+ * cambiar), la lógica de auto-avance/borrado/pegado vive toda acá adentro.
+ */
+function OtpDigitsInput({ length, value, onChange, disabled }) {
+  const inputsRef = useRef([]);
+  const digits = Array.from({ length }, (_, i) => value[i] || '');
+
+  const focusIndex = (i) => {
+    inputsRef.current[i]?.focus();
+  };
+
+  const setDigitAt = (i, digit) => {
+    const next = digits.slice();
+    next[i] = digit;
+    onChange(next.join('').replace(/\D/g, ''));
+  };
+
+  const handleChange = (i, e) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    if (!raw) {
+      setDigitAt(i, '');
+      return;
+    }
+    // Último dígito tipeado (por si el navegador no reemplaza la selección sola).
+    setDigitAt(i, raw.slice(-1));
+    if (i < length - 1) focusIndex(i + 1);
+  };
+
+  const handleKeyDown = (i, e) => {
+    if (e.key === 'Backspace') {
+      if (digits[i]) return; // el propio onChange ya lo vacía
+      e.preventDefault();
+      if (i > 0) {
+        setDigitAt(i - 1, '');
+        focusIndex(i - 1);
+      }
+    } else if (e.key === 'ArrowLeft' && i > 0) {
+      e.preventDefault();
+      focusIndex(i - 1);
+    } else if (e.key === 'ArrowRight' && i < length - 1) {
+      e.preventDefault();
+      focusIndex(i + 1);
+    }
+  };
+
+  const handlePaste = (i, e) => {
+    const text = e.clipboardData.getData('text').replace(/\D/g, '');
+    if (!text) return;
+    e.preventDefault();
+    onChange(text.slice(0, length));
+    focusIndex(Math.min(text.length, length - 1));
+  };
+
+  return (
+    <div className="account-security-otp-boxes" role="group">
+      {digits.map((digit, i) => (
+        <input
+          key={i}
+          ref={(el) => {
+            inputsRef.current[i] = el;
+          }}
+          type="text"
+          inputMode="numeric"
+          autoComplete={i === 0 ? 'one-time-code' : 'off'}
+          className="account-security-otp-box"
+          value={digit}
+          onChange={(e) => handleChange(i, e)}
+          onKeyDown={(e) => handleKeyDown(i, e)}
+          onPaste={(e) => handlePaste(i, e)}
+          disabled={disabled}
+          maxLength={1}
+          aria-label={`Dígito ${i + 1}`}
+        />
+      ))}
     </div>
   );
 }
@@ -505,8 +588,13 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
 
   if (step === 'verify') {
     return (
-      <form className="account-security-panel" onSubmit={handleContinueFromCode}>
-        <p className="account-security-hint">
+      <form
+        className="account-security-panel account-security-panel--centered account-security-panel--otp-verify"
+        onSubmit={handleContinueFromCode}
+      >
+        <div className="account-security-icon account-security-icon--lock" aria-hidden="true" />
+
+        <p className="account-security-hint--plain">
           {maskedEmail
             ? t('account.changeOtpVerifyHintWithEmail', {
                 email: maskedEmail,
@@ -519,32 +607,20 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
               })}
         </p>
 
-        <label className="account-security-label" htmlFor="change-password-otp">
-          {t('account.changeOtpCodeLabel', { defaultValue: 'Código de acceso único' })}
-        </label>
-        <input
-          id="change-password-otp"
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          autoComplete="one-time-code"
-          className="account-security-input"
-          style={{ letterSpacing: '0.5em', textAlign: 'center', fontSize: '1.2em' }}
-          value={otpCode}
-          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, OTP_LENGTH))}
-          maxLength={OTP_LENGTH}
-          disabled={isSubmitting}
-          required
-        />
+        <OtpDigitsInput length={OTP_LENGTH} value={otpCode} onChange={setOtpCode} disabled={isSubmitting} />
 
         {error && <div className="account-security-error">{error}</div>}
 
-        <button type="submit" className="account-security-btn account-security-btn--primary" disabled={isSubmitting}>
+        <button
+          type="submit"
+          className="account-security-btn account-security-btn--primary account-security-btn--pill"
+          disabled={isSubmitting}
+        >
           {t('account.changeOtpContinue', { defaultValue: 'Continuar' })}
         </button>
         <button
           type="button"
-          className="account-security-btn account-security-btn--ghost"
+          className="account-security-btn account-security-btn--ghost account-security-btn--pill"
           disabled={isSubmitting}
           onClick={resetToRequest}
         >
@@ -552,7 +628,7 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
         </button>
         <button
           type="button"
-          className="account-security-btn account-security-btn--ghost"
+          className="account-security-link"
           disabled={isSubmitting}
           onClick={handleSendCode}
         >
