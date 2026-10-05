@@ -380,7 +380,8 @@ export default {
     "osms": false,
     "osmsInline": true,
     "playerVolumeControls": false,
-    "playerChannelArrows": false
+    "playerChannelArrows": false,
+    "castEnabled": false
   },
   "vod": {
     "layout": "hero",

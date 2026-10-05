@@ -228,6 +228,52 @@ export function setOnDeviceSessionUnexpectedClose(fn) {
   onUnexpectedCloseGlobal = typeof fn === 'function' ? fn : null;
 }
 
+// --- Transmisión entre dispositivos (cast) -----------------------------------
+// Ver `castService.js` y docs/ del backend (DISENO_TECNICO_CASTEO_2026-10-05).
+// Este módulo solo aporta tres cosas, todas apagadas por defecto (si nadie
+// las configura, el comportamiento es idéntico al de antes):
+//   1. Un proveedor de campos extra para `register_device` (nombre, si puede
+//      recibir, capacidades).
+//   2. Un canal global para los mensajes `cast.*` que llegan por este mismo
+//      socket (mismo patrón que `setOnDeviceRevoked` y compañía).
+//   3. `sendDeviceMessage`, para mandar mensajes por el socket ya registrado.
+let castRegistrationProvider = null;
+let onCastMessageGlobal = null;
+
+export function setCastRegistrationProvider(fn) {
+  castRegistrationProvider = typeof fn === 'function' ? fn : null;
+}
+
+export function setOnCastMessage(fn) {
+  onCastMessageGlobal = typeof fn === 'function' ? fn : null;
+}
+
+/**
+ * Manda un mensaje JSON por el socket de dispositivo ya registrado.
+ * @returns {boolean} true si se envió; false si no hay socket abierto.
+ */
+export function sendDeviceMessage(message) {
+  const ws = activeDeviceSocket;
+  if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+  try {
+    ws.send(JSON.stringify(message));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getCastRegistrationFields() {
+  if (!castRegistrationProvider) return null;
+  try {
+    const fields = castRegistrationProvider();
+    return fields && typeof fields === 'object' ? fields : null;
+  } catch {
+    // Un proveedor roto no debe impedir el registro del dispositivo.
+    return null;
+  }
+}
+
 /**
  * `http(s)://host` -> `ws(s)://host/ws/device/`. Si el brand declaró una
  * `login.deviceSession.wsUrl` explícita, se usa esa tal cual (por si el
@@ -352,6 +398,8 @@ export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) 
             device_model: deviceModel,
           };
           if (existingToken) payload.device_token = existingToken;
+          const castFields = getCastRegistrationFields();
+          if (castFields) Object.assign(payload, castFields);
           ws.send(JSON.stringify(payload));
         } catch {
           finish({ ok: false, error: 'send_failed' });
@@ -382,6 +430,17 @@ export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) 
         }
 
         const type = message?.type;
+
+        // `cast.*` (transmisión entre dispositivos) va por un canal aparte:
+        // no toca el registro ni los eventos de dispositivos vinculados.
+        if (typeof type === 'string' && type.startsWith('cast.')) {
+          try {
+            onCastMessageGlobal?.(message);
+          } catch {
+            // noop -- un listener roto no debe afectar el resto del socket
+          }
+          return;
+        }
 
         if (type === 'ping') {
           try {
