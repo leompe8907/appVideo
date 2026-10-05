@@ -27,7 +27,10 @@ import {
   isCastEnabled,
   listDevices,
   msToSeconds,
+  getControllerSession,
   reportState,
+  setControllerSession,
+  subscribeController,
   secondsToMs,
   sendCommand,
   sendContent,
@@ -211,5 +214,33 @@ describe('conversión de tiempos', () => {
     expect(msToSeconds(2500)).toBe(2.5);
     expect(msToSeconds(-1)).toBe(0);
     expect(msToSeconds('x')).toBe(0);
+  });
+});
+
+describe('transmisión controlada por este dispositivo', () => {
+  it('guarda la sesión, avisa a los suscriptores y permite limpiarla', () => {
+    const fn = vi.fn();
+    const off = subscribeController(fn);
+    expect(getControllerSession()).toBeNull();
+
+    setControllerSession({ id: 's1', deviceName: 'TV' });
+    expect(getControllerSession()).toMatchObject({ id: 's1' });
+    setControllerSession(null);
+    expect(getControllerSession()).toBeNull();
+    expect(fn).toHaveBeenCalledTimes(2);
+
+    off();
+    setControllerSession({ id: 's2' });
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('un suscriptor que falla no impide avisar a los demás', () => {
+    subscribeController(() => {
+      throw new Error('boom');
+    });
+    const good = vi.fn();
+    subscribeController(good);
+    setControllerSession({ id: 's' });
+    expect(good).toHaveBeenCalled();
   });
 });

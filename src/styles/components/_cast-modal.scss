@@ -40,3 +40,44 @@
 .cast-modal__error {
   color: #ff8a8a;
 }
+
+// Mini-control flotante (CastRemoteHost.jsx)
+.cast-remote {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1900;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: calc(100vw - 2rem);
+  padding: 0.5rem 0.75rem;
+  background: rgba(42, 42, 42, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: #fff;
+
+  > * {
+    margin: 0.2rem 0.25rem;
+  }
+}
+
+.cast-remote__label {
+  font-size: 0.9rem;
+}
+
+.cast-remote__btn {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    border-color: rgba(0, 123, 255, 0.9);
+    outline: none;
+  }
+}

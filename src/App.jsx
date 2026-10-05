@@ -6,6 +6,7 @@ import { useAuthValidator } from './hooks/useAuthValidator';
 import { useAppLifecycle } from './hooks/useAppLifecycle';
 import { useMediaSession } from './hooks/useMediaSession';
 import { useCastReceiver } from './hooks/useCastReceiver';
+import { CastRemoteHost } from './components/cast/CastRemoteHost';
 import { useBrand } from './contexts/BrandContext';
 import { isAuthenticated } from './utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
@@ -166,6 +167,7 @@ function App() {
       <PlayerProvider>
         <AppLifecycleHost />
         <CastReceiverHost />
+        <CastRemoteHost />
         <OsdKeyboardProvider>
           <TvFocusRing />
           <div className="App">

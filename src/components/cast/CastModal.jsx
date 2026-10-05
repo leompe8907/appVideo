@@ -3,7 +3,14 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusElementSafe } from '../../navigation/spatialNavigation';
-import { listDevices, sendCommand, sendContent, subscribeCast } from '../../services/castService';
+import {
+  getControllerSession,
+  listDevices,
+  sendCommand,
+  sendContent,
+  setControllerSession,
+  subscribeCast,
+} from '../../services/castService';
 import { castErrorKey, pickSendTargets } from './castModalLogic';
 
 const INITIAL_FOCUS_DELAY_MS = 50;
@@ -31,8 +38,9 @@ function formatClock(ms) {
  * @param {() => void} props.onClose
  * @param {{kind: string, id: number, title?: string, startPositionSeconds?: number}|null} props.content
  * @param {() => void} [props.onSent] se llama cuando el receptor aceptó el envío
+ * @param {boolean} [props.startInRemote] abre directo el control remoto de la transmisión en curso
  */
-export function CastModal({ open, onClose, content, onSent }) {
+export function CastModal({ open, onClose, content, onSent, startInRemote = false }) {
   const { t } = useTranslation();
   const rootRef = useRef(null);
   const zoneIdRef = useRef(null);
@@ -60,13 +68,20 @@ export function CastModal({ open, onClose, content, onSent }) {
   // Al abrir: vista de dispositivos y lista fresca.
   useEffect(() => {
     if (!open) return;
-    setView('devices');
-    setSession(null);
     setRemote(null);
     setDisplaced(false);
     setBusyId(null);
+    setError('');
+    const current = startInRemote ? getControllerSession() : null;
+    if (current) {
+      setSession(current);
+      setView('remote');
+      return;
+    }
+    setView('devices');
+    setSession(null);
     refresh();
-  }, [open, refresh]);
+  }, [open, refresh, startInRemote]);
 
   // Foco / BACK como cualquier otro modal de la app.
   useEffect(() => {
@@ -89,7 +104,10 @@ export function CastModal({ open, onClose, content, onSent }) {
     return subscribeCast((message) => {
       if (message.session_id !== sessionId) return;
       if (message.type === 'cast.state') setRemote(message);
-      if (message.type === 'cast.displaced') setDisplaced(true);
+      if (message.type === 'cast.displaced') {
+        setDisplaced(true);
+        setControllerSession(null);
+      }
     });
   }, [open, sessionId]);
 
@@ -99,7 +117,9 @@ export function CastModal({ open, onClose, content, onSent }) {
     setError('');
     try {
       const res = await sendContent({ targetDeviceId: device.id, content });
-      setSession({ id: res.session_id, deviceName: device.name });
+      const next = { id: res.session_id, deviceName: device.name, content };
+      setControllerSession(next);
+      setSession(next);
       setView('remote');
       if (onSent) onSent();
     } catch (e) {
@@ -191,7 +211,7 @@ export function CastModal({ open, onClose, content, onSent }) {
                       +10s
                     </button>
                   ) : null}
-                  <button type="button" className="confirm-modal__btn" onClick={() => { run('stop'); onClose(); }}>
+                  <button type="button" className="confirm-modal__btn" onClick={() => { run('stop'); setControllerSession(null); onClose(); }}>
                     {t('cast.stop', { defaultValue: 'Detener' })}
                   </button>
                 </div>

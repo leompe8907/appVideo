@@ -536,5 +536,35 @@
     "api": "Request error. Try again.",
     "server": "Server error. Try again later.",
     "unknown": "Unknown error"
+  },
+  "cast": {
+    "button": "Cast",
+    "title": "Cast to",
+    "refresh": "Refresh",
+    "stop": "Stop",
+    "options": "Options",
+    "playingNow": "playing",
+    "waiting": "Waiting for the device...",
+    "noDevices": "No devices available. Open the app on another device with your account.",
+    "remoteTitle": "Casting to {{name}}",
+    "displaced": "Another device took over the stream.",
+    "state": {
+      "playing": "Playing",
+      "paused": "Paused",
+      "loading": "Loading",
+      "idle": "Stopped",
+      "ended": "Ended",
+      "error": "Error"
+    },
+    "errors": {
+      "targetOffline": "The device is offline.",
+      "targetNotFound": "The device is no longer available.",
+      "rejected": "The device rejected the stream.",
+      "rateLimited": "Too many requests, try again shortly.",
+      "unsupported": "That device can't play this content.",
+      "timeout": "The server did not respond.",
+      "notConnected": "No connection to the server.",
+      "generic": "Could not cast."
+    }
   }
 }

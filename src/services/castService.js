@@ -231,9 +231,38 @@ export function reportState(sessionId, state) {
   return sendDeviceMessage({ v: CAST_PROTOCOL_VERSION, type: 'cast.state', session_id: sessionId, ...state });
 }
 
+// --- Transmisión que ESTE dispositivo controla (lado emisor) ---------------
+// Vive a nivel módulo para que el mini-control de la app (CastRemoteHost) y el
+// modal compartan la misma sesión aunque se cierre el reproductor.
+let controllerSession = null; // { id, deviceName, content } | null
+const controllerListeners = new Set();
+
+export function getControllerSession() {
+  return controllerSession;
+}
+
+export function setControllerSession(session) {
+  controllerSession = session || null;
+  controllerListeners.forEach((fn) => {
+    try {
+      fn(controllerSession);
+    } catch {
+      // un suscriptor roto no afecta a los demás
+    }
+  });
+}
+
+/** @returns {() => void} función para desuscribirse */
+export function subscribeController(listener) {
+  controllerListeners.add(listener);
+  return () => controllerListeners.delete(listener);
+}
+
 /** Solo para tests. */
 export function __resetCastForTests() {
   rejectAllPending(new Error('reset'));
   listeners.clear();
+  controllerListeners.clear();
+  controllerSession = null;
   requestCounter = 0;
 }

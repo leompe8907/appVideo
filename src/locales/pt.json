@@ -536,5 +536,35 @@
     "api": "Erro na solicitação. Tente novamente.",
     "server": "Erro do servidor. Tente mais tarde.",
     "unknown": "Erro desconhecido"
+  },
+  "cast": {
+    "button": "Transmitir",
+    "title": "Transmitir para",
+    "refresh": "Atualizar",
+    "stop": "Parar",
+    "options": "Opções",
+    "playingNow": "reproduzindo",
+    "waiting": "Aguardando o dispositivo...",
+    "noDevices": "Nenhum dispositivo disponível. Abra o app em outro dispositivo com sua conta.",
+    "remoteTitle": "Transmitindo para {{name}}",
+    "displaced": "Outro dispositivo assumiu a transmissão.",
+    "state": {
+      "playing": "Reproduzindo",
+      "paused": "Em pausa",
+      "loading": "Carregando",
+      "idle": "Parado",
+      "ended": "Finalizado",
+      "error": "Erro"
+    },
+    "errors": {
+      "targetOffline": "O dispositivo está offline.",
+      "targetNotFound": "O dispositivo não está mais disponível.",
+      "rejected": "O dispositivo recusou a transmissão.",
+      "rateLimited": "Muitas solicitações, tente em instantes.",
+      "unsupported": "Esse dispositivo não pode reproduzir este conteúdo.",
+      "timeout": "O servidor não respondeu.",
+      "notConnected": "Sem conexão com o servidor.",
+      "generic": "Não foi possível transmitir."
+    }
   }
 }

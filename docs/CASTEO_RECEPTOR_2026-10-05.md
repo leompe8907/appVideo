@@ -54,12 +54,17 @@ transmisible) que abre `components/cast/CastModal.jsx`:
    ±10 s (VOD/catchup), detener, audio y subtítulos.
 
 Lógica pura en `components/cast/castModalLogic.js` (con tests). Estilos en
-`styles/components/_cast-modal.scss`. Textos con `defaultValue` en español; **faltan
-las claves `cast.*` en los archivos de i18n** (otros idiomas caen al español).
+`styles/components/_cast-modal.scss`. Textos en `locales/{es,en,pt}.json` (clave `cast.*`).
 
-Limitación: el control remoto vive en el modal; si se cierra, hoy no hay forma de
-volver a controlar esa transmisión desde este dispositivo (falta un mini-control
-flotante a nivel app). El botón solo aparece dentro del reproductor, no en fichas de catálogo.
+**Mini-control flotante** (`components/cast/CastRemoteHost.jsx`, montado en `App.jsx`):
+la transmisión enviada se guarda en `castService` (`get/setControllerSession`), así
+que sigue visible aunque se cierre el reproductor. Permite pausar/reanudar, detener y
+abrir el control completo ("Opciones": saltos, audio, subtítulos). Desaparece solo si el
+receptor termina, se corta o otro dispositivo toma la transmisión (`cast.displaced`).
+
+Pendiente: el botón de enviar solo aparece dentro del reproductor, no en fichas de
+catálogo; los botones del mini-control no están integrados al foco por control remoto
+de TV (`FocusManager`), solo el modal lo está.
 
 ## Limitaciones conocidas
 
