@@ -9,6 +9,9 @@ import { resolveLiveWindowFromEpgItems } from '../../utils/epgCurrentEvent';
 import { usePreload } from '../../store/usePreload';
 import panaccessService from '../../services/panaccessService';
 import { useBrand } from '../../contexts/BrandContext';
+import CastModal from '../cast/CastModal';
+import { buildCastContent } from '../cast/castModalLogic';
+import { isCastEnabled } from '../../services/castService';
 import { isParentalControlEnabledForBrand } from '../../config/brandConfig';
 import AppIcon from '../AppIcon';
 import EpgEventModal from '../epg/EpgEventModal';
@@ -271,6 +274,9 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   const [visible, setVisible] = useState(true);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
+  // Transmitir a otro dispositivo (solo si la marca lo activó, ver castService).
+  const [castOpen, setCastOpen] = useState(false);
+  const castContent = isCastEnabled(currentBrand) ? buildCastContent(state) : null;
   const [isFullscreen, setIsFullscreen] = useState(() => isAppFullscreenActive());
   const [tracksPopoverPos, setTracksPopoverPos] = useState(null); // { top, left, width } | null
   const hideTimeoutRef = useRef(null);
@@ -1088,6 +1094,19 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
               <AppIcon name="subtitles" size="1em" />
             </FocusableButton>
           ) : null}
+          {castContent ? (
+            <FocusableButton
+              type="button"
+              className="player-hud__pillbtn"
+              id={PLAYER_FOCUS_IDS.CAST}
+              data-tv-nav="player-hud"
+              tabIndex={hudTvTabIndex}
+              onClick={() => setCastOpen(true)}
+              aria-label={t('cast.title', { defaultValue: 'Transmitir a' })}
+            >
+              {t('cast.button', { defaultValue: 'Transmitir' })}
+            </FocusableButton>
+          ) : null}
         </div>
 
         {showPlaybackButtons ? (
@@ -1257,6 +1276,13 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
           </div>
         </div>
       </div>
+
+      <CastModal
+        open={castOpen}
+        content={castOpen ? castContent : null}
+        onClose={() => setCastOpen(false)}
+        onSent={() => pause?.()}
+      />
 
       {overlay ? (
         overlay === 'tracks' ? null : overlay === 'info' && shouldUseEpgInfoModal ? null : (

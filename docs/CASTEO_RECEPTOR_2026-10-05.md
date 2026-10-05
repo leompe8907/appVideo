@@ -42,6 +42,25 @@ No incluye todavía la UI de controlador (selector de dispositivos para enviar).
 - **No verificado**: ESLint, el hook dentro de la app real, ni prueba contra el backend
   en una TV. El hook no tiene test automático.
 
+## Controlador (enviar a otro dispositivo)
+
+Botón "Transmitir" en el HUD del reproductor (solo con `castEnabled` y contenido
+transmisible) que abre `components/cast/CastModal.jsx`:
+
+1. Lista los dispositivos de la cuenta en línea que pueden recibir (excluye el propio).
+2. Al elegir uno envía `{kind, id, title, posición}`; el receptor arma su propia URL.
+   Este dispositivo pausa su reproducción (transferencia, "el último gana").
+3. Vista de control remoto con el estado que reporta el receptor: pausa/reanudar,
+   ±10 s (VOD/catchup), detener, audio y subtítulos.
+
+Lógica pura en `components/cast/castModalLogic.js` (con tests). Estilos en
+`styles/components/_cast-modal.scss`. Textos con `defaultValue` en español; **faltan
+las claves `cast.*` en los archivos de i18n** (otros idiomas caen al español).
+
+Limitación: el control remoto vive en el modal; si se cierra, hoy no hay forma de
+volver a controlar esa transmisión desde este dispositivo (falta un mini-control
+flotante a nivel app). El botón solo aparece dentro del reproductor, no en fichas de catálogo.
+
 ## Limitaciones conocidas
 
 - VOD: no se evalúa clasificación por edad (solo hay `id`; no hay catálogo VOD
