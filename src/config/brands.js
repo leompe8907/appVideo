@@ -87,6 +87,9 @@
  *     control remoto vía CH+/CH-). Reutiliza la misma lógica de zapping que el teclado/control remoto
  *     (usePlayerChannelZapping), no hay lógica nueva de selección de canal. false (default, comportamiento
  *     actual): sin flechas en el HUD.
+ *   @param {boolean} [features.castEnabled=false] - true: habilita la transmisión entre dispositivos de la
+ *     cuenta (botón "Transmitir" en el reproductor, mini-control y receptor; ver services/castService.js).
+ *     Requiere backend con el protocolo `cast.*` (migración wind 0016). false (default): sin cambios.
  *
  * @param {Object} login - Bloque unificado de configuración del Login por marca.
  *   @param {Object} login.theme - Colores y estilos del formulario (CSS: hex, rgba, gradiente o var(--primary-color)).

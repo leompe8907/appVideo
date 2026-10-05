@@ -11,14 +11,13 @@
  * corresponda, en vez de partir de cero o copiar una marca existente al
  * voleo. Ver el JSDoc completo del shape en `../brands.js`.
  *
- * IMPORTANTE: un campo solo entra acá si las 7 marcas (al momento de
- * generar este archivo) ya lo tenían definido. Un campo ausente a propósito
- * en algunas marcas (ej. `login.udid.tempTokenRequired`, que solo entienden
- * ciertos backends -- ver `useUdidLoginFlow.js`) NO se completó con un valor
- * inventado -- rellenarlo hubiera roto el login UDID de intv/gigmax/
- * multiplustv/sattv y pintado mal el panel de Mi Cuenta de 6 marcas. Si una
- * marca nueva necesita ese campo, agregarlo explícitamente en su propio
- * archivo, no acá.
+ * IMPORTANTE: todas las marcas deben tener EXACTAMENTE los mismos parámetros
+ * (mismo conjunto de claves). Al agregar un parámetro nuevo, agregarlo en
+ * TODOS los archivos de marca, con un valor que conserve el comportamiento
+ * actual de cada una (ej. `login.udid.tempTokenRequired: false`, que solo
+ * activa el backend que lo entiende -- ver `useUdidLoginFlow.js`; `ui.splashVideo: ""`
+ * en marcas sin splash animado, donde el valor no se usa). Un campo ausente
+ * se considera un olvido, no una decisión.
  */
 export default {
   "brand": "bromteck",
@@ -95,7 +94,8 @@ export default {
         10000
       ],
       "heartbeatMs": 30000,
-      "privateKeyUrl": ""
+      "privateKeyUrl": "",
+      "tempTokenRequired": false
     },
     "socialLogin": {
       "backendBaseUrl": "https://backend.wind.do",
@@ -128,6 +128,7 @@ export default {
     "theme": {
       "sidebarBg": "#0b2a4a",
       "contentBg": "#061a2e",
+      "panelBg": "#0b2a4a",
       "panelText": "rgba(255, 255, 255, 0.88)",
       "activeItemBg": "#5c8fc4",
       "activeItemText": "#ffffff",
@@ -211,6 +212,7 @@ export default {
   "ui": {
     "splashDuration": 3000,
     "splashAnimado": false,
+    "splashVideo": "",
     "focus": {
       "enabled": true,
       "color": "#3AA3AE",

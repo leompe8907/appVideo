@@ -113,6 +113,7 @@ export default {
     "theme": {
       "sidebarBg": "#0b2a4a",
       "contentBg": "#061a2e",
+      "panelBg": "#0b2a4a",
       "panelText": "rgba(255, 255, 255, 0.88)",
       "activeItemBg": "#5c8fc4",
       "activeItemText": "#ffffff",
@@ -196,6 +197,7 @@ export default {
   "ui": {
     "splashDuration": 3000,
     "splashAnimado": false,
+    "splashVideo": "",
     "focus": {
       "enabled": true,
       "color": "#3333FF",
@@ -365,7 +367,8 @@ export default {
     "osms": true,
     "osmsInline": true,
     "playerVolumeControls": false,
-    "playerChannelArrows": false
+    "playerChannelArrows": false,
+    "castEnabled": false
   },
   "vod": {
     "layout": "hero",

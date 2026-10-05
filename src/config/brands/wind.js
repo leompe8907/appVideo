@@ -113,6 +113,7 @@ export default {
     "theme": {
       "sidebarBg": "#0b2a4a",
       "contentBg": "#061a2e",
+      "panelBg": "#0b2a4a",
       "panelText": "rgba(255, 255, 255, 0.88)",
       "activeItemBg": "#5c8fc4",
       "activeItemText": "#ffffff",
@@ -366,7 +367,8 @@ export default {
     "osms": true,
     "osmsInline": true,
     "playerVolumeControls": true,
-    "playerChannelArrows": true
+    "playerChannelArrows": true,
+    "castEnabled": false
   },
   "vod": {
     "layout": "hero",
