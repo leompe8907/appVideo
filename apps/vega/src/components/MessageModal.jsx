@@ -3,7 +3,7 @@ import {useState} from 'react';
 import {Modal, Pressable, Text, View} from 'react-native';
 import i18n from '@appvideo/core/locales/i18n';
 import {FocusRing} from './FocusRing';
-import {createScaledStyles} from '../scaledStyles';
+import {createScaledStyles, ENTRY_SCALE} from '../scaledStyles';
 
 /** Mensaje modal con un botón "Cerrar" (como MessageModal de la web). Atrás también cierra. */
 export function MessageModal({message, type = 'error', onClose}) {
@@ -22,7 +22,7 @@ export function MessageModal({message, type = 'error', onClose}) {
               style={styles.button}>
               <Text style={styles.buttonText}>{i18n.t('common.close')}</Text>
             </Pressable>
-            <FocusRing visible={focused} radius={999} />
+            <FocusRing visible={focused} radius={999} scale={ENTRY_SCALE} />
           </View>
         </View>
       </View>
@@ -44,4 +44,4 @@ const styles = createScaledStyles({
   message: {color: '#fff', fontSize: 16, textAlign: 'center', marginBottom: 20},
   button: {alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 32, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)'},
   buttonText: {color: '#fff', fontSize: 16, fontWeight: '600'},
-});
+}, ENTRY_SCALE);

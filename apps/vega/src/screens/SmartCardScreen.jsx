@@ -16,7 +16,7 @@ import {FocusRing} from '../components/FocusRing';
 import {MessageModal} from '../components/MessageModal';
 import {FullScreenImage} from '../components/FullScreenImage';
 import {getTheme} from '../theme';
-import {createScaledStyles} from '../scaledStyles';
+import {createScaledStyles, ENTRY_SCALE} from '../scaledStyles';
 import {devLog} from '../devLog';
 
 const t = (key, opts) => i18n.t(key, opts);
@@ -39,7 +39,7 @@ function FocusableItem({onPress, disabled, hasTVPreferredFocus, radius = 8, styl
         style={[style, disabled && styles.disabled]}>
         {children}
       </Pressable>
-      <FocusRing visible={focused} radius={radius} />
+      <FocusRing visible={focused} radius={radius} scale={ENTRY_SCALE} />
     </View>
   );
 }
@@ -271,4 +271,4 @@ const styles = createScaledStyles({
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 8,
   },
-});
+}, ENTRY_SCALE);

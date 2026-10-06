@@ -13,7 +13,7 @@ import {MessageModal} from '../components/MessageModal';
 import {FullScreenImage} from '../components/FullScreenImage';
 import {getTheme} from '../theme';
 import {screenForWebRoute} from '../routes';
-import {createScaledStyles, px} from '../scaledStyles';
+import {createScaledStyles, ENTRY_SCALE, px} from '../scaledStyles';
 import {devLog} from '../devLog';
 
 const t = (key) => i18n.t(key);
@@ -57,7 +57,7 @@ function LoginInput({theme, inputRef, secure, rightSlot, hasTVPreferredFocus, ..
         ]}
       />
       {rightSlot}
-      <FocusRing visible={focused} radius={12} />
+      <FocusRing visible={focused} radius={12} scale={ENTRY_SCALE} />
     </View>
   );
 }
@@ -109,7 +109,7 @@ export function LoginScreen({navigate}) {
       onFocus={() => setToggleFocused(true)}
       onBlur={() => setToggleFocused(false)}
       style={styles.toggle}>
-      <EyeIcon open={showPassword} size={px(20)} color={toggleFocused ? '#fff' : l.toggleText} />
+      <EyeIcon open={showPassword} size={px(20, ENTRY_SCALE)} color={toggleFocused ? '#fff' : l.toggleText} />
     </Pressable>
   );
 
@@ -161,7 +161,7 @@ export function LoginScreen({navigate}) {
               {submitting ? t('login.submitting') : t('login.submit')}
             </Text>
           </Pressable>
-          <FocusRing visible={submitFocused} radius={999} />
+          <FocusRing visible={submitFocused} radius={999} scale={ENTRY_SCALE} />
         </View>
       </View>
 
@@ -198,4 +198,4 @@ const styles = createScaledStyles({
   submitDisabled: {opacity: 0.5},
   submitDisabledBg: {backgroundColor: 'rgba(255,255,255,0.1)'},
   submitText: {fontSize: 16, fontWeight: '600', letterSpacing: 0.32},
-});
+}, ENTRY_SCALE);
