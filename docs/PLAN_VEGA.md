@@ -35,9 +35,7 @@ Detalle técnico y cómo reproducir: `~/Desktop/VegaPruebaRN/PRUEBA_VEGA.md`.
 ### Avance de la app Vega (06-10-2026, rama `vega/core`)
 `apps/vega` corre en el Fire TV Stick 4K Select (192.168.4.218) con `@appvideo/core`: splash con validación de sesión, login manual, home con los bouquets y canales reales de INTV (logos incluidos) y vivo a pantalla completa con zapping. Probado: TV Jornal, TV Tribuna, RedeTV!, TV Guararapes, Gazeta; Globo Nordeste muestra el error (404 del CDN). Cómo compilar, instalar, ver logs, sacar capturas y simular el control: [apps/vega/README.md](../apps/vega/README.md).
 
-Bloqueado por falta de red en la sesión (instalar con `npm install` en `apps/vega`):
-- `@amazon-devices/react-native-async-storage__async-storage`: el AsyncStorage heredado no persiste al reiniciar; hoy la sesión de desarrollo se precarga desde `apps/vega/dev-session.local.json`.
-- Paquetes de React Navigation de Amazon (hoy navegación por estado).
+Ya instalados: AsyncStorage de Amazon (la sesión persiste al reiniciar) y React Navigation de Amazon (stack).
 
 ## Fase 0 — Decisiones y requisitos previos (1 semana)
 1. ~~**Comprar 1–2 Fire TV Stick 4K Select.**~~ Hecho: hay uno conectado y en modo desarrollador. El dispositivo virtual de la Mac Intel decodifica por software, no corre WebView y no sirve para medir rendimiento.

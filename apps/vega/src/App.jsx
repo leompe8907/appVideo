@@ -1,6 +1,8 @@
 import * as React from 'react';
-import {useCallback, useEffect, useRef, useState} from 'react';
-import {BackHandler, Dimensions, View, StyleSheet} from 'react-native';
+import {useEffect, useState} from 'react';
+import {Dimensions, StyleSheet, View} from 'react-native';
+import {NavigationContainer} from '@amazon-devices/react-navigation__native';
+import {createStackNavigator} from '@amazon-devices/react-navigation__stack';
 import '@appvideo/core/locales/i18n';
 import {SplashScreen} from './screens/SplashScreen';
 import {LoginScreen} from './screens/LoginScreen';
@@ -9,58 +11,57 @@ import {PlayerScreen} from './screens/PlayerScreen';
 import {devLog} from './devLog';
 import {storageReady} from './bootstrap';
 
-const SCREENS = {
-  splash: SplashScreen,
-  login: LoginScreen,
-  home: HomeScreen,
-  player: PlayerScreen,
-};
+const Stack = createStackNavigator();
 
-/** Desde dónde vuelve "Atrás" (sin entrada: Atrás cierra la app). */
-const BACK_TO = {player: 'home'};
+// Mismas opciones que vega-video-sample: sin encabezado ni animaciones.
+const SCREEN_OPTIONS = {headerShown: false, animationEnabled: false, cardStyle: {backgroundColor: '#000'}};
+
+/** Pantallas raíz: al llegar se descarta el historial (Atrás no vuelve al splash). */
+const ROOT_SCREENS = new Set(['login', 'home']);
 
 /**
- * Navegación mínima por estado mientras no se puedan instalar los paquetes
- * de React Navigation de Amazon (Fase 2 del plan).
+ * Adapta las pantallas (que reciben `navigate(nombre, params)` y `params`)
+ * a React Navigation. Atrás lo maneja el stack: desde el reproductor vuelve
+ * al home, y desde una pantalla raíz cierra la app.
  */
+function withNavigate(Screen) {
+  return function NavigatedScreen({navigation, route}) {
+    const navigate = React.useCallback(
+      (name, params) => {
+        devLog('navegar →', name);
+        if (ROOT_SCREENS.has(name)) navigation.reset({index: 0, routes: [{name, params}]});
+        else navigation.navigate(name, params);
+      },
+      [navigation],
+    );
+    return <Screen navigate={navigate} params={route.params} />;
+  };
+}
+
+const Splash = withNavigate(SplashScreen);
+const Login = withNavigate(LoginScreen);
+const Home = withNavigate(HomeScreen);
+const Player = withNavigate(PlayerScreen);
+
 export function App() {
   const [ready, setReady] = useState(false);
-  const [route, setRoute] = useState({name: 'splash', params: undefined});
-  const routeRef = useRef(route);
-  useEffect(() => {
-    routeRef.current = route;
-  }, [route]);
-
-  const navigate = useCallback((name, params) => {
-    devLog('navegar →', name);
-    setRoute({name, params});
-  }, []);
 
   useEffect(() => {
     storageReady.finally(() => setReady(true));
-  }, []);
-
-  useEffect(() => {
     devLog('pantalla', JSON.stringify(Dimensions.get('window')));
   }, []);
 
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      const back = BACK_TO[routeRef.current.name];
-      if (!back) return false;
-      navigate(back);
-      return true;
-    });
-    return () => sub.remove();
-  }, [navigate]);
+  if (!ready) return <View style={styles.root} />;
 
-  const Screen = SCREENS[route.name];
   return (
-    <View style={styles.root}>
-      {ready ? (
-        <Screen key={route.name} navigate={navigate} params={route.params} />
-      ) : null}
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="splash" screenOptions={SCREEN_OPTIONS}>
+        <Stack.Screen name="splash" component={Splash} />
+        <Stack.Screen name="login" component={Login} />
+        <Stack.Screen name="home" component={Home} />
+        <Stack.Screen name="player" component={Player} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 

@@ -7,6 +7,7 @@ import * as userSession from '@appvideo/core/utils/userSession';
 import {FocusButton} from '../components/FocusButton';
 import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
+import {useIsFocused} from '@amazon-devices/react-navigation__native';
 import {devLog} from '../devLog';
 import {getHomeMemory, rememberBouquet, rememberChannel, resetHomeMemory} from '../homeMemory';
 
@@ -66,14 +67,24 @@ function ChannelCard({channel, onPress, theme, hasTVPreferredFocus}) {
 export function HomeScreen({navigate}) {
   const theme = getTheme();
   const [bouquets, setBouquets] = useState(null);
-  const [initialMemory] = useState(getHomeMemory);
-  const [selected, setSelectedState] = useState(initialMemory.bouquetIndex);
+  const [selected, setSelectedState] = useState(() => getHomeMemory().bouquetIndex);
   const setSelected = (i) => {
     rememberBouquet(i);
     setSelectedState(i);
   };
-  // Al volver del reproductor el foco va al canal que se estaba viendo.
-  const returnChannel = initialMemory.channelIndex;
+  // Al volver del reproductor (la pantalla sigue montada debajo) el foco va
+  // al canal que se estaba viendo, también si se cambió con zapping.
+  const isFocused = useIsFocused();
+  const [returnChannel, setReturnChannel] = useState(() => getHomeMemory().channelIndex);
+  useEffect(() => {
+    if (!isFocused) {
+      setReturnChannel(null);
+      return;
+    }
+    const memory = getHomeMemory();
+    setSelectedState(memory.bouquetIndex);
+    setReturnChannel(memory.channelIndex);
+  }, [isFocused]);
   const [error, setError] = useState('');
 
   const load = React.useCallback(async () => {

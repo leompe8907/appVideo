@@ -11,9 +11,8 @@ vivo a pantalla completa con zapping (▲▼), reintento (OK) y Atrás al home.
 
 - SDK Vega en `~/vega` (`source ~/vega/env`) y Node 20 en `/usr/local/opt/node@20/bin`.
 - Fire TV en modo desarrollador en la misma red.
-- `node_modules` de esta carpeta: hoy es la carpeta real que antes estaba en
-  `~/Desktop/VegaPruebaRN` (allá quedó un enlace a esta). No está en git. Con
-  red, se puede regenerar con `npm install` acá.
+- `npm install` en esta carpeta (usa `package-lock.json`). Ojo: `~/Desktop/VegaPruebaRN/node_modules`
+  es un enlace a este `node_modules`.
 
 ## Compilar e instalar
 
@@ -60,17 +59,15 @@ como en la web). Sirve para entrar sin escribir usuario y contraseña.
   sola copia de React). Además repite el renombre
   `react-native` → `@amazon-devices/react-native-kepler`, que la CLI pierde
   cuando el proyecto define su propio `resolveRequest`.
-- `src/bootstrap.js` registra el almacenamiento y el runtime de Vega antes de
-  cargar el resto.
+- `src/bootstrap.js` registra el almacenamiento (AsyncStorage de Amazon,
+  persistente) y el runtime de Vega antes de cargar el resto.
+- Navegación: stack de React Navigation de Amazon en `App.jsx` (sin encabezado
+  ni animaciones, como vega-video-sample).
 - Los estilos se escriben en píxeles de 1920×1080 y `src/scaledStyles.js` los
   lleva al ancho lógico real (960×540 en el stick).
 
 ## Pendiente
 
-- **Persistencia**: el AsyncStorage heredado no conserva datos al reiniciar en
-  el stick. Instalar `@amazon-devices/react-native-async-storage__async-storage`
-  (con red) y cambiar el import en `src/bootstrap.js`.
-- React Navigation de Amazon (hoy hay navegación por estado en `App.jsx`).
 - EPG, catchup, VOD, búsqueda, cuenta, control parental (Fase 4).
 - Contrato completo de motor (`src/player/engines/contracts.js` de la web),
   calidad de Wind, "licencia en uso" (Fase 3).
