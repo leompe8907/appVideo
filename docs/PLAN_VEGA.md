@@ -32,6 +32,9 @@ Detalle técnico y cómo reproducir: `~/Desktop/VegaPruebaRN/PRUEBA_VEGA.md`.
 - `~/Desktop/VegaPruebaRN/src/probeStreams.local.ts` tiene un `sessionId` de INTV de prueba (en `.gitignore`; vence al cerrar sesión).
 - Disco: ~7 GB libres al 06-10.
 
+### Avance de la app Vega (06-10-2026, noche)
+Con el diseño de appVideo y verificado en el Fire TV (Debug y Release): splash, login (teclado del sistema), smartcard con "licencia en uso", home (menú lateral, bouquets con EPG, banners), reproductor en vivo con HUD (zapping por LCN, listado de canales, info), Películas (VOD: filas, detalle, episodios, reproductor), Buscador y Mi Cuenta. Arreglos en el núcleo que también corrigen la web: VOD sin grupos de categorías (antes no se mostraba), fechas de EPG restauradas de caché. Pendiente: catchup/EPG, control parental, perfiles, OSMS, pistas de audio/subtítulos, publicación (Fase 6).
+
 ### Avance de la app Vega (06-10-2026, rama `vega/core`)
 `apps/vega` corre en el Fire TV Stick 4K Select (192.168.4.218) con `@appvideo/core`: splash con validación de sesión, login manual, home con los bouquets y canales reales de INTV (logos incluidos) y vivo a pantalla completa con zapping. Probado: TV Jornal, TV Tribuna, RedeTV!, TV Guararapes, Gazeta; Globo Nordeste muestra el error (404 del CDN). Cómo compilar, instalar, ver logs, sacar capturas y simular el control: [apps/vega/README.md](../apps/vega/README.md).
 

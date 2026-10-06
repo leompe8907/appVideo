@@ -4,8 +4,12 @@ App React Native 0.83 / SDK Vega 0.24 que reutiliza `@appvideo/core`
 (servicios de Panaccess, stores, marcas, i18n). Plan completo:
 [docs/PLAN_VEGA.md](../../docs/PLAN_VEGA.md).
 
-Hoy hace: splash → login (o sesión guardada) → home con bouquets y canales →
-vivo a pantalla completa con zapping (▲▼), reintento (OK) y Atrás al home.
+Pantallas con el diseño de appVideo (ver docs/VEGA_DESIGN_SPEC*.md):
+splash → login → smartcard → home (menú lateral, Inicio con bouquets y
+banners, Canales) → vivo con HUD (zapping por LCN, listado de canales, info);
+Películas (filas por género, "Ver más", detalle hero, episodios, reproductor
+VOD con ±10 s y progreso); Buscador; Mi Cuenta (QR, Acerca de, Refrescar,
+Cerrar sesión, Salir).
 
 ## Requisitos
 
@@ -19,7 +23,7 @@ vivo a pantalla completa con zapping (▲▼), reintento (OK) y Atrás al home.
 ```bash
 cd apps/vega
 ./scripts/build.sh              # Debug (Release: ./scripts/build.sh Release)
-./scripts/run-on-device.sh      # IP por defecto 192.168.4.218
+./scripts/run-on-device.sh      # IP por defecto 192.168.4.218 (Release: ./scripts/run-on-device.sh 192.168.4.218 Release)
 ```
 
 `VEGA_BRAND=intv` (por defecto) elige la marca. El token y la URL del
@@ -66,9 +70,26 @@ como en la web). Sirve para entrar sin escribir usuario y contraseña.
 - Los estilos se escriben en píxeles de 1920×1080 y `src/scaledStyles.js` los
   lleva al ancho lógico real (960×540 en el stick).
 
+## Particularidades de Vega (aprendidas en el stick)
+
+- `react-native-svg` hace caer la app: íconos PNG (`node scripts/gen-icons.js`,
+  desde HomeNavIcon.jsx / AppIcon.jsx de la web), QR dibujado con Views y
+  degradados con `@amazon-devices/react-linear-gradient`.
+- Imágenes a pantalla completa: ancho/alto explícitos (`FullScreenImage`); con
+  `absoluteFill` se dibujan a su tamaño en píxeles. Splash y fondo en JPG 1920×1080.
+- Teclado en pantalla: `com.amazon.inputmethod.service` en `[wants]` del manifiesto.
+- `crypto.getRandomValues` no existe: polyfill con `WebCrypto.randomUUID()` nativo.
+- AsyncStorage: `@amazon-devices/react-native-async-storage__async-storage`
+  (el heredado no persiste).
+- Pantallas montadas debajo de otra (stack) no deben manejar Atrás: usar
+  `useIsFocused`.
+- El protector de pantalla de Fire TV pausa la app: al probar con teclas
+  simuladas, despertarlo antes.
+
 ## Pendiente
 
-- EPG, catchup, VOD, búsqueda, cuenta, control parental (Fase 4).
-- Contrato completo de motor (`src/player/engines/contracts.js` de la web),
-  calidad de Wind, "licencia en uso" (Fase 3).
+- Catchup y Guía EPG (la cuenta de prueba de INTV no tiene catchup y la guía
+  está apagada por marca), control parental (PIN y bloqueo), perfiles, OSMS.
+- Pistas de audio/subtítulos, calidad de Wind, telemetría de reproducción.
+- Banners de video (los de imagen están; sin datos de prueba en INTV).
 - Logos y colores para las demás marcas (`src/theme.js`).
