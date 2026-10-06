@@ -35,7 +35,7 @@ function withNavigate(Screen) {
       },
       [navigation],
     );
-    return <Screen navigate={navigate} params={route.params} />;
+    return React.createElement(Screen, {navigate, params: route.params});
   };
 }
 

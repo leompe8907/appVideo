@@ -62,6 +62,8 @@ export default defineConfig([
         require: 'readonly',
       },
     },
+    // Regla del refresco en caliente de Vite: no aplica a React Native.
+    rules: { 'react-refresh/only-export-components': 'off' },
   },
   {
     files: ['apps/vega/{babel,metro}.config.js', 'apps/vega/babel/**/*.js', 'apps/vega/scripts/**/*.js'],

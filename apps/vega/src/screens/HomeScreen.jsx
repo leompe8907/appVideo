@@ -59,6 +59,12 @@ export function HomeScreen({navigate}) {
     setPreferredFocus(m.bouquetKey != null ? {bouquetKey: m.bouquetKey, index: m.channelIndex} : null);
   }, [isFocused]);
 
+  const selectSection = (key) => {
+    rememberSection(key);
+    setSection(key);
+    setPreferredFocus(null);
+  };
+
   // Atrás: desde otra sección vuelve a Inicio (como HomeInputDispatcher); en Inicio, el sistema cierra la app.
   useEffect(() => {
     if (!isFocused) return undefined;
@@ -69,12 +75,6 @@ export function HomeScreen({navigate}) {
     });
     return () => sub.remove();
   });
-
-  const selectSection = (key) => {
-    rememberSection(key);
-    setSection(key);
-    setPreferredFocus(null);
-  };
 
   const bouquets = useMemo(() => {
     if (epg.status !== 'ready') return [];
