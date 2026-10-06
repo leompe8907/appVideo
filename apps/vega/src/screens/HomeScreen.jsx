@@ -138,7 +138,7 @@ export function HomeScreen({navigate}) {
         </View>
       );
   } else if (section === 'vod') {
-    content = <VodPage onPlay={(p) => navigate('vodplayer', p)} onModalChange={setVodModalOpen} />;
+    content = <VodPage active={isFocused} onPlay={(p) => navigate('vodplayer', p)} onModalChange={setVodModalOpen} />;
   } else if (section === 'account') {
     // TODO(Fase 4): página Mi Cuenta. Por ahora, nombre y cerrar sesión.
     content = (

@@ -51,7 +51,7 @@ function CategoryGrid({category, onSelect, onClose}) {
  * Página Películas (VodPage de la web, spec 2 §1): título y una fila por
  * género (máx. 9 + "Ver más"), detalle a pantalla completa al elegir.
  */
-export function VodPage({onPlay, onModalChange}) {
+export function VodPage({onPlay, onModalChange, active = true}) {
   const brand = getActiveBrandConfig();
   const vod = usePreloadStore((s) => s.vod);
   const loadVOD = usePreloadStore((s) => s.loadVOD);
@@ -71,16 +71,17 @@ export function VodPage({onPlay, onModalChange}) {
     onModalChange?.(Boolean(detail || grid));
   }, [detail, grid, onModalChange]);
 
-  // Atrás cierra el modal de arriba (detalle, después la grilla).
+  // Atrás cierra el modal de arriba (detalle, después la grilla). Sólo con el
+  // home en primer plano: debajo del reproductor, Atrás es del reproductor.
   useEffect(() => {
-    if (!detail && !grid) return undefined;
+    if (!active || (!detail && !grid)) return undefined;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (detail) setDetail(null);
       else setGrid(null);
       return true;
     });
     return () => sub.remove();
-  }, [detail, grid]);
+  }, [detail, grid, active]);
 
   const categories = vod.categories || [];
 
