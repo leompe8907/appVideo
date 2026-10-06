@@ -24,6 +24,15 @@ const seed = __DEV__ ? DEV_STORAGE_SEED : {};
 setStorageBackend(createMemoryStorage(seed));
 
 /** Se resuelve cuando el almacenamiento persistente está listo (App espera esto). */
+if (__DEV__) {
+  try {
+    const sample = global.crypto.getRandomValues(new Uint8Array(4));
+    devLog('crypto.getRandomValues OK', Array.from(sample).join(','));
+  } catch (e) {
+    devLog('crypto.getRandomValues ERROR', e?.message);
+  }
+}
+
 export const storageReady = (async () => {
   try {
     const persistent = await createAsyncBackedStorage(AsyncStorage, {
