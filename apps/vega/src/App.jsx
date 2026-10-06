@@ -1,53 +1,59 @@
 import * as React from 'react';
-import {useEffect, useState} from 'react';
-import {ScrollView, StyleSheet, Text, View} from 'react-native';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {BackHandler, Dimensions, View, StyleSheet} from 'react-native';
 import '@appvideo/core/locales/i18n';
-import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
-import panaccessService from '@appvideo/core/services/panaccessService';
-import * as userSession from '@appvideo/core/utils/userSession';
-import {getBouquetsWithChannels} from '@appvideo/core/services/tvDataService';
+import {SplashScreen} from './screens/SplashScreen';
+import {LoginScreen} from './screens/LoginScreen';
+import {HomeScreen} from './screens/HomeScreen';
+import {PlayerScreen} from './screens/PlayerScreen';
 import {devLog} from './devLog';
 
-export function App() {
-  const [lines, setLines] = useState([]);
-  const log = (...a) => {
-    devLog(...a);
-    setLines((prev) => [...prev, a.map(String).join(' ')]);
-  };
+const SCREENS = {
+  splash: SplashScreen,
+  login: LoginScreen,
+  home: HomeScreen,
+  player: PlayerScreen,
+};
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const brand = getActiveBrandConfig();
-        log('marca', brand?.brand, 'token', brand?.token ? 'sí' : 'NO', 'drm', brand?.drm ? 'sí' : 'NO');
-        await panaccessService.initialize(brand);
-        log('sesión guardada', userSession.getSessionId() ? 'sí' : 'no');
-        const valid = await panaccessService.validateSession();
-        log('validateSession', valid);
-        const bouquets = await getBouquetsWithChannels();
-        log('bouquets', bouquets.length, 'canales', bouquets.reduce((n, b) => n + b.items.length, 0));
-        const first = bouquets[0]?.items?.[0];
-        if (first) log('primer canal', first.name, String(first.url).replace(/sessionId=[^&]+/, 'sessionId=…'));
-      } catch (e) {
-        log('ERROR', e?.message, e?.errorInfo ? JSON.stringify(e.errorInfo) : '');
-      }
-    })();
+/** Desde dónde vuelve "Atrás" (sin entrada: Atrás cierra la app). */
+const BACK_TO = {player: 'home'};
+
+/**
+ * Navegación mínima por estado mientras no se puedan instalar los paquetes
+ * de React Navigation de Amazon (Fase 2 del plan).
+ */
+export function App() {
+  const [route, setRoute] = useState({name: 'splash', params: undefined});
+  const routeRef = useRef(route);
+  routeRef.current = route;
+
+  const navigate = useCallback((name, params) => {
+    devLog('navegar →', name);
+    setRoute({name, params});
   }, []);
 
+  useEffect(() => {
+    devLog('pantalla', JSON.stringify(Dimensions.get('window')));
+  }, []);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      const back = BACK_TO[routeRef.current.name];
+      if (!back) return false;
+      navigate(back);
+      return true;
+    });
+    return () => sub.remove();
+  }, [navigate]);
+
+  const Screen = SCREENS[route.name];
   return (
-    <View style={styles.container}>
-      <ScrollView>
-        {lines.map((l, i) => (
-          <Text key={i} style={styles.line}>
-            {l}
-          </Text>
-        ))}
-      </ScrollView>
+    <View style={styles.root}>
+      <Screen key={route.name} navigate={navigate} params={route.params} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#000', padding: 32},
-  line: {color: '#9cf', fontSize: 22},
+  root: {flex: 1, backgroundColor: '#000'},
 });

@@ -9,6 +9,8 @@
  */
 import {WebCrypto} from '@amazon-devices/react-native-w3cmedia/dist/headless';
 
+export {isPanaccessRotatingKeyUri} from '@appvideo/core/player/panaccessPlayback';
+
 const PANACCESS_KEY_WRAP_KEY = new Uint8Array([
   0xb2, 0xc2, 0x3a, 0x00, 0xff, 0xfe, 0x86, 0x90,
   0x17, 0x87, 0x05, 0xae, 0x19, 0xed, 0x08, 0xb8,
@@ -20,16 +22,6 @@ const PANACCESS_KEY_WRAP_IV = new Uint8Array([
 
 /** Key de prueba 00112233…ff envuelta con la key/IV de arriba (generada con openssl). */
 export const SAMPLE_WRAPPED_KEY_HEX = 'f70ae0a9ccbec7477313a693fb7856eff6d246dc130ce83ab0b574655b95ae08';
-
-export function isPanaccessRotatingKeyUri(url: string): boolean {
-  if (typeof url !== 'string') return false;
-  const lower = url.toLowerCase();
-  return (
-    lower.includes('requestmode=mekey') ||
-    lower.includes('f=getcatchupkey') ||
-    lower.includes('f=getvodkey')
-  );
-}
 
 export async function unwrapPanaccessKey(raw: ArrayBuffer): Promise<ArrayBuffer> {
   if (!raw || raw.byteLength <= 16) return raw;
