@@ -4,17 +4,17 @@
 // export-components`) para que el Fast Refresh de Vite funcione bien; estas
 // funciones son puro cálculo y además así se pueden testear sin montar nada.
 
+import { parseEpgDateToMs } from './epgTime';
+
+// Date, número o "YYYY-MM-DD HH:mm:ss" (UTC). Antes un string caía en la rama
+// `valueOf` y devolvía null.
 export function asMs(dateLike) {
-  if (dateLike == null) return null;
-  if (typeof dateLike?.valueOf === 'function') {
-    const v = dateLike.valueOf();
-    return typeof v === 'number' && !Number.isNaN(v) ? v : null;
-  }
-  if (typeof dateLike === 'number') return dateLike;
-  const d = new Date(dateLike);
-  const t = d.getTime();
-  return Number.isNaN(t) ? null : t;
+  return parseEpgDateToMs(dateLike);
 }
+
+/** Inicio/fin del evento; `startDate`/`endDate` llegan como `{}` tras restaurar caché. */
+const startOf = (ev) => asMs(ev?.startDate) ?? asMs(ev?.start);
+const endOf = (ev) => asMs(ev?.endDate) ?? asMs(ev?.end);
 
 export function formatHHmm(ms) {
   if (!ms || Number.isNaN(ms)) return '';
@@ -30,7 +30,7 @@ export function clamp(n, a, b) {
 
 function getSortedEvents(epgItems) {
   const list = Array.isArray(epgItems) ? [...epgItems] : [];
-  list.sort((a, b) => (asMs(a?.startDate) ?? 0) - (asMs(b?.startDate) ?? 0));
+  list.sort((a, b) => (startOf(a) ?? 0) - (startOf(b) ?? 0));
   return list;
 }
 
@@ -55,8 +55,8 @@ export function computeSlots(epgItems, { nowMs, epgPastEnabled = false } = {}) {
   if (nowMs == null) return { before: null, now: null, next: null, later: null, isLive: false };
 
   let idxNow = events.findIndex((ev) => {
-    const s = asMs(ev?.startDate);
-    const e = asMs(ev?.endDate);
+    const s = startOf(ev);
+    const e = endOf(ev);
     if (s == null || e == null) return false;
     return nowMs >= s && nowMs <= e;
   });
@@ -66,7 +66,7 @@ export function computeSlots(epgItems, { nowMs, epgPastEnabled = false } = {}) {
   // - si no hay futuro, el último evento como "now"
   if (idxNow < 0) {
     idxNow = events.findIndex((ev) => {
-      const s = asMs(ev?.startDate);
+      const s = startOf(ev);
       if (s == null) return false;
       return s > nowMs;
     });
@@ -80,8 +80,8 @@ export function computeSlots(epgItems, { nowMs, epgPastEnabled = false } = {}) {
 
   const isLive = (() => {
     if (!now) return false;
-    const s = asMs(now?.startDate);
-    const e = asMs(now?.endDate);
+    const s = startOf(now);
+    const e = endOf(now);
     if (s == null || e == null) return false;
     return nowMs >= s && nowMs <= e;
   })();

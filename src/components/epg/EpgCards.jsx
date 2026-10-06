@@ -10,7 +10,7 @@ import { useParentalGate } from '../../hooks/useParentalGate';
 import { useEpgReminderStore } from '@appvideo/core/store/epgReminderStore';
 import { getChannelStableId, dedupeStreams } from '@appvideo/core/utils/channelId';
 import { useTvInitialFocus } from '../../hooks/useTvInitialFocus';
-import { asMs, clamp, computeLiveProgressStyle, computeSlots, formatHHmm } from './epgSlots';
+import { asMs, clamp, computeLiveProgressStyle, computeSlots, formatHHmm } from '@appvideo/core/utils/epgSlots';
 import '../epg/epg-common.scss';
 
 /**
@@ -240,11 +240,11 @@ export function EpgCards({ onSelect }) {
             channel?.icon ||
             null;
 
-          const nowStart = asMs(now?.startDate);
-          const nowEnd = asMs(now?.endDate);
+          const nowStart = (asMs(now?.startDate) ?? asMs(now?.start));
+          const nowEnd = (asMs(now?.endDate) ?? asMs(now?.end));
 
-          const beforeStart = asMs(before?.startDate);
-          const beforeEnd = asMs(before?.endDate);
+          const beforeStart = (asMs(before?.startDate) ?? asMs(before?.start));
+          const beforeEnd = (asMs(before?.endDate) ?? asMs(before?.end));
           const nowTitle = now?.languages?.[0]?.title || now?.title || '';
           const beforeTitle = before?.languages?.[0]?.title || before?.title || '';
           const nextTitle = next?.languages?.[0]?.title || next?.title || '';
@@ -257,13 +257,13 @@ export function EpgCards({ onSelect }) {
           const nowTime =
             nowStart != null ? `${formatHHmm(nowStart)} - ${formatHHmm(nowEnd)}` : '';
           const nextTime = (() => {
-            const s = asMs(next?.startDate);
-            const e = asMs(next?.endDate);
+            const s = (asMs(next?.startDate) ?? asMs(next?.start));
+            const e = (asMs(next?.endDate) ?? asMs(next?.end));
             return s != null && e != null ? `${formatHHmm(s)} - ${formatHHmm(e)}` : '';
           })();
           const laterTime = (() => {
-            const s = asMs(later?.startDate);
-            const e = asMs(later?.endDate);
+            const s = (asMs(later?.startDate) ?? asMs(later?.start));
+            const e = (asMs(later?.endDate) ?? asMs(later?.end));
             return s != null && e != null ? `${formatHHmm(s)} - ${formatHHmm(e)}` : '';
           })();
 

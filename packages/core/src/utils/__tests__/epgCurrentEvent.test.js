@@ -34,3 +34,17 @@ describe('epgCurrentEvent', () => {
     expect(getEpgEventTitle(null)).toBe('');
   });
 });
+
+describe('epgSlots con eventos restaurados de caché', () => {
+  it('calcula ahora/siguiente con fechas en texto y startDate vacío', async () => {
+    const { computeSlots } = await import('../epgSlots.js');
+    const items = [
+      { title: 'B', start: '2026-10-06 21:00:00', end: '2026-10-06 22:00:00', startDate: {}, endDate: {} },
+      { title: 'A', start: '2026-10-06 20:00:00', end: '2026-10-06 21:00:00', startDate: {}, endDate: {} },
+    ];
+    const slots = computeSlots(items, { nowMs: Date.UTC(2026, 9, 6, 20, 30) });
+    expect(slots.now.title).toBe('A');
+    expect(slots.next.title).toBe('B');
+    expect(slots.isLive).toBe(true);
+  });
+});
