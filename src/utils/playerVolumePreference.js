@@ -1,3 +1,4 @@
+import { getStorage } from '../platform/storage';
 /**
  * Memoria de volumen/mute del reproductor, global por marca (no por canal --
  * a diferencia de audio/subtítulos en `playerTrackPreferences.js`, el
@@ -19,7 +20,7 @@ function storageKey(brandId) {
 /** @returns {{ volume: number, muted: boolean }} */
 export function getSavedVolumePreference(brandId) {
   try {
-    const raw = localStorage.getItem(storageKey(brandId));
+    const raw = getStorage()?.getItem(storageKey(brandId));
     if (!raw) return { volume: 1, muted: false };
     const parsed = JSON.parse(raw);
     const volume = Number.isFinite(parsed?.volume) ? Math.min(1, Math.max(0, parsed.volume)) : 1;
@@ -33,7 +34,7 @@ export function getSavedVolumePreference(brandId) {
 export function saveVolumePreference(brandId, { volume, muted }) {
   try {
     const safeVolume = Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : 1;
-    localStorage.setItem(
+    getStorage()?.setItem(
       storageKey(brandId),
       JSON.stringify({ volume: safeVolume, muted: muted === true }),
     );

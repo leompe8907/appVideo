@@ -7,6 +7,8 @@ import CryptoJS from 'crypto-js';
 import { getEpgCdnUrl, getOperatorName } from '../utils/userSession';
 import { normalizeEpgInWorker } from '../workers/epgWorkerClient';
 import { parseEpgDateToMs } from '../utils/epgTime';
+import { storageGet } from '../platform/storage';
+import { getUserAgent } from '../platform/runtime';
 
 const DEFAULT_EPG_HOURS_LIMIT = 12;
 const DEFAULT_EPG_DAYS_OFFSET = 2;
@@ -16,8 +18,8 @@ export const DEFAULT_EPG_REQUEST_TIMEOUT_MS = 90000;
 function isTvDevice() {
   try {
     return (
-      localStorage.getItem('device') === 'tv' ||
-      /smart-tv|smarttv|tizen|webos|lg|samsung/i.test(navigator.userAgent || '')
+      storageGet('device') === 'tv' ||
+      /smart-tv|smarttv|tizen|webos|lg|samsung/i.test(getUserAgent())
     );
   } catch {
     return false;

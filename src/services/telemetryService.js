@@ -33,6 +33,8 @@
  */
 
 import panaccessService from './panaccessService';
+import { getStorage } from '../platform/storage';
+import { onAppHidden } from '../platform/runtime';
 
 const STORAGE_KEY = 'app_telemetry_pending_v1';
 const MAX_QUEUE = 500;
@@ -83,7 +85,7 @@ const REASON_USER_INTERACTION = 1;
 
 function loadQueue() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getStorage()?.getItem(STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -245,12 +247,7 @@ export class TelemetryService {
     // ejecutar código — intentar vaciar la cola acá, ignorando el intervalo
     // mínimo entre llamadas. Cubre tanto Smart TV (visibilitychange al
     // suspenderse) como navegador (pagehide al cerrar pestaña/navegar afuera).
-    this._boundHandleHide = () => {
-      if (document.visibilityState === 'hidden') this.flushOnHide();
-    };
-    this._boundHandlePageHide = () => this.flushOnHide();
-    document.addEventListener('visibilitychange', this._boundHandleHide);
-    window.addEventListener('pagehide', this._boundHandlePageHide);
+    this._stopHiddenListener = onAppHidden(() => this.flushOnHide());
   }
 
   destroy() {
@@ -263,10 +260,8 @@ export class TelemetryService {
     this._saveTimer = null;
     this._firstFlushTimer = null;
     this._periodicTimer = null;
-    if (this._boundHandleHide) document.removeEventListener('visibilitychange', this._boundHandleHide);
-    if (this._boundHandlePageHide) window.removeEventListener('pagehide', this._boundHandlePageHide);
-    this._boundHandleHide = null;
-    this._boundHandlePageHide = null;
+    if (this._stopHiddenListener) this._stopHiddenListener();
+    this._stopHiddenListener = null;
   }
 
   /** Nuevo contenido en reproducción — cierra lo anterior (si aplica) y arranca el umbral anti-zapping. */
@@ -327,7 +322,7 @@ export class TelemetryService {
     if (this._saveTimer) clearTimeout(this._saveTimer);
     this._saveTimer = setTimeout(() => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this._queue));
+        getStorage()?.setItem(STORAGE_KEY, JSON.stringify(this._queue));
       } catch {
         // noop
       }

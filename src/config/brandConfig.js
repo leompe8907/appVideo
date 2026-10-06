@@ -3,6 +3,8 @@ import { DEFAULT_BRAND } from "./defaultBrand";
 import { getBrandAsset } from "../utils/assetLoader";
 import { invalidateHomeBackgroundCache } from "../utils/config";
 import { getSplashPath, getSplashPosterPath, getSplashVideoPath } from "../utils/splashLoader";
+import { storageGet, storageRemove, storageSet } from "../platform/storage";
+import { getLaunchParam } from "../platform/runtime";
 
 const isDev = import.meta.env.DEV;
 
@@ -21,20 +23,19 @@ let _cache = { key: null, config: null };
  * @returns {{ brandId: string, from: 'url'|'storage'|'default'|'fallback' }}
  */
 function resolveBrandKey() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const brandFromUrl = urlParams.get("brand");
+  const brandFromUrl = getLaunchParam("brand");
   if (brandFromUrl) {
     const config = getBrandConfig(brandFromUrl);
     if (config) return { brandId: brandFromUrl, from: "url" };
     if (isDev) console.warn(`[Brand] No encontrado en URL: ${brandFromUrl}`);
   }
 
-  const brandFromStorage = localStorage.getItem("brand");
+  const brandFromStorage = storageGet("brand");
   if (brandFromStorage) {
     const config = getBrandConfig(brandFromStorage);
     if (config) return { brandId: brandFromStorage, from: "storage" };
     if (isDev) console.warn(`[Brand] Brand en localStorage inválido: ${brandFromStorage}`);
-    localStorage.removeItem("brand");
+    storageRemove("brand");
   }
 
   if (DEFAULT_BRAND && getBrandConfig(DEFAULT_BRAND)) {
@@ -62,15 +63,15 @@ export function getActiveBrandConfig() {
     const fallback = getBrandConfig(fallbackBrand);
     const enriched = enrichConfigWithAssets(fallback);
     if (enriched) {
-      localStorage.setItem("brand", fallbackBrand);
+      storageSet("brand", fallbackBrand);
       _cache = { key: fallbackBrand, config: enriched };
     }
     return enriched || null;
   }
 
-  if (from === "url") localStorage.setItem("brand", brandId);
-  if (from === "default") localStorage.setItem("brand", DEFAULT_BRAND);
-  if (from === "fallback") localStorage.setItem("brand", brandId);
+  if (from === "url") storageSet("brand", brandId);
+  if (from === "default") storageSet("brand", DEFAULT_BRAND);
+  if (from === "fallback") storageSet("brand", brandId);
 
   if (isDev) {
     console.log(`[Brand] Cargado desde ${from}: ${brandId}`);

@@ -148,7 +148,11 @@ export let CV = {
     }
   },
 
+  /** Sólo en la web: inyecta un `<script>`. En otras plataformas usar `mode: "json"`. */
   callJsonp(url, parameters) {
+    if (typeof document === "undefined") {
+      return Promise.reject(new Error("JSONP no disponible en esta plataforma"));
+    }
     return new Promise((resolve, reject) => {
       const callbackName = `CVJSONP${Date.now()}`;
       const timeout = setTimeout(() => {

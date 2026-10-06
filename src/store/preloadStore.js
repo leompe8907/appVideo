@@ -6,6 +6,7 @@ import { processAdsFromApi } from '../utils/adsData';
 import { mergeEpgIntoChannels } from '../utils/epgMerge';
 import { dedupeStreams } from '../utils/channelId';
 import { normalizeList, prepareRecorded, toMs } from './catchupRecorded';
+import { getStorage, storageKeys, storageRemove } from '../platform/storage';
 
 // Evaluar IS_DEV a nivel de módulo, fuera de cualquier closure asíncrono.
 // IMPORTANTE: `import.meta.env.DEV` tiene que quedar como acceso directo
@@ -153,7 +154,7 @@ function pruneBouquets(bouquets) {
 function getStoredEpgCache(brandConfig) {
   try {
     const key = getEpgCacheKey(brandConfig);
-    const raw = localStorage.getItem(key);
+    const raw = getStorage()?.getItem(key);
     if (!raw) return null;
     const data = JSON.parse(raw);
     if (!data || !data.timestamp || !Array.isArray(data.bouquetsWithChannels)) return null;
@@ -178,14 +179,9 @@ function saveEpgCache(brandConfig, bouquetsWithChannels, streams) {
 
   // Limpieza proactiva: Elimina cachés de EPG de otras marcas para no saturar el localStorage
   try {
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith('app_epg_cache_') && k !== key) {
-        keysToRemove.push(k);
-      }
-    }
-    keysToRemove.forEach((k) => localStorage.removeItem(k));
+    storageKeys()
+      .filter((k) => k.startsWith('app_epg_cache_') && k !== key)
+      .forEach((k) => storageRemove(k));
   } catch (e) {
     // noop
   }
@@ -198,7 +194,7 @@ function saveEpgCache(brandConfig, bouquetsWithChannels, streams) {
       bouquetsWithChannels: prunedBouquets,
       // No guardamos 'streams' para evitar duplicar todos los objetos de canal con su EPG (se reconstruye al cargar)
     };
-    localStorage.setItem(key, JSON.stringify(payload));
+    getStorage()?.setItem(key, JSON.stringify(payload));
   } catch (err) {
     if (IS_DEV) console.warn('[PreloadStore] Error al guardar caché EPG:', err);
   }

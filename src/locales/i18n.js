@@ -7,6 +7,8 @@ import { initReactI18next } from 'react-i18next';
 import es from './es.json';
 import en from './en.json';
 import pt from './pt.json';
+import { storageGet } from '../platform/storage';
+import { getLanguage } from '../platform/runtime';
 
 const resources = {
   es: { translation: es },
@@ -17,12 +19,12 @@ const resources = {
 // Detección de idioma: localStorage > navigator > fallback 'es'
 const getStoredLanguage = () => {
   try {
-    const stored = localStorage.getItem('app_language');
+    const stored = storageGet('app_language');
     if (stored && (stored === 'es' || stored === 'en' || stored === 'pt')) return stored;
   } catch {
     // noop
   }
-  const browser = (navigator.language || navigator.userLanguage || '').toLowerCase();
+  const browser = getLanguage().toLowerCase();
   if (browser.startsWith('en')) return 'en';
   if (browser.startsWith('pt')) return 'pt';
   return 'es';

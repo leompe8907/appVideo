@@ -9,6 +9,7 @@ import { getActiveBrandConfig, isParentalControlEnabledForBrand } from '../confi
 import { rememberMainShellFocus } from '../utils/homeShellLastContentFocus';
 
 function rememberShellFocusFromActiveElement() {
+  if (typeof document === 'undefined') return;
   try {
     const active = document.activeElement;
     const main = document.querySelector('main.home-content[data-home-scope="content"]');
@@ -22,7 +23,7 @@ function rememberShellFocusFromActiveElement() {
 
 function captureGateFocusSnapshot() {
   rememberShellFocusFromActiveElement();
-  return document.activeElement;
+  return typeof document !== 'undefined' ? document.activeElement : null;
 }
 
 const initial = {

@@ -4,6 +4,7 @@
  */
 
 import { getActiveBrandConfig } from '../config/brandConfig';
+import { getStorage } from '../platform/storage';
 
 const MIGRATION_FLAG = '__migrated_v2';
 
@@ -58,11 +59,7 @@ export function brandStorageKey(brandId, key) {
 }
 
 function safeLocalStorage() {
-  try {
-    return typeof localStorage !== 'undefined' ? localStorage : null;
-  } catch {
-    return null;
-  }
+  return getStorage();
 }
 
 export function getBrandItem(brandId, key) {

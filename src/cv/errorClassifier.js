@@ -1,4 +1,5 @@
 import i18n from '../locales/i18n';
+import { isOnline } from '../platform/runtime';
 
 export const ERROR_TYPES = {
   NETWORK: 'NETWORK_ERROR',
@@ -49,7 +50,7 @@ export function classifyError(error, response = null) {
     retry = true;
   }
   // Error de red
-  else if (!navigator.onLine || error.name === 'NetworkError' || normalizedMessage.includes('network')) {
+  else if (!isOnline() || error.name === 'NetworkError' || normalizedMessage.includes('network')) {
     errorType = ERROR_TYPES.NETWORK;
     userMessage = t('errors.network');
     retry = true;

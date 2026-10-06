@@ -14,6 +14,7 @@ import {
   setBrandItem,
 } from './brandStorage';
 import { resetBrandStoresOnLogout } from './brandLogout';
+import { storageRemove } from '../platform/storage';
 
 const STORAGE_KEYS = {
   sessionId: 'sessionId',
@@ -164,7 +165,7 @@ export function getCredentialsWithFallback(fallbackKey, brand) {
 export function setLoggedOut(options = {}) {
   const id = brandId(options.brandId);
   try {
-    localStorage.removeItem('app_last_active_route');
+    storageRemove('app_last_active_route');
   } catch {
     // noop
   }

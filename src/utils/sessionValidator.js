@@ -113,7 +113,7 @@ export function startSessionValidator(brandConfig) {
     validateSession(brandConfig);
   }
 
-  validationIntervalId = window.setInterval(() => {
+  validationIntervalId = setInterval(() => {
     if (Date.now() - lastValidationTimestamp > VALIDATION_INTERVAL_MS) {
       validateSession(brandConfig);
     }
@@ -123,7 +123,7 @@ export function startSessionValidator(brandConfig) {
 export function stopSessionValidator() {
   if (validationIntervalId) {
     logger.log('[SessionValidator] Deteniendo validador de sesión.');
-    window.clearInterval(validationIntervalId);
+    clearInterval(validationIntervalId);
     validationIntervalId = null;
   }
 }

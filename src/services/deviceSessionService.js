@@ -44,6 +44,7 @@ import {
   setBrandItem,
 } from '../utils/brandStorage';
 import { detectTvVendorFromApis } from '../utils/tvPlatformApis';
+import { getUserAgent } from '../platform/runtime';
 import { refreshDeviceSessionAccessToken, resolveDeviceAuthBaseUrl } from './deviceAuthService';
 
 const STORAGE_KEYS = {
@@ -79,7 +80,7 @@ export function resolveDeviceType() {
   if (vendor === 'lg') return DEVICE_TYPE.LG;
   if (vendor === 'samsung') return DEVICE_TYPE.SAMSUNG;
 
-  const ua = String(typeof navigator !== 'undefined' ? navigator.userAgent : '').toLowerCase();
+  const ua = getUserAgent().toLowerCase();
   const uaLg = detectLgFromUserAgent(ua);
   const uaSamsung = detectSamsungFromUserAgent(ua);
   if (uaLg && !uaSamsung) return DEVICE_TYPE.LG;
@@ -100,11 +101,7 @@ export function resolveDeviceType() {
 export function resolveDeviceModel(deviceType) {
   if (deviceType === DEVICE_TYPE.LG) return 'LG webOS TV';
   if (deviceType === DEVICE_TYPE.SAMSUNG) return 'Samsung Tizen TV';
-  try {
-    return String(navigator.userAgent || '').slice(0, 200);
-  } catch {
-    return '';
-  }
+  return getUserAgent().slice(0, 200);
 }
 
 export function getStoredDeviceToken(brand) {

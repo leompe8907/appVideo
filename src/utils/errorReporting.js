@@ -34,6 +34,7 @@
  */
 
 import { detectTvVendorFromApis } from './tvPlatformApis';
+import { getStorage } from '../platform/storage';
 
 const MAX_STORED_ERRORS = 20;
 const MAX_REPORTS_PER_SESSION = 40; // corta ante tormentas de errores repetidos (ej. loop de render)
@@ -167,7 +168,7 @@ function getSessionTag() {
 
 function readStoredErrors() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getStorage()?.getItem(STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -180,7 +181,7 @@ function storeError(entry) {
     const list = readStoredErrors();
     list.push(entry);
     while (list.length > MAX_STORED_ERRORS) list.shift();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    getStorage()?.setItem(STORAGE_KEY, JSON.stringify(list));
   } catch {
     // localStorage puede fallar (cuota, modo privado, storage no persistente en algunos TV) — no bloquear.
   }
@@ -218,7 +219,7 @@ export function getStoredErrorReports() {
 
 export function clearStoredErrorReports() {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    getStorage()?.removeItem(STORAGE_KEY);
   } catch {
     // noop
   }

@@ -1,6 +1,8 @@
+import { storageGet } from '../platform/storage';
+
 const UDID_DEBUG =
   import.meta.env.DEV ||
-  (typeof localStorage !== 'undefined' && localStorage.getItem('udid_debug') === '1');
+  storageGet('udid_debug') === '1';
 
 function udidLog(...args) {
   if (!UDID_DEBUG) return;
