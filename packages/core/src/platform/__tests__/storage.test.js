@@ -84,9 +84,22 @@ describe('createAsyncBackedStorage', () => {
     await s.flush();
 
     expect(async.multiSet).toHaveBeenCalledTimes(1);
-    expect(async.multiSet).toHaveBeenCalledWith([['sessionId', 'def']]);
     expect(async.multiRemove).toHaveBeenCalledWith(['old']);
-    expect(Object.fromEntries(async.data)).toEqual({ brand: 'intv', sessionId: 'def' });
+    const { __appvideo_storage_keys: index, ...data } = Object.fromEntries(async.data);
+    expect(data).toEqual({ brand: 'intv', sessionId: 'def' });
+    expect(JSON.parse(index).sort()).toEqual(['brand', 'sessionId']);
+  });
+
+  it('si getAllKeys falla, carga las claves desde su índice', async () => {
+    const first = fakeAsyncStorage();
+    const s1 = await createAsyncBackedStorage(first, { flushDelayMs: 0 });
+    s1.setItem('intv.sessionId', 'abc');
+    await s1.flush();
+
+    first.getAllKeys.mockRejectedValue(new Error('no soportado'));
+    const s2 = await createAsyncBackedStorage(first, { onError: () => {} });
+    expect(s2.getItem('intv.sessionId')).toBe('abc');
+    expect(s2.length).toBe(1);
   });
 
   it('arranca vacío si AsyncStorage falla al cargar', async () => {

@@ -13,6 +13,9 @@
 
 let customBackend = null;
 
+/** Clave interna de `createAsyncBackedStorage` con la lista de claves guardadas. */
+const KEY_INDEX = '__appvideo_storage_keys';
+
 /** @param {Storage | null} backend */
 export function setStorageBackend(backend) {
   customBackend = backend || null;
@@ -134,17 +137,38 @@ export function createMemoryStorage(initial = {}, onChange) {
  *   multiSet: (pairs: [string, string][]) => Promise<void>,
  *   multiRemove: (keys: string[]) => Promise<void>,
  * }} asyncStorage
+ * Además de los datos guarda la lista de claves en `KEY_INDEX`, para poder
+ * cargar todo aunque `getAllKeys` falle (pasa con el AsyncStorage heredado de
+ * Vega cuando el almacén está vacío o recién creado).
+ *
  * @param {{ flushDelayMs?: number, onError?: (err: unknown) => void }} [options]
  */
 export async function createAsyncBackedStorage(asyncStorage, options = {}) {
   const { flushDelayMs = 50, onError } = options;
 
+  const readKeys = async () => {
+    try {
+      const keys = await asyncStorage.getAllKeys();
+      if (Array.isArray(keys)) return keys.filter((k) => k !== KEY_INDEX);
+    } catch (err) {
+      if (onError) onError(err);
+    }
+    try {
+      const [[, raw]] = await asyncStorage.multiGet([KEY_INDEX]);
+      const keys = raw ? JSON.parse(raw) : [];
+      return Array.isArray(keys) ? keys : [];
+    } catch (err) {
+      if (onError) onError(err);
+      return [];
+    }
+  };
+
   let initial = {};
   try {
-    const keys = await asyncStorage.getAllKeys();
+    const keys = await readKeys();
     if (keys.length > 0) {
       const pairs = await asyncStorage.multiGet(keys);
-      initial = Object.fromEntries(pairs.filter(([, v]) => v != null));
+      initial = Object.fromEntries(pairs.filter(([k, v]) => k !== KEY_INDEX && v != null));
     }
   } catch (err) {
     if (onError) onError(err);
@@ -161,6 +185,7 @@ export async function createAsyncBackedStorage(asyncStorage, options = {}) {
     const batch = Array.from(pending.entries());
     pending.clear();
     const toSet = batch.filter(([, v]) => v !== null);
+    toSet.push([KEY_INDEX, JSON.stringify(allKeys())]);
     const toRemove = batch.filter(([, v]) => v === null).map(([k]) => k);
     flushing = flushing
       .then(() => Promise.all([
@@ -173,7 +198,14 @@ export async function createAsyncBackedStorage(asyncStorage, options = {}) {
     return flushing;
   };
 
-  const storage = createMemoryStorage(initial, (key, value) => {
+  let storage = null;
+  const allKeys = () => {
+    const keys = [];
+    for (let i = 0; i < storage.length; i += 1) keys.push(storage.key(i));
+    return keys;
+  };
+
+  storage = createMemoryStorage(initial, (key, value) => {
     pending.set(key, value);
     if (!timer) timer = setTimeout(flush, flushDelayMs);
   });

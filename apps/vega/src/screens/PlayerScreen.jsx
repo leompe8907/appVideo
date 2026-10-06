@@ -7,6 +7,7 @@ import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
 import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
 import {devLog} from '../devLog';
+import {rememberChannel} from '../homeMemory';
 
 const t = (key) => i18n.t(key);
 const OVERLAY_MS = 4000;
@@ -55,6 +56,7 @@ export function PlayerScreen({params}) {
       return undefined;
     }
     let cancelled = false;
+    rememberChannel(index);
     setState('loading');
     showOverlay();
     const timer = setTimeout(() => {

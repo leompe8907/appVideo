@@ -8,6 +8,7 @@ import {FocusButton} from '../components/FocusButton';
 import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
 import {devLog} from '../devLog';
+import {getHomeMemory, rememberBouquet, rememberChannel, resetHomeMemory} from '../homeMemory';
 
 const t = (key) => i18n.t(key);
 
@@ -34,11 +35,12 @@ function BouquetItem({bouquet, selected, onSelect, theme, hasTVPreferredFocus}) 
   );
 }
 
-function ChannelCard({channel, onPress, theme}) {
+function ChannelCard({channel, onPress, theme, hasTVPreferredFocus}) {
   const [focused, setFocused] = useState(false);
   return (
     <Pressable
       onPress={onPress}
+      hasTVPreferredFocus={hasTVPreferredFocus}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={[
@@ -64,7 +66,14 @@ function ChannelCard({channel, onPress, theme}) {
 export function HomeScreen({navigate}) {
   const theme = getTheme();
   const [bouquets, setBouquets] = useState(null);
-  const [selected, setSelected] = useState(0);
+  const [initialMemory] = useState(getHomeMemory);
+  const [selected, setSelectedState] = useState(initialMemory.bouquetIndex);
+  const setSelected = (i) => {
+    rememberBouquet(i);
+    setSelectedState(i);
+  };
+  // Al volver del reproductor el foco va al canal que se estaba viendo.
+  const returnChannel = initialMemory.channelIndex;
   const [error, setError] = useState('');
 
   const load = React.useCallback(async () => {
@@ -73,6 +82,11 @@ export function HomeScreen({navigate}) {
     try {
       const list = sortBouquetsByPriority(await getBouquetsWithChannels({enableRetry: true}));
       devLog('home:', list.length, 'bouquets');
+      setSelectedState((i) => {
+        const next = i < list.length ? i : 0;
+        rememberBouquet(next);
+        return next;
+      });
       setBouquets(list);
     } catch (e) {
       devLog('home: error', e?.message);
@@ -87,6 +101,7 @@ export function HomeScreen({navigate}) {
 
   const logout = () => {
     userSession.setLoggedOut();
+    resetHomeMemory();
     navigate('login');
   };
 
@@ -110,7 +125,7 @@ export function HomeScreen({navigate}) {
             selected={i === selected}
             onSelect={() => setSelected(i)}
             theme={theme}
-            hasTVPreferredFocus={i === 0}
+            hasTVPreferredFocus={returnChannel == null && i === selected}
           />
         ))}
         <View style={styles.spacer} />
@@ -133,7 +148,11 @@ export function HomeScreen({navigate}) {
                 <ChannelCard
                   channel={item}
                   theme={theme}
-                  onPress={() => navigate('player', {channels: current.items, index})}
+                  hasTVPreferredFocus={returnChannel === index}
+                  onPress={() => {
+                    rememberChannel(index);
+                    navigate('player', {channels: current.items, index});
+                  }}
                 />
               )}
               contentContainerStyle={styles.grid}

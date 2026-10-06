@@ -7,6 +7,7 @@ import {LoginScreen} from './screens/LoginScreen';
 import {HomeScreen} from './screens/HomeScreen';
 import {PlayerScreen} from './screens/PlayerScreen';
 import {devLog} from './devLog';
+import {storageReady} from './bootstrap';
 
 const SCREENS = {
   splash: SplashScreen,
@@ -23,13 +24,20 @@ const BACK_TO = {player: 'home'};
  * de React Navigation de Amazon (Fase 2 del plan).
  */
 export function App() {
+  const [ready, setReady] = useState(false);
   const [route, setRoute] = useState({name: 'splash', params: undefined});
   const routeRef = useRef(route);
-  routeRef.current = route;
+  useEffect(() => {
+    routeRef.current = route;
+  }, [route]);
 
   const navigate = useCallback((name, params) => {
     devLog('navegar →', name);
     setRoute({name, params});
+  }, []);
+
+  useEffect(() => {
+    storageReady.finally(() => setReady(true));
   }, []);
 
   useEffect(() => {
@@ -49,7 +57,9 @@ export function App() {
   const Screen = SCREENS[route.name];
   return (
     <View style={styles.root}>
-      <Screen key={route.name} navigate={navigate} params={route.params} />
+      {ready ? (
+        <Screen key={route.name} navigate={navigate} params={route.params} />
+      ) : null}
     </View>
   );
 }

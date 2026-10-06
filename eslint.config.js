@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'apps/vega/build', 'apps/vega/src/w3cmedia/**']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -49,6 +49,23 @@ export default defineConfig([
         ),
       },
     },
+  },
+
+  // App Vega (React Native): globals de RN.
+  {
+    files: ['apps/vega/index.js', 'apps/vega/src/**/*.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        ...globals['shared-node-browser'],
+        __DEV__: 'readonly',
+        global: 'readonly',
+        require: 'readonly',
+      },
+    },
+  },
+  {
+    files: ['apps/vega/{babel,metro}.config.js', 'apps/vega/babel/**/*.js', 'apps/vega/scripts/**/*.js'],
+    languageOptions: { globals: globals.node, sourceType: 'commonjs' },
   },
 
   // Archivos Node (scripts/config) — permitir `process`, etc.
