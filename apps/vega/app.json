@@ -1,5 +1,5 @@
 {
   "//": "El nombre debe ser <id del paquete en manifest.toml>.main",
   "name": "com.bromteck.appvideo.main",
-  "displayName": "appVideo"
+  "displayName": "inTV Play"
 }

@@ -1,7 +1,7 @@
 schema-version = 1
 
 [package]
-title = "appVideo"
+title = "inTV Play"
 version = "0.1.0"
 id = "com.bromteck.appvideo"
 

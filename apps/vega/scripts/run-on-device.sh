@@ -10,7 +10,9 @@ source ~/vega/env >/dev/null
 DEVICE="${1:-192.168.4.218}:5555"
 BUILD_DIR="build/armv7-$(echo "${2:-Debug}" | tr "[:upper:]" "[:lower:]")"
 VDA="$(ls -d ~/vega/sdk/vega-sdk/main/*/bin/tools/vda | tail -1)"
-APP_ID="com.bromteck.appvideo.main"
+# Mismo id que scripts/brand-package.js (intv conserva el id base).
+BRAND="${VEGA_BRAND:-intv}"
+if [ "$BRAND" = "intv" ]; then APP_ID="com.bromteck.appvideo.main"; else APP_ID="com.bromteck.appvideo.${BRAND}.main"; fi
 
 "$VDA" connect "$DEVICE" >/dev/null
 "$VDA" -s "$DEVICE" reverse tcp:8765 tcp:8765 >/dev/null

@@ -13,6 +13,9 @@ source ~/vega/env >/dev/null
 
 node scripts/gen-env.js
 node scripts/gen-brand-assets.js
+# id y título del paquete según la marca; se vuelve a intv al terminar.
+node scripts/brand-package.js apply
+trap 'node scripts/brand-package.js restore >/dev/null' EXIT
 # El plugin de Babel incrusta valores del .env.local: sin esto Metro
 # reutilizaría transformaciones viejas.
 rm -rf "${TMPDIR:-/tmp}"/metro-* "${TMPDIR:-/tmp}"/haste-map-* 2>/dev/null || true
