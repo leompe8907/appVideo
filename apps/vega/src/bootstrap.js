@@ -3,7 +3,8 @@
  * de plataforma de `@appvideo/core` antes de que sus módulos lean el
  * almacenamiento o el entorno.
  */
-import {AppState, AsyncStorage} from 'react-native';
+import {AppState} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createAsyncBackedStorage,
   createMemoryStorage,
@@ -20,13 +21,6 @@ installDevErrorLogging();
 const seed = __DEV__ ? DEV_STORAGE_SEED : {};
 
 // Hasta que cargue AsyncStorage (asíncrono) se usa memoria.
-//
-// TODO: el AsyncStorage heredado de react-native-kepler funciona durante la
-// ejecución pero en el stick no conserva los datos al reiniciar la app (y su
-// getAllKeys falla). Amazon recomienda
-// @amazon-devices/react-native-async-storage__async-storage: instalarlo (hace
-// falta red) y reemplazar el import de AsyncStorage de arriba. La sesión de
-// desarrollo (dev-session.local.json) cubre las pruebas mientras tanto.
 setStorageBackend(createMemoryStorage(seed));
 
 /** Se resuelve cuando el almacenamiento persistente está listo (App espera esto). */
