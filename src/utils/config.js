@@ -2,6 +2,8 @@
  * Helpers para acceder a configuraciones organizadas por secciones
  */
 
+import { onBrandCacheInvalidated } from '@appvideo/core/config/brandConfig';
+
 /**
  * Obtiene una propiedad de UI
  * @param {Object} brandConfig - Configuración de la marca
@@ -74,6 +76,8 @@ export function invalidateHomeBackgroundCache() {
   homeBackgroundProbeToken += 1;
   homeBackgroundResolvedUrlByBrand.clear();
 }
+
+onBrandCacheInvalidated(invalidateHomeBackgroundCache);
 
 /**
  * Prueba `background.{ext}` en orden y fija una sola `--home-background-image`.

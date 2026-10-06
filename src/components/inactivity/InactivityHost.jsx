@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useBrand } from '../../contexts/BrandContext';
-import { usePreload } from '../../store/usePreload';
-import { useInactivityStore } from '../../store/inactivityStore';
-import * as userSession from '../../utils/userSession';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { useInactivityStore } from '@appvideo/core/store/inactivityStore';
+import * as userSession from '@appvideo/core/utils/userSession';
 import {
   resolveInactivityGraceSec,
   resolveInactivityTimeoutSec,

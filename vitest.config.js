@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -6,9 +7,14 @@ import { defineConfig } from 'vitest/config';
  * que no aplica y solo agregaría riesgo/ruido a una corrida de tests unitarios.
  */
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@appvideo/core': fileURLToPath(new URL('./packages/core/src', import.meta.url)),
+    },
+  },
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.test.{js,jsx}'],
+    include: ['src/**/*.test.{js,jsx}', 'packages/*/src/**/*.test.{js,jsx}'],
     globals: false,
   },
 });

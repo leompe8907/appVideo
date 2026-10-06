@@ -3,9 +3,9 @@ import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useDeviceTime } from '../../hooks/useDeviceTime';
 import { useHomeHeaderState } from '../../contexts/homeHeaderContext';
-import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
-import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
-import { resolveShellMode, resolveSubheaderActivado } from '../../config/brandConfig';
+import { getCurrentEpgEvent } from '@appvideo/core/utils/epgCurrentEvent';
+import { parseEpgDateToMs, formatHHmmFromMs } from '@appvideo/core/utils/epgTime';
+import { resolveShellMode, resolveSubheaderActivado } from '@appvideo/core/config/brandConfig';
 
 /**
  * Cabecera de Inicio: tres zonas horizontales (izquierda, centro, derecha).

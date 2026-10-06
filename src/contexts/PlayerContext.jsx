@@ -3,11 +3,11 @@ import { useDevice } from './DeviceContext';
 import { useBrand } from './BrandContext';
 import { createEngine } from '../player/engines/createEngine';
 import { DEFAULT_SEEK_STEP_SECONDS, PLAYER_ENGINE_EVENTS } from '../player/engines/contracts';
-import panaccessService from '../services/panaccessService';
-import telemetryService from '../services/telemetryService';
-import * as userSession from '../utils/userSession';
+import panaccessService from '@appvideo/core/services/panaccessService';
+import telemetryService from '@appvideo/core/services/telemetryService';
+import * as userSession from '@appvideo/core/utils/userSession';
 import { isLicenseInUseError } from '../utils/licenseInUse';
-import { resolveBrandId } from '../utils/brandStorage';
+import { resolveBrandId } from '@appvideo/core/utils/brandStorage';
 import {
   applySavedTrackPreferences,
   getSavedTrackPreferences,

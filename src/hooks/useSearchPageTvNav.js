@@ -4,7 +4,7 @@ import { useDevice } from '../contexts/DeviceContext';
 import { TV_ACTION } from '../utils/tvRemote';
 import { navigationRouter } from '../navigation/NavigationRouter';
 import { focusElementSafe, scrollIntoViewWithinAncestors } from '../navigation/spatialNavigation';
-import { useSearchSessionStore } from '../store/searchSessionStore';
+import { useSearchSessionStore } from '@appvideo/core/store/searchSessionStore';
 
 const TARGET_PATH = '/home/buscador';
 const INPUT_ID = 'search-input-tv';

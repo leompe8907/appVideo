@@ -4,10 +4,10 @@ import {
   filterBouquetsForInicio,
   filterBouquetsForTvRadioServices,
   sortBouquetsByPriority,
-} from '../../services/tvDataService';
+} from '@appvideo/core/services/tvDataService';
 import { useDevice } from '../../contexts/DeviceContext';
-import { usePreload } from '../../store/usePreload';
-import { resolveBouquetLayoutForDevice } from '../../utils/bouquetLayoutConfig';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { resolveBouquetLayoutForDevice } from '@appvideo/core/utils/bouquetLayoutConfig';
 import {
   BouquetHorizontalGrid,
   BouquetGridVertical,

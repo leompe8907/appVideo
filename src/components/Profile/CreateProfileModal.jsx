@@ -20,7 +20,7 @@ import { FocusableInput } from '../navigation/FocusableInput';
 import { FocusableButton } from '../navigation/FocusableButton';
 import { AvatarOption } from './AvatarOption';
 
-import panaccessService from '../../services/panaccessService';
+import panaccessService from '@appvideo/core/services/panaccessService';
 import { getProfileAvatars } from '../../constants/images';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusElementSafe } from '../../navigation/spatialNavigation';

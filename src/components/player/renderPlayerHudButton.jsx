@@ -1,4 +1,4 @@
-import { PLAYER_HUD_BUTTON_KEYS } from '../../config/playerHudLayout.js';
+import { PLAYER_HUD_BUTTON_KEYS } from '@appvideo/core/config/playerHudLayout.js';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';
 import { PLAYER_FOCUS_IDS } from '../../hooks/usePlayerHudTvNavigation';

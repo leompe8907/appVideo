@@ -1,4 +1,4 @@
-import { getBrandAsset } from '../utils/assetLoader';
+import { getBrandAsset } from '@appvideo/core/utils/assetLoader';
 
 /**
  * Avatares de perfil (pantalla "¿Quién está mirando?" / modal de creación).

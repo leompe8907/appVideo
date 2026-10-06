@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import i18n from '../locales/i18n';
+import i18n from '@appvideo/core/locales/i18n';
 import { reportError } from '../utils/errorReporting';
 
 /**

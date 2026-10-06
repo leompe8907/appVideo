@@ -1,6 +1,6 @@
-import * as userSession from './userSession';
-import { checkSessionAndReactivateIfNeeded, clearSessionBeforeNewLogin } from '../services/loginFlow';
-import logger from './logger';
+import * as userSession from '@appvideo/core/utils/userSession';
+import { checkSessionAndReactivateIfNeeded, clearSessionBeforeNewLogin } from '@appvideo/core/services/loginFlow';
+import logger from '@appvideo/core/utils/logger';
 
 const VALIDATION_INTERVAL_MS = 5 * 60 * 1000;
 let validationIntervalId = null;

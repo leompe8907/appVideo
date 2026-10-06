@@ -4,14 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { MessageModal } from '../components/MessageModal';
 import AppIcon from '../components/AppIcon';
-import panaccessService from '../services/panaccessService';
+import panaccessService from '@appvideo/core/services/panaccessService';
 import { isLicenseInUseError } from '../utils/licenseInUse';
 import {
   setLoggedOut,
   setLicenses as storeLicenses,
   getActiveLicense,
   setActiveLicense,
-} from '../utils/userSession';
+} from '@appvideo/core/utils/userSession';
 import { useDevice } from '../contexts/DeviceContext';
 import {
   SMARTCARD_FOCUS_IDS,
@@ -27,7 +27,7 @@ import {
   getLicenseProducts,
   filterLicensesForDisplay,
   findLicenseByKey,
-} from '../utils/licenseProducts';
+} from '@appvideo/core/utils/licenseProducts';
 
 function getLicensesArray(response) {
   if (!response) return [];

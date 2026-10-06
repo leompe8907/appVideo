@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import { BRANDS } from '../src/config/brands.js';
+import { BRANDS } from '../packages/core/src/config/brands.js';
 
 execSync('node scripts/check-brand-secrets.js', { stdio: 'inherit' });
 

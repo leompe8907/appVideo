@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import QRCode from 'qrcode';
 import { useBrand } from '../contexts/BrandContext';
-import { isParentalControlEnabledForBrand } from '../config/brandConfig';
+import { isParentalControlEnabledForBrand } from '@appvideo/core/config/brandConfig';
 import { useDevice } from '../contexts/DeviceContext';
 import { useDeviceTime } from '../hooks/useDeviceTime';
 import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
@@ -12,10 +12,10 @@ import LinkedDevicesPanel from '../components/account/LinkedDevicesPanel';
 import ChangePasswordPanel from '../components/account/ChangePasswordPanel';
 import CloseAccountPanel from '../components/account/CloseAccountPanel';
 import { OsmsPage } from './OsmsPage';
-import { isDeviceSessionEnabled } from '../services/deviceAuthService';
-import { clearSessionBeforeNewLogin } from '../services/loginFlow';
+import { isDeviceSessionEnabled } from '@appvideo/core/services/deviceAuthService';
+import { clearSessionBeforeNewLogin } from '@appvideo/core/services/loginFlow';
 import { exitAppBestEffort } from '../utils/tvNavigation';
-import { getActiveLicense, getCredentials } from '../utils/userSession';
+import { getActiveLicense, getCredentials } from '@appvideo/core/utils/userSession';
 import '../styles/pages/_mi-cuenta.scss';
 
 /**

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
-import { usePreload } from '../../store/usePreload';
+import { usePreload } from '@appvideo/core/store/usePreload';
 import { PreloadScreen } from './PreloadScreen';
 
 /**

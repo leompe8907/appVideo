@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
-import { useOsmsStore } from '../store/osmsStore';
+import { useOsmsStore } from '@appvideo/core/store/osmsStore';
 import {
   captureInitialUnreadIds,
   formatCardDate,

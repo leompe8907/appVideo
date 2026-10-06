@@ -3,7 +3,7 @@
  * Orden por LCN ascendente; canales sin número (lcn 0) al final.
  */
 
-import { dedupeStreams } from './channelId';
+import { dedupeStreams } from '@appvideo/core/utils/channelId';
 
 export function buildZappingChannelList(streams) {
   const raw = dedupeStreams(Array.isArray(streams) ? streams : []);

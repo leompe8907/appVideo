@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { usePlayer } from '../contexts/PlayerContext';
-import { usePreload } from '../store/usePreload';
+import { usePreload } from '@appvideo/core/store/usePreload';
 import { useParentalGate } from '../hooks/useParentalGate';
 import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import { navigationRouter } from '../navigation/NavigationRouter';

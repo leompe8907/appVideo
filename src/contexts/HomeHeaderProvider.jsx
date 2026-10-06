@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { HomeHeaderDispatchContext, HomeHeaderStateContext } from './homeHeaderContext';
-import { getChannelStableId } from '../utils/channelId';
+import { getChannelStableId } from '@appvideo/core/utils/channelId';
 
 export function HomeHeaderProvider({ children }) {
   const [focusedChannel, setFocusedChannelState] = useState(null);

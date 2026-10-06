@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useBrand } from '../../contexts/BrandContext';
 import { usePlayer } from '../../contexts/PlayerContext';
-import { usePreload } from '../../store/usePreload';
+import { usePreload } from '@appvideo/core/store/usePreload';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import VodCard from './VodCard';
 import VodSeeMoreCard from './VodSeeMoreCard';

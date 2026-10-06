@@ -5,16 +5,16 @@ import { useNavigate } from 'react-router-dom';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { resolveLiveWindowFromEpgItems } from '../../utils/epgCurrentEvent';
-import { usePreload } from '../../store/usePreload';
-import panaccessService from '../../services/panaccessService';
+import { resolveLiveWindowFromEpgItems } from '@appvideo/core/utils/epgCurrentEvent';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import panaccessService from '@appvideo/core/services/panaccessService';
 import { useBrand } from '../../contexts/BrandContext';
-import { isParentalControlEnabledForBrand } from '../../config/brandConfig';
+import { isParentalControlEnabledForBrand } from '@appvideo/core/config/brandConfig';
 import AppIcon from '../AppIcon';
 import EpgEventModal from '../epg/EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
-import { useParental } from '../../store/useParental';
-import { getChannelStableId } from '../../utils/channelId';
+import { useParental } from '@appvideo/core/store/useParental';
+import { getChannelStableId } from '@appvideo/core/utils/channelId';
 import { buildZappingChannelList } from '../../utils/channelZappingList';
 import {
   usePlayerHudTvNavigation,

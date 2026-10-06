@@ -15,11 +15,11 @@ import { MessageModal } from '../components/MessageModal';
 import { FocusableButton } from '../components/navigation/FocusableButton';
 import AppIcon from '../components/AppIcon';
 import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
-import panaccessService from '../services/panaccessService';
-import { setLoggedOut } from '../utils/userSession';
-import { filterProfileSmartCards } from '../utils/licenseProducts';
+import panaccessService from '@appvideo/core/services/panaccessService';
+import { setLoggedOut } from '@appvideo/core/utils/userSession';
+import { filterProfileSmartCards } from '@appvideo/core/utils/licenseProducts';
 import { getProfileAvatars } from '../constants/images';
-import { useActiveProfile } from '../store/useActiveProfile';
+import { useActiveProfile } from '@appvideo/core/store/useActiveProfile';
 import '../styles/pages/_profile.scss';
 
 /**

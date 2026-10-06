@@ -5,7 +5,7 @@ import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useHomeNavItems } from '../hooks/useHomeNavItems';
 import { HomeNavIcon } from './HomeNavIcon';
-import { resolveTopbarAreas } from '../config/brandConfig';
+import { resolveTopbarAreas } from '@appvideo/core/config/brandConfig';
 import { TV_ACTION } from '../utils/tvRemote';
 import { navigationRouter } from '../navigation/NavigationRouter';
 import { moveFocus } from '../navigation/spatialNavigation';

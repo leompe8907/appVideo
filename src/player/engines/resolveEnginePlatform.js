@@ -2,7 +2,7 @@ import {
   detectTvVendorFromApis,
   hasLgTvRuntime,
   hasSamsungTvRuntime,
-} from '../../utils/tvPlatformApis.js';
+} from '@appvideo/core/utils/tvPlatformApis.js';
 
 export const ENGINE_PLATFORM = Object.freeze({
   WEB: 'web',

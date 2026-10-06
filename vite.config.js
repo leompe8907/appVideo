@@ -1,10 +1,11 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import legacy from '@vitejs/plugin-legacy'
 import { brandPublicAssetsPlugin } from './vite/brandPublicAssets.js'
-import { BRANDS } from './src/config/brands.js'
-import { resolveBrandTokenFromProcessEnv, resolveBrandDrmFromProcessEnv } from './src/config/resolveBrandToken.js'
-import { applyBrandRuntimePolicyFromEnv } from './src/config/applyBrandRuntimePolicy.js'
+import { BRANDS } from './packages/core/src/config/brands.js'
+import { resolveBrandTokenFromProcessEnv, resolveBrandDrmFromProcessEnv } from './packages/core/src/config/resolveBrandToken.js'
+import { applyBrandRuntimePolicyFromEnv } from './packages/core/src/config/applyBrandRuntimePolicy.js'
 import { ensureLegacyEs5Plugin } from './vite/ensureLegacyEs5Plugin.js'
 
 function singleBrandConfigPlugin(brand, env) {
@@ -17,7 +18,7 @@ function singleBrandConfigPlugin(brand, env) {
       if (!brand) return null;
 
       const normalizedId = id.replaceAll('\\', '/');
-      if (!normalizedId.endsWith('/src/config/brands.js')) return null;
+      if (!normalizedId.endsWith('/packages/core/src/config/brands.js')) return null;
 
       if (!selectedBrand) {
         this.warn(`[single-brand-config] No existe configuración para "${brand}".`);
@@ -129,6 +130,12 @@ export default defineConfig(({ mode }) => {
         // Asegurar que el output sea ES5-compatible para el chunk legacy
         ecma: 5,
         safari10: true,
+      },
+    },
+
+    resolve: {
+      alias: {
+        '@appvideo/core': fileURLToPath(new URL('./packages/core/src', import.meta.url)),
       },
     },
 

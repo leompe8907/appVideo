@@ -33,7 +33,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ConfirmModal from '../ConfirmModal';
-import { requestAccountDeletion } from '../../services/accountSecurityService';
+import { requestAccountDeletion } from '@appvideo/core/services/accountSecurityService';
 // Los estilos de este panel viven en styles/pages/_mi-cuenta.scss /
 // styles/components/_account-security.scss (importados desde
 // MiCuentaPage.jsx), no acá -- ver el comentario en ese archivo sobre por

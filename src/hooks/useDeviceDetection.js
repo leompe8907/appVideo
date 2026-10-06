@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   hasLgTvRuntime,
   hasSamsungTvRuntime,
-} from '../utils/tvPlatformApis';
+} from '@appvideo/core/utils/tvPlatformApis';
 
 /**
  * Hook para detectar el tipo de dispositivo (TV vs PC)

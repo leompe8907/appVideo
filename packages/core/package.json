@@ -1,0 +1,20 @@
+{
+  "name": "@appvideo/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Código compartido sin DOM (servicios, stores, marcas, i18n) para la web y la app Vega.",
+  "exports": {
+    "./*": "./src/*"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.95.2",
+    "crypto-js": "^4.2.0",
+    "i18next": "^24.2.3",
+    "react-i18next": "^15.7.4",
+    "zustand": "^5.0.12"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  }
+}

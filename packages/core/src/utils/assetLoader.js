@@ -58,8 +58,12 @@ export function getBrandImageWithFallback(brand, imageName) {
  * @returns {Promise<HTMLImageElement>}
  */
 export function preloadImage(src) {
+  const ImageCtor = globalThis.Image;
+  if (typeof ImageCtor !== 'function') {
+    return Promise.reject(new Error('Image no disponible en esta plataforma'));
+  }
   return new Promise((resolve, reject) => {
-    const img = new Image();
+    const img = new ImageCtor();
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;

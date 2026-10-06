@@ -12,7 +12,7 @@ import {
   setChannelData,
   setPlayerAudioLang,
   setPlayerSubtitleLang,
-} from './userPreferences';
+} from '@appvideo/core/utils/userPreferences';
 
 const PROP_AUDIO = 'audio';
 const PROP_SUBTITLES = 'subtitles';

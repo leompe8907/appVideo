@@ -1,7 +1,7 @@
 import {
   DEFAULT_PLAYER_HUD_LAYOUT,
   VALID_PLAYER_HUD_BUTTON_KEYS,
-} from '../config/playerHudLayout.js';
+} from '@appvideo/core/config/playerHudLayout.js';
 
 /** Tipos de reproducción en `hudLayout.overrides`. */
 export const PLAYER_HUD_PLAYBACK_TYPES = Object.freeze(['service', 'vod', 'catchup']);

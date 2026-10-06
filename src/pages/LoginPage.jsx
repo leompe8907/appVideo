@@ -8,21 +8,21 @@ import { useDevice } from '../contexts/DeviceContext';
 import { FocusableInput } from '../components/navigation/FocusableInput';
 import { FocusableButton } from '../components/navigation/FocusableButton';
 import { MessageModal } from '../components/MessageModal';
-import { resolvePostLoginRoute } from '../utils/navigation';
-import { clearSessionBeforeNewLogin, loginAndActivateLicense } from '../services/loginFlow';
-import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
+import { resolvePostLoginRoute } from '@appvideo/core/utils/navigation';
+import { clearSessionBeforeNewLogin, loginAndActivateLicense } from '@appvideo/core/services/loginFlow';
+import { classifyError, ERROR_TYPES } from '@appvideo/core/cv/errorClassifier';
 import { useUdidLoginFlow } from '../hooks/useUdidLoginFlow';
 import { LOGIN_FOCUS_IDS, useLoginTvNavigation } from '../hooks/useLoginTvNavigation';
 import { focusManager, createZoneId } from '../navigation/FocusManager';
 import { getFacebookSocialPostUrl, getGoogleSocialPostUrl } from '../utils/socialAuthUrls';
-import { exchangeGoogleCredentialWithBackend } from '../services/googleSocialLogin';
+import { exchangeGoogleCredentialWithBackend } from '@appvideo/core/services/googleSocialLogin';
 import {
   exchangeFacebookAccessTokenWithBackend,
   getFacebookAccessToken,
 } from '../services/facebookSocialLogin';
-import { isDeviceSessionEnabled } from '../services/deviceAuthService';
-import { requestPasswordReset } from '../services/accountSecurityService';
-import { preloadImage } from '../utils/assetLoader';
+import { isDeviceSessionEnabled } from '@appvideo/core/services/deviceAuthService';
+import { requestPasswordReset } from '@appvideo/core/services/accountSecurityService';
+import { preloadImage } from '@appvideo/core/utils/assetLoader';
 import { LOGIN_SOCIAL_LOGOS } from '../constants/login/socialLogos.js';
 import '../styles/components/_login.scss';
 

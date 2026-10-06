@@ -1,14 +1,14 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlayer } from '../../contexts/PlayerContext';
-import { usePreload } from '../../store/usePreload';
+import { usePreload } from '@appvideo/core/store/usePreload';
 import { useBrand } from '../../contexts/BrandContext';
 import { useNavigate } from 'react-router-dom';
-import panaccessService from '../../services/panaccessService';
+import panaccessService from '@appvideo/core/services/panaccessService';
 import EpgEventModal from './EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
-import { useEpgReminderStore } from '../../store/epgReminderStore';
-import { getChannelStableId, dedupeStreams } from '../../utils/channelId';
+import { useEpgReminderStore } from '@appvideo/core/store/epgReminderStore';
+import { getChannelStableId, dedupeStreams } from '@appvideo/core/utils/channelId';
 import { useTvInitialFocus } from '../../hooks/useTvInitialFocus';
 import { asMs, clamp, computeLiveProgressStyle, computeSlots, formatHHmm } from './epgSlots';
 import '../epg/epg-common.scss';

@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const brandsPath = join(__dirname, '../src/config/brands.js');
+const brandsPath = join(__dirname, '../packages/core/src/config/brands.js');
 
 const source = readFileSync(brandsPath, 'utf8');
 
@@ -39,7 +39,7 @@ source.split('\n').forEach((line, lineIndex) => {
 });
 
 if (violations.length > 0) {
-  console.error('❌ Se detectaron valores hardcodeados en src/config/brands.js:');
+  console.error('❌ Se detectaron valores hardcodeados en packages/core/src/config/brands.js:');
   violations.forEach((v, i) => {
     console.error(`   ${i + 1}. ${v.field} literal en línea ${v.line} (${v.value})`);
   });

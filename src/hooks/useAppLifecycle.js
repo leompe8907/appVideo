@@ -2,12 +2,12 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
-import { isAuthenticated, getCredentials, getCredentialsWithFallback } from '../utils/userSession';
+import { isAuthenticated, getCredentials, getCredentialsWithFallback } from '@appvideo/core/utils/userSession';
 import { validateSessionIfDue } from '../utils/sessionValidator';
-import { isDeviceSessionEnabled } from '../services/deviceAuthService';
-import { isDeviceSessionActive, setOnDeviceSessionUnexpectedClose } from '../services/deviceSessionService';
-import { maybeEstablishDeviceSession } from '../services/loginFlow';
-import { syncPreferencesFromBackend } from '../services/preferencesSyncService';
+import { isDeviceSessionEnabled } from '@appvideo/core/services/deviceAuthService';
+import { isDeviceSessionActive, setOnDeviceSessionUnexpectedClose } from '@appvideo/core/services/deviceSessionService';
+import { maybeEstablishDeviceSession } from '@appvideo/core/services/loginFlow';
+import { syncPreferencesFromBackend } from '@appvideo/core/services/preferencesSyncService';
 
 /** Tiempo máximo en milisegundos en background antes de forzar revalidación silenciosa de token (30 min) */
 const MAX_BACKGROUND_MS = 30 * 60 * 1000;

@@ -8,8 +8,8 @@ import { useTranslation } from 'react-i18next';
 
 import { useDevice } from '../../contexts/DeviceContext';
 import { usePlayer } from '../../contexts/PlayerContext';
-import panaccessService from '../../services/panaccessService';
-import { getVodImageUrl } from '../../services/vodService';
+import panaccessService from '@appvideo/core/services/panaccessService';
+import { getVodImageUrl } from '@appvideo/core/services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';

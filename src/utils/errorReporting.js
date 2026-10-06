@@ -33,8 +33,8 @@
  * mandado al backend.
  */
 
-import { detectTvVendorFromApis } from './tvPlatformApis';
-import { getStorage } from '../platform/storage';
+import { detectTvVendorFromApis } from '@appvideo/core/utils/tvPlatformApis';
+import { getStorage } from '@appvideo/core/platform/storage';
 
 const MAX_STORED_ERRORS = 20;
 const MAX_REPORTS_PER_SESSION = 40; // corta ante tormentas de errores repetidos (ej. loop de render)
@@ -106,9 +106,9 @@ async function sendToDiagnosticsBackend(entry) {
     if (!apiKey) return;
 
     const [{ getActiveBrandConfig }, { resolveBrandId }, deviceAuth] = await Promise.all([
-      import('../config/brandConfig'),
-      import('./brandStorage'),
-      import('../services/deviceAuthService'),
+      import('@appvideo/core/config/brandConfig'),
+      import('@appvideo/core/utils/brandStorage'),
+      import('@appvideo/core/services/deviceAuthService'),
     ]);
 
     const brandConfig = getActiveBrandConfig();

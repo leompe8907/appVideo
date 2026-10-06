@@ -1,4 +1,4 @@
-import { getStorage } from '../platform/storage';
+import { getStorage } from '@appvideo/core/platform/storage';
 /**
  * Memoria de volumen/mute del reproductor, global por marca (no por canal --
  * a diferencia de audio/subtítulos en `playerTrackPreferences.js`, el

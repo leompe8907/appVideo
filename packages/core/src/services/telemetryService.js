@@ -1,3 +1,4 @@
+/* global window, document */ // sólo tras comprobar `typeof`: fuera de la web no existen
 /**
  * Telemetría de reproducción (canal en vivo / VOD / catchup) hacia Panaccess.
  *

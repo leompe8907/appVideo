@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useBrand } from '../contexts/BrandContext';
-import { useOsmsStore } from '../store/osmsStore';
-import { isAuthenticated } from '../utils/userSession';
+import { useOsmsStore } from '@appvideo/core/store/osmsStore';
+import { isAuthenticated } from '@appvideo/core/utils/userSession';
 
 /**
  * Polling de OSMS mientras estás en /home/*.

@@ -4,7 +4,7 @@
  */
 
 
-import { getVodImageUrl } from '../../services/vodService';
+import { getVodImageUrl } from '@appvideo/core/services/vodService';
 
 export function VodCard({ item, onSelect, baseUrl }) {
   const posterUrl =

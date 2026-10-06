@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getUdid } from '../cv/udid';
+import { getUdid } from '@appvideo/core/cv/udid';
 import {
   decryptEncryptedCredentials,
   generateEphemeralKeyPair,
   encodePublicKeyForHeader,
-} from '../services/udidCrypto';
-import { setBrandItem } from '../utils/brandStorage';
+} from '@appvideo/core/services/udidCrypto';
+import { setBrandItem } from '@appvideo/core/utils/brandStorage';
 
 const DEFAULT_RECONNECT_MS = [3000, 6000, 10000];
 const UDID_DEBUG =

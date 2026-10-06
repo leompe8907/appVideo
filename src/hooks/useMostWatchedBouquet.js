@@ -24,12 +24,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
-import { usePreload } from '../store/usePreload';
+import { usePreload } from '@appvideo/core/store/usePreload';
 import {
   buildMostWatchedItems,
   getTopChannelsGlobal,
   isTelemetryEnabled,
-} from '../services/mostWatchedChannelsService';
+} from '@appvideo/core/services/mostWatchedChannelsService';
 
 export function useMostWatchedBouquet() {
   const { t } = useTranslation();

@@ -2,10 +2,10 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
-import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
-import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
-import { useParental } from '../../store/useParental';
-import { getChannelStableId } from '../../utils/channelId';
+import { getCurrentEpgEvent } from '@appvideo/core/utils/epgCurrentEvent';
+import { parseEpgDateToMs, formatHHmmFromMs } from '@appvideo/core/utils/epgTime';
+import { useParental } from '@appvideo/core/store/useParental';
+import { getChannelStableId } from '@appvideo/core/utils/channelId';
 import { proxyImageUrl } from '../../utils/imageProxy';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
 import {
@@ -17,7 +17,7 @@ import {
   getChannelLayoutVariant,
   resolveHorizontalGridMode,
   resolveVerticalGridColumns,
-} from '../../utils/bouquetLayoutConfig';
+} from '@appvideo/core/utils/bouquetLayoutConfig';
 import { useChunkedList } from '../../hooks/useChunkedList';
 import { EmblaHorizontalRail } from '../navigation/EmblaHorizontalRail';
 import { groupItemsIntoColumnMajorColumns } from '../../utils/horizontalBouquetGrid';

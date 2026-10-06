@@ -26,8 +26,8 @@ import {
   changePassword,
   confirmPasswordChangeOtp,
   requestPasswordChangeOtp,
-} from '../../services/accountSecurityService';
-import { clearSessionBeforeNewLogin } from '../../services/loginFlow';
+} from '@appvideo/core/services/accountSecurityService';
+import { clearSessionBeforeNewLogin } from '@appvideo/core/services/loginFlow';
 // Los estilos de este panel viven en styles/pages/_mi-cuenta.scss (importado
 // desde MiCuentaPage.jsx), no acá -- ver el comentario en ese archivo sobre
 // por qué (chunk de CSS separado que se rompía en el build de producción).

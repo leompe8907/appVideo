@@ -1,3 +1,4 @@
+/* global window, document */ // sólo tras comprobar `typeof`: fuera de la web no existen
 /**
  * Carga perezosa del SDK de Google reCAPTCHA v3 y generación de tokens por
  * acción -- usado por `accountSecurityService.js` (`requestPasswordReset`,

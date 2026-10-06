@@ -1,3 +1,4 @@
+/* global window, document */ // sólo tras comprobar `typeof`: fuera de la web no existen
 /**
  * Información y eventos del entorno de ejecución que el código compartido
  * necesita sin depender del DOM: user agent, idioma, conectividad, parámetros

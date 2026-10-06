@@ -1,4 +1,4 @@
-import { useParentalGateStore } from '../store/parentalGateStore';
+import { useParentalGateStore } from '@appvideo/core/store/parentalGateStore';
 
 /**
  * Hook thin-wrapper sobre un store global.

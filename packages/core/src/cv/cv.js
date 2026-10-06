@@ -1,3 +1,4 @@
+/* global window, document */ // sólo tras comprobar `typeof`: fuera de la web no existen
 import CryptoJS from "crypto-js";
 import getUdid from "./udid";
 import { createTimeoutPromise, classifyError } from "./errorClassifier";

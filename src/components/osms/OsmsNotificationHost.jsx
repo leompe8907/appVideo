@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
-import { useOsmsStore } from '../../store/osmsStore';
+import { useOsmsStore } from '@appvideo/core/store/osmsStore';
 import { previewText } from '../../utils/osmsFormat';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';

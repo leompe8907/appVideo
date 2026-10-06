@@ -3,16 +3,17 @@
  * Compatibilidad: Samsung Tizen 4/5 (~2019), LG webOS 4/5 (~2019)
  */
 
-import './locales/i18n';
+import '@appvideo/core/locales/i18n';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { BrandProvider } from './contexts/BrandContext';
 import { DeviceProvider } from './contexts/DeviceContext';
-import { AppQueryProvider } from './query/QueryProvider';
+import { AppQueryProvider } from '@appvideo/core/query/QueryProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import App from './App';
 import { runCompatCheck, showCompatError } from './utils/compatCheck';
 import { installGlobalErrorReporting } from './utils/errorReporting';
+import { registerParentalGateWebFocus } from './utils/parentalGateWebFocus';
 
 import './styles/main.scss';
 
@@ -20,6 +21,7 @@ import './styles/main.scss';
 // player, EPG, etc). En TV no hay devtools accesibles, así que esta es la
 // única forma de enterarse de que algo rompió en producción.
 installGlobalErrorReporting();
+registerParentalGateWebFocus();
 
 // Foco visible (PC + 10-foot): aplica/quita clase `.focused` automáticamente.
 // Controlado por bandera: html[data-focus="on|off"] (setea BrandTheme).

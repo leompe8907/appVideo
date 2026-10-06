@@ -12,7 +12,7 @@ import {
   useVodStatus,
   useEpgError,
   useVodError,
-} from '../../store/preloadStore';
+} from '@appvideo/core/store/preloadStore';
 
 const TIPS_INTERVAL_MS = 4000;
 

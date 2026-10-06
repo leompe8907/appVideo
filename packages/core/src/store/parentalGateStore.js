@@ -6,24 +6,30 @@ import { normalizeBrParentalRating } from '../utils/parentalRatingBR';
 import { getCurrentEpgEvent } from '../utils/epgCurrentEvent';
 import i18n from '../locales/i18n';
 import { getActiveBrandConfig, isParentalControlEnabledForBrand } from '../config/brandConfig';
-import { rememberMainShellFocus } from '../utils/homeShellLastContentFocus';
 
-function rememberShellFocusFromActiveElement() {
-  if (typeof document === 'undefined') return;
-  try {
-    const active = document.activeElement;
-    const main = document.querySelector('main.home-content[data-home-scope="content"]');
-    if (active instanceof HTMLElement && main instanceof HTMLElement && main.contains(active)) {
-      rememberMainShellFocus(active);
-    }
-  } catch {
-    // noop
-  }
+/**
+ * Cómo guardar y devolver el foco al abrir/cerrar el gate. Cada plataforma
+ * registra el suyo (la web: `registerParentalGateWebFocus`); sin registrar,
+ * no se toca el foco.
+ */
+let focusAdapter = {
+  capture: () => null,
+  restore: (el) => {
+    if (el && typeof el.focus === 'function') el.focus({ preventScroll: true });
+  },
+};
+
+/** @param {{ capture?: () => any, restore?: (snapshot: any) => void }} adapter */
+export function setParentalGateFocusAdapter(adapter) {
+  focusAdapter = { ...focusAdapter, ...(adapter || {}) };
 }
 
 function captureGateFocusSnapshot() {
-  rememberShellFocusFromActiveElement();
-  return typeof document !== 'undefined' ? document.activeElement : null;
+  try {
+    return focusAdapter.capture();
+  } catch {
+    return null;
+  }
 }
 
 const initial = {
@@ -87,9 +93,9 @@ export const useParentalGateStore = create((set, get) => ({
   closeGate: () => {
     const el = get().lastFocusedEl;
     set({ ...initial });
-    if (el && typeof el.focus === 'function') {
+    if (el) {
       try {
-        el.focus({ preventScroll: true });
+        focusAdapter.restore(el);
       } catch {
         // noop
       }

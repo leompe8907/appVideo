@@ -4,7 +4,7 @@ import { Sidebar } from '../components/Sidebar';
 import { Topbar } from '../components/Topbar';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
-import { resolveShellMode } from '../config/brandConfig';
+import { resolveShellMode } from '@appvideo/core/config/brandConfig';
 import { HomeShellContent } from '../components/ads/HomeShellContent';
 import { usePlayer } from '../contexts/PlayerContext';
 import PlayerHud from '../components/player/PlayerHud';

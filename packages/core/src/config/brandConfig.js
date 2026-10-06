@@ -1,7 +1,6 @@
 import { getBrandConfig } from "./brands";
 import { DEFAULT_BRAND } from "./defaultBrand";
 import { getBrandAsset } from "../utils/assetLoader";
-import { invalidateHomeBackgroundCache } from "../utils/config";
 import { getSplashPath, getSplashPosterPath, getSplashVideoPath } from "../utils/splashLoader";
 import { storageGet, storageRemove, storageSet } from "../platform/storage";
 import { getLaunchParam } from "../platform/runtime";
@@ -215,12 +214,30 @@ export function validateBrandConfig(config) {
   });
 }
 
+const _invalidationListeners = new Set();
+
+/**
+ * Registra una función a llamar cuando se invalida la caché de marca (p. ej.
+ * la caché del fondo del home en la web).
+ * @returns {() => void} para quitarla
+ */
+export function onBrandCacheInvalidated(listener) {
+  _invalidationListeners.add(listener);
+  return () => _invalidationListeners.delete(listener);
+}
+
 /**
  * Invalida la caché (útil tras changeBrand sin reload).
  */
 export function invalidateBrandCache() {
   _cache = { key: null, config: null };
-  invalidateHomeBackgroundCache();
+  _invalidationListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch {
+      // noop
+    }
+  });
 }
 
 /**

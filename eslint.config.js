@@ -34,6 +34,23 @@ export default defineConfig([
     },
   },
 
+  // Código compartido con Vega: sin globals de navegador. Si hace falta algo
+  // del entorno, pasar por `platform/storage` o `platform/runtime`.
+  {
+    files: ['packages/core/src/**/*.{js,jsx}'],
+    ignores: ['packages/core/src/**/__tests__/**'],
+    languageOptions: {
+      globals: {
+        ...globals['shared-node-browser'],
+        ...Object.fromEntries(
+          Object.keys(globals.browser)
+            .filter((name) => !(name in globals['shared-node-browser']))
+            .map((name) => [name, 'off']),
+        ),
+      },
+    },
+  },
+
   // Archivos Node (scripts/config) — permitir `process`, etc.
   {
     files: ['vite.config.js', 'scripts/**/*.js'],

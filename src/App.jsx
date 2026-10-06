@@ -6,7 +6,7 @@ import { useAuthValidator } from './hooks/useAuthValidator';
 import { useAppLifecycle } from './hooks/useAppLifecycle';
 import { useMediaSession } from './hooks/useMediaSession';
 import { useBrand } from './contexts/BrandContext';
-import { isAuthenticated } from './utils/userSession';
+import { isAuthenticated } from '@appvideo/core/utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
 import { TvFocusRing } from './components/navigation/TvFocusRing';
 import { OsdKeyboardProvider } from './contexts/OsdKeyboardContext';
@@ -19,8 +19,8 @@ import {
   stopSessionValidator,
   setOnSessionInvalid,
 } from './utils/sessionValidator';
-import { setOnDeviceRevoked } from './services/deviceSessionService';
-import { clearSessionBeforeNewLogin } from './services/loginFlow';
+import { setOnDeviceRevoked } from '@appvideo/core/services/deviceSessionService';
+import { clearSessionBeforeNewLogin } from '@appvideo/core/services/loginFlow';
 
 // Lazy loading de páginas
 const SplashPage = lazy(() => import('./pages/SplashPage'));

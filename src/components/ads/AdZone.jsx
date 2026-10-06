@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
-import { getDisplayTimeMs, isVideoUrl } from '../../utils/adsData';
+import { getDisplayTimeMs, isVideoUrl } from '@appvideo/core/utils/adsData';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
 import { requestTvFocusRingSync } from '../navigation/TvFocusRing';
 import { BrandFallbackImage } from '../common/BrandFallbackImage';

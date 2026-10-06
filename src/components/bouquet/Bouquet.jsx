@@ -6,8 +6,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
-import { usePreload } from '../../store/usePreload';
-import { filterMainBouquets } from '../../services/tvDataService';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { filterMainBouquets } from '@appvideo/core/services/tvDataService';
 
 /**
  * Normaliza un color devuelto por el backend (ej. "ffffff  ") a formato CSS (#ffffff).

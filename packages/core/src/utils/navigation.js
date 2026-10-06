@@ -3,6 +3,7 @@
  */
 
 import { getActiveLicense } from './userSession';
+import { storageGet } from '../platform/storage';
 
 /**
  * Obtiene la ruta inicial después del login según la configuración del brand
@@ -31,7 +32,7 @@ export function resolvePostLoginRoute(brandConfig) {
   }
 
   try {
-    const savedRoute = localStorage.getItem('app_last_active_route');
+    const savedRoute = storageGet('app_last_active_route');
     if (savedRoute && (savedRoute.startsWith('/home') || savedRoute.startsWith('/smartcard'))) {
       return savedRoute;
     }

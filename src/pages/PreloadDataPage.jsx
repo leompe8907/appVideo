@@ -13,8 +13,8 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
-import { usePreload } from '../store/usePreload';
-import { useEpgStatus, useVodStatus } from '../store/preloadStore';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { useEpgStatus, useVodStatus } from '@appvideo/core/store/preloadStore';
 import { PreloadScreen } from '../components/preload/PreloadScreen';
 
 export function PreloadDataPage() {

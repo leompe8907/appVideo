@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useBrand } from '../../contexts/BrandContext';
-import { getChannelStableId } from '../../utils/channelId';
+import { getChannelStableId } from '@appvideo/core/utils/channelId';
 
 function buildLogoUrlFromLogo2Id(channel) {
   if (!channel) return null;

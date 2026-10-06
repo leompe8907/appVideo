@@ -64,7 +64,7 @@ function getWorker() {
   try {
     const blob = new Blob([EPG_WORKER_SOURCE], { type: 'text/javascript' });
     const url = URL.createObjectURL(blob);
-    worker = new Worker(url);
+    worker = new globalThis.Worker(url);
     worker.onmessage = (e) => {
       const { id, events, error } = e?.data || {};
       const p = pending.get(id);

@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
-import { usePreload } from '../store/usePreload';
-import { useOsmsStore } from '../store/osmsStore';
-import { hasTvRadioServiceBouquets } from '../services/tvDataService';
-import { getSubscriberName } from '../utils/userSession';
-import { useActiveProfile } from '../store/useActiveProfile';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { useOsmsStore } from '@appvideo/core/store/osmsStore';
+import { hasTvRadioServiceBouquets } from '@appvideo/core/services/tvDataService';
+import { getSubscriberName } from '@appvideo/core/utils/userSession';
+import { useActiveProfile } from '@appvideo/core/store/useActiveProfile';
 import { getProfileAvatars } from '../constants/images';
 
 /**

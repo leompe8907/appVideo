@@ -10,7 +10,7 @@ import { FocusableButton } from '../navigation/FocusableButton';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusElementSafe } from '../../navigation/spatialNavigation';
 
-import panaccessService from '../../services/panaccessService';
+import panaccessService from '@appvideo/core/services/panaccessService';
 
 export function DeleteProfileModal({ profile, onClose, onSuccess }) {
   const { t } = useTranslation();

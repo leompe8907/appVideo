@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePreload } from '../store/usePreload';
-import { useParental } from '../store/useParental';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { useParental } from '@appvideo/core/store/useParental';
 import { useBrand } from '../contexts/BrandContext';
-import { isParentalControlEnabledForBrand } from '../config/brandConfig';
+import { isParentalControlEnabledForBrand } from '@appvideo/core/config/brandConfig';
 import { useDevice } from '../contexts/DeviceContext';
-import { getChannelStableId } from '../utils/channelId';
+import { getChannelStableId } from '@appvideo/core/utils/channelId';
 import { useParentalGate } from '../hooks/useParentalGate';
 import ParentalChannelCard from '../components/parental/ParentalChannelCard';
 import ParentalPinGate from '../components/parental/ParentalPinGate';
