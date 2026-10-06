@@ -10,6 +10,7 @@ import {QrCode} from '../components/QrCode';
 import {ConfirmModal} from '../components/ConfirmModal';
 import {formatTime} from '../epg';
 import {resetHomeMemory} from '../homeMemory';
+import {ParentalSettings} from '../parental/ParentalSettings';
 import {createScaledStyles, px} from '../scaledStyles';
 
 const t = (key, opts) => i18n.t(key, opts);
@@ -130,12 +131,7 @@ export function AccountPage({navigate, active = true}) {
   } else if (selected === 'refresh') {
     content = <Text style={[styles.contentTitle, {color: colors.title}]}>{t('account.refresh')} ✓</Text>;
   } else if (selected === 'parental') {
-    content = (
-      <>
-        <Text style={[styles.contentTitle, {color: colors.title}]}>{t('account.advancedSettings')}</Text>
-        <Text style={[styles.stepText, {color: colors.text}]}>{t('account.comingSoon')}</Text>
-      </>
-    );
+    content = <ParentalSettings colors={colors} />;
   }
 
   return (

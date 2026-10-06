@@ -16,9 +16,28 @@ let customBackend = null;
 /** Clave interna de `createAsyncBackedStorage` con la lista de claves guardadas. */
 const KEY_INDEX = '__appvideo_storage_keys';
 
+const backendListeners = new Set();
+
 /** @param {Storage | null} backend */
 export function setStorageBackend(backend) {
   customBackend = backend || null;
+  backendListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch {
+      // noop
+    }
+  });
+}
+
+/**
+ * Avisa cuando cambia el backend (p. ej. Vega pasa de memoria a AsyncStorage
+ * ya cargado): los stores que leen al importarse vuelven a hidratarse.
+ * @returns {() => void} para dejar de escuchar
+ */
+export function onStorageBackendChange(listener) {
+  backendListeners.add(listener);
+  return () => backendListeners.delete(listener);
 }
 
 /** @returns {Storage | null} `null` si no hay almacenamiento disponible (modo privado, SSR, etc.). */

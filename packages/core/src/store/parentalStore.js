@@ -3,6 +3,7 @@ import { derivePinHash, timingSafeEqual } from '../utils/pinHash';
 import { getBrandItem, resolveBrandId, setBrandItem } from '../utils/brandStorage';
 import { getActiveBrandConfig, isParentalControlEnabledForBrand } from '../config/brandConfig';
 import { pushPreferences } from '../services/preferencesSyncService';
+import { onStorageBackendChange } from '../platform/storage';
 
 const DEFAULT_UNLOCK_TTL_MS = 15 * 60 * 1000;
 const DEFAULT_RATING_UNLOCK_TTL_MS = 15 * 60 * 1000;
@@ -125,6 +126,8 @@ export const useParentalStore = create((set, get) => {
 
   // Hidratar best-effort al crear el store (no depende de React)
   queueMicrotask(() => hydrate());
+  // Re-hidratar si el almacenamiento se carga después (Vega: AsyncStorage).
+  onStorageBackendChange(() => hydrate());
 
   return {
     ...initial,

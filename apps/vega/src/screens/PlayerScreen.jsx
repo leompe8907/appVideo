@@ -5,6 +5,7 @@ import {KeplerCaptionsView, KeplerVideoSurfaceView} from '@amazon-devices/react-
 import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
+import {useParentalGateStore} from '@appvideo/core/store/parentalGateStore';
 import {buildZappingChannelList} from '@appvideo/core/utils/channelZappingList';
 import {buildChannelLogoUrl} from '@appvideo/core/utils/bouquetLayoutConfig';
 import {getCurrentEpgEvent, getEpgEventTimeBoundsMs, getEpgEventTitle} from '@appvideo/core/utils/epgCurrentEvent';
@@ -160,12 +161,18 @@ export function PlayerScreen({params, navigate}) {
 
   useEffect(() => () => hideTimer.current && clearTimeout(hideTimer.current), []);
 
+  // Cambiar de canal pasa por el control parental (como usePlayerChannelZapping).
+  const requestPlayChannel = useParentalGateStore((s) => s.requestPlayChannel);
+  const goTo = useCallback(
+    (next) => requestPlayChannel({channel: channels[next], playFn: () => setIndex(next)}),
+    [channels, requestPlayChannel],
+  );
   const zap = useCallback(
     (delta) => {
       const n = channels.length;
-      if (n > 1) setIndex((i) => (i + delta + n) % n);
+      if (n > 1) goTo((index + delta + n) % n);
     },
-    [channels.length],
+    [channels.length, index, goTo],
   );
 
   useTVEventHandler((evt) => {
@@ -329,7 +336,7 @@ export function PlayerScreen({params, navigate}) {
                   active={i === index}
                   hasTVPreferredFocus={i === index}
                   onPress={() => {
-                    setIndex(i);
+                    goTo(i);
                     if (closeListOnSelect) setPanel(null);
                   }}
                 />

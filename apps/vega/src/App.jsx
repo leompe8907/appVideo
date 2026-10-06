@@ -12,6 +12,7 @@ import {SmartCardScreen} from './screens/SmartCardScreen';
 import {VodPlayerScreen} from './screens/VodPlayerScreen';
 import {devLog} from './devLog';
 import {storageReady} from './bootstrap';
+import {ParentalGateHost} from './parental/ParentalGateHost';
 
 const Stack = createStackNavigator();
 
@@ -68,6 +69,7 @@ export function App() {
         <Stack.Screen name="player" component={Player} />
         <Stack.Screen name="vodplayer" component={VodPlayer} />
       </Stack.Navigator>
+      <ParentalGateHost />
     </NavigationContainer>
   );
 }

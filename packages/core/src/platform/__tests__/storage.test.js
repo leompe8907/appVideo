@@ -111,3 +111,15 @@ describe('createAsyncBackedStorage', () => {
     expect(onError).toHaveBeenCalled();
   });
 });
+
+describe('onStorageBackendChange', () => {
+  it('avisa al cambiar el backend y deja de avisar al desuscribirse', async () => {
+    const { onStorageBackendChange } = await import('../storage.js');
+    const listener = vi.fn();
+    const stop = onStorageBackendChange(listener);
+    setStorageBackend(createMemoryStorage());
+    stop();
+    setStorageBackend(null);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+});

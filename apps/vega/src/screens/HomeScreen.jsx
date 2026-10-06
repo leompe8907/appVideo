@@ -5,6 +5,7 @@ import {useIsFocused} from '@amazon-devices/react-navigation__native';
 import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
+import {useParentalGateStore} from '@appvideo/core/store/parentalGateStore';
 import {filterBouquetsForInicio, filterBouquetsForTvRadioServices} from '@appvideo/core/services/tvDataService';
 import {FullScreenImage} from '../components/FullScreenImage';
 import {Sidebar, RAIL_WIDTH} from '../home/Sidebar';
@@ -104,11 +105,29 @@ export function HomeScreen({navigate}) {
     return section === 'channels' ? filterBouquetsForTvRadioServices(list) : filterBouquetsForInicio(list);
   }, [epg.status, epg.bouquetsWithChannels, section]);
 
-  const play = (bouquet, index) => {
-    const channel = bouquet.items[index];
-    rememberPlayback(String(bouquet.bouquetId ?? bouquet.id), channel?.id ?? channel?.epgStreamId ?? index);
-    navigate('player', {channel});
+  // Reproducir pasa por el control parental (requestPlayChannel, como la web).
+  const requestPlayChannel = useParentalGateStore((s) => s.requestPlayChannel);
+  const requestPlayMedia = useParentalGateStore((s) => s.requestPlayMedia);
+  const playChannel = (channel, bouquetKey) => {
+    if (!channel) return;
+    requestPlayChannel({
+      channel,
+      playFn: () => {
+        rememberPlayback(bouquetKey ?? null, channel?.id ?? channel?.epgStreamId);
+        navigate('player', {channel});
+      },
+    });
   };
+  const playVod = (p) =>
+    requestPlayMedia({
+      item: p.item,
+      ratingRaw: p.item?.parentalRating,
+      title: t('parental.restrictedTitle'),
+      message: t('parental.restrictedMessage'),
+      playFn: () => navigate('vodplayer', p),
+    });
+
+  const play = (bouquet, index) => playChannel(bouquet.items[index], String(bouquet.bouquetId ?? bouquet.id));
 
   // Banner activado (adActivate.js de la web): stream_id=N → canal; vod_id=N → Películas.
   const activateAd = (ad) => {
@@ -117,7 +136,7 @@ export function HomeScreen({navigate}) {
     if (Number.isNaN(id)) return;
     if (generic.startsWith('stream_id')) {
       const stream = (epg.streams || []).find((s) => String(s?.id) === String(id));
-      if (stream) navigate('player', {channel: stream});
+      if (stream) playChannel(stream);
     } else if (generic.startsWith('vod_id=')) {
       selectSection('vod');
     }
@@ -173,15 +192,12 @@ export function HomeScreen({navigate}) {
       <SearchPage
         active={isFocused}
         onModalChange={setVodModalOpen}
-        onPlayChannel={(channel) => {
-          rememberPlayback(null, channel?.id ?? channel?.epgStreamId);
-          navigate('player', {channel});
-        }}
-        onPlayVod={(p) => navigate('vodplayer', p)}
+        onPlayChannel={(channel) => playChannel(channel)}
+        onPlayVod={playVod}
       />
     );
   } else if (section === 'vod') {
-    content = <VodPage active={isFocused} onPlay={(p) => navigate('vodplayer', p)} onModalChange={setVodModalOpen} />;
+    content = <VodPage active={isFocused} onPlay={playVod} onModalChange={setVodModalOpen} />;
   } else if (section === 'account') {
     content = <AccountPage active={isFocused} navigate={navigate} />;
   } else {

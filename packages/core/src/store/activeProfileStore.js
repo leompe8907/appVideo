@@ -12,6 +12,7 @@
  */
 import { create } from 'zustand';
 import { getBrandItem, resolveBrandId, setBrandItem } from '../utils/brandStorage';
+import { onStorageBackendChange } from '../platform/storage';
 
 const STORAGE_VERSION = 1;
 const ACTIVE_PROFILE_STORAGE_KEY = `activeProfile.v${STORAGE_VERSION}`;
@@ -56,6 +57,8 @@ export const useActiveProfileStore = create((set) => {
 
   // Hidratar best-effort al crear el store (no depende de React)
   queueMicrotask(() => hydrate());
+  // Re-hidratar si el almacenamiento se carga después (Vega: AsyncStorage).
+  onStorageBackendChange(() => hydrate());
 
   return {
     ...initial,

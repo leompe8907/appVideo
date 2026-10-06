@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getBrandItem, resolveBrandId, setBrandItem } from '../utils/brandStorage';
+import { onStorageBackendChange } from '../platform/storage';
 
 const STORAGE_VERSION = 1;
 const EPG_REMINDERS_KEY = `epg.reminders.v${STORAGE_VERSION}`;
@@ -57,6 +58,8 @@ export const useEpgReminderStore = create((set, get) => {
   };
 
   queueMicrotask(() => hydrate());
+  // Re-hidratar si el almacenamiento se carga después (Vega: AsyncStorage).
+  onStorageBackendChange(() => hydrate());
 
   return {
     ...initial,
