@@ -13,6 +13,7 @@ import {resetHomeMemory} from '../homeMemory';
 import {Sidebar, RAIL_WIDTH} from '../home/Sidebar';
 import {BouquetWall} from '../home/BouquetWall';
 import {VodPage} from '../vod/VodPage';
+import {SearchPage} from '../search/SearchPage';
 import {useHomeNavItems} from '../home/useHomeNavItems';
 import {getHomeMemory, rememberPlayback, rememberSection} from '../homeMemory';
 import {getTheme} from '../theme';
@@ -137,6 +138,18 @@ export function HomeScreen({navigate}) {
           <Text style={styles.sub}>{t('bouquet.noBouquets')}</Text>
         </View>
       );
+  } else if (section === 'search') {
+    content = (
+      <SearchPage
+        active={isFocused}
+        onModalChange={setVodModalOpen}
+        onPlayChannel={(channel) => {
+          rememberPlayback(null, channel?.id ?? channel?.epgStreamId);
+          navigate('player', {channel});
+        }}
+        onPlayVod={(p) => navigate('vodplayer', p)}
+      />
+    );
   } else if (section === 'vod') {
     content = <VodPage active={isFocused} onPlay={(p) => navigate('vodplayer', p)} onModalChange={setVodModalOpen} />;
   } else if (section === 'account') {
