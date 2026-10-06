@@ -6,7 +6,7 @@ import { DEFAULT_SEEK_STEP_SECONDS, PLAYER_ENGINE_EVENTS } from '../player/engin
 import panaccessService from '@appvideo/core/services/panaccessService';
 import telemetryService from '@appvideo/core/services/telemetryService';
 import * as userSession from '@appvideo/core/utils/userSession';
-import { isLicenseInUseError } from '../utils/licenseInUse';
+import { isLicenseInUseError } from '@appvideo/core/utils/licenseInUse';
 import { resolveBrandId } from '@appvideo/core/utils/brandStorage';
 import {
   applySavedTrackPreferences,

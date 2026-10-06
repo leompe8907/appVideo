@@ -10,6 +10,7 @@
     "test": "jest --colors"
   },
   "dependencies": {
+    "@amazon-devices/react-linear-gradient": "~2.0.9000000001",
     "@amazon-devices/react-native-async-storage__async-storage": "~2.1.0",
     "@amazon-devices/react-native-gesture-handler": "~4.0.0",
     "@amazon-devices/react-native-kepler": "~4.0.0",

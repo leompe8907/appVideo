@@ -8,6 +8,7 @@ import {SplashScreen} from './screens/SplashScreen';
 import {LoginScreen} from './screens/LoginScreen';
 import {HomeScreen} from './screens/HomeScreen';
 import {PlayerScreen} from './screens/PlayerScreen';
+import {SmartCardScreen} from './screens/SmartCardScreen';
 import {devLog} from './devLog';
 import {storageReady} from './bootstrap';
 
@@ -17,7 +18,7 @@ const Stack = createStackNavigator();
 const SCREEN_OPTIONS = {headerShown: false, animationEnabled: false, cardStyle: {backgroundColor: '#000'}};
 
 /** Pantallas raíz: al llegar se descarta el historial (Atrás no vuelve al splash). */
-const ROOT_SCREENS = new Set(['login', 'home']);
+const ROOT_SCREENS = new Set(['login', 'smartcard', 'home']);
 
 /**
  * Adapta las pantallas (que reciben `navigate(nombre, params)` y `params`)
@@ -42,6 +43,7 @@ const Splash = withNavigate(SplashScreen);
 const Login = withNavigate(LoginScreen);
 const Home = withNavigate(HomeScreen);
 const Player = withNavigate(PlayerScreen);
+const SmartCard = withNavigate(SmartCardScreen);
 
 export function App() {
   const [ready, setReady] = useState(false);
@@ -58,6 +60,7 @@ export function App() {
       <Stack.Navigator initialRouteName="splash" screenOptions={SCREEN_OPTIONS}>
         <Stack.Screen name="splash" component={Splash} />
         <Stack.Screen name="login" component={Login} />
+        <Stack.Screen name="smartcard" component={SmartCard} />
         <Stack.Screen name="home" component={Home} />
         <Stack.Screen name="player" component={Player} />
       </Stack.Navigator>

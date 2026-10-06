@@ -58,16 +58,8 @@ id = "/com.amazon.kepler.navigation__routers_8@INavigation__Routers_0"
 [[needs.module]]
 id = "/com.amazon.kepler.navigation__stack_8@INavigation__Stack_0"
 
-
-
-
-
-
-
-
-
-
-
+[[needs.module]]
+id = "/com.amazon.kepler.linear_gradient_2@ILinearGradient_0"
 
 [components]
 [[components.interactive]]

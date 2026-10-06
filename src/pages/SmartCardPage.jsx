@@ -5,7 +5,7 @@ import { useBrand } from '../contexts/BrandContext';
 import { MessageModal } from '../components/MessageModal';
 import AppIcon from '../components/AppIcon';
 import panaccessService from '@appvideo/core/services/panaccessService';
-import { isLicenseInUseError } from '../utils/licenseInUse';
+import { isLicenseInUseError } from '@appvideo/core/utils/licenseInUse';
 import {
   setLoggedOut,
   setLicenses as storeLicenses,

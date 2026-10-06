@@ -1,19 +1,22 @@
 import * as React from 'react';
 import {useEffect} from 'react';
-import {ActivityIndicator, Image, Text, View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
-import panaccessService from '@appvideo/core/services/panaccessService';
-import * as userSession from '@appvideo/core/utils/userSession';
+import {resolveSplashDestination} from '@appvideo/core/services/splashAuthFlow';
+import {FullScreenImage} from '../components/FullScreenImage';
 import {getTheme} from '../theme';
-import {createScaledStyles} from '../scaledStyles';
+import {screenForWebRoute} from '../routes';
 import {devLog} from '../devLog';
 
+const AUTH_TIMEOUT_MS = 60000;
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
- * Decide adónde ir al arrancar: con una sesión válida al home, si no al login.
- *
- * Es más simple que `resolveSplashDestination` de la web (perfiles, smartcard
- * y reactivación de licencia quedan para la Fase 4): acá alcanza con que el
- * middleware acepte la sesión.
+ * Igual que SplashPage de la web (spec §5.1): `splash.png` de la marca a
+ * pantalla completa durante al menos `ui.splashDuration`, mientras
+ * `resolveSplashDestination` decide el destino (sesión + licencia → home o
+ * smartcard; si no → login).
  */
 export function SplashScreen({navigate}) {
   const theme = getTheme();
@@ -21,40 +24,33 @@ export function SplashScreen({navigate}) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      let next = 'login';
+      const started = Date.now();
+      let route = '/login';
       try {
-        const brand = getActiveBrandConfig();
-        await panaccessService.initialize(brand);
-        if (userSession.getSessionId()) {
-          const valid = await panaccessService.validateSession();
-          devLog('splash: sesión', valid ? 'válida' : 'inválida');
-          if (valid) next = 'home';
-        }
+        route = await Promise.race([
+          resolveSplashDestination(getActiveBrandConfig()),
+          wait(AUTH_TIMEOUT_MS).then(() => '/login'),
+        ]);
       } catch (e) {
         devLog('splash: error', e?.message);
       }
-      if (!cancelled) navigate(next);
+      const remaining = theme.splashDurationMs - (Date.now() - started);
+      if (remaining > 0) await wait(remaining);
+      devLog('splash: destino', route);
+      if (!cancelled) navigate(screenForWebRoute(route));
     })();
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, [navigate, theme.splashDurationMs]);
 
   return (
-    <View style={[styles.container, {backgroundColor: theme.background}]}>
-      {theme.logo ? (
-        <Image source={theme.logo} style={styles.logo} resizeMode="contain" />
-      ) : (
-        <Text style={[styles.title, {color: theme.text}]}>{theme.appName}</Text>
-      )}
-      <ActivityIndicator size="large" color={theme.text} style={styles.spinner} />
+    <View style={styles.container}>
+      <FullScreenImage source={theme.assets.splash} />
     </View>
   );
 }
 
-const styles = createScaledStyles({
-  container: {flex: 1, alignItems: 'center', justifyContent: 'center'},
-  logo: {width: 480, height: 110},
-  title: {fontSize: 56, fontWeight: '700'},
-  spinner: {marginTop: 48},
+const styles = StyleSheet.create({
+  container: {flex: 1, backgroundColor: '#000'},
 });

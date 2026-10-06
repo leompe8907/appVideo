@@ -12,6 +12,7 @@ export PATH="/usr/local/opt/node@20/bin:$PATH"
 source ~/vega/env >/dev/null
 
 node scripts/gen-env.js
+node scripts/gen-brand-assets.js
 # El plugin de Babel incrusta valores del .env.local: sin esto Metro
 # reutilizaría transformaciones viejas.
 rm -rf "${TMPDIR:-/tmp}"/metro-* "${TMPDIR:-/tmp}"/haste-map-* 2>/dev/null || true
