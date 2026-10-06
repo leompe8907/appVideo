@@ -1,0 +1,40 @@
+{
+  "name": "@appvideo/vega",
+  "version": "0.1.0",
+  "private": true,
+  "description": "App appVideo para Fire TV (Vega OS). Usa @appvideo/core.",
+  "scripts": {
+    "start": "react-native start",
+    "build:debug": "react-native build-vega --build-type Debug",
+    "build:release": "react-native build-vega --build-type Release",
+    "test": "jest --colors"
+  },
+  "dependencies": {
+    "@amazon-devices/react-native-kepler": "~4.0.0",
+    "@amazon-devices/react-native-w3cmedia": "~2.3.2",
+    "base-64": "^1.0.0",
+    "fastestsmallesttextencoderdecoder": "~1.0.22",
+    "react": "19.2.0",
+    "react-native": "0.83.0",
+    "xmldom": "^0.6.0"
+  },
+  "devDependencies": {
+    "@amazon-devices/kepler-cli-platform": "^0",
+    "@react-native-community/cli": "20.0.0",
+    "@react-native/babel-preset": "0.83.0",
+    "@react-native/metro-config": "0.83.0",
+    "@react-native/typescript-config": "0.83.0",
+    "@types/react": "^19.2.0",
+    "typescript": "5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "kepler": {
+    "projectType": "application",
+    "appName": "appVideo",
+    "targets": [
+      "tv"
+    ]
+  }
+}

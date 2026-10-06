@@ -1,0 +1,10 @@
+# node_modules es un enlace a ~/Desktop/VegaPruebaRN/node_modules mientras no
+# haya red para `npm install` (ver README.md).
+node_modules
+build
+buildinfo.json
+src/env.generated.js
+dev-session.local.json
+
+# Shaka 4.8.5 parcheado por Amazon (build de Vega): sí se versiona.
+!src/w3cmedia/shakaplayer/dist
