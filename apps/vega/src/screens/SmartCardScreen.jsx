@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import i18n from '@appvideo/core/locales/i18n';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {isLicenseInUseError} from '@appvideo/core/utils/licenseInUse';
@@ -149,6 +149,7 @@ export function SmartCardScreen({navigate}) {
         </View>
       ) : (
         <View style={styles.content}>
+          <Image source={theme.logo} style={styles.logo} resizeMode="contain" />
           <Text style={styles.instructions}>{t('smartcard.instructionsNoPIN', {appName: theme.appName})}</Text>
           <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
             {list.map((license, index) => {
@@ -216,6 +217,8 @@ const styles = createScaledStyles({
   overlay: {backgroundColor: 'rgba(0,0,0,0.5)'},
   center: {alignItems: 'center', justifyContent: 'center', textAlign: 'center'},
   content: {width: 560},
+  // La web no muestra logo en esta pantalla; en TV se agrega (mismo tamaño que en el login).
+  logo: {width: 176, height: 40, alignSelf: 'center', marginBottom: 24},
   instructions: {fontSize: 16, color: 'rgba(255,255,255,0.95)', marginBottom: 12},
   list: {
     height: 320,
