@@ -15,7 +15,7 @@ import EpgEventModal from '../epg/EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useParental } from '@appvideo/core/store/useParental';
 import { getChannelStableId } from '@appvideo/core/utils/channelId';
-import { buildZappingChannelList } from '../../utils/channelZappingList';
+import { buildZappingChannelList } from '@appvideo/core/utils/channelZappingList';
 import {
   usePlayerHudTvNavigation,
   PLAYER_FOCUS_IDS,

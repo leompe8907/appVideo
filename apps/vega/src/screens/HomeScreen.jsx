@@ -65,7 +65,7 @@ export function HomeScreen({navigate}) {
       return;
     }
     const m = getHomeMemory();
-    setPreferredFocus(m.bouquetKey != null ? {bouquetKey: m.bouquetKey, index: m.channelIndex} : null);
+    setPreferredFocus(m.channelId != null ? {bouquetKey: m.bouquetKey, channelId: m.channelId} : null);
   }, [isFocused]);
 
   const selectSection = (key) => {
@@ -92,9 +92,22 @@ export function HomeScreen({navigate}) {
   }, [epg.status, epg.bouquetsWithChannels, section]);
 
   const play = (bouquet, index) => {
-    rememberPlayback(String(bouquet.bouquetId ?? bouquet.id), index);
-    navigate('player', {channels: bouquet.items, index});
+    const channel = bouquet.items[index];
+    rememberPlayback(String(bouquet.bouquetId ?? bouquet.id), channel?.id ?? channel?.epgStreamId ?? index);
+    navigate('player', {channel});
   };
+
+  // El canal recordado puede no estar en el bouquet recordado (zapping por LCN):
+  // se busca el primer bouquet visible que lo tenga.
+  const focusTarget = useMemo(() => {
+    if (bouquets.length === 0) return null;
+    const first = {bouquetKey: String(bouquets[0].bouquetId ?? bouquets[0].id), channelId: String(bouquets[0].items?.[0]?.id ?? bouquets[0].items?.[0]?.epgStreamId ?? 0)};
+    if (!preferredFocus?.channelId) return first;
+    const has = (b) => (b.items || []).some((c) => String(c?.id ?? c?.epgStreamId) === preferredFocus.channelId);
+    const remembered = bouquets.find((b) => String(b.bouquetId ?? b.id) === preferredFocus.bouquetKey);
+    const target = remembered && has(remembered) ? remembered : bouquets.find(has);
+    return target ? {bouquetKey: String(target.bouquetId ?? target.id), channelId: preferredFocus.channelId} : first;
+  }, [bouquets, preferredFocus]);
 
   let content;
   if (epg.status !== 'ready' && epg.status !== 'error') {
@@ -115,11 +128,7 @@ export function HomeScreen({navigate}) {
   } else if (section === 'inicio' || section === 'channels') {
     content =
       bouquets.length > 0 ? (
-        <BouquetWall
-          bouquets={bouquets}
-          onPlay={play}
-          preferredFocus={preferredFocus || {bouquetKey: String(bouquets[0].bouquetId ?? bouquets[0].id), index: 0}}
-        />
+        <BouquetWall bouquets={bouquets} onPlay={play} preferredFocus={focusTarget} />
       ) : (
         <View style={styles.center}>
           <Text style={styles.sub}>{t('bouquet.noBouquets')}</Text>

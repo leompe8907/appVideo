@@ -48,6 +48,7 @@ export class VegaHlsPlayer {
 
   emit(state, detail) {
     if (this.destroyed) return;
+    this.lastState = state;
     this.callbacks.onState?.(state, detail);
   }
 
@@ -65,6 +66,13 @@ export class VegaHlsPlayer {
     video.addEventListener('loadedmetadata', play);
     video.addEventListener('canplay', play);
     video.addEventListener('playing', () => this.emit('playing'));
+    // Tras un `waiting` no siempre llega otro `playing`: si el tiempo avanza, está reproduciendo.
+    let lastTime = -1;
+    video.addEventListener('timeupdate', () => {
+      const t = video.currentTime;
+      if (this.lastState !== 'playing' && this.lastState !== 'error' && lastTime >= 0 && t > lastTime) this.emit('playing');
+      lastTime = t;
+    });
     video.addEventListener('waiting', () => this.emit('buffering'));
     video.addEventListener('error', () =>
       this.emit('error', {source: 'video', code: video.error?.code, message: video.error?.message}),

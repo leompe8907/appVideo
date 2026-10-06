@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { findZappingChannelIndex } from '../utils/channelZappingList';
+import { findZappingChannelIndex } from '@appvideo/core/utils/channelZappingList';
 import { TV_ACTION } from '../utils/tvRemote';
 import { navigationRouter } from '../navigation/NavigationRouter';
 

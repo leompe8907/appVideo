@@ -30,7 +30,8 @@ function withNavigate(Screen) {
     const navigate = React.useCallback(
       (name, params) => {
         devLog('navegar →', name);
-        if (ROOT_SCREENS.has(name)) navigation.reset({index: 0, routes: [{name, params}]});
+        if (name === 'back') navigation.goBack();
+        else if (ROOT_SCREENS.has(name)) navigation.reset({index: 0, routes: [{name, params}]});
         else navigation.navigate(name, params);
       },
       [navigation],

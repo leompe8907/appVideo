@@ -34,7 +34,7 @@ function BouquetRow({bouquet, onPlay, preferredFocus}) {
       cardDesign={layout.cardDesign}
       logoIndex={layout.logoIndex}
       backgroundColor={layout.backgroundColor}
-      hasTVPreferredFocus={preferredFocus?.bouquetKey === bKey && preferredFocus?.index === index}
+      hasTVPreferredFocus={preferredFocus?.bouquetKey === bKey && preferredFocus?.channelId === channelKey(channel, index)}
       onPress={() => onPlay(bouquet, index)}
     />
   );
