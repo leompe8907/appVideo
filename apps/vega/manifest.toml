@@ -88,6 +88,10 @@ id = "com.amazon.network.service"
 [[wants.service]]
 id = "com.amazon.gipc.uuid.*"
 
+# Teclado en pantalla para TextInput.
+[[wants.service]]
+id = "com.amazon.inputmethod.service"
+
 [offers]
 [[offers.service]]
 id = "com.amazon.gipc.uuid.*"
