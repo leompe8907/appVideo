@@ -9,6 +9,7 @@ import {filterBouquetsForInicio, filterBouquetsForTvRadioServices} from '@appvid
 import {FullScreenImage} from '../components/FullScreenImage';
 import {Sidebar, RAIL_WIDTH} from '../home/Sidebar';
 import {BouquetWall} from '../home/BouquetWall';
+import {AdZone} from '../home/AdZone';
 import {VodPage} from '../vod/VodPage';
 import {SearchPage} from '../search/SearchPage';
 import {AccountPage} from '../account/AccountPage';
@@ -36,6 +37,16 @@ export function HomeScreen({navigate}) {
   const [preferredFocus, setPreferredFocus] = useState(null);
   // Con un modal de VOD abierto, Atrás lo cierra el modal (no vuelve a Inicio).
   const [vodModalOpen, setVodModalOpen] = useState(false);
+
+  const ads = usePreloadStore((s) => s.ads);
+  const loadAds = usePreloadStore((s) => s.loadAds);
+  const adsEnabled = brand?.homeShell?.ads?.inicio === true;
+  useEffect(() => {
+    if (adsEnabled) loadAds();
+  }, [adsEnabled, loadAds]);
+  useEffect(() => {
+    devLog('home: ads', ads.status, ads.error || '', 'top', ads.top?.length ?? 0, 'bottom', ads.bottom?.length ?? 0, 'total', ads.processed?.length ?? 0);
+  }, [ads.status, ads.error, ads.top, ads.bottom, ads.processed]);
 
   useEffect(() => {
     loadEPG(brand);
@@ -99,6 +110,19 @@ export function HomeScreen({navigate}) {
     navigate('player', {channel});
   };
 
+  // Banner activado (adActivate.js de la web): stream_id=N → canal; vod_id=N → Películas.
+  const activateAd = (ad) => {
+    const generic = ad?.genericData != null ? String(ad.genericData) : '';
+    const id = parseInt(generic.split('=')[1], 10);
+    if (Number.isNaN(id)) return;
+    if (generic.startsWith('stream_id')) {
+      const stream = (epg.streams || []).find((s) => String(s?.id) === String(id));
+      if (stream) navigate('player', {channel: stream});
+    } else if (generic.startsWith('vod_id=')) {
+      selectSection('vod');
+    }
+  };
+
   // El canal recordado puede no estar en el bouquet recordado (zapping por LCN):
   // se busca el primer bouquet visible que lo tenga.
   const focusTarget = useMemo(() => {
@@ -130,7 +154,15 @@ export function HomeScreen({navigate}) {
   } else if (section === 'inicio' || section === 'channels') {
     content =
       bouquets.length > 0 ? (
-        <BouquetWall bouquets={bouquets} onPlay={play} preferredFocus={focusTarget} />
+        <View style={styles.inicio}>
+          <BouquetWall
+            bouquets={bouquets}
+            onPlay={play}
+            preferredFocus={focusTarget}
+            header={section === 'inicio' && adsEnabled ? <AdZone ads={ads.top} position="top" onActivate={activateAd} /> : null}
+          />
+          {section === 'inicio' && adsEnabled ? <AdZone ads={ads.bottom} position="bottom" onActivate={activateAd} /> : null}
+        </View>
       ) : (
         <View style={styles.center}>
           <Text style={styles.sub}>{t('bouquet.noBouquets')}</Text>
@@ -181,5 +213,5 @@ const styles = createScaledStyles({
   message: {color: '#fff', fontSize: 28, marginTop: 24},
   sub: {color: 'rgba(255,255,255,0.85)', fontSize: 20, marginTop: 12},
   error: {color: '#f8d7da', fontSize: 20, textAlign: 'center'},
-  logout: {marginTop: 32},
+  inicio: {flex: 1},
 });

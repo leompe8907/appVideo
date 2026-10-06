@@ -99,9 +99,10 @@ function Separator() {
  * vertical; cada bouquet con su layout de TV (`bouquetLayouts.tv` /
  * customData / layoutType).
  */
-export function BouquetWall({bouquets, onPlay, preferredFocus}) {
+export function BouquetWall({bouquets, onPlay, preferredFocus, header}) {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.wall} showsVerticalScrollIndicator={false}>
+      {header}
       {bouquets.map((b) => (
         <BouquetRow key={keyOf(b)} bouquet={b} onPlay={onPlay} preferredFocus={preferredFocus} />
       ))}

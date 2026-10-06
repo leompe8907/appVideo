@@ -56,6 +56,8 @@ export function ChannelCard({channel, cardDesign, logoIndex, backgroundColor, on
   const logo = useLogoSource(channel, logoIndex);
   const [focused, setFocused] = useState(false);
   const [, setTick] = useState(0);
+  // Si la imagen del programa falla, se usa el logo (como el onError de la web).
+  const [eventImageFailed, setEventImageFailed] = useState(false);
 
   // Como en la web: el progreso se recalcula cada 1 s sólo mientras tiene foco.
   useEffect(() => {
@@ -75,6 +77,8 @@ export function ChannelCard({channel, cardDesign, logoIndex, backgroundColor, on
   };
   const channelBg = channel?.backgroundColor || channel?.bgColor;
   const now = /event/.test(variant) ? nowInfo(channel) : null;
+  const eventSource = now?.image && !eventImageFailed ? {uri: now.image} : logo;
+  const onEventImageError = () => setEventImageFailed(true);
 
   if (variant === 'logo_with_number') {
     return (
@@ -102,7 +106,7 @@ export function ChannelCard({channel, cardDesign, logoIndex, backgroundColor, on
               <Image source={logo} style={styles.logoTopImage} resizeMode="contain" />
             </View>
             <View style={styles.eventBlock}>
-              <Image source={now?.image ? {uri: now.image} : logo} style={styles.eventImage} resizeMode="stretch" />
+              <Image source={eventSource} style={styles.eventImage} resizeMode={eventSource === logo ? 'contain' : 'stretch'} onError={onEventImageError} />
             </View>
             <View style={styles.progressStrip}>
               <Progress value={now?.progress || 0} color={theme.timeshipColor} />
@@ -130,7 +134,7 @@ export function ChannelCard({channel, cardDesign, logoIndex, backgroundColor, on
             <View style={[styles.logoTop, {backgroundColor: '#0a0a0a'}]}>
               <Image source={logo} style={styles.logoTopImage} resizeMode="contain" />
             </View>
-            <Image source={now?.image ? {uri: now.image} : logo} style={styles.overlayImage} resizeMode="stretch" />
+            <Image source={eventSource} style={styles.overlayImage} resizeMode={eventSource === logo ? 'contain' : 'stretch'} onError={onEventImageError} />
             <View style={styles.overlayInfo}>
               {now ? <Text style={styles.eventTime}>{now.time}</Text> : null}
               {now ? (
@@ -154,9 +158,10 @@ export function ChannelCard({channel, cardDesign, logoIndex, backgroundColor, on
       <View>
         <View style={[styles.logoCard, {backgroundColor: channelBg || 'rgba(255,255,255,0.04)'}]}>
           <Image
-            source={isEvent && now?.image ? {uri: now.image} : logo}
+            source={isEvent ? eventSource : logo}
             style={styles.fill}
-            resizeMode={isEvent && now?.image ? 'cover' : 'contain'}
+            resizeMode={isEvent && eventSource !== logo ? 'cover' : 'contain'}
+            onError={isEvent ? onEventImageError : undefined}
           />
         </View>
         <FocusRing visible={focused} radius={48} />
