@@ -15,6 +15,8 @@ import {VodPage} from '../vod/VodPage';
 import {SearchPage} from '../search/SearchPage';
 import {AccountPage} from '../account/AccountPage';
 import {CatchupPage} from '../catchup/CatchupPage';
+import {EpgGuidePage} from '../epg/EpgGuidePage';
+import {ReminderHost} from '../epg/ReminderHost';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {getCatchupStreamId, getEventTitle} from '@appvideo/core/utils/catchupEvent';
 import {useHomeNavItems} from '../home/useHomeNavItems';
@@ -130,6 +132,24 @@ export function HomeScreen({navigate}) {
       playFn: () => navigate('vodplayer', p),
     });
 
+  const playCatchup = (event) => {
+    const catchupId = getCatchupStreamId(event);
+    if (catchupId == null) return;
+    let url;
+    try {
+      url = panaccessService.getCatchupM3u8Url({catchupId});
+    } catch {
+      return;
+    }
+    requestPlayMedia({
+      item: event,
+      ratingRaw: event?.parentalRating,
+      title: t('parental.restrictedTitle'),
+      message: t('parental.restrictedMessage'),
+      playFn: () => navigate('vodplayer', {url, title: getEventTitle(event)}),
+    });
+  };
+
   const play = (bouquet, index) => playChannel(bouquet.items[index], String(bouquet.bouquetId ?? bouquet.id));
 
   // Banner activado (adActivate.js de la web): stream_id=N → canal; vod_id=N → Películas.
@@ -206,23 +226,16 @@ export function HomeScreen({navigate}) {
       <CatchupPage
         active={isFocused}
         onModalChange={setVodModalOpen}
-        onPlay={(event) => {
-          const catchupId = getCatchupStreamId(event);
-          if (catchupId == null) return;
-          let url;
-          try {
-            url = panaccessService.getCatchupM3u8Url({catchupId});
-          } catch {
-            return;
-          }
-          requestPlayMedia({
-            item: event,
-            ratingRaw: event?.parentalRating,
-            title: t('parental.restrictedTitle'),
-            message: t('parental.restrictedMessage'),
-            playFn: () => navigate('vodplayer', {url, title: getEventTitle(event)}),
-          });
-        }}
+        onPlay={playCatchup}
+      />
+    );
+  } else if (section === 'epg') {
+    content = (
+      <EpgGuidePage
+        active={isFocused}
+        onModalChange={setVodModalOpen}
+        onPlayChannel={(channel) => playChannel(channel)}
+        onPlayCatchup={playCatchup}
       />
     );
   } else if (section === 'account') {
@@ -239,6 +252,7 @@ export function HomeScreen({navigate}) {
     <View style={[styles.root, {backgroundColor: theme.background}]}>
       <FullScreenImage source={theme.assets.background} />
       <View style={styles.content}>{content}</View>
+      <ReminderHost playerActive={!isFocused} onGoToChannel={(channel) => playChannel(channel)} />
       <Sidebar
         account={account}
         items={navItems}

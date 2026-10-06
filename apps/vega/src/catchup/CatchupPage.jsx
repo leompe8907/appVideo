@@ -11,15 +11,12 @@ import {
   getCatchupGroupTitle,
   getCatchupId,
   getCatchupRailItemKey,
-  getCatchupStreamId,
-  getEventDescription,
-  getEventEndMs,
   getEventImage,
   getEventStartMs,
   getEventTitle,
 } from '@appvideo/core/utils/catchupEvent';
 import {FocusRing} from '../components/FocusRing';
-import {formatTime} from '../epg';
+import {EpgEventModal} from '../epg/EpgEventModal';
 import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
 
@@ -63,57 +60,6 @@ function SeeMoreCard({onPress}) {
         <Text style={styles.title}>{t('catchup.seeMore')}</Text>
       </Pressable>
       <FocusRing visible={focused} radius={8} />
-    </View>
-  );
-}
-
-/** Detalle del evento en contexto catchup (EpgEventModal, spec 3 §2). */
-function EventDetail({event, group, onPlay}) {
-  const theme = getTheme();
-  const channel = catchupGroupToChannel(group);
-  const start = getEventStartMs(event);
-  const end = getEventEndMs(event);
-  const canPlay = getCatchupStreamId(event) != null;
-  const [focused, setFocused] = useState(false);
-  const logo = channel?.img || channel?.imageUrl || channel?.logoUrl || channel?.logo;
-  const image = getEventImage(event);
-  return (
-    <View style={styles.modalOverlay}>
-      <View style={styles.detail}>
-        <View style={styles.detailHeader}>
-          <Image source={logo ? {uri: logo} : theme.assets.placeholder} style={styles.detailLogo} resizeMode="contain" />
-          <View style={styles.detailHeaderText}>
-            <Text style={styles.detailChannel} numberOfLines={1}>
-              {channel?.name}
-            </Text>
-            <Text style={styles.detailMeta}>
-              {[channel?.lcn, start != null && end != null ? `${formatTime(start)} - ${formatTime(end)}` : null, start != null && end != null ? `${Math.round((end - start) / 60000)} min` : null]
-                .filter(Boolean)
-                .join('   ')}
-            </Text>
-          </View>
-          {image ? <Image source={{uri: image}} style={styles.detailImage} resizeMode="contain" /> : null}
-        </View>
-        <View style={styles.detailBody}>
-          <Text style={styles.detailTitle}>{getEventTitle(event) || t('epg.eventNoTitle')}</Text>
-          <Text style={styles.badge}>Catchup</Text>
-          <ScrollView style={styles.descriptionScroll}>
-            <Text style={styles.description}>{getEventDescription(event) || t('epg.noDescription')}</Text>
-          </ScrollView>
-        </View>
-        <View style={styles.footer}>
-          {canPlay ? (
-            <View>
-              <Pressable hasTVPreferredFocus onPress={() => onPlay(event, group)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={styles.playBtn}>
-                <Text style={styles.playText}>{t('catchup.play')}</Text>
-              </Pressable>
-              <FocusRing visible={focused} radius={12} />
-            </View>
-          ) : (
-            <Text style={styles.notAvailable}>{t('catchup.notAvailableYet')}</Text>
-          )}
-        </View>
-      </View>
     </View>
   );
 }
@@ -226,10 +172,17 @@ export function CatchupPage({onPlay, onModalChange, active = true}) {
           </View>
         </View>
       ) : null}
-      {detail ? <EventDetail event={detail.event} group={detail.group} onPlay={(event, group) => {
-        setDetail(null);
-        onPlay(event, group);
-      }} /> : null}
+      {detail ? (
+        <EpgEventModal
+          context="catchup"
+          channel={catchupGroupToChannel(detail.group)}
+          event={detail.event}
+          onPlayCatchup={(event) => {
+            setDetail(null);
+            onPlay(event, detail.group);
+          }}
+        />
+      ) : null}
     </View>
   );
 }
