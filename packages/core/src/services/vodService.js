@@ -8,6 +8,8 @@ import panaccessService from './panaccessService';
 
 const VOD_CONTENT_PAGE_SIZE = 100;
 const VOD_CONTENT_MAX_OFFSET = 1000;
+/** Categoría sintética cuando la API no manda grupos de categorías (ver prepareDataForVOD). */
+export const FALLBACK_MOVIES_CATEGORY_ID = -2;
 
 /** Plantillas por defecto 10foot: mismo patrón que config.js imageUrlVodPosterList/Info/Original */
 const DEFAULT_VOD_IMAGE_TEMPLATES = {
@@ -83,7 +85,23 @@ export function prepareDataForVOD(vods, categories, vodRecommendedId, baseUrl, i
     allVods.push(vod);
   };
 
+  // Sin grupos de categorías (la librería llega con `categoryGroups: []`, p. ej.
+  // cuando el operador quita el permiso de getVodCategoryGroups) el contenido
+  // igual llega por getVodContent: en vez de descartarlo, se agrupa en una
+  // categoría "Películas" (más nuevas primero); las series se agregan abajo
+  // como siempre.
+  if (categories.length === 0 && Array.isArray(vods) && vods.length > 0) {
+    const releaseMs = (v) => Date.parse(String(v.libraryReleaseDate || '').replace(' ', 'T')) || 0;
+    const movies = vods.filter((v) => v.isSeries !== true).sort((a, b) => releaseMs(b) - releaseMs(a));
+    vods.forEach((vod) => Object.assign(vod, buildVodImageUrls(vod, baseUrl, templates)));
+    if (movies.length > 0) {
+      categories.push({ id: FALLBACK_MOVIES_CATEGORY_ID, name: t('vod.title') || 'Películas', vods: movies });
+      movies.forEach(pushUnique);
+    }
+  }
+
   categories.forEach((category, index) => {
+    if (category.id === FALLBACK_MOVIES_CATEGORY_ID) return;
     const filtered = (vods || []).filter((vod) =>
       Array.isArray(vod.categories) && vod.categories.indexOf(category.id) >= 0
     );

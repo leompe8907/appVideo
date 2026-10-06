@@ -39,6 +39,15 @@ export function HomeScreen({navigate}) {
     loadEPG(brand);
   }, [brand, loadEPG]);
 
+  const vod = usePreloadStore((s) => s.vod);
+  const catchup = usePreloadStore((s) => s.catchup);
+  useEffect(() => {
+    devLog('home: vod', vod.status, vod.error || '', 'cats', vod.categories?.length ?? 0, 'vods', vod.allVods?.length ?? 0, 'rec', vod.vodRecommended?.length ?? 0);
+  }, [vod.status, vod.error, vod.categories, vod.allVods, vod.vodRecommended]);
+  useEffect(() => {
+    devLog('home: catchup', catchup.status, catchup.error || '', 'groups', catchup.groups?.length ?? 0, 'recorded', catchup.recorded?.length ?? 0);
+  }, [catchup.status, catchup.error, catchup.groups, catchup.recorded]);
+
   useEffect(() => {
     if (epg.status === 'ready') {
       const list = epg.bouquetsWithChannels || [];
