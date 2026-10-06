@@ -54,8 +54,8 @@ function HudButton({icon, onPress, primary, hasTVPreferredFocus, onFocus}) {
 }
 
 /**
- * Reproductor de VOD con el HUD de appVideo (spec §4.2 + spec 2 §3): URL de
- * `getVodM3u8Url({vodId})`, botones Volver / −10 s / Play-Pausa / +10 s,
+ * Reproductor de VOD y catchup con el HUD de appVideo (spec §4.2, spec 2 §3,
+ * spec 3 §3.4): URL de `getVodM3u8Url({vodId})` o la de catchup ya armada, botones Volver / −10 s / Play-Pausa / +10 s,
  * barra de progreso con tiempos y "−restante"; siempre arranca en 0 (como la web).
  */
 export function VodPlayerScreen({params, navigate}) {
@@ -122,7 +122,8 @@ export function VodPlayerScreen({params, navigate}) {
   useEffect(() => {
     let url;
     try {
-      url = panaccessService.getVodM3u8Url({vodId: params?.vodId});
+      // Catchup llega con la URL ya armada (getCatchupM3u8Url); VOD con vodId.
+      url = params?.url ? panaccessService.normalizePlaybackUrl(params.url) : panaccessService.getVodM3u8Url({vodId: params?.vodId});
     } catch (e) {
       devLog('vod: url', e?.message);
       setState('error');
@@ -149,7 +150,7 @@ export function VodPlayerScreen({params, navigate}) {
       player.current = null;
       p.destroy();
     };
-  }, [params?.vodId, params?.title]);
+  }, [params?.vodId, params?.url, params?.title]);
 
   const p = player.current;
   const current = p?.currentTime || 0;

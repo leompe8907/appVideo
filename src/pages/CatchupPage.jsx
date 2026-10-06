@@ -21,7 +21,7 @@ import {
   getEventImage,
   getEventStartMs,
   getEventTitle,
-} from '../utils/catchupEvent';
+} from '@appvideo/core/utils/catchupEvent';
 import '../styles/pages/_catchup.scss';
 
 function CatchupEventButton({

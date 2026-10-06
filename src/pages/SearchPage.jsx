@@ -15,7 +15,7 @@ import EpgEventModal from '../components/epg/EpgEventModal';
 import VodDetailModal from '../components/vod/VodDetailModal';
 import VodDetailModalClassic from '../components/vod/VodDetailModalClassic';
 import { useBrandPlaceholderUrl } from '../hooks/useBrandPlaceholderUrl';
-import { catchupGroupToChannel, catchupEventToChannel } from '../utils/catchupEvent';
+import { catchupGroupToChannel, catchupEventToChannel } from '@appvideo/core/utils/catchupEvent';
 import '../styles/pages/_search.scss';
 
 function SearchTab({ id, label, active, hidden, onSelect }) {

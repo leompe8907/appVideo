@@ -4,7 +4,7 @@ import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';
 import CatchupCard from './CatchupCard';
-import { getCatchupGroupKey, getCatchupRailItemKey } from '../../utils/catchupEvent';
+import { getCatchupGroupKey, getCatchupRailItemKey } from '@appvideo/core/utils/catchupEvent';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusFirstIn } from '../../navigation/spatialNavigation';
 

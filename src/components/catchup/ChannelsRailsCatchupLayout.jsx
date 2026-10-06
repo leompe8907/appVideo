@@ -3,7 +3,7 @@ import { EmblaHorizontalRail } from '../navigation/EmblaHorizontalRail';
 import CatchupCard from './CatchupCard';
 import CatchupSeeMoreCard from './CatchupSeeMoreCard';
 import CatchupGroupModal from './CatchupGroupModal';
-import { getCatchupGroupKey, getCatchupGroupTitle, getCatchupRailItemKey } from '../../utils/catchupEvent';
+import { getCatchupGroupKey, getCatchupGroupTitle, getCatchupRailItemKey } from '@appvideo/core/utils/catchupEvent';
 
 const ITEMS_PER_RAIL = 9;
 

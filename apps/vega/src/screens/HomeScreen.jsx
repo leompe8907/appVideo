@@ -14,6 +14,9 @@ import {AdZone} from '../home/AdZone';
 import {VodPage} from '../vod/VodPage';
 import {SearchPage} from '../search/SearchPage';
 import {AccountPage} from '../account/AccountPage';
+import {CatchupPage} from '../catchup/CatchupPage';
+import panaccessService from '@appvideo/core/services/panaccessService';
+import {getCatchupStreamId, getEventTitle} from '@appvideo/core/utils/catchupEvent';
 import {useHomeNavItems} from '../home/useHomeNavItems';
 import {getHomeMemory, rememberPlayback, rememberSection} from '../homeMemory';
 import {getTheme} from '../theme';
@@ -198,6 +201,30 @@ export function HomeScreen({navigate}) {
     );
   } else if (section === 'vod') {
     content = <VodPage active={isFocused} onPlay={playVod} onModalChange={setVodModalOpen} />;
+  } else if (section === 'catchup') {
+    content = (
+      <CatchupPage
+        active={isFocused}
+        onModalChange={setVodModalOpen}
+        onPlay={(event) => {
+          const catchupId = getCatchupStreamId(event);
+          if (catchupId == null) return;
+          let url;
+          try {
+            url = panaccessService.getCatchupM3u8Url({catchupId});
+          } catch {
+            return;
+          }
+          requestPlayMedia({
+            item: event,
+            ratingRaw: event?.parentalRating,
+            title: t('parental.restrictedTitle'),
+            message: t('parental.restrictedMessage'),
+            playFn: () => navigate('vodplayer', {url, title: getEventTitle(event)}),
+          });
+        }}
+      />
+    );
   } else if (section === 'account') {
     content = <AccountPage active={isFocused} navigate={navigate} />;
   } else {

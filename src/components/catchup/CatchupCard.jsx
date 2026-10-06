@@ -6,7 +6,7 @@ import {
   getEventImage,
   getEventStartMs,
   getEventTitle,
-} from '../../utils/catchupEvent';
+} from '@appvideo/core/utils/catchupEvent';
 
 export function CatchupCard({ event, onSelect }) {
   const { i18n } = useTranslation();

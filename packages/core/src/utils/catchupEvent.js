@@ -1,3 +1,5 @@
+import { parseEpgDateToMs } from './epgTime';
+
 export function fmtHHmm(ms) {
   if (ms == null) return '';
   const d = ms instanceof Date ? ms : new Date(ms);
@@ -51,16 +53,11 @@ export function getEventImage(event) {
   );
 }
 
+// Date, número o "YYYY-MM-DD HH:mm:ss" (UTC). `startDate` llega como `{}` tras
+// restaurar caché JSON: entonces se usa el string. (Antes un string caía en la
+// rama `valueOf` y devolvía null.)
 export function getEventStartMs(event) {
-  const v = event?.startDate ?? event?.start ?? event?.start_date;
-  if (v == null) return null;
-  if (typeof v?.valueOf === 'function') {
-    const ms = v.valueOf();
-    return Number.isFinite(ms) ? ms : null;
-  }
-  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
-  const ms = new Date(v).getTime();
-  return Number.isFinite(ms) ? ms : null;
+  return parseEpgDateToMs(event?.startDate) ?? parseEpgDateToMs(event?.start) ?? parseEpgDateToMs(event?.start_date);
 }
 
 export function fmtCatchupDate(ms, locale) {
@@ -235,16 +232,8 @@ export function catchupGroupToChannel(group) {
 }
 
 export function getEventEndMs(event) {
-  const endRaw = event?.endDate ?? event?.end ?? event?.end_date;
-  if (endRaw != null) {
-    if (typeof endRaw?.valueOf === 'function') {
-      const ms = endRaw.valueOf();
-      if (Number.isFinite(ms)) return ms;
-    }
-    if (typeof endRaw === 'number' && Number.isFinite(endRaw)) return endRaw;
-    const ms = new Date(endRaw).getTime();
-    if (Number.isFinite(ms)) return ms;
-  }
+  const endMs = parseEpgDateToMs(event?.endDate) ?? parseEpgDateToMs(event?.end) ?? parseEpgDateToMs(event?.end_date);
+  if (endMs != null) return endMs;
 
   const startMs = getEventStartMs(event);
   const durationSeconds = Number(

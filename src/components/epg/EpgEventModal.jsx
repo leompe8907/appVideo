@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { getCatchupStreamId, getEventDescription, getEventTitle } from '../../utils/catchupEvent';
+import { getCatchupStreamId, getEventDescription, getEventTitle } from '@appvideo/core/utils/catchupEvent';
 import '../epg/epg-common.scss';
 import AppIcon from '../AppIcon';
 import { BrandFallbackImage } from '../common/BrandFallbackImage';
