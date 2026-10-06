@@ -7,13 +7,11 @@ import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
 import {filterBouquetsForInicio, filterBouquetsForTvRadioServices} from '@appvideo/core/services/tvDataService';
 import {FullScreenImage} from '../components/FullScreenImage';
-import {FocusButton} from '../components/FocusButton';
-import * as userSession from '@appvideo/core/utils/userSession';
-import {resetHomeMemory} from '../homeMemory';
 import {Sidebar, RAIL_WIDTH} from '../home/Sidebar';
 import {BouquetWall} from '../home/BouquetWall';
 import {VodPage} from '../vod/VodPage';
 import {SearchPage} from '../search/SearchPage';
+import {AccountPage} from '../account/AccountPage';
 import {useHomeNavItems} from '../home/useHomeNavItems';
 import {getHomeMemory, rememberPlayback, rememberSection} from '../homeMemory';
 import {getTheme} from '../theme';
@@ -153,22 +151,7 @@ export function HomeScreen({navigate}) {
   } else if (section === 'vod') {
     content = <VodPage active={isFocused} onPlay={(p) => navigate('vodplayer', p)} onModalChange={setVodModalOpen} />;
   } else if (section === 'account') {
-    // TODO(Fase 4): página Mi Cuenta. Por ahora, nombre y cerrar sesión.
-    content = (
-      <View style={styles.center}>
-        <Text style={styles.message}>{account.label}</Text>
-        <FocusButton
-          label={t('common.logout')}
-          hasTVPreferredFocus
-          style={styles.logout}
-          onPress={() => {
-            userSession.setLoggedOut();
-            resetHomeMemory();
-            navigate('login');
-          }}
-        />
-      </View>
-    );
+    content = <AccountPage active={isFocused} navigate={navigate} />;
   } else {
     content = (
       <View style={styles.center}>
