@@ -1,4 +1,4 @@
-import {getCurrentEpgEvent, getEpgEventTimeBoundsMs} from '@appvideo/core/utils/epgCurrentEvent';
+import {getCurrentEpgEvent, getEpgEventTimeBoundsMs, getEpgEventTitle} from '@appvideo/core/utils/epgCurrentEvent';
 
 function pad(n) {
   return n < 10 ? `0${n}` : String(n);
@@ -25,10 +25,10 @@ export function getNowNext(channel) {
   const nextBounds = getEpgEventTimeBoundsMs(nextEvent);
   return {
     current: {
-      title: current.title || '',
+      title: getEpgEventTitle(current),
       time: bounds ? `${formatTime(bounds.startMs)} – ${formatTime(bounds.endMs)}` : '',
       progress,
     },
-    next: nextEvent ? {title: nextEvent.title || '', time: nextBounds ? formatTime(nextBounds.startMs) : ''} : null,
+    next: nextEvent ? {title: getEpgEventTitle(nextEvent), time: nextBounds ? formatTime(nextBounds.startMs) : ''} : null,
   };
 }

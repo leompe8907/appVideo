@@ -1,195 +1,166 @@
 import * as React from 'react';
-import {useEffect, useState} from 'react';
-import {ActivityIndicator, FlatList, Image, Pressable, Text, View} from 'react-native';
+import {useEffect, useMemo, useState} from 'react';
+import {ActivityIndicator, BackHandler, Text, View} from 'react-native';
+import {useIsFocused} from '@amazon-devices/react-navigation__native';
 import i18n from '@appvideo/core/locales/i18n';
-import {getBouquetsWithChannels, sortBouquetsByPriority} from '@appvideo/core/services/tvDataService';
-import * as userSession from '@appvideo/core/utils/userSession';
+import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
+import {usePreloadStore} from '@appvideo/core/store/preloadStore';
+import {filterBouquetsForInicio, filterBouquetsForTvRadioServices} from '@appvideo/core/services/tvDataService';
+import {FullScreenImage} from '../components/FullScreenImage';
 import {FocusButton} from '../components/FocusButton';
+import * as userSession from '@appvideo/core/utils/userSession';
+import {resetHomeMemory} from '../homeMemory';
+import {Sidebar, RAIL_WIDTH} from '../home/Sidebar';
+import {BouquetWall} from '../home/BouquetWall';
+import {useHomeNavItems} from '../home/useHomeNavItems';
+import {getHomeMemory, rememberPlayback, rememberSection} from '../homeMemory';
 import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
-import {useIsFocused} from '@amazon-devices/react-navigation__native';
 import {devLog} from '../devLog';
-import {getHomeMemory, rememberBouquet, rememberChannel, resetHomeMemory} from '../homeMemory';
 
-const t = (key) => i18n.t(key);
+const t = (key, opts) => i18n.t(key, opts);
 
-function BouquetItem({bouquet, selected, onSelect, theme, hasTVPreferredFocus}) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <Pressable
-      onFocus={() => {
-        setFocused(true);
-        onSelect();
-      }}
-      onBlur={() => setFocused(false)}
-      onPress={onSelect}
-      hasTVPreferredFocus={hasTVPreferredFocus}
-      style={[
-        styles.bouquet,
-        selected && {backgroundColor: theme.secondary},
-        focused && {borderColor: theme.focusBorder},
-      ]}>
-      <Text style={[styles.bouquetText, {color: theme.text}]} numberOfLines={1}>
-        {bouquet.name || bouquet.title || bouquet.bouquetId}
-      </Text>
-    </Pressable>
-  );
-}
-
-function ChannelCard({channel, onPress, theme, hasTVPreferredFocus}) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      hasTVPreferredFocus={hasTVPreferredFocus}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      style={[
-        styles.card,
-        {backgroundColor: focused ? theme.surfaceFocused : theme.surface},
-        focused && {borderColor: theme.focusBorder, transform: [{scale: 1.06}]},
-      ]}>
-      <View style={styles.logoBox}>
-        {channel.img ? (
-          <Image source={{uri: channel.img}} style={styles.channelLogo} resizeMode="contain" />
-        ) : (
-          <Text style={[styles.lcn, {color: theme.textMuted}]}>{channel.lcn}</Text>
-        )}
-      </View>
-      <Text style={[styles.channelName, {color: theme.text}]} numberOfLines={1}>
-        {channel.lcn != null ? `${channel.lcn}  ` : ''}
-        {channel.name}
-      </Text>
-    </Pressable>
-  );
-}
-
+/**
+ * Home de TV con el diseño de appVideo (spec §1-§3): menú lateral + muro de
+ * bouquets. Inicio = bouquets principales; Canales = bouquets no principales.
+ * Las demás secciones todavía no están portadas.
+ */
 export function HomeScreen({navigate}) {
   const theme = getTheme();
-  const [bouquets, setBouquets] = useState(null);
-  const [selected, setSelectedState] = useState(() => getHomeMemory().bouquetIndex);
-  const setSelected = (i) => {
-    rememberBouquet(i);
-    setSelectedState(i);
-  };
-  // Al volver del reproductor (la pantalla sigue montada debajo) el foco va
-  // al canal que se estaba viendo, también si se cambió con zapping.
+  const brand = getActiveBrandConfig();
+  const epg = usePreloadStore((s) => s.epg);
+  const loadEPG = usePreloadStore((s) => s.loadEPG);
+  const {account, navItems} = useHomeNavItems();
+  const [section, setSection] = useState(() => getHomeMemory().section);
   const isFocused = useIsFocused();
-  const [returnChannel, setReturnChannel] = useState(() => getHomeMemory().channelIndex);
+  const [preferredFocus, setPreferredFocus] = useState(null);
+
+  useEffect(() => {
+    loadEPG(brand);
+  }, [brand, loadEPG]);
+
+  useEffect(() => {
+    if (epg.status === 'ready') {
+      const list = epg.bouquetsWithChannels || [];
+      devLog('home: EPG listo,', list.length, 'bouquets');
+      const sample = list[0]?.items?.[0]?.epgItems?.[0];
+      if (sample) devLog('home: evento de muestra', JSON.stringify(sample).slice(0, 400));
+    }
+    if (epg.status === 'error') devLog('home: EPG error', epg.error);
+  }, [epg.status, epg.bouquetsWithChannels, epg.error]);
+
+  // Al volver del reproductor (el home queda montado debajo), foco al canal visto.
   useEffect(() => {
     if (!isFocused) {
-      setReturnChannel(null);
+      setPreferredFocus(null);
       return;
     }
-    const memory = getHomeMemory();
-    setSelectedState(memory.bouquetIndex);
-    setReturnChannel(memory.channelIndex);
+    const m = getHomeMemory();
+    setPreferredFocus(m.bouquetKey != null ? {bouquetKey: m.bouquetKey, index: m.channelIndex} : null);
   }, [isFocused]);
-  const [error, setError] = useState('');
 
-  const load = React.useCallback(async () => {
-    setError('');
-    setBouquets(null);
-    try {
-      const list = sortBouquetsByPriority(await getBouquetsWithChannels({enableRetry: true}));
-      devLog('home:', list.length, 'bouquets');
-      setSelectedState((i) => {
-        const next = i < list.length ? i : 0;
-        rememberBouquet(next);
-        return next;
-      });
-      setBouquets(list);
-    } catch (e) {
-      devLog('home: error', e?.message);
-      setError(e?.errorInfo?.userMessage || e?.message || t('errors.unexpected'));
-      setBouquets([]);
-    }
-  }, []);
-
+  // Atrás: desde otra sección vuelve a Inicio (como HomeInputDispatcher); en Inicio, el sistema cierra la app.
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!isFocused) return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (section === 'inicio') return false;
+      selectSection('inicio');
+      return true;
+    });
+    return () => sub.remove();
+  });
 
-  const logout = () => {
-    userSession.setLoggedOut();
-    resetHomeMemory();
-    navigate('login');
+  const selectSection = (key) => {
+    rememberSection(key);
+    setSection(key);
+    setPreferredFocus(null);
   };
 
-  if (bouquets === null) {
-    return (
-      <View style={[styles.center, {backgroundColor: theme.background}]}>
-        <ActivityIndicator size="large" color={theme.text} />
+  const bouquets = useMemo(() => {
+    if (epg.status !== 'ready') return [];
+    const list = epg.bouquetsWithChannels || [];
+    return section === 'channels' ? filterBouquetsForTvRadioServices(list) : filterBouquetsForInicio(list);
+  }, [epg.status, epg.bouquetsWithChannels, section]);
+
+  const play = (bouquet, index) => {
+    rememberPlayback(String(bouquet.bouquetId ?? bouquet.id), index);
+    navigate('player', {channels: bouquet.items, index});
+  };
+
+  let content;
+  if (epg.status !== 'ready' && epg.status !== 'error') {
+    const p = epg.progress || {};
+    content = (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#fff" />
+        <Text style={styles.message}>{epg.status === 'finishing' ? t('preload.finishing') : t('preload.message')}</Text>
+        {p.total ? <Text style={styles.sub}>{t('preload.channelsProgress', {current: p.current, total: p.total})}</Text> : null}
+      </View>
+    );
+  } else if (epg.status === 'error' && bouquets.length === 0) {
+    content = (
+      <View style={styles.center}>
+        <Text style={styles.error}>{epg.error || t('bouquet.errorLoad')}</Text>
+      </View>
+    );
+  } else if (section === 'inicio' || section === 'channels') {
+    content =
+      bouquets.length > 0 ? (
+        <BouquetWall
+          bouquets={bouquets}
+          onPlay={play}
+          preferredFocus={preferredFocus || {bouquetKey: String(bouquets[0].bouquetId ?? bouquets[0].id), index: 0}}
+        />
+      ) : (
+        <View style={styles.center}>
+          <Text style={styles.sub}>{t('bouquet.noBouquets')}</Text>
+        </View>
+      );
+  } else if (section === 'account') {
+    // TODO(Fase 4): página Mi Cuenta. Por ahora, nombre y cerrar sesión.
+    content = (
+      <View style={styles.center}>
+        <Text style={styles.message}>{account.label}</Text>
+        <FocusButton
+          label={t('common.logout')}
+          hasTVPreferredFocus
+          style={styles.logout}
+          onPress={() => {
+            userSession.setLoggedOut();
+            resetHomeMemory();
+            navigate('login');
+          }}
+        />
+      </View>
+    );
+  } else {
+    content = (
+      <View style={styles.center}>
+        <Text style={styles.message}>Próximamente</Text>
       </View>
     );
   }
 
-  const current = bouquets[selected];
   return (
-    <View style={[styles.container, {backgroundColor: theme.background}]}>
-      <View style={[styles.sidebar, {backgroundColor: theme.primary}]}>
-        {theme.logo ? <Image source={theme.logo} style={styles.logo} resizeMode="contain" /> : null}
-        {bouquets.map((b, i) => (
-          <BouquetItem
-            key={b.bouquetId}
-            bouquet={b}
-            selected={i === selected}
-            onSelect={() => setSelected(i)}
-            theme={theme}
-            hasTVPreferredFocus={returnChannel == null && i === selected}
-          />
-        ))}
-        <View style={styles.spacer} />
-        <FocusButton label={t('common.logout')} onPress={logout} />
-      </View>
-      <View style={styles.content}>
-        {error ? (
-          <View style={styles.center}>
-            <Text style={[styles.error, {color: theme.error}]}>{error}</Text>
-            <FocusButton label={t('player.retry')} onPress={load} hasTVPreferredFocus />
-          </View>
-        ) : (
-          <>
-            <Text style={[styles.heading, {color: theme.text}]}>{current?.name || ''}</Text>
-            <FlatList
-              data={current?.items || []}
-              keyExtractor={(c) => String(c.id ?? c.epgStreamId ?? c.name)}
-              numColumns={4}
-              renderItem={({item, index}) => (
-                <ChannelCard
-                  channel={item}
-                  theme={theme}
-                  hasTVPreferredFocus={returnChannel === index}
-                  onPress={() => {
-                    rememberChannel(index);
-                    navigate('player', {channels: current.items, index});
-                  }}
-                />
-              )}
-              contentContainerStyle={styles.grid}
-            />
-          </>
-        )}
-      </View>
+    <View style={[styles.root, {backgroundColor: theme.background}]}>
+      <FullScreenImage source={theme.assets.background} />
+      <View style={styles.content}>{content}</View>
+      <Sidebar
+        account={account}
+        items={navItems}
+        activeKey={section}
+        onSelect={selectSection}
+      />
     </View>
   );
 }
 
 const styles = createScaledStyles({
-  container: {flex: 1, flexDirection: 'row'},
+  root: {flex: 1},
+  content: {flex: 1, marginLeft: RAIL_WIDTH},
   center: {flex: 1, alignItems: 'center', justifyContent: 'center'},
-  sidebar: {width: 340, paddingVertical: 40, paddingHorizontal: 24},
-  logo: {width: 260, height: 60, marginBottom: 32, alignSelf: 'center'},
-  bouquet: {paddingVertical: 16, paddingHorizontal: 20, borderRadius: 12, borderWidth: 3, borderColor: 'transparent', marginBottom: 8},
-  bouquetText: {fontSize: 24, fontWeight: '600'},
-  spacer: {flex: 1},
-  content: {flex: 1, paddingTop: 40, paddingHorizontal: 32},
-  heading: {fontSize: 34, fontWeight: '700', marginBottom: 24, marginLeft: 12},
-  grid: {paddingBottom: 60},
-  card: {width: 300, height: 220, margin: 12, borderRadius: 16, borderWidth: 3, borderColor: 'transparent', padding: 16},
-  logoBox: {flex: 1, alignItems: 'center', justifyContent: 'center'},
-  channelLogo: {width: 200, height: 120},
-  lcn: {fontSize: 56, fontWeight: '700'},
-  channelName: {fontSize: 22, marginTop: 8},
-  error: {fontSize: 26, marginBottom: 24, textAlign: 'center'},
+  message: {color: '#fff', fontSize: 28, marginTop: 24},
+  sub: {color: 'rgba(255,255,255,0.85)', fontSize: 20, marginTop: 12},
+  error: {color: '#f8d7da', fontSize: 20, textAlign: 'center'},
+  logout: {marginTop: 32},
 });

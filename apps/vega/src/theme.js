@@ -55,9 +55,14 @@ export function getTheme() {
     focusBorder: '#ffffff',
     error: '#ff6b7a',
     sidebar: {
-      background: ui.sidebar?.backgroundColor || primary,
+      // Igual que applyTheme: panelBackgroundColor ?? backgroundColor; con rgba → #0a0a0a.
+      panel: (() => {
+        const c = ui.sidebar?.panelBackgroundColor ?? ui.sidebar?.backgroundColor;
+        return !c || /rgba/i.test(c) ? '#0a0a0a' : c;
+      })(),
       text: ui.sidebar?.textColor || 'rgba(255,255,255,0.82)',
     },
+    timeshipColor: brand?.bouquets?.timeshipColor ?? ui.epgLineColorTime ?? '#3333FF',
     login: {
       cardBackground: color(login.cardBackground, 'rgba(255,255,255,0.05)'),
       submitBg: color(login.submitBg, `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`),

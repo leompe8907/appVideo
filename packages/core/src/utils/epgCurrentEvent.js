@@ -3,6 +3,30 @@
  * Centralizado para que el player HUD y la grilla usen la misma fuente de verdad.
  */
 
+import { parseEpgDateToMs } from './epgTime';
+
+/**
+ * Inicio/fin del evento en ms. `startDate`/`endDate` son Date recién
+ * cargados, pero al restaurar la caché persistente (JSON) llegan como `{}`:
+ * en ese caso se usa `start`/`end` ("YYYY-MM-DD HH:mm:ss", UTC).
+ * @returns {number} NaN si no hay fecha válida
+ */
+function eventMs(dateField, rawField) {
+  const ms = parseEpgDateToMs(dateField) ?? parseEpgDateToMs(rawField);
+  return ms == null ? NaN : ms;
+}
+
+/**
+ * Título del evento: `languages[0].title` (formato de la API) o `title`.
+ * @param {object|null} event
+ * @returns {string}
+ */
+export function getEpgEventTitle(event) {
+  if (!event) return '';
+  if (event.languages?.[0]?.title) return event.languages[0].title;
+  return event.title ?? '';
+}
+
 /**
  * @param {Array} epgItems
  * @returns {object|null}
@@ -12,8 +36,8 @@ export function getCurrentEpgEvent(epgItems) {
   const now = Date.now();
   let lastValid = null;
   for (const event of epgItems) {
-    const startMs = event.startDate?.valueOf?.() ?? new Date(event.start).getTime();
-    const endMs = event.endDate?.valueOf?.() ?? new Date(event.end).getTime();
+    const startMs = eventMs(event.startDate, event.start);
+    const endMs = eventMs(event.endDate, event.end);
     if (Number.isNaN(startMs) || Number.isNaN(endMs)) continue;
     lastValid = event;
     if (now >= startMs && now <= endMs) return event;
@@ -28,8 +52,8 @@ export function getCurrentEpgEvent(epgItems) {
  */
 export function getEpgEventTimeBoundsMs(event) {
   if (!event) return null;
-  const startMs = event.startDate?.valueOf?.() ?? new Date(event.start).getTime();
-  const endMs = event.endDate?.valueOf?.() ?? new Date(event.end).getTime();
+  const startMs = eventMs(event.startDate, event.start);
+  const endMs = eventMs(event.endDate, event.end);
   if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) return null;
   return { startMs, endMs };
 }

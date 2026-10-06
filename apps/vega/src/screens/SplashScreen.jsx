@@ -3,6 +3,7 @@ import {useEffect} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {resolveSplashDestination} from '@appvideo/core/services/splashAuthFlow';
+import * as userSession from '@appvideo/core/utils/userSession';
 import {FullScreenImage} from '../components/FullScreenImage';
 import {getTheme} from '../theme';
 import {screenForWebRoute} from '../routes';
@@ -25,6 +26,14 @@ export function SplashScreen({navigate}) {
     let cancelled = false;
     (async () => {
       const started = Date.now();
+      devLog(
+        'splash: sesión',
+        userSession.getSessionId() ? 'sí' : 'no',
+        '| licencia activa',
+        userSession.getActiveLicense()?.licenseKey ? 'sí' : 'no',
+        '| credenciales',
+        userSession.getCredentials() ? 'sí' : 'no',
+      );
       let route = '/login';
       try {
         route = await Promise.race([

@@ -23,6 +23,18 @@ function safeJson(v) {
 }
 
 export function installDevErrorLogging() {
+  if (__DEV__) {
+    // Los flujos del núcleo informan errores con console.warn/error (sólo en
+    // desarrollo): que también lleguen a la Mac.
+    for (const level of ['warn', 'error']) {
+      const original = console[level];
+      console[level] = (...args) => {
+        original.apply(console, args);
+        if (typeof args[0] === 'string' && args[0].includes('Legacy AsyncStorage')) return;
+        fetch(LOG_URL, {method: 'POST', body: `console.${level}: ${args.map((a) => (a instanceof Error ? a.message : typeof a === 'string' ? a : safeJson(a))).join(' ')}`}).catch(() => {});
+      };
+    }
+  }
   const prev = global.ErrorUtils?.getGlobalHandler?.();
   global.ErrorUtils?.setGlobalHandler?.((e, isFatal) => {
     devLog(`ERROR JS${isFatal ? ' fatal' : ''}:`, e);

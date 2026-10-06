@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
-import { getCurrentEpgEvent } from '@appvideo/core/utils/epgCurrentEvent';
+import { getCurrentEpgEvent, getEpgEventTitle } from '@appvideo/core/utils/epgCurrentEvent';
 import { parseEpgDateToMs, formatHHmmFromMs } from '@appvideo/core/utils/epgTime';
 import { useParental } from '@appvideo/core/store/useParental';
 import { getChannelStableId } from '@appvideo/core/utils/channelId';
@@ -38,13 +38,6 @@ function getEpgEventProgressPercent(event) {
   if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) return 0;
   const p = ((now - startMs) / (endMs - startMs)) * 100;
   return Math.min(100, Math.max(0, p));
-}
-
-/** Título del evento desde languages[0].title o campo directo */
-function getEpgEventTitle(event) {
-  if (!event) return '';
-  if (event.languages?.[0]?.title) return event.languages[0].title;
-  return event.title ?? '';
 }
 
 // Helper local para normalizar colores (copia ligera del usado en Bouquet.jsx)
