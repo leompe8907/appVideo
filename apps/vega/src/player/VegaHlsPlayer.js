@@ -107,6 +107,34 @@ export class VegaHlsPlayer {
     video.play();
   }
 
+  /** Controles para VOD/catchup. */
+  play() {
+    this.video?.play();
+  }
+
+  pause() {
+    this.video?.pause();
+  }
+
+  get paused() {
+    return this.video ? this.video.paused : true;
+  }
+
+  get currentTime() {
+    return this.video ? Number(this.video.currentTime) || 0 : 0;
+  }
+
+  get duration() {
+    const d = this.video ? Number(this.video.duration) : 0;
+    return Number.isFinite(d) ? d : 0;
+  }
+
+  seekTo(seconds) {
+    if (!this.video) return;
+    const max = this.duration || seconds;
+    this.video.currentTime = Math.max(0, Math.min(seconds, max - 1));
+  }
+
   async destroy() {
     if (this.destroyed) return;
     this.destroyed = true;

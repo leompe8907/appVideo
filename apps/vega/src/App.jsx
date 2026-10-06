@@ -9,6 +9,7 @@ import {LoginScreen} from './screens/LoginScreen';
 import {HomeScreen} from './screens/HomeScreen';
 import {PlayerScreen} from './screens/PlayerScreen';
 import {SmartCardScreen} from './screens/SmartCardScreen';
+import {VodPlayerScreen} from './screens/VodPlayerScreen';
 import {devLog} from './devLog';
 import {storageReady} from './bootstrap';
 
@@ -45,6 +46,7 @@ const Login = withNavigate(LoginScreen);
 const Home = withNavigate(HomeScreen);
 const Player = withNavigate(PlayerScreen);
 const SmartCard = withNavigate(SmartCardScreen);
+const VodPlayer = withNavigate(VodPlayerScreen);
 
 export function App() {
   const [ready, setReady] = useState(false);
@@ -64,6 +66,7 @@ export function App() {
         <Stack.Screen name="smartcard" component={SmartCard} />
         <Stack.Screen name="home" component={Home} />
         <Stack.Screen name="player" component={Player} />
+        <Stack.Screen name="vodplayer" component={VodPlayer} />
       </Stack.Navigator>
     </NavigationContainer>
   );

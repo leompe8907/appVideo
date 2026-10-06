@@ -12,6 +12,7 @@ import * as userSession from '@appvideo/core/utils/userSession';
 import {resetHomeMemory} from '../homeMemory';
 import {Sidebar, RAIL_WIDTH} from '../home/Sidebar';
 import {BouquetWall} from '../home/BouquetWall';
+import {VodPage} from '../vod/VodPage';
 import {useHomeNavItems} from '../home/useHomeNavItems';
 import {getHomeMemory, rememberPlayback, rememberSection} from '../homeMemory';
 import {getTheme} from '../theme';
@@ -34,6 +35,8 @@ export function HomeScreen({navigate}) {
   const [section, setSection] = useState(() => getHomeMemory().section);
   const isFocused = useIsFocused();
   const [preferredFocus, setPreferredFocus] = useState(null);
+  // Con un modal de VOD abierto, Atrás lo cierra el modal (no vuelve a Inicio).
+  const [vodModalOpen, setVodModalOpen] = useState(false);
 
   useEffect(() => {
     loadEPG(brand);
@@ -78,7 +81,7 @@ export function HomeScreen({navigate}) {
   useEffect(() => {
     if (!isFocused) return undefined;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (section === 'inicio') return false;
+      if (section === 'inicio' || vodModalOpen) return false;
       selectSection('inicio');
       return true;
     });
@@ -134,6 +137,8 @@ export function HomeScreen({navigate}) {
           <Text style={styles.sub}>{t('bouquet.noBouquets')}</Text>
         </View>
       );
+  } else if (section === 'vod') {
+    content = <VodPage onPlay={(p) => navigate('vodplayer', p)} onModalChange={setVodModalOpen} />;
   } else if (section === 'account') {
     // TODO(Fase 4): página Mi Cuenta. Por ahora, nombre y cerrar sesión.
     content = (

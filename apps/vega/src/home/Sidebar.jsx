@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {useRef, useState} from 'react';
-import {Image, Pressable, Text, View} from 'react-native';
+import {Image, Pressable, TVFocusGuideView, Text, View} from 'react-native';
 import {getTheme} from '../theme';
 import {createScaledStyles, px} from '../scaledStyles';
 
@@ -84,10 +84,15 @@ export function Sidebar({account, items, activeKey, onSelect}) {
   return (
     <>
       {expanded ? <View pointerEvents="none" style={styles.dim} /> : null}
-      <View style={[styles.sidebar, {width: px(expanded ? PANEL_WIDTH : RAIL_WIDTH), backgroundColor: theme.sidebar.panel}]}>
+      {/* ▲▼ no salen del menú (como Sidebar.jsx); al entrar vuelve al último ítem enfocado. */}
+      <TVFocusGuideView
+        autoFocus
+        trapFocusUp
+        trapFocusDown
+        style={[styles.sidebar, {width: px(expanded ? PANEL_WIDTH : RAIL_WIDTH), backgroundColor: theme.sidebar.panel}]}>
         <View style={styles.accountGroup}>{renderItem(account)}</View>
         <View style={styles.navGroup}>{items.map(renderItem)}</View>
-      </View>
+      </TVFocusGuideView>
     </>
   );
 }
