@@ -229,9 +229,11 @@ export function SearchPage() {
       services: epg.streams || [],
       vods: vod.allVods || [],
       catchupGroups: catchup.groups || [],
+      bouquets: epg.bouquetsWithChannels || [],
+      vodCategories: vod.categories || [],
       vodDrmBaseUrl: currentBrand?.drm ?? '',
     });
-  }, [debouncedQuery, epg.streams, vod.allVods, catchup.groups, currentBrand?.drm]);
+  }, [debouncedQuery, epg.streams, epg.bouquetsWithChannels, vod.allVods, vod.categories, catchup.groups, currentBrand?.drm]);
 
   const grouped = useMemo(() => {
     const services = [];

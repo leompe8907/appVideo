@@ -1,7 +1,10 @@
 /**
- * Panel nativo de "eliminar cuenta". Solo se monta en PC/web cuando el
- * brand tiene `login.deviceSession.enabled` (ver `MiCuentaPage.jsx`) -- en
- * TV o brands sin este backend se sigue usando el QR existente.
+ * Panel nativo de "eliminar cuenta". Se monta cuando el brand tiene
+ * `login.deviceSession.enabled` (ver `MiCuentaPage.jsx`) -- en brands sin
+ * este backend se sigue usando el QR existente. También habilitado en TV
+ * (2026-10-02, ver `TV_READY_NATIVE_PANELS` en `MiCuentaPage.jsx`): el
+ * input de correo del paso `email` usa `FocusableInput` (abre el teclado
+ * OSD con Enter) en vez de un `<input>` plano.
  *
  * Flujo con confirmación por correo (2026-09-08/09/17, mockup del cliente
  * "Flujo | Mi cuenta - Eliminar cuenta"; ver
@@ -34,6 +37,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ConfirmModal from '../ConfirmModal';
 import { requestAccountDeletion } from '../../services/accountSecurityService';
+import { FocusableInput } from '../navigation/FocusableInput';
 // Los estilos de este panel viven en styles/pages/_mi-cuenta.scss /
 // styles/components/_account-security.scss (importados desde
 // MiCuentaPage.jsx), no acá -- ver el comentario en ese archivo sobre por
@@ -244,7 +248,7 @@ export function CloseAccountPanel({ brandConfig, brand }) {
           })}
         </p>
 
-        <input
+        <FocusableInput
           type="email"
           className="account-security-input account-security-input--centered"
           placeholder={t('account.deleteAccountEmailPlaceholder', { defaultValue: 'Escribe tu correo' })}

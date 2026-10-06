@@ -624,3 +624,14 @@ $account-security-request-width: 22rem;
   opacity: 0.5;
   cursor: default;
 }
+
+// Variante TV de `OtpDigitsInput` (ver ChangePasswordPanel.jsx): un solo
+// campo en vez de 6 casillas, pensado para abrirse con el teclado numérico
+// OSD (Enter) en vez de navegarse casilla por casilla con el D-pad.
+.account-security-otp-tv-input {
+  width: 100%;
+  max-width: 14rem;
+  text-align: center;
+  letter-spacing: 0.6em;
+  font-size: 1.3rem;
+}

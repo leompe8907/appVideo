@@ -1,8 +1,15 @@
 /**
- * Panel nativo de "dispositivos vinculados" (listar/revocar). Solo se
- * monta en PC/web cuando el brand tiene `login.deviceSession.enabled`
- * (ver `MiCuentaPage.jsx`) -- en TV o brands sin este backend se sigue
- * usando el QR existente, sin cambios.
+ * Panel nativo de "dispositivos vinculados" (listar/revocar). Se monta
+ * cuando el brand tiene `login.deviceSession.enabled` (ver
+ * `MiCuentaPage.jsx`) -- en brands sin este backend se sigue usando el QR
+ * existente, sin cambios.
+ *
+ * Primer panel nativo habilitado también en TV (2026-10-02, ver
+ * `TV_READY_NATIVE_PANELS` en `MiCuentaPage.jsx`): no tiene ningún paso que
+ * pida tipear (solo lista + botones + `ConfirmModal`), así que no hace
+ * falta teclado virtual ni adaptación extra -- las filas/botones ya son
+ * `<button>` reales, focusables de taquito por el motor de navegación
+ * espacial genérico.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';

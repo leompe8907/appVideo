@@ -27,19 +27,30 @@ import '../styles/pages/_mi-cuenta.scss';
  * ya que en TV no hay forma práctica de abrir un link arbitrario.
  *
  * EXCEPCIÓN nativa: si el brand tiene `login.deviceSession.enabled` (backend
- * propio de "dispositivos vinculados"/cuenta, ver `deviceAuthService.js`) Y
- * no estamos en TV, "Cambiar contraseña", "Dispositivos vinculados" y
- * "Eliminar cuenta" se resuelven con un panel nativo dentro de la misma app
- * en vez del QR -- en TV escribir una contraseña con el control remoto es
- * mala UX, así que ahí se sigue usando el QR sin cambios. "Suscripción" no
- * tiene contrapartida nativa (no forma parte del contrato de este backend)
- * y siempre usa QR.
+ * propio de "dispositivos vinculados"/cuenta, ver `deviceAuthService.js`),
+ * "Cambiar contraseña", "Dispositivos vinculados" y "Eliminar cuenta" se
+ * resuelven con un panel nativo dentro de la misma app en vez del QR.
+ * "Suscripción" no tiene contrapartida nativa (no forma parte del contrato
+ * de este backend) y siempre usa QR.
+ *
+ * En TV, el nativo solo se habilita pantalla por pantalla, a medida que cada
+ * una se adapta para navegación con control remoto (ver `TV_READY_NATIVE_PANELS`
+ * más abajo) -- las que todavía no están adaptadas siguen usando el QR en TV
+ * (escribir con el control remoto es mala UX), sin que eso bloquee a las que
+ * ya sí están listas.
  */
 const NATIVE_ACCOUNT_PANELS = {
   changePassword: ChangePasswordPanel,
   linkedDevices: LinkedDevicesPanel,
   deleteAccount: CloseAccountPanel,
 };
+
+// Paneles nativos ya validados para TV. "linkedDevices" no pedía tipear
+// nada. "deleteAccount" y "changePassword" sí (email/contraseña/código OTP)
+// -- se habilitan acá una vez que sus inputs pasaron a `FocusableInput`
+// (abre el teclado OSD con Enter) y, en el caso del código OTP, a un campo
+// único en vez de 6 casillas (ver `OtpDigitsInput` en ChangePasswordPanel.jsx).
+const TV_READY_NATIVE_PANELS = new Set(['linkedDevices', 'deleteAccount', 'changePassword']);
 export function MiCuentaPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -57,7 +68,13 @@ export function MiCuentaPage() {
   // si la marca usa perfiles (mismo flag que decide el redirect post-login
   // en utils/navigation.js), si no hay nada a qué "cambiar".
   const changeProfileEnabled = currentBrand?.features?.profiles === true;
-  const useNativeAccountFlow = !isTV && isDeviceSessionEnabled(currentBrand);
+  // Antes: `!isTV && isDeviceSessionEnabled(...)`, un solo flag todo-o-nada.
+  // Ahora se decide por pantalla (`activeItem.key`): en TV, solo las que ya
+  // están en `TV_READY_NATIVE_PANELS` usan el panel nativo; el resto (PC/web)
+  // sigue igual que antes.
+  const isNativeFlowEnabledForBrand = isDeviceSessionEnabled(currentBrand);
+  const canUseNativePanel = (key) =>
+    isNativeFlowEnabledForBrand && !!NATIVE_ACCOUNT_PANELS[key] && (!isTV || TV_READY_NATIVE_PANELS.has(key));
 
   // Flags independientes por funcionalidad (`brand.account.sections`): a
   // diferencia de `account.links` (que resuelve un QR/panel), estas son
@@ -315,7 +332,7 @@ export function MiCuentaPage() {
           ) : activeItem ? (
             <>
               <h1 className="mi-cuenta-content__title">{activeItem.label}</h1>
-              {useNativeAccountFlow && NATIVE_ACCOUNT_PANELS[activeItem.key] ? (
+              {canUseNativePanel(activeItem.key) ? (
                 (() => {
                   const NativePanel = NATIVE_ACCOUNT_PANELS[activeItem.key];
                   return <NativePanel brandConfig={currentBrand} brand={currentBrand?.brand} />;

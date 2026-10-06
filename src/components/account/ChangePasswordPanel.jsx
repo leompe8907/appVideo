@@ -1,7 +1,11 @@
 /**
- * Panel nativo de "cambiar contraseña". Solo se monta en PC/web cuando el
- * brand tiene `login.deviceSession.enabled` (ver `MiCuentaPage.jsx`) -- en
- * TV o brands sin este backend se sigue usando el QR existente.
+ * Panel nativo de "cambiar contraseña". Se monta cuando el brand tiene
+ * `login.deviceSession.enabled` (ver `MiCuentaPage.jsx`) -- en brands sin
+ * este backend se sigue usando el QR existente. También habilitado en TV
+ * (2026-10-02, ver `TV_READY_NATIVE_PANELS` en `MiCuentaPage.jsx`): los
+ * campos de texto usan `FocusableInput` (abre el teclado OSD con Enter), y
+ * el código OTP usa un campo único en TV en vez de 6 casillas (ver
+ * `OtpDigitsInput` más abajo).
  *
  * Dos flujos posibles, elegidos por marca (2026-09-14, ver
  * docs/CAMBIO_CONTRASENA_OTP_2026-09-14.md en Back-Wind-V2) vía
@@ -28,6 +32,8 @@ import {
   requestPasswordChangeOtp,
 } from '../../services/accountSecurityService';
 import { clearSessionBeforeNewLogin } from '../../services/loginFlow';
+import { useDevice } from '../../contexts/DeviceContext';
+import { FocusableInput } from '../navigation/FocusableInput';
 // Los estilos de este panel viven en styles/pages/_mi-cuenta.scss (importado
 // desde MiCuentaPage.jsx), no acá -- ver el comentario en ese archivo sobre
 // por qué (chunk de CSS separado que se rompía en el build de producción).
@@ -155,7 +161,7 @@ function PasswordToggleInput({
 }) {
   return (
     <div className="account-security-password-field">
-      <input
+      <FocusableInput
         id={id}
         type={show ? 'text' : 'password'}
         className="account-security-input"
@@ -196,8 +202,33 @@ function PasswordToggleInput({
  * cambiar), la lógica de auto-avance/borrado/pegado vive toda acá adentro.
  */
 function OtpDigitsInput({ length, value, onChange, disabled }) {
+  const { isTV } = useDevice();
   const inputsRef = useRef([]);
   const digits = Array.from({ length }, (_, i) => value[i] || '');
+
+  // En TV, 6 casillas navegables de a una con el D-pad son tediosas (y el
+  // foco "salta" entre inputs reales en vez de abrir el teclado OSD como
+  // cualquier otro campo). En vez de adaptar la navegación casilla por
+  // casilla, se usa un solo campo que al apretar Enter abre el teclado
+  // numérico 4x3 que ya existe (`VirtualKeyboard`, `type="numeric"`, el
+  // mismo que usa p. ej. el PIN parental) -- el usuario escribe los 6
+  // dígitos de una sola vez ahí y confirma con "OK".
+  if (isTV) {
+    return (
+      <FocusableInput
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        autoComplete="one-time-code"
+        className="account-security-input account-security-otp-tv-input"
+        title="Código de acceso único"
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, length))}
+        maxLength={length}
+        disabled={disabled}
+      />
+    );
+  }
 
   const focusIndex = (i) => {
     inputsRef.current[i]?.focus();
@@ -718,7 +749,7 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
         })}
       </p>
 
-      <input
+      <FocusableInput
         type="email"
         className="account-security-input account-security-input--centered"
         placeholder={t('account.changeOtpEmailPlaceholder', { defaultValue: 'Escribe tu correo' })}

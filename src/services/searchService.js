@@ -300,8 +300,182 @@ function normalizeResult(item, type, ctx = {}) {
   return normalized;
 }
 
+// --- Búsqueda por grupo (bouquet / grupo de catchup / categoría VOD) ---
+// Réplica de las reglas de Android/iOS (BUSCADOR_POR_GRUPO.md, 05/10/2026,
+// `SearchGroups` compartido). Se SUMA a la búsqueda por nombre de siempre.
+
+const GROUP_MIN_LENGTH = 3;
+const GROUP_EPG_DAYS = 2; // hoy y mañana
+// Por debajo de cualquier coincidencia directa por nombre (mínimo ~100): lo que
+// coincide por su propio nombre sale primero, el contenido del grupo detrás.
+const GROUP_MATCH_RELEVANCE = 90;
+
+/** Minúsculas + sin tildes (á→a, ñ→n, ç→c, ...). */
+function normalizeGroupStr(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
+
+/** Aplica solo con 3+ caracteres (sin espacios de los bordes) y si no es solo números. */
+function appliesToGroups(query) {
+  const q = String(query || '').trim();
+  return q.length >= GROUP_MIN_LENGTH && !/^\d+$/.test(q);
+}
+
+function isGroupMatch(name, normalizedQuery) {
+  return !!name && normalizeGroupStr(name).includes(normalizedQuery);
+}
+
+function getEventStartMs(ev) {
+  return getMs(ev?.startDate ?? ev?.start);
+}
+
+/** Asigna relevancia decreciente para conservar el orden de la lista (el sort final es estable). */
+function withOrderedRelevance(items) {
+  return items.map((item, i) => {
+    item.relevance = GROUP_MATCH_RELEVANCE - i / 100000;
+    return item;
+  });
+}
+
+function searchByGroups({
+  query,
+  bouquets,
+  services,
+  catchupGroups,
+  vods,
+  vodCategories,
+  vodDrmBaseUrl,
+  nowMs,
+}) {
+  if (!appliesToGroups(query)) return [];
+  const q = normalizeGroupStr(query.trim());
+  const out = [];
+
+  // 1. Canales de TODOS los bouquets que coinciden (Inicio y Canales), sin repetir.
+  const seenChannels = new Set();
+  const bouquetChannels = [];
+  (Array.isArray(bouquets) ? bouquets : []).forEach((b) => {
+    const bName = b?.name ?? b?.title ?? b?.Name ?? b?.Title ?? '';
+    if (!isGroupMatch(bName, q)) return;
+    (Array.isArray(b?.items) ? b.items : []).forEach((ch) => {
+      if (!ch) return;
+      const key = ch.id ?? ch.epgStreamId ?? ch.lcn;
+      if (key != null) {
+        if (seenChannels.has(key)) return;
+        seenChannels.add(key);
+      }
+      bouquetChannels.push(ch);
+    });
+  });
+
+  // Los canales del bouquet pueden venir sin `epgItems` (o sin epgStreamId): se
+  // completan con el stream equivalente de `services` (por id / epgStreamId).
+  const svcById = new Map();
+  const svcByEpg = new Map();
+  (Array.isArray(services) ? services : []).forEach((sv) => {
+    if (sv?.id != null) svcById.set(String(sv.id), sv);
+    const e = sv?.epgStreamId ?? sv?.epgStreamid;
+    if (e != null && e !== '' && e !== 0 && e !== '0') svcByEpg.set(String(e), sv);
+  });
+  for (let i = 0; i < bouquetChannels.length; i++) {
+    const ch = bouquetChannels[i];
+    const e = ch.epgStreamId ?? ch.epgStreamid;
+    const sv =
+      (ch.id != null && svcById.get(String(ch.id))) ||
+      (e != null && svcByEpg.get(String(e))) ||
+      null;
+    if (sv && sv !== ch) {
+      const hasEpg = Array.isArray(ch.epgItems) && ch.epgItems.length > 0;
+      bouquetChannels[i] = {
+        ...sv,
+        ...ch,
+        epgStreamId: ch.epgStreamId ?? ch.epgStreamid ?? sv.epgStreamId ?? sv.epgStreamid,
+        epgItems: hasEpg ? ch.epgItems : sv.epgItems ?? ch.epgItems ?? [],
+      };
+    }
+  }
+
+  withOrderedRelevance(
+    bouquetChannels.map((ch) => normalizeResult(ch, 'service')).filter(Boolean)
+  ).forEach((r) => out.push(r));
+
+  // 2. Catchup: grupos cuyo epgStreamId es el de un canal del bouquet, o cuyo
+  //    nombre coincide. Del más nuevo al más viejo.
+  const epgIds = new Set(
+    bouquetChannels
+      .flatMap((c) => [c.epgStreamId ?? c.epgStreamid, c.id])
+      .filter((v) => v != null && v !== '' && v !== 0 && v !== '0')
+      .map(String)
+  );
+  const lcns = new Set(
+    bouquetChannels.map((c) => c.lcn ?? c.LCN).filter((v) => v != null && v !== '').map(String)
+  );
+  const matchedGroups = (Array.isArray(catchupGroups) ? catchupGroups : []).filter((g) => {
+    const gId = g?.epgStreamId ?? g?.epg_stream_id ?? g?.epgStreamid;
+    if (gId != null && epgIds.has(String(gId))) return true;
+    if (g?.lcn != null && lcns.has(String(g.lcn))) return true;
+    return isGroupMatch(g?.name, q);
+  });
+  const catchupEvents = getAllCatchupEvents(matchedGroups).sort(
+    (a, b) => (getEventStartMs(b) || 0) - (getEventStartMs(a) || 0)
+  );
+  withOrderedRelevance(
+    catchupEvents.map((ev) => normalizeResult(ev, 'catchup')).filter(Boolean)
+  ).forEach((r) => out.push(r));
+
+  // 3. Guía: eventos no terminados que empiezan antes del final de mañana
+  //    (hora del dispositivo), por hora de comienzo.
+  const startOfToday = new Date(nowMs);
+  startOfToday.setHours(0, 0, 0, 0);
+  const untilMs = startOfToday.getTime() + GROUP_EPG_DAYS * 24 * 60 * 60 * 1000;
+  const epgRows = getAllEpgEventsFromStreams(bouquetChannels, { nowMs })
+    .filter(({ event }) => {
+      const s = getEventStartMs(event);
+      return !Number.isFinite(s) || s < untilMs;
+    })
+    .sort((a, b) => (getEventStartMs(a.event) || 0) - (getEventStartMs(b.event) || 0));
+  withOrderedRelevance(
+    epgRows
+      .map(({ channel, event, title }) =>
+        normalizeResult(
+          {
+            id: `${channel?.id ?? channel?.epgStreamId ?? 'ch'}-${event?.id ?? event?.eventId ?? event?.start ?? title}`,
+            name: title,
+            channel,
+            event,
+          },
+          'epg'
+        )
+      )
+      .filter(Boolean)
+  ).forEach((r) => out.push(r));
+
+  // 4. Películas de las categorías que coinciden (sin las de adultos si vienen marcadas).
+  const matchedCatIds = new Set(
+    (Array.isArray(vodCategories) ? vodCategories : [])
+      .filter((c) => c && !c.isAdult && !c.adult && isGroupMatch(c.name, q))
+      .map((c) => String(c.id))
+  );
+  if (matchedCatIds.size > 0) {
+    const movies = (Array.isArray(vods) ? vods : []).filter((vod) =>
+      (Array.isArray(vod?.categories) ? vod.categories : []).some((id) => matchedCatIds.has(String(id)))
+    );
+    withOrderedRelevance(
+      movies.map((vod) => normalizeResult(vod, 'vod', { vodDrmBaseUrl })).filter(Boolean)
+    ).forEach((r) => out.push(r));
+  }
+
+  return out;
+}
+
 /**
  * Busca sobre datos ya cargados (EPG/services, VOD, Catchup).
+ * Además del texto propio de cada ítem, si la query (3+ caracteres, no solo
+ * números) coincide con el nombre de un bouquet, grupo de catchup o categoría
+ * VOD, suma todo su contenido (ver `searchByGroups`).
  * Retorna resultados normalizados ordenados por relevancia (desc).
  */
 export function searchAll({
@@ -309,6 +483,8 @@ export function searchAll({
   services = [],
   vods = [],
   catchupGroups = [],
+  bouquets = [],
+  vodCategories = [],
   vodDrmBaseUrl = '',
 } = {}) {
   const results = [];
@@ -374,6 +550,22 @@ export function searchAll({
     normalized.relevance = calculateRelevance(title, trimmed);
     allResults.push(normalized);
   });
+
+  // Grupos (bouquet / grupo de catchup / categoría VOD): van DESPUÉS de las
+  // coincidencias directas, así la deduplicación de abajo (se queda con la
+  // primera) conserva la relevancia más alta si un ítem coincide por las dos vías.
+  allResults.push(
+    ...searchByGroups({
+      query: trimmed,
+      bouquets,
+      services,
+      catchupGroups,
+      vods,
+      vodCategories,
+      vodDrmBaseUrl,
+      nowMs: Date.now(),
+    })
+  );
 
   // Deduplicar por tipo+id por si la fuente de datos tiene duplicados
   const seen = new Set();
