@@ -34,10 +34,13 @@ function SidebarItem({item, active, expanded, focused, onFocus, onBlur, onPress,
       </View>
       {expanded ? (
         <View style={styles.labelCell}>
-          <Text style={[styles.label, {color}]} numberOfLines={1}>
-            {item.label}
-          </Text>
-          {highlighted ? <View style={[styles.underline, {backgroundColor: accent}]} /> : null}
+          {/* Como .home-sidebar-label::after: la línea mide lo que el texto. */}
+          <View style={styles.labelWrap}>
+            <Text style={[styles.label, {color}]} numberOfLines={1}>
+              {item.label}
+            </Text>
+            {highlighted ? <View style={[styles.underline, {backgroundColor: accent}]} /> : null}
+          </View>
         </View>
       ) : null}
     </Pressable>
@@ -116,5 +119,6 @@ const styles = createScaledStyles({
   railIndicator: {position: 'absolute', bottom: -6, width: 25.6, height: 2, borderRadius: 1},
   labelCell: {flex: 1, paddingRight: 16, alignItems: 'flex-start'},
   label: {fontSize: 38.4, fontWeight: '400'},
-  underline: {alignSelf: 'stretch', height: 2, marginTop: 5.6},
+  labelWrap: {alignSelf: 'flex-start', maxWidth: '100%'},
+  underline: {alignSelf: 'stretch', height: 2, borderRadius: 1, marginTop: 5.6},
 });
