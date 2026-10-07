@@ -107,9 +107,18 @@ export function HomeScreen({navigate}) {
     return () => sub.remove();
   });
 
-  // Durante una recarga del EPG el store conserva los bouquets anteriores:
-  // se siguen mostrando (no se desmonta el muro ni se pierde el foco).
-  const hasEpgData = (epg.bouquetsWithChannels || []).length > 0;
+  // Como /preload en la web: la precarga se muestra hasta que termina la
+  // primera carga del EPG (lista o error). Si el caché tiene menos de 30 min
+  // (EPG_CACHE_TTL_MS del núcleo) llega lista al instante; si no, se espera la
+  // descarga completa (el store publica los canales antes que los eventos, y
+  // no hay que mostrar el home a medias). Las recargas posteriores en segundo
+  // plano no vuelven a mostrarla: el muro sigue con los datos anteriores.
+  const epgSettled = epg.status === 'ready' || epg.status === 'error';
+  const [initialEpgDone, setInitialEpgDone] = useState(epgSettled);
+  useEffect(() => {
+    if (epgSettled) setInitialEpgDone(true);
+  }, [epgSettled]);
+  const hasEpgData = initialEpgDone && (epg.bouquetsWithChannels || []).length > 0;
   const bouquets = useMemo(() => {
     if (epg.status !== 'ready' && !hasEpgData) return [];
     const list = epg.bouquetsWithChannels || [];
@@ -191,9 +200,8 @@ export function HomeScreen({navigate}) {
     return target ? {bouquetKey: String(target.bouquetId ?? target.id), channelId: preferredFocus.channelId} : first;
   }, [bouquets, preferredFocus]);
 
-  // Precarga a pantalla completa, sin menú lateral (como /preload en la web),
-  // sólo en la primera carga: las recargas en segundo plano no la muestran.
-  if (epg.status !== 'ready' && epg.status !== 'error' && !hasEpgData) return <PreloadScreen />;
+  // Precarga a pantalla completa, sin menú lateral (ver initialEpgDone).
+  if (!initialEpgDone) return <PreloadScreen />;
 
   let content;
   if (epg.status === 'error' && bouquets.length === 0) {
