@@ -32,8 +32,20 @@ Detalle técnico y cómo reproducir: `~/Desktop/VegaPruebaRN/PRUEBA_VEGA.md`.
 - `~/Desktop/VegaPruebaRN/src/probeStreams.local.ts` tiene un `sessionId` de INTV de prueba (en `.gitignore`; vence al cerrar sesión).
 - Disco: ~7 GB libres al 06-10.
 
+### Avance de la app Vega (07-10-2026)
+Control parental probado en el Fire TV: PIN, bloqueo y desbloqueo de canal, PIN incorrecto. Su diseño de TV se replicó en la web ([VEGA_PARENTAL_A_WEB.md](VEGA_PARENTAL_A_WEB.md)). El reloj de Mi Cuenta y de los reproductores se actualiza solo.
+
+### Pendientes pedidos (07-10-2026)
+1. **VOD por categorías:** las películas tienen categorías, pero hoy salen todas juntas en «Películas» porque `getVodCategoryGroups` responde sin permisos. Revisar cómo arma las categorías la app de Android y hacer lo mismo en `@appvideo/core`.
+2. **Reproductor:** faltan botones respecto de appVideo. Comparar los HUD de vivo y VOD con la web y completar (audio, subtítulos, calidad y lo que falte).
+3. **Barra inferior del menú lateral:** no es igual a la de appVideo. Compararla y corregirla.
+4. **Scroll con el control:** revisar el scroll en las cuatro direcciones en todas las pantallas. Si no se identifica la falla, preguntar al usuario.
+5. **Menú «Guía» (EPG):** no aparece en INTV porque su marca tiene `EPG.enabled: false` (`packages/core/src/config/brands/intv.js`). Confirmar si es lo esperado o si hay que encenderlo.
+6. **Flags de marca:** revisar todo lo configurable en `packages/core/src/config/brands/*.js` y dejar en una tabla qué se aplica en el Fire TV y qué no.
+7. **App de MultiplusTV:** crearla para probar catchup, EPG y VOD, porque esa cuenta tiene todos esos datos. La marca ya existe en el núcleo; el build sale con `VEGA_BRAND=multiplustv` como `com.bromteck.appvideo.multiplustv`. Imágenes: el splash y el fondo de 1920×1080 en JPG van en `apps/vega/assets/brand-source/multiplustv/`; si faltan, se convierten los de `public/multiplustv/`. Logos y placeholder salen de `public/multiplustv/`. Hacen falta credenciales de prueba de MultiplusTV.
+
 ### Avance de la app Vega (06-10-2026, noche)
-Con el diseño de appVideo y verificado en el Fire TV (Debug y Release): splash, login (teclado del sistema), smartcard con "licencia en uso", home (menú lateral, bouquets con EPG, banners), reproductor en vivo con HUD (zapping por LCN, listado de canales, info), Películas (VOD: filas, detalle, episodios, reproductor), Buscador y Mi Cuenta. Arreglos en el núcleo que también corrigen la web: VOD sin grupos de categorías (antes no se mostraba), fechas de EPG restauradas de caché. Pendiente: catchup/EPG, control parental, perfiles, OSMS, pistas de audio/subtítulos, publicación (Fase 6).
+Con el diseño de appVideo y verificado en el Fire TV (Debug y Release): splash, login (teclado del sistema), smartcard con "licencia en uso", home (menú lateral, bouquets con EPG, banners), reproductor en vivo con HUD (zapping por LCN, listado de canales, info), Películas (VOD: filas, detalle, episodios, reproductor), Buscador y Mi Cuenta. Arreglos en el núcleo que también corrigen la web: VOD sin grupos de categorías (antes no se mostraba), fechas de EPG restauradas de caché. Pendiente: catchup/EPG, perfiles, OSMS, pistas de audio/subtítulos, publicación (Fase 6).
 
 ### Avance de la app Vega (06-10-2026, rama `vega/core`)
 `apps/vega` corre en el Fire TV Stick 4K Select (192.168.4.218) con `@appvideo/core`: splash con validación de sesión, login manual, home con los bouquets y canales reales de INTV (logos incluidos) y vivo a pantalla completa con zapping. Probado: TV Jornal, TV Tribuna, RedeTV!, TV Guararapes, Gazeta; Globo Nordeste muestra el error (404 del CDN). Cómo compilar, instalar, ver logs, sacar capturas y simular el control: [apps/vega/README.md](../apps/vega/README.md).
