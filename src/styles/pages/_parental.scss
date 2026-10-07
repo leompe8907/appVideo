@@ -17,6 +17,19 @@
   @include scrollbar-hidden; /* ocultar barra sin perder scroll */
 }
 
+// Dentro de Mi Cuenta: el contenedor de Mi Cuenta ya pone el padding y el
+// scroll; el título deja lugar al reloj (--mi-cuenta-clock-reserve).
+.parental-page--embedded {
+  padding: 0;
+  max-height: none;
+  overflow: visible;
+
+  .parental-title {
+    padding-right: 84px;
+    padding-right: var(--mi-cuenta-clock-reserve, 84px);
+  }
+}
+
 .parental-header {
   margin-bottom: 12px;
 }
@@ -195,17 +208,8 @@
   color: var(--account-active-text, #fff);
 }
 
-.parental-rating-checkbox {
-  display: inline-flex;
-  align-items: center;
-  opacity: 0.95;
-  font-size: 16px;
-  font-size: clamp(14px, 1.85vmin, 24px);
-
-  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
-  > *:not(:last-child) {
-    margin-right: 8px;
-  }
+.parental-rating-apply-live {
+  white-space: nowrap;
 }
 
 .parental-empty {
@@ -290,13 +294,45 @@
   }
 }
 
+// Foco como en Vega: borde de 3px con el color de foco de la marca sobre el
+// propio control, sin escala ni sombra. TvFocusRing no dibuja su anillo
+// dentro de `.parental-card` (ver `isFocusRingTarget`); sin esto, el anillo
+// (radio 10) no coincidía con las tarjetas (radio 12) y, con el anillo
+// apagado, el `scale(1.08)` global montaba la tarjeta sobre sus vecinas.
+// `html` + `button` para ganarle a `[data-focus="on"].device-tv button.focused`.
+// En TV con anillo activo no se pone `.focused` (main.jsx), por eso `:focus`
+// en TV. Sin `:focus-visible`: Chrome 53 no lo conoce y descartaría la regla.
+@mixin parental-control-focus {
+  outline: none !important;
+  border-width: 3px !important;
+  border-color: var(--focus-color, var(--primary-color, #667eea)) !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+html[data-focus='on'] .parental-card button.focused {
+  @include parental-control-focus;
+}
+
+html[data-focus='on'].device-tv .parental-card button:focus {
+  @include parental-control-focus;
+}
+
 /* Gate */
+// Sin `inset`, `display: grid`, `place-items` ni `gap`: no existen en el
+// Chrome 53 de Tizen/webOS viejos (ver `browserslist`).
 .parental-pin-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   background: rgba(0, 0, 0, 0.72);
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 9999;
 }
 
@@ -337,11 +373,18 @@
   color: #ff6b7a;
 }
 
+// 5 columnas con flex-wrap + márgenes; el margen negativo compensa el de
+// la última columna.
 .parental-pin-pad {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
+  margin: 14px -10px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+
+  > * {
+    box-sizing: border-box;
+    width: calc(20% - 10px);
+    margin: 0 10px 10px 0;
+  }
 }
 
 .parental-pin-digit {
@@ -355,8 +398,8 @@
   font-size: clamp(14px, 1.8vmin, 20px);
 }
 
-.parental-pin-digit--ok {
-  grid-column: span 2;
+.parental-pin-pad > .parental-pin-digit--ok {
+  width: calc(40% - 10px);
   background: rgba(102, 126, 234, 0.22);
   border-color: rgba(102, 126, 234, 0.55);
 }

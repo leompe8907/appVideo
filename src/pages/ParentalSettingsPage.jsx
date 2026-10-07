@@ -16,7 +16,12 @@ import { TV_ACTION } from '../utils/tvRemote';
 import { findNextFocusable, focusElementSafe } from '../navigation/spatialNavigation';
 import '../styles/pages/_parental.scss';
 
-export function ParentalSettingsPage() {
+/**
+ * @param {boolean} [embedded=false] - true cuando se muestra dentro de Mi Cuenta
+ * (a la derecha del menú, como en Vega): sin foco inicial propio (el foco queda
+ * en el ítem del menú) y con lugar para el reloj de Mi Cuenta junto al título.
+ */
+export function ParentalSettingsPage({ embedded = false } = {}) {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
   const { isTV } = useDevice();
@@ -47,7 +52,7 @@ export function ParentalSettingsPage() {
   // de geometría genérico ya resuelve LRUD entre todos los controles, solo
   // falta colocar el foco inicial al entrar (los modales de PIN/confirmación
   // atrapan el foco ellos mismos vía FocusManager cuando están abiertos).
-  useTvInitialFocus('.parental-page', [channels.length]);
+  useTvInitialFocus(embedded ? '' : '.parental-page', [channels.length]);
 
   // El grid de canales y el segmento de clasificación por edad viven en
   // tarjetas separadas; la fila de "Bloquear ahora" (más arriba, alineada a
@@ -75,7 +80,7 @@ export function ParentalSettingsPage() {
 
       if (
         action === TV_ACTION.DOWN &&
-        active.matches('.parental-rating-segbtn, .parental-rating-checkbox input')
+        active.matches('.parental-rating-segbtn, .parental-rating-apply-live')
       ) {
         const firstCard = document.querySelector('.parental-channel-grid .parental-channel-card');
         if (firstCard instanceof HTMLElement) return focusElementSafe(firstCard);
@@ -104,9 +109,11 @@ export function ParentalSettingsPage() {
     parental.unlockUntilMs != null &&
     Date.now() < parental.unlockUntilMs;
 
+  const rootClassName = `parental-page${embedded ? ' parental-page--embedded' : ''}`;
+
   if (!parentalControlEnabled) {
     return (
-      <section className="parental-page" aria-label={t('parental.title', { defaultValue: 'Control parental' })}>
+      <section className={rootClassName} aria-label={t('parental.title', { defaultValue: 'Control parental' })}>
         <div className="parental-header">
           <h2 className="parental-title">{t('parental.title', { defaultValue: 'Control parental' })}</h2>
         </div>
@@ -118,7 +125,7 @@ export function ParentalSettingsPage() {
   }
 
   return (
-    <section className="parental-page" aria-label={t('parental.title', { defaultValue: 'Control parental' })}>
+    <section className={rootClassName} aria-label={t('parental.title', { defaultValue: 'Control parental' })}>
       <ConfirmModal
         open={showForgotPin}
         title={t('parental.forgotPinTitle', { defaultValue: 'Olvidé mi PIN' })}
@@ -285,14 +292,17 @@ export function ParentalSettingsPage() {
           </div>
 
           {parental.ratingEnabled ? (
-            <label className="parental-rating-checkbox">
-              <input
-                type="checkbox"
-                checked={parental.ratingApplyToLive !== false}
-                onChange={(e) => parental.setRatingApplyToLive(e.target.checked)}
-              />
+            // Botón en vez de checkbox nativo (como Vega): en TV el checkbox
+            // es chico y no muestra el foco con el mismo estilo que el resto.
+            <button
+              type="button"
+              className="parental-btn parental-rating-apply-live"
+              aria-pressed={parental.ratingApplyToLive !== false}
+              onClick={() => parental.setRatingApplyToLive(parental.ratingApplyToLive === false)}
+            >
+              {`${parental.ratingApplyToLive !== false ? '☑' : '☐'} `}
               {t('parental.ratingApplyToLive', { defaultValue: 'Aplicar a TV en vivo (EPG)' })}
-            </label>
+            </button>
           ) : null}
         </div>
       </div>

@@ -14,13 +14,14 @@ import { focusFirstIn } from '../navigation/spatialNavigation';
  * geometría en cada tecla) — solo necesita un punto de partida inicial.
  *
  * @param {string} selector Selector CSS del contenedor cuyo primer foco enfocable se busca
+ *   (vacío: no hace nada, p. ej. una pantalla embebida que deja el foco donde está)
  * @param {any[]} [deps] Dependencias adicionales para re-disparar (ej. `[dataStatus]`)
  */
 export function useTvInitialFocus(selector, deps = []) {
   const { isTV } = useDevice();
 
   useEffect(() => {
-    if (!isTV) return undefined;
+    if (!isTV || !selector) return undefined;
     const cancel = focusFirstIn(selector);
     return cancel;
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -13,6 +13,8 @@ function isFocusRingTarget(el) {
   if (!el || typeof el.querySelector !== 'function') return false;
   try {
     if (el.closest('.home-sidebar')) return false;
+    // Control parental: el foco es el borde del propio control (_parental.scss).
+    if (el.closest('.parental-card')) return false;
   } catch {
     // noop
   }

@@ -33,7 +33,6 @@ const SearchPage = lazy(() => import('./pages/SearchPage'));
 const PreloadDataPage = lazy(() => import('./pages/PreloadDataPage'));
 const EpgCardsPage = lazy(() => import('./pages/EpgCardsPage'));
 const CatchupPage = lazy(() => import('./pages/CatchupPage'));
-const ParentalSettingsPage = lazy(() => import('./pages/ParentalSettingsPage'));
 const OsmsPage = lazy(() => import('./pages/OsmsPage'));
 const MiCuentaPage = lazy(() => import('./pages/MiCuentaPage'));
 const HomePlaceholderPage = lazy(() =>
@@ -177,12 +176,13 @@ function App() {
                     <Route path="buscador" element={<Suspense fallback={<Loading />}><SearchPage /></Suspense>} />
                     <Route path="servicios-tv-radio" element={<Suspense fallback={<Loading />}><TvRadioServicesPage /></Suspense>} />
                     <Route path="epg" element={<EpgGuardRoute><Suspense fallback={<Loading />}><EpgCardsPage /></Suspense></EpgGuardRoute>} />
-                    <Route path="control-parental" element={<Suspense fallback={<Loading />}><ParentalSettingsPage /></Suspense>} />
                   </Route>
                   <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>} />
                   <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>} />
                   <Route path="osms" element={<Suspense fallback={<Loading />}><OsmsPage /></Suspense>} />
                   <Route path="mi-cuenta" element={<Suspense fallback={<Loading />}><MiCuentaPage /></Suspense>} />
+                  {/* El control parental vive dentro de Mi Cuenta (como en Vega). */}
+                  <Route path="control-parental" element={<Navigate to="/home/mi-cuenta?section=parental" replace />} />
                   <Route path="*" element={<Navigate to="/home/inicio" replace />} />
                 </Route>
                 {/* Fallback */}

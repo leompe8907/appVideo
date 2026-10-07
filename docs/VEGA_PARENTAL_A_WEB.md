@@ -61,3 +61,12 @@ Textos, flujo y reglas iguales a la web:
 - Para desbloquear un canal se pide PIN; para bloquearlo, no.
 - «Bloquear ahora» cierra el desbloqueo temporal.
 - Las opciones de clasificación son L…18 y «Aplicar a TV en vivo».
+
+## Estado en la web (Samsung y LG usan el mismo build)
+
+Aplicado: tarjetas de canal, botones, disposición y tipografía (puntos 1–4). Además:
+- **Foco**: borde de 3px sobre el propio control (`_parental.scss`); `TvFocusRing` no
+  dibuja su anillo dentro de `.parental-card`.
+- **«Aplicar a TV en vivo»**: botón con ☑/☐ en vez de checkbox nativo.
+- **Modal de PIN**: sin `inset`, `display: grid`, `place-items` ni `gap` (Chrome 53 de
+  Tizen/webOS viejos).

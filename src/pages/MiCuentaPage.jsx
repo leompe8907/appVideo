@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import QRCode from 'qrcode';
 import { useBrand } from '../contexts/BrandContext';
@@ -12,6 +12,8 @@ import LinkedDevicesPanel from '../components/account/LinkedDevicesPanel';
 import ChangePasswordPanel from '../components/account/ChangePasswordPanel';
 import CloseAccountPanel from '../components/account/CloseAccountPanel';
 import { OsmsPage } from './OsmsPage';
+import { ParentalSettingsPage } from './ParentalSettingsPage';
+import { PreloadGate } from '../components/preload/PreloadGate';
 import { isDeviceSessionEnabled } from '@appvideo/core/services/deviceAuthService';
 import { clearSessionBeforeNewLogin } from '@appvideo/core/services/loginFlow';
 import { exitAppBestEffort } from '../utils/tvNavigation';
@@ -43,6 +45,7 @@ const NATIVE_ACCOUNT_PANELS = {
 export function MiCuentaPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { appName, currentBrand } = useBrand();
   const { isTV } = useDevice();
   const { text: clockText } = useDeviceTime({ locale: currentBrand?.ui?.locale, format: 'HH:mm' });
@@ -117,7 +120,13 @@ export function MiCuentaPage() {
     return qrItems.find((item) => item.key === 'deleteAccount');
   }, [qrItems]);
 
-  const [activeKey, setActiveKey] = useState(() => qrItems[0]?.key || (aboutEnabled ? 'about' : ''));
+  // `?section=parental`: entrada directa al control parental (ruta vieja
+  // /home/control-parental y el aviso "Configurar PIN" del gate).
+  const [activeKey, setActiveKey] = useState(() =>
+    parentalControlEnabled && searchParams.get('section') === 'parental'
+      ? 'parental'
+      : qrItems[0]?.key || (aboutEnabled ? 'about' : ''),
+  );
   const [confirmAction, setConfirmAction] = useState(null); // 'logout' | 'exit' | null
   const [qrImageSrc, setQrImageSrc] = useState('');
 
@@ -128,11 +137,19 @@ export function MiCuentaPage() {
     const validKeys = new Set(qrItems.map((i) => i.key));
     if (aboutEnabled) validKeys.add('about');
     if (osmsInline) validKeys.add('osms');
+    if (parentalControlEnabled) validKeys.add('parental');
     if (!validKeys.has(activeKey)) {
       setActiveKey(qrItems[0]?.key || (aboutEnabled ? 'about' : ''));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qrItems, aboutEnabled, osmsInline]);
+  }, [qrItems, aboutEnabled, osmsInline, parentalControlEnabled]);
+
+  // Mi Cuenta ya montada (p. ej. el gate de PIN navega acá desde el player):
+  // el estado inicial no se recalcula, así que se sigue el parámetro.
+  const sectionParam = searchParams.get('section');
+  useEffect(() => {
+    if (sectionParam === 'parental' && parentalControlEnabled) setActiveKey('parental');
+  }, [sectionParam, parentalControlEnabled]);
 
   const activeItem = qrItems.find((i) => i.key === activeKey) || null;
   const activeUrl = activeItem?.link?.url || '';
@@ -256,8 +273,8 @@ export function MiCuentaPage() {
             {parentalControlEnabled && (
               <button
                 type="button"
-                className="mi-cuenta-item"
-                onClick={() => navigate('/home/control-parental')}
+                className={`mi-cuenta-item${activeKey === 'parental' ? ' active' : ''}`}
+                onClick={() => setActiveKey('parental')}
               >
                 {t('account.advancedSettings', { defaultValue: 'Control parental' })}
               </button>
@@ -312,6 +329,13 @@ export function MiCuentaPage() {
 
           {activeKey === 'osms' && osmsInline ? (
             <OsmsPage embedded />
+          ) : activeKey === 'parental' && parentalControlEnabled ? (
+            // Dentro de Mi Cuenta, como en Vega. Mi Cuenta no está bajo
+            // HomeEpgRoutesLayout: sin este gate la lista de canales podía
+            // quedar vacía si el EPG no estaba precargado.
+            <PreloadGate required="epg">
+              <ParentalSettingsPage embedded />
+            </PreloadGate>
           ) : activeItem ? (
             <>
               <h1 className="mi-cuenta-content__title">{activeItem.label}</h1>

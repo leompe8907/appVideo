@@ -34,14 +34,14 @@ export function ParentalGateHost() {
         cancelText={t('common.close', { defaultValue: 'Cerrar' })}
         onConfirm={() => {
           closeGate();
-          // Importante: cerrar el player para que se vea la UI de /home/control-parental
+          // Importante: cerrar el player para que se vea el control parental de Mi Cuenta
           // (HomePage oculta la UI cuando el player está activo).
           try {
             close?.();
           } catch {
             // noop
           }
-          navigate('/home/control-parental');
+          navigate('/home/mi-cuenta?section=parental');
         }}
         onCancel={closeGate}
       />
