@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {FlatList, Text, View} from 'react-native';
+import {FlatList, TVFocusGuideView, Text, View} from 'react-native';
 import {
   resolveBouquetLayoutForDevice,
   resolveHorizontalGridMode,
@@ -86,7 +86,8 @@ const BouquetRow = React.memo(function BouquetRow({bouquet, onPlay, preferredCha
   return (
     <View style={styles.bouquet}>
       <Text style={styles.heading}>{bouquet.name || bouquet.title || ''}</Text>
-      {body}
+      {/* Como la web: ▶ en la última tarjeta no salta a otra fila. */}
+      <TVFocusGuideView trapFocusRight>{body}</TVFocusGuideView>
     </View>
   );
 });

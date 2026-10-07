@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {useEffect, useState} from 'react';
-import {ActivityIndicator, BackHandler, FlatList, Image, Pressable, ScrollView, Text, View} from 'react-native';
+import {ActivityIndicator, BackHandler, FlatList, Image, Pressable, ScrollView, TVFocusGuideView, Text, View} from 'react-native';
 import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
@@ -130,20 +130,22 @@ export function CatchupPage({onPlay, onModalChange, active = true}) {
           return (
             <View key={gKey} style={styles.section}>
               <Text style={styles.railTitle}>{getCatchupGroupTitle(group, t('catchup.unknownChannel'))}</Text>
-              <FlatList
-                horizontal
-                data={data}
-                keyExtractor={(e, i) => (e.__more ? 'more' : getCatchupRailItemKey(e, gKey, i))}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.rail}
-                renderItem={({item, index}) =>
-                  item.__more ? (
-                    <SeeMoreCard onPress={() => setGrid(group)} />
-                  ) : (
-                    <CatchupCard event={item} hasTVPreferredFocus={!grid && !detail && gi === 0 && index === 0} onPress={() => open(item, group)} />
-                  )
-                }
-              />
+              <TVFocusGuideView trapFocusRight>
+                <FlatList
+                  horizontal
+                  data={data}
+                  keyExtractor={(e, i) => (e.__more ? 'more' : getCatchupRailItemKey(e, gKey, i))}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.rail}
+                  renderItem={({item, index}) =>
+                    item.__more ? (
+                      <SeeMoreCard onPress={() => setGrid(group)} />
+                    ) : (
+                      <CatchupCard event={item} hasTVPreferredFocus={!grid && !detail && gi === 0 && index === 0} onPress={() => open(item, group)} />
+                    )
+                  }
+                />
+              </TVFocusGuideView>
             </View>
           );
         })}

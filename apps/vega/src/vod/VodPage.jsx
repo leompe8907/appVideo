@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {useEffect, useRef, useState} from 'react';
-import {ActivityIndicator, BackHandler, FlatList, Pressable, ScrollView, Text, View} from 'react-native';
+import {ActivityIndicator, BackHandler, FlatList, Pressable, ScrollView, TVFocusGuideView, Text, View} from 'react-native';
 import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
@@ -111,21 +111,23 @@ export function VodPage({onPlay, onModalChange, active = true}) {
           return (
             <View key={String(cat.id)} style={styles.row}>
               <Text style={styles.rowTitle}>{cat.name}</Text>
-              <FlatList
-                horizontal
-                data={data}
-                keyExtractor={(v, i) => (v.__more ? 'more' : String(v?.id ?? i))}
-                ItemSeparatorComponent={Gap}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.rail}
-                renderItem={({item, index}) =>
-                  item.__more ? (
-                    <VodSeeMoreCard label={t('vod.seeMore')} onPress={() => setGrid(cat)} />
-                  ) : (
-                    <VodCard item={item} hasTVPreferredFocus={!detail && !grid && row === 0 && index === 0} onPress={() => setDetail(item)} />
-                  )
-                }
-              />
+              <TVFocusGuideView trapFocusRight>
+                <FlatList
+                  horizontal
+                  data={data}
+                  keyExtractor={(v, i) => (v.__more ? 'more' : String(v?.id ?? i))}
+                  ItemSeparatorComponent={Gap}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.rail}
+                  renderItem={({item, index}) =>
+                    item.__more ? (
+                      <VodSeeMoreCard label={t('vod.seeMore')} onPress={() => setGrid(cat)} />
+                    ) : (
+                      <VodCard item={item} hasTVPreferredFocus={!detail && !grid && row === 0 && index === 0} onPress={() => setDetail(item)} />
+                    )
+                  }
+                />
+              </TVFocusGuideView>
             </View>
           );
         })}
