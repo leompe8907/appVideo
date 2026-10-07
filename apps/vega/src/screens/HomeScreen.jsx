@@ -105,11 +105,14 @@ export function HomeScreen({navigate}) {
     return () => sub.remove();
   });
 
+  // Durante una recarga del EPG el store conserva los bouquets anteriores:
+  // se siguen mostrando (no se desmonta el muro ni se pierde el foco).
+  const hasEpgData = (epg.bouquetsWithChannels || []).length > 0;
   const bouquets = useMemo(() => {
-    if (epg.status !== 'ready') return [];
+    if (epg.status !== 'ready' && !hasEpgData) return [];
     const list = epg.bouquetsWithChannels || [];
     return section === 'channels' ? filterBouquetsForTvRadioServices(list) : filterBouquetsForInicio(list);
-  }, [epg.status, epg.bouquetsWithChannels, section]);
+  }, [epg.status, epg.bouquetsWithChannels, hasEpgData, section]);
 
   // Reproducir pasa por el control parental (requestPlayChannel, como la web).
   const requestPlayChannel = useParentalGateStore((s) => s.requestPlayChannel);
@@ -178,8 +181,9 @@ export function HomeScreen({navigate}) {
     return target ? {bouquetKey: String(target.bouquetId ?? target.id), channelId: preferredFocus.channelId} : first;
   }, [bouquets, preferredFocus]);
 
-  // Precarga a pantalla completa, sin menú lateral (como /preload en la web).
-  if (epg.status !== 'ready' && epg.status !== 'error') return <PreloadScreen />;
+  // Precarga a pantalla completa, sin menú lateral (como /preload en la web),
+  // sólo en la primera carga: las recargas en segundo plano no la muestran.
+  if (epg.status !== 'ready' && epg.status !== 'error' && !hasEpgData) return <PreloadScreen />;
 
   let content;
   if (epg.status === 'error' && bouquets.length === 0) {

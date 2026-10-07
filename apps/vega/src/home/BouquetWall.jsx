@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {FlatList, ScrollView, Text, View} from 'react-native';
+import {FlatList, Text, View} from 'react-native';
 import {
   resolveBouquetLayoutForDevice,
   resolveHorizontalGridMode,
@@ -75,8 +75,9 @@ function BouquetRow({bouquet, onPlay, preferredFocus}) {
           ItemSeparatorComponent={Separator}
           contentContainerStyle={styles.track}
           showsHorizontalScrollIndicator={false}
-          initialNumToRender={28}
-          windowSize={5}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={3}
         />
       );
     }
@@ -100,13 +101,24 @@ function Separator() {
  * customData / layoutType).
  */
 export function BouquetWall({bouquets, onPlay, preferredFocus, header}) {
+  // Lista vertical virtualizada: sólo se arman los bouquets cerca de la
+  // pantalla (con 10+ bouquets el ScrollView armaba cientos de tarjetas y
+  // cada movimiento de foco se sentía lento). Se arma al menos hasta el
+  // bouquet del canal recordado, para que reciba el foco al volver.
+  const preferredIndex = bouquets.findIndex((b) => keyOf(b) === preferredFocus?.bouquetKey);
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.wall} showsVerticalScrollIndicator={false}>
-      {header}
-      {bouquets.map((b) => (
-        <BouquetRow key={keyOf(b)} bouquet={b} onPlay={onPlay} preferredFocus={preferredFocus} />
-      ))}
-    </ScrollView>
+    <FlatList
+      style={styles.scroll}
+      contentContainerStyle={styles.wall}
+      data={bouquets}
+      keyExtractor={keyOf}
+      renderItem={({item}) => <BouquetRow bouquet={item} onPlay={onPlay} preferredFocus={preferredFocus} />}
+      ListHeaderComponent={header}
+      initialNumToRender={Math.max(3, preferredIndex + 2)}
+      maxToRenderPerBatch={2}
+      windowSize={5}
+      showsVerticalScrollIndicator={false}
+    />
   );
 }
 
