@@ -1,12 +1,12 @@
 import * as React from 'react';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {ActivityIndicator, BackHandler, Image, Pressable, Text, View, useTVEventHandler} from 'react-native';
-import {KeplerCaptionsView, KeplerVideoSurfaceView} from '@amazon-devices/react-native-w3cmedia';
 import LinearGradient from '@amazon-devices/react-linear-gradient';
 import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
+import {VideoSurface} from '../player/VideoSurface';
 import {TracksPanel, hasTrackOptions} from '../player/TracksPanel';
 import {Clock} from '../components/Clock';
 import {FocusRing} from '../components/FocusRing';
@@ -178,25 +178,7 @@ export function VodPlayerScreen({params, navigate}) {
 
   return (
     <View style={styles.container}>
-      <KeplerVideoSurfaceView
-        style={styles.surface}
-        onSurfaceViewCreated={(h) => {
-          handles.current.surface = h;
-          player.current?.setSurfaceHandle(h);
-        }}
-        onSurfaceViewDestroyed={(h) => {
-          player.current?.clearSurfaceHandle(h);
-          handles.current.surface = null;
-        }}
-      />
-      <KeplerCaptionsView
-        onCaptionViewCreated={(h) => {
-          handles.current.caption = h;
-          player.current?.setCaptionViewHandle(h);
-        }}
-        show={Boolean(tracks?.textEnabled)}
-        style={styles.captions}
-      />
+      <VideoSurface handlesRef={handles} playerRef={player} showCaptions={Boolean(tracks?.textEnabled)} />
 
       {state === 'loading' || state === 'buffering' ? (
         <View style={styles.loading} pointerEvents="none">

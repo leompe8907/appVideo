@@ -85,6 +85,16 @@ como en la web). Sirve para entrar sin escribir usuario y contraseña.
   `useIsFocused`.
 - El protector de pantalla de Fire TV pausa la app: al probar con teclas
   simuladas, despertarlo antes.
+- **Builds Debug: la app se cierra a los ~7,5 min de reproducir video**
+  (cualquier canal y marca; `SIGABRT` por "Too many open files" en el log
+  del stick). Es del runtime de desarrollo de Vega: en **Release** no pasa
+  (probado 12+ min). No es de React DevTools, ni de Shaka (fetch o XHR), ni
+  del descifrado de keys, ni de `timeupdate`, ni del manifiesto: se probó
+  cada cosa por separado (07-10-2026). Para pruebas largas de reproducción
+  usar Release: `./scripts/build.sh Release` y
+  `./scripts/run-on-device.sh 192.168.4.218 Release` (sin logs a la Mac).
+- Imágenes remotas: siempre con `RemoteImage` / `remoteImage.js` (URLs vacías,
+  sin id o caídas del operador provocaban cierres al rearmar el home).
 
 ## Pendiente
 

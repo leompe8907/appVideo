@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ActivityIndicator, BackHandler, FlatList, Image, Pressable, Text, View, useTVEventHandler} from 'react-native';
-import {KeplerCaptionsView, KeplerVideoSurfaceView} from '@amazon-devices/react-native-w3cmedia';
 import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig, isParentalControlEnabledForBrand} from '@appvideo/core/config/brandConfig';
 import {useParentalStore} from '@appvideo/core/store/parentalStore';
@@ -12,6 +11,7 @@ import {buildZappingChannelList} from '@appvideo/core/utils/channelZappingList';
 import {buildChannelLogoUrl} from '@appvideo/core/utils/bouquetLayoutConfig';
 import {getCurrentEpgEvent, getEpgEventTimeBoundsMs, getEpgEventTitle} from '@appvideo/core/utils/epgCurrentEvent';
 import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
+import {VideoSurface} from '../player/VideoSurface';
 import {TracksPanel, hasTrackOptions} from '../player/TracksPanel';
 import {Clock} from '../components/Clock';
 import {FocusRing} from '../components/FocusRing';
@@ -156,11 +156,13 @@ export function PlayerScreen({params, navigate}) {
   const handles = useRef({surface: null, caption: null});
   const hideTimer = useRef(null);
 
-  // Reloj y now/next se re-evalúan cada segundo.
+  // now/next se re-evalúan cada segundo, sólo con el HUD visible (con el
+  // HUD oculto no hay nada que actualizar en pantalla).
   useEffect(() => {
+    if (!hudVisible) return undefined;
     const timer = setInterval(() => setTick((x) => x + 1), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [hudVisible]);
 
   const showHud = useCallback(() => {
     setHudVisible(true);
@@ -294,25 +296,7 @@ export function PlayerScreen({params, navigate}) {
 
   return (
     <View style={styles.container}>
-      <KeplerVideoSurfaceView
-        style={styles.surface}
-        onSurfaceViewCreated={(h) => {
-          handles.current.surface = h;
-          player.current?.setSurfaceHandle(h);
-        }}
-        onSurfaceViewDestroyed={(h) => {
-          player.current?.clearSurfaceHandle(h);
-          handles.current.surface = null;
-        }}
-      />
-      <KeplerCaptionsView
-        onCaptionViewCreated={(h) => {
-          handles.current.caption = h;
-          player.current?.setCaptionViewHandle(h);
-        }}
-        show={Boolean(tracks?.textEnabled)}
-        style={styles.captions}
-      />
+      <VideoSurface handlesRef={handles} playerRef={player} showCaptions={Boolean(tracks?.textEnabled)} />
 
       {state === 'loading' || state === 'buffering' ? (
         <View style={styles.loading} pointerEvents="none">
