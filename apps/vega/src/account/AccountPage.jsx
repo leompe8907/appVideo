@@ -6,9 +6,9 @@ import {getActiveBrandConfig, isParentalControlEnabledForBrand} from '@appvideo/
 import {clearSessionBeforeNewLogin} from '@appvideo/core/services/loginFlow';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
 import {getActiveLicense, getCredentials} from '@appvideo/core/utils/userSession';
+import {Clock} from '../components/Clock';
 import {QrCode} from '../components/QrCode';
 import {ConfirmModal} from '../components/ConfirmModal';
-import {formatTime} from '../epg';
 import {resetHomeMemory} from '../homeMemory';
 import {ParentalSettings} from '../parental/ParentalSettings';
 import {createScaledStyles, px} from '../scaledStyles';
@@ -155,7 +155,7 @@ export function AccountPage({navigate, active = true}) {
       </ScrollView>
 
       <View style={[styles.content, {backgroundColor: colors.contentBg}]}>
-        <Text style={[styles.clock, {color: colors.text}]}>{formatTime(Date.now())}</Text>
+        <Clock style={[styles.clock, {color: colors.text}]} />
         {content}
       </View>
 

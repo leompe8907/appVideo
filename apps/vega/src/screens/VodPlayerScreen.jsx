@@ -7,8 +7,8 @@ import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
+import {Clock} from '../components/Clock';
 import {FocusRing} from '../components/FocusRing';
-import {formatTime} from '../epg';
 import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
 import {devLog} from '../devLog';
@@ -63,7 +63,7 @@ export function VodPlayerScreen({params, navigate}) {
   const hideMs = Math.max(500, Number(getActiveBrandConfig()?.player?.hudAutoHideMs) || 6000);
   const [state, setState] = useState('loading');
   const [hudVisible, setHudVisible] = useState(true);
-  const [, setTick] = useState(0);
+  const [pos, setPos] = useState({current: 0, duration: 0, paused: false});
   const player = useRef(null);
   const handles = useRef({surface: null, caption: null});
   const hideTimer = useRef(null);
@@ -75,7 +75,10 @@ export function VodPlayerScreen({params, navigate}) {
   }, [hideMs]);
 
   useEffect(() => {
-    const timer = setInterval(() => setTick((x) => x + 1), 500);
+    const timer = setInterval(() => {
+      const pl = player.current;
+      if (pl) setPos({current: pl.currentTime || 0, duration: pl.duration || 0, paused: pl.paused});
+    }, 500);
     return () => clearInterval(timer);
   }, []);
 
@@ -152,11 +155,8 @@ export function VodPlayerScreen({params, navigate}) {
     };
   }, [params?.vodId, params?.url, params?.title]);
 
-  const p = player.current;
-  const current = p?.currentTime || 0;
-  const duration = p?.duration || 0;
+  const {current, duration, paused} = pos;
   const progress = duration > 0 ? Math.min(1, current / duration) : 0;
-  const paused = p ? p.paused : false;
 
   return (
     <View style={styles.container}>
@@ -202,18 +202,18 @@ export function VodPlayerScreen({params, navigate}) {
           <View style={styles.topbar}>
             <HudButton icon="back" onPress={() => navigate('back')} onFocus={showHud} />
             <View style={styles.centerGroup}>
-              <HudButton icon="rewind" onPress={() => p?.seekTo(current - SKIP_SECONDS)} onFocus={showHud} />
+              <HudButton icon="rewind" onPress={() => player.current?.seekTo(current - SKIP_SECONDS)} onFocus={showHud} />
               <HudButton
                 icon={paused ? 'play' : 'pause'}
                 primary
                 hasTVPreferredFocus={state !== 'error'}
-                onPress={() => (paused ? p?.play() : p?.pause())}
+                onPress={() => (paused ? player.current?.play() : player.current?.pause())}
                 onFocus={showHud}
               />
-              <HudButton icon="forward" onPress={() => p?.seekTo(current + SKIP_SECONDS)} onFocus={showHud} />
+              <HudButton icon="forward" onPress={() => player.current?.seekTo(current + SKIP_SECONDS)} onFocus={showHud} />
             </View>
             <View style={styles.clock}>
-              <Text style={styles.clockText}>{formatTime(Date.now())}</Text>
+              <Clock style={styles.clockText} />
             </View>
           </View>
           <View style={styles.bottom} pointerEvents="none">

@@ -10,6 +10,7 @@ import {buildZappingChannelList} from '@appvideo/core/utils/channelZappingList';
 import {buildChannelLogoUrl} from '@appvideo/core/utils/bouquetLayoutConfig';
 import {getCurrentEpgEvent, getEpgEventTimeBoundsMs, getEpgEventTitle} from '@appvideo/core/utils/epgCurrentEvent';
 import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
+import {Clock} from '../components/Clock';
 import {FocusRing} from '../components/FocusRing';
 import {formatTime} from '../epg';
 import {getTheme} from '../theme';
@@ -289,7 +290,7 @@ export function PlayerScreen({params, navigate}) {
               <HudButton icon="info" onPress={() => setPanel('info')} onFocus={showHud} />
             </View>
             <View style={styles.clock}>
-              <Text style={styles.clockText}>{formatTime(Date.now())}</Text>
+              <Clock style={styles.clockText} />
             </View>
           </View>
 
