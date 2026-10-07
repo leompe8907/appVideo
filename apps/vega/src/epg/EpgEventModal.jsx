@@ -52,7 +52,7 @@ export function EpgEventModal({channel, event, context, isLive, onPlayCatchup, o
     <View style={styles.overlay}>
       <View style={styles.box}>
         <View style={styles.header}>
-          <Image source={logo ? {uri: logo} : theme.assets.placeholder} style={styles.logo} resizeMode="contain" />
+          <Image resizeMethod="resize" source={logo ? {uri: logo} : theme.assets.placeholder} style={styles.logo} resizeMode="contain" />
           <View style={styles.headerText}>
             <Text style={styles.channel} numberOfLines={1}>
               {channel?.name || ''}
@@ -64,7 +64,7 @@ export function EpgEventModal({channel, event, context, isLive, onPlayCatchup, o
               {start != null && end != null ? <Text style={styles.metaDim}>{`${Math.round((end - start) / 60000)} min`}</Text> : null}
             </View>
           </View>
-          {image ? <Image source={{uri: image}} style={styles.image} resizeMode="contain" /> : null}
+          {image ? <Image resizeMethod="resize" source={{uri: image}} style={styles.image} resizeMode="contain" /> : null}
         </View>
         <View style={styles.body}>
           <Text style={styles.title}>{getEventTitle(event) || t('epg.eventNoTitle')}</Text>

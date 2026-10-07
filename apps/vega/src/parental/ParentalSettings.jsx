@@ -53,7 +53,7 @@ function ChannelToggle({channel, blocked, onPress, colors}) {
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={[styles.channel, {borderColor: focused ? colors.focus : 'rgba(255,255,255,0.12)'}, blocked && styles.channelBlocked]}>
-      <Image source={logo ? {uri: logo} : theme.assets.placeholder} style={styles.channelLogo} resizeMode="contain" />
+      <Image resizeMethod="resize" source={logo ? {uri: logo} : theme.assets.placeholder} style={styles.channelLogo} resizeMode="contain" />
       <Text style={[styles.channelName, {color: colors.text}]} numberOfLines={1}>
         {channel?.lcn != null ? `${channel.lcn} ` : ''}
         {channel?.name}

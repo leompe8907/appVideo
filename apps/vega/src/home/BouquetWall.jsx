@@ -21,12 +21,12 @@ function toColumns(items, rows) {
   return columns;
 }
 
-function BouquetRow({bouquet, onPlay, preferredFocus}) {
+// Memo: sólo se re-renderiza la fila cuyo canal recordado cambia.
+const BouquetRow = React.memo(function BouquetRow({bouquet, onPlay, preferredChannelId}) {
   const layout = resolveBouquetLayoutForDevice(bouquet, TV);
   const items = bouquet.items || [];
   const width = cellWidthFor(layout.cardDesign);
-  const bKey = keyOf(bouquet);
-
+  
   const card = (channel, index) => (
     <ChannelCard
       key={channelKey(channel, index)}
@@ -34,7 +34,7 @@ function BouquetRow({bouquet, onPlay, preferredFocus}) {
       cardDesign={layout.cardDesign}
       logoIndex={layout.logoIndex}
       backgroundColor={layout.backgroundColor}
-      hasTVPreferredFocus={preferredFocus?.bouquetKey === bKey && preferredFocus?.channelId === channelKey(channel, index)}
+      hasTVPreferredFocus={preferredChannelId != null && preferredChannelId === channelKey(channel, index)}
       onPress={() => onPlay(bouquet, index)}
     />
   );
@@ -75,8 +75,8 @@ function BouquetRow({bouquet, onPlay, preferredFocus}) {
           ItemSeparatorComponent={Separator}
           contentContainerStyle={styles.track}
           showsHorizontalScrollIndicator={false}
-          initialNumToRender={8}
-          maxToRenderPerBatch={6}
+          initialNumToRender={6}
+          maxToRenderPerBatch={4}
           windowSize={3}
         />
       );
@@ -89,7 +89,7 @@ function BouquetRow({bouquet, onPlay, preferredFocus}) {
       {body}
     </View>
   );
-}
+});
 
 function Separator() {
   return <View style={styles.separator} />;
@@ -112,11 +112,17 @@ export function BouquetWall({bouquets, onPlay, preferredFocus, header}) {
       contentContainerStyle={styles.wall}
       data={bouquets}
       keyExtractor={keyOf}
-      renderItem={({item}) => <BouquetRow bouquet={item} onPlay={onPlay} preferredFocus={preferredFocus} />}
+      renderItem={({item}) => (
+        <BouquetRow
+          bouquet={item}
+          onPlay={onPlay}
+          preferredChannelId={preferredFocus?.bouquetKey === keyOf(item) ? preferredFocus.channelId : null}
+        />
+      )}
       ListHeaderComponent={header}
       initialNumToRender={Math.max(3, preferredIndex + 2)}
       maxToRenderPerBatch={2}
-      windowSize={5}
+      windowSize={3}
       showsVerticalScrollIndicator={false}
     />
   );

@@ -49,7 +49,7 @@ function Progress({value, color}) {
  * Tarjeta de canal del muro de bouquets (BouquetLayouts.jsx de la web).
  * El anillo de foco rodea el marco de la tarjeta, sin escala.
  */
-export function ChannelCard({channel, cardDesign, logoIndex, backgroundColor, onPress, onFocus, hasTVPreferredFocus}) {
+function ChannelCardImpl({channel, cardDesign, logoIndex, backgroundColor, onPress, onFocus, hasTVPreferredFocus}) {
   const theme = getTheme();
   const variant = getChannelLayoutVariant(cardDesign);
   const width = cellWidthFor(cardDesign);
@@ -85,7 +85,7 @@ export function ChannelCard({channel, cardDesign, logoIndex, backgroundColor, on
       <Pressable {...pressableProps} style={[styles.card, {width: px(width)}]}>
         <View>
           <View style={[styles.lwnFrame, {backgroundColor: channelBg || '#152a52'}]}>
-            <Image source={logo} style={styles.lwnLogo} resizeMode="contain" />
+            <Image resizeMethod="resize" source={logo} style={styles.lwnLogo} resizeMode="contain" />
             {channel?.lcn != null ? <Text style={styles.lwnNumber}>{channel.lcn}</Text> : null}
           </View>
           <FocusRing visible={focused} radius={16} />
@@ -103,10 +103,10 @@ export function ChannelCard({channel, cardDesign, logoIndex, backgroundColor, on
         <View>
           <View style={styles.ealFrame}>
             <View style={[styles.logoTop, {backgroundColor: backgroundColor || '#0a0a0a'}]}>
-              <Image source={logo} style={styles.logoTopImage} resizeMode="contain" />
+              <Image resizeMethod="resize" source={logo} style={styles.logoTopImage} resizeMode="contain" />
             </View>
             <View style={styles.eventBlock}>
-              <Image source={eventSource} style={styles.eventImage} resizeMode={eventSource === logo ? 'contain' : 'stretch'} onError={onEventImageError} />
+              <Image resizeMethod="resize" source={eventSource} style={styles.eventImage} resizeMode={eventSource === logo ? 'contain' : 'stretch'} onError={onEventImageError} />
             </View>
             <View style={styles.progressStrip}>
               <Progress value={now?.progress || 0} color={theme.timeshipColor} />
@@ -132,9 +132,9 @@ export function ChannelCard({channel, cardDesign, logoIndex, backgroundColor, on
         <View>
           <View style={[styles.overlayFrame]}>
             <View style={[styles.logoTop, {backgroundColor: '#0a0a0a'}]}>
-              <Image source={logo} style={styles.logoTopImage} resizeMode="contain" />
+              <Image resizeMethod="resize" source={logo} style={styles.logoTopImage} resizeMode="contain" />
             </View>
-            <Image source={eventSource} style={styles.overlayImage} resizeMode={eventSource === logo ? 'contain' : 'stretch'} onError={onEventImageError} />
+            <Image resizeMethod="resize" source={eventSource} style={styles.overlayImage} resizeMode={eventSource === logo ? 'contain' : 'stretch'} onError={onEventImageError} />
             <View style={styles.overlayInfo}>
               {now ? <Text style={styles.eventTime}>{now.time}</Text> : null}
               {now ? (
@@ -157,7 +157,7 @@ export function ChannelCard({channel, cardDesign, logoIndex, backgroundColor, on
     <Pressable {...pressableProps} style={[styles.card, {width: px(width)}]}>
       <View>
         <View style={[styles.logoCard, {backgroundColor: channelBg || 'rgba(255,255,255,0.04)'}]}>
-          <Image
+          <Image resizeMethod="resize"
             source={isEvent ? eventSource : logo}
             style={styles.fill}
             resizeMode={isEvent && eventSource !== logo ? 'cover' : 'contain'}
@@ -169,6 +169,19 @@ export function ChannelCard({channel, cardDesign, logoIndex, backgroundColor, on
     </Pressable>
   );
 }
+
+// Con ~200 canales cada movimiento de foco re-renderizaba todas las tarjetas
+// montadas: sólo se re-renderiza si cambian sus datos (onPress se ignora: la
+// arma el bouquet con el mismo canal e índice).
+export const ChannelCard = React.memo(
+  ChannelCardImpl,
+  (a, b) =>
+    a.channel === b.channel &&
+    a.cardDesign === b.cardDesign &&
+    a.logoIndex === b.logoIndex &&
+    a.backgroundColor === b.backgroundColor &&
+    a.hasTVPreferredFocus === b.hasTVPreferredFocus,
+);
 
 // Medidas de _bouquet.scss a 1920×1080 (spec §2.4).
 const styles = createScaledStyles({

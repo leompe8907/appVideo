@@ -43,7 +43,7 @@ export function AdZone({ads, position, onActivate}) {
     <View style={[styles.zone, position === 'bottom' ? styles.bottom : styles.top]}>
       <View>
         <Pressable onPress={() => onActivate?.(ad)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}>
-          <Image
+          <Image resizeMethod="resize"
             source={{uri: ad.file}}
             resizeMode="contain"
             style={{width: '100%', height: ratio ? undefined : px(maxHeight), aspectRatio: ratio || undefined, maxHeight: px(maxHeight * 2)}}

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ActivityIndicator, BackHandler, Text, View} from 'react-native';
 import {useIsFocused} from '@amazon-devices/react-navigation__native';
 import i18n from '@appvideo/core/locales/i18n';
@@ -156,7 +156,15 @@ export function HomeScreen({navigate}) {
     });
   };
 
-  const play = (bouquet, index) => playChannel(bouquet.items[index], String(bouquet.bouquetId ?? bouquet.id));
+  // Estable entre renders (las filas y tarjetas están memorizadas).
+  const playChannelRef = useRef(playChannel);
+  useEffect(() => {
+    playChannelRef.current = playChannel;
+  });
+  const play = useCallback(
+    (bouquet, index) => playChannelRef.current(bouquet.items[index], String(bouquet.bouquetId ?? bouquet.id)),
+    [],
+  );
 
   // Banner activado (adActivate.js de la web): stream_id=N → canal; vod_id=N → Películas.
   const activateAd = (ad) => {

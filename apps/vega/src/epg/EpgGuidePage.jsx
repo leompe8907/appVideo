@@ -128,7 +128,7 @@ export function EpgGuidePage({onPlayChannel, onPlayCatchup, onModalChange, activ
             <View style={styles.row}>
               <View style={[styles.channelCol, styles.channelCell, activeRow && {backgroundColor: colors.channelActiveBg, padding: px(8), borderRadius: px(14)}]}>
                 {channel?.lcn != null ? <Text style={styles.lcn}>{channel.lcn}</Text> : null}
-                {logo ? <Image source={{uri: logo}} style={styles.logo} resizeMode="contain" /> : null}
+                {logo ? <Image resizeMethod="resize" source={{uri: logo}} style={styles.logo} resizeMode="contain" /> : null}
                 <Text style={styles.channelName} numberOfLines={1}>
                   {channel?.name}
                 </Text>

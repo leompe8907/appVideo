@@ -33,7 +33,7 @@ function CatchupCard({event, onPress, hasTVPreferredFocus}) {
     <View style={[styles.card, getCatchupId(event) == null && styles.unavailable]}>
       <Pressable onPress={onPress} hasTVPreferredFocus={hasTVPreferredFocus} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}>
         <View style={styles.poster}>
-          <Image source={image && !failed ? {uri: image} : theme.assets.placeholder} style={styles.fill} resizeMode="cover" onError={() => setFailed(true)} />
+          <Image resizeMethod="resize" source={image && !failed ? {uri: image} : theme.assets.placeholder} style={styles.fill} resizeMode="cover" onError={() => setFailed(true)} />
         </View>
         <Text style={styles.title} numberOfLines={1}>
           {getEventTitle(event) || '—'}

@@ -24,7 +24,7 @@ export function VodCard({item, onPress, hasTVPreferredFocus, onFocus}) {
           onFocus?.();
         }}
         onBlur={() => setFocused(false)}>
-        <View style={styles.poster}>{uri ? <Image source={{uri}} style={styles.image} resizeMode="cover" /> : null}</View>
+        <View style={styles.poster}>{uri ? <Image resizeMethod="resize" source={{uri}} style={styles.image} resizeMode="cover" /> : null}</View>
         <Text style={styles.title} numberOfLines={1}>
           {item?.name || item?.title || ''}
         </Text>

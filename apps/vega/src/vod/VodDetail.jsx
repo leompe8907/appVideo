@@ -121,7 +121,7 @@ export function VodDetail({item, categories, onPlay}) {
       />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.inner}>
-          <View style={styles.posterWrap}>{poster ? <Image source={{uri: poster}} style={styles.poster} resizeMode="stretch" /> : null}</View>
+          <View style={styles.posterWrap}>{poster ? <Image resizeMethod="resize" source={{uri: poster}} style={styles.poster} resizeMode="stretch" /> : null}</View>
           <View style={styles.info}>
             <Text style={styles.title}>{item?.name || item?.title}</Text>
             <View style={styles.metaRow}>
@@ -170,7 +170,7 @@ export function VodDetail({item, categories, onPlay}) {
                 return (
                   <FocusText key={String(ep?.id ?? ep?.vodId ?? i)} onPress={() => play(ep)} style={styles.episode} radius={8}>
                     <View style={styles.episodeThumb}>
-                      {thumb ? <Image source={{uri: thumb}} style={styles.poster} resizeMode="cover" /> : null}
+                      {thumb ? <Image resizeMethod="resize" source={{uri: thumb}} style={styles.poster} resizeMode="cover" /> : null}
                     </View>
                     <View style={styles.episodeInfo}>
                       <Text style={styles.episodeName} numberOfLines={1}>

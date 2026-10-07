@@ -75,7 +75,7 @@ function HudButton({icon, onPress, hasTVPreferredFocus, onFocus}) {
         }}
         onBlur={() => setFocused(false)}
         style={styles.iconBtn}>
-        <Image source={ICONS[icon]} style={styles.iconImg} />
+        <Image resizeMethod="resize" source={ICONS[icon]} style={styles.iconImg} />
       </Pressable>
       <FocusRing visible={focused} radius={999} />
     </View>
@@ -93,7 +93,7 @@ function ChannelRow({channel, active, onPress, hasTVPreferredFocus, theme}) {
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={[styles.row, active && styles.rowActive]}>
-        <Image source={logoOf(channel, theme)} style={styles.rowLogo} resizeMode="contain" />
+        <Image resizeMethod="resize" source={logoOf(channel, theme)} style={styles.rowLogo} resizeMode="contain" />
         <Text style={styles.rowLcn}>{channel?.lcn ?? ''}</Text>
         <View style={styles.rowMeta}>
           <Text style={styles.rowName} numberOfLines={1}>
@@ -353,7 +353,7 @@ export function PlayerScreen({params, navigate}) {
 
           {channel ? (
             <View style={styles.bottombar} pointerEvents="none">
-              <Image source={logoOf(channel, theme)} style={styles.logo} resizeMode="contain" />
+              <Image resizeMethod="resize" source={logoOf(channel, theme)} style={styles.logo} resizeMode="contain" />
               <View style={styles.meta}>
                 <Text style={styles.name} numberOfLines={1}>
                   {channel.lcn != null ? <Text style={styles.lcn}>{`${channel.lcn}   `}</Text> : null}

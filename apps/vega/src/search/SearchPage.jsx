@@ -69,7 +69,7 @@ function ResultCard({item, colors, onPress, hasTVPreferredFocus, onFocus}) {
         focused && styles.cardFocused,
       ]}>
       <View style={[item.type === 'epg' ? styles.thumbEpg : styles.thumb, {backgroundColor: colors.thumbBg}]}>
-        <Image source={item.logo ? {uri: item.logo} : theme.assets.placeholder} style={styles.fill} resizeMode="contain" />
+        <Image resizeMethod="resize" source={item.logo ? {uri: item.logo} : theme.assets.placeholder} style={styles.fill} resizeMode="contain" />
       </View>
       {item.type === 'epg' ? (
         <>
