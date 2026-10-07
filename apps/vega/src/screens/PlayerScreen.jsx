@@ -15,6 +15,7 @@ import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
 import {TracksPanel, hasTrackOptions} from '../player/TracksPanel';
 import {Clock} from '../components/Clock';
 import {FocusRing} from '../components/FocusRing';
+import {imageSource} from '../remoteImage';
 import {formatTime} from '../epg';
 import {getTheme} from '../theme';
 import {createScaledStyles, px} from '../scaledStyles';
@@ -39,8 +40,12 @@ const ICONS = {
 const channelId = (c) => String(c?.id ?? c?.epgStreamId ?? '');
 
 function logoOf(channel, theme) {
-  const url = buildChannelLogoUrl(channel, getActiveBrandConfig()?.drm) || channel?.img || channel?.imageUrl || channel?.logoUrl;
-  return url ? {uri: url} : theme.assets.placeholder;
+  const candidates = [buildChannelLogoUrl(channel, getActiveBrandConfig()?.drm), channel?.img, channel?.imageUrl, channel?.logoUrl];
+  for (const url of candidates) {
+    const source = imageSource(url);
+    if (source) return source;
+  }
+  return theme.assets.placeholder;
 }
 
 /** Programa actual y siguiente (el HUD re-renderiza cada 1 s). */

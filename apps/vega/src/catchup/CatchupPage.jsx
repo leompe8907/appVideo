@@ -15,6 +15,7 @@ import {
   getEventStartMs,
   getEventTitle,
 } from '@appvideo/core/utils/catchupEvent';
+import {RemoteImage} from '../components/RemoteImage';
 import {FocusRing} from '../components/FocusRing';
 import {EpgEventModal} from '../epg/EpgEventModal';
 import {getTheme} from '../theme';
@@ -26,14 +27,13 @@ const ITEMS_PER_RAIL = 9;
 function CatchupCard({event, onPress, hasTVPreferredFocus}) {
   const theme = getTheme();
   const [focused, setFocused] = useState(false);
-  const [failed, setFailed] = useState(false);
   const image = getEventImage(event);
   const start = getEventStartMs(event);
   return (
     <View style={[styles.card, getCatchupId(event) == null && styles.unavailable]}>
       <Pressable onPress={onPress} hasTVPreferredFocus={hasTVPreferredFocus} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}>
         <View style={styles.poster}>
-          <Image resizeMethod="resize" source={image && !failed ? {uri: image} : theme.assets.placeholder} style={styles.fill} resizeMode="cover" onError={() => setFailed(true)} />
+          <RemoteImage uri={image} fallback={theme.assets.placeholder} style={styles.fill} resizeMode="cover" />
         </View>
         <Text style={styles.title} numberOfLines={1}>
           {getEventTitle(event) || '—'}

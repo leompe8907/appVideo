@@ -3,6 +3,7 @@ import {useState} from 'react';
 import {Image, Pressable, ScrollView, Text, View} from 'react-native';
 import i18n from '@appvideo/core/locales/i18n';
 import {getCatchupStreamId, getEventDescription, getEventEndMs, getEventImage, getEventStartMs, getEventTitle} from '@appvideo/core/utils/catchupEvent';
+import {RemoteImage} from '../components/RemoteImage';
 import {FocusRing} from '../components/FocusRing';
 import {formatTime} from '../epg';
 import {getTheme} from '../theme';
@@ -52,7 +53,7 @@ export function EpgEventModal({channel, event, context, isLive, onPlayCatchup, o
     <View style={styles.overlay}>
       <View style={styles.box}>
         <View style={styles.header}>
-          <Image resizeMethod="resize" source={logo ? {uri: logo} : theme.assets.placeholder} style={styles.logo} resizeMode="contain" />
+          <RemoteImage uri={logo} fallback={theme.assets.placeholder} style={styles.logo} resizeMode="contain" />
           <View style={styles.headerText}>
             <Text style={styles.channel} numberOfLines={1}>
               {channel?.name || ''}
@@ -64,7 +65,7 @@ export function EpgEventModal({channel, event, context, isLive, onPlayCatchup, o
               {start != null && end != null ? <Text style={styles.metaDim}>{`${Math.round((end - start) / 60000)} min`}</Text> : null}
             </View>
           </View>
-          {image ? <Image resizeMethod="resize" source={{uri: image}} style={styles.image} resizeMode="contain" /> : null}
+          <RemoteImage uri={image} style={styles.image} resizeMode="contain" />
         </View>
         <View style={styles.body}>
           <Text style={styles.title}>{getEventTitle(event) || t('epg.eventNoTitle')}</Text>

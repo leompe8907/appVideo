@@ -9,6 +9,7 @@ import {useParentalGateStore} from '@appvideo/core/store/parentalGateStore';
 import {getChannelStableId} from '@appvideo/core/utils/channelId';
 import {buildChannelLogoUrl} from '@appvideo/core/utils/bouquetLayoutConfig';
 import {PinModal} from './PinModal';
+import {RemoteImage} from '../components/RemoteImage';
 import {ConfirmModal} from '../components/ConfirmModal';
 import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
@@ -53,7 +54,7 @@ function ChannelToggle({channel, blocked, onPress, colors}) {
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={[styles.channel, {borderColor: focused ? colors.focus : 'rgba(255,255,255,0.12)'}, blocked && styles.channelBlocked]}>
-      <Image resizeMethod="resize" source={logo ? {uri: logo} : theme.assets.placeholder} style={styles.channelLogo} resizeMode="contain" />
+      <RemoteImage uri={logo} fallback={theme.assets.placeholder} style={styles.channelLogo} resizeMode="contain" />
       <Text style={[styles.channelName, {color: colors.text}]} numberOfLines={1}>
         {channel?.lcn != null ? `${channel.lcn} ` : ''}
         {channel?.name}

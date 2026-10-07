@@ -10,6 +10,7 @@ import {buildChannelLogoUrl} from '@appvideo/core/utils/bouquetLayoutConfig';
 import {getEpgEventTitle} from '@appvideo/core/utils/epgCurrentEvent';
 import {asMs, computeSlots} from '@appvideo/core/utils/epgSlots';
 import {EpgEventModal} from './EpgEventModal';
+import {RemoteImage} from '../components/RemoteImage';
 import {FocusRing} from '../components/FocusRing';
 import {formatTime} from '../epg';
 import {getTheme} from '../theme';
@@ -128,7 +129,7 @@ export function EpgGuidePage({onPlayChannel, onPlayCatchup, onModalChange, activ
             <View style={styles.row}>
               <View style={[styles.channelCol, styles.channelCell, activeRow && {backgroundColor: colors.channelActiveBg, padding: px(8), borderRadius: px(14)}]}>
                 {channel?.lcn != null ? <Text style={styles.lcn}>{channel.lcn}</Text> : null}
-                {logo ? <Image resizeMethod="resize" source={{uri: logo}} style={styles.logo} resizeMode="contain" /> : null}
+                <RemoteImage uri={logo} style={styles.logo} resizeMode="contain" />
                 <Text style={styles.channelName} numberOfLines={1}>
                   {channel?.name}
                 </Text>

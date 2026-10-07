@@ -5,6 +5,7 @@ import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {buildChannelLogoUrl, getChannelLayoutVariant} from '@appvideo/core/utils/bouquetLayoutConfig';
 import {getCurrentEpgEvent, getEpgEventTimeBoundsMs, getEpgEventTitle} from '@appvideo/core/utils/epgCurrentEvent';
 import {FocusRing} from '../components/FocusRing';
+import {imageSource, markImageFailed} from '../remoteImage';
 import {formatTime} from '../epg';
 import {getTheme} from '../theme';
 import {createScaledStyles, px} from '../scaledStyles';
@@ -18,10 +19,11 @@ export function cellWidthFor(cardDesign) {
   return 224;
 }
 
-function useLogoSource(channel, logoIndex) {
+function useLogoSource(channel, logoIndex, failedTick) {
   const theme = getTheme();
-  const url = buildChannelLogoUrl(channel, getActiveBrandConfig()?.drm, logoIndex) || channel?.img;
-  return url ? {uri: url} : theme.assets.placeholder;
+  void failedTick; // re-evaluar al fallar una imagen
+  const built = imageSource(buildChannelLogoUrl(channel, getActiveBrandConfig()?.drm, logoIndex));
+  return built || imageSource(channel?.img, theme.assets.placeholder);
 }
 
 function nowInfo(channel) {
@@ -53,7 +55,8 @@ function ChannelCardImpl({channel, cardDesign, logoIndex, backgroundColor, onPre
   const theme = getTheme();
   const variant = getChannelLayoutVariant(cardDesign);
   const width = cellWidthFor(cardDesign);
-  const logo = useLogoSource(channel, logoIndex);
+  const [failedTick, setFailedTick] = useState(0);
+  const logo = useLogoSource(channel, logoIndex, failedTick);
   const [focused, setFocused] = useState(false);
   const [, setTick] = useState(0);
   // Si la imagen del programa falla, se usa el logo (como el onError de la web).
@@ -77,15 +80,26 @@ function ChannelCardImpl({channel, cardDesign, logoIndex, backgroundColor, onPre
   };
   const channelBg = channel?.backgroundColor || channel?.bgColor;
   const now = /event/.test(variant) ? nowInfo(channel) : null;
-  const eventSource = now?.image && !eventImageFailed ? {uri: now.image} : logo;
-  const onEventImageError = () => setEventImageFailed(true);
+  const eventImage = eventImageFailed ? null : imageSource(now?.image);
+  const eventSource = eventImage || logo;
+  const onEventImageError = () => {
+    markImageFailed(eventImage);
+    setEventImageFailed(true);
+  };
+  // Logo que falla: no se vuelve a pedir; se usa el siguiente (img o placeholder).
+  const onLogoError = () => {
+    if (logo?.uri) {
+      markImageFailed(logo);
+      setFailedTick((x) => x + 1);
+    }
+  };
 
   if (variant === 'logo_with_number') {
     return (
       <Pressable {...pressableProps} style={[styles.card, {width: px(width)}]}>
         <View>
           <View style={[styles.lwnFrame, {backgroundColor: channelBg || '#152a52'}]}>
-            <Image resizeMethod="resize" source={logo} style={styles.lwnLogo} resizeMode="contain" />
+            <Image resizeMethod="resize" source={logo} onError={onLogoError} style={styles.lwnLogo} resizeMode="contain" />
             {channel?.lcn != null ? <Text style={styles.lwnNumber}>{channel.lcn}</Text> : null}
           </View>
           <FocusRing visible={focused} radius={16} />
@@ -103,7 +117,7 @@ function ChannelCardImpl({channel, cardDesign, logoIndex, backgroundColor, onPre
         <View>
           <View style={styles.ealFrame}>
             <View style={[styles.logoTop, {backgroundColor: backgroundColor || '#0a0a0a'}]}>
-              <Image resizeMethod="resize" source={logo} style={styles.logoTopImage} resizeMode="contain" />
+              <Image resizeMethod="resize" source={logo} onError={onLogoError} style={styles.logoTopImage} resizeMode="contain" />
             </View>
             <View style={styles.eventBlock}>
               <Image resizeMethod="resize" source={eventSource} style={styles.eventImage} resizeMode={eventSource === logo ? 'contain' : 'stretch'} onError={onEventImageError} />
@@ -132,7 +146,7 @@ function ChannelCardImpl({channel, cardDesign, logoIndex, backgroundColor, onPre
         <View>
           <View style={[styles.overlayFrame]}>
             <View style={[styles.logoTop, {backgroundColor: '#0a0a0a'}]}>
-              <Image resizeMethod="resize" source={logo} style={styles.logoTopImage} resizeMode="contain" />
+              <Image resizeMethod="resize" source={logo} onError={onLogoError} style={styles.logoTopImage} resizeMode="contain" />
             </View>
             <Image resizeMethod="resize" source={eventSource} style={styles.overlayImage} resizeMode={eventSource === logo ? 'contain' : 'stretch'} onError={onEventImageError} />
             <View style={styles.overlayInfo}>

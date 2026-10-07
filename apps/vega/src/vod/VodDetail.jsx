@@ -6,6 +6,7 @@ import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {getVodImageUrl} from '@appvideo/core/services/vodService';
+import {RemoteImage} from '../components/RemoteImage';
 import {FullScreenImage} from '../components/FullScreenImage';
 import {FocusRing} from '../components/FocusRing';
 import {getTheme} from '../theme';
@@ -121,7 +122,7 @@ export function VodDetail({item, categories, onPlay}) {
       />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.inner}>
-          <View style={styles.posterWrap}>{poster ? <Image resizeMethod="resize" source={{uri: poster}} style={styles.poster} resizeMode="stretch" /> : null}</View>
+          <View style={styles.posterWrap}><RemoteImage uri={poster} style={styles.poster} resizeMode="stretch" /></View>
           <View style={styles.info}>
             <Text style={styles.title}>{item?.name || item?.title}</Text>
             <View style={styles.metaRow}>
@@ -170,7 +171,7 @@ export function VodDetail({item, categories, onPlay}) {
                 return (
                   <FocusText key={String(ep?.id ?? ep?.vodId ?? i)} onPress={() => play(ep)} style={styles.episode} radius={8}>
                     <View style={styles.episodeThumb}>
-                      {thumb ? <Image resizeMethod="resize" source={{uri: thumb}} style={styles.poster} resizeMode="cover" /> : null}
+                      <RemoteImage uri={thumb} style={styles.poster} resizeMode="cover" />
                     </View>
                     <View style={styles.episodeInfo}>
                       <Text style={styles.episodeName} numberOfLines={1}>

@@ -3,6 +3,7 @@ import {useState} from 'react';
 import {Image, Pressable, Text, View} from 'react-native';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {getVodImageUrl} from '@appvideo/core/services/vodService';
+import {RemoteImage} from '../components/RemoteImage';
 import {FocusRing} from '../components/FocusRing';
 import {createScaledStyles} from '../scaledStyles';
 
@@ -24,7 +25,7 @@ export function VodCard({item, onPress, hasTVPreferredFocus, onFocus}) {
           onFocus?.();
         }}
         onBlur={() => setFocused(false)}>
-        <View style={styles.poster}>{uri ? <Image resizeMethod="resize" source={{uri}} style={styles.image} resizeMode="cover" /> : null}</View>
+        <View style={styles.poster}><RemoteImage uri={uri} style={styles.image} resizeMode="cover" /></View>
         <Text style={styles.title} numberOfLines={1}>
           {item?.name || item?.title || ''}
         </Text>

@@ -6,6 +6,7 @@ import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
 import {getSearchDebounceMs, searchAll} from '@appvideo/core/services/searchService';
 import {buildSearchResultKey, useSearchSessionStore} from '@appvideo/core/store/searchSessionStore';
+import {RemoteImage} from '../components/RemoteImage';
 import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
 import {formatTime} from '../epg';
@@ -69,7 +70,7 @@ function ResultCard({item, colors, onPress, hasTVPreferredFocus, onFocus}) {
         focused && styles.cardFocused,
       ]}>
       <View style={[item.type === 'epg' ? styles.thumbEpg : styles.thumb, {backgroundColor: colors.thumbBg}]}>
-        <Image resizeMethod="resize" source={item.logo ? {uri: item.logo} : theme.assets.placeholder} style={styles.fill} resizeMode="contain" />
+        <RemoteImage uri={item.logo} fallback={theme.assets.placeholder} style={styles.fill} resizeMode="contain" />
       </View>
       {item.type === 'epg' ? (
         <>
