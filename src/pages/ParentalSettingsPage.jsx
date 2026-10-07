@@ -236,7 +236,7 @@ export function ParentalSettingsPage() {
 
         <div className="parental-divider" />
 
-        <div className="parental-row">
+        <div className="parental-row parental-row--stacked">
           <div className="parental-row__label">
             {t('parental.ratingTitle', { defaultValue: 'Clasificación (BR)' })}
           </div>

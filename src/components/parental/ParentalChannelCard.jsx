@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
 import { getChannelStableId } from '@appvideo/core/utils/channelId';
 
@@ -14,6 +15,7 @@ export function ParentalChannelCard({
   blocked = false,
   onSelect,
 }) {
+  const { t } = useTranslation();
   const { currentBrand, getImage } = useBrand();
   const id = getChannelStableId(channel);
 
@@ -63,14 +65,16 @@ export function ParentalChannelCard({
         ) : (
           <div className="parental-channel-card__img parental-channel-card__img--placeholder" />
         )}
-        {blocked ? <div className="parental-channel-card__lock" aria-hidden="true">🔒</div> : null}
       </div>
 
-      <div className="parental-channel-card__meta">
-        <div className="parental-channel-card__lcn">{channel?.lcn ?? ''}</div>
-        <div className="parental-channel-card__name" title={channel?.name ?? ''}>
-          {channel?.name ?? ''}
-        </div>
+      <div className="parental-channel-card__name" title={channel?.name ?? ''}>
+        {channel?.lcn != null && channel?.lcn !== '' ? `${channel.lcn} ` : ''}
+        {channel?.name ?? ''}
+      </div>
+      <div className="parental-channel-card__state">
+        {blocked
+          ? `🔒 ${t('parental.blocked', { defaultValue: 'Bloqueado' })}`
+          : t('parental.block', { defaultValue: 'Bloquear canal' })}
       </div>
     </button>
   );
