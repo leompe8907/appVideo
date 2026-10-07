@@ -1,12 +1,13 @@
 import * as React from 'react';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {ActivityIndicator, Image, Pressable, Text, View, useTVEventHandler} from 'react-native';
+import {ActivityIndicator, BackHandler, Image, Pressable, Text, View, useTVEventHandler} from 'react-native';
 import {KeplerCaptionsView, KeplerVideoSurfaceView} from '@amazon-devices/react-native-w3cmedia';
 import LinearGradient from '@amazon-devices/react-linear-gradient';
 import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
+import {TracksPanel, hasTrackOptions} from '../player/TracksPanel';
 import {Clock} from '../components/Clock';
 import {FocusRing} from '../components/FocusRing';
 import {getTheme} from '../theme';
@@ -22,6 +23,7 @@ const ICONS = {
   forward: require('../../assets/icons/app-forward.png'),
   play: require('../../assets/icons/app-play.png'),
   pause: require('../../assets/icons/app-pause.png'),
+  subtitles: require('../../assets/icons/app-subtitles.png'),
 };
 
 function hms(total) {
@@ -82,14 +84,27 @@ export function VodPlayerScreen({params, navigate}) {
     return () => clearInterval(timer);
   }, []);
 
+  const [panel, setPanel] = useState(null); // null | 'tracks'
+  const [tracks, setTracks] = useState(null);
+
+  // Atrás cierra el panel de pistas; sin panel, el stack vuelve al detalle.
   useEffect(() => {
-    if (state !== 'playing') {
+    if (!panel) return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setPanel(null);
+      return true;
+    });
+    return () => sub.remove();
+  }, [panel]);
+
+  useEffect(() => {
+    if (panel || state !== 'playing') {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       setHudVisible(true);
     } else {
       showHud();
     }
-  }, [state, showHud]);
+  }, [panel, state, showHud]);
 
   useEffect(() => () => hideTimer.current && clearTimeout(hideTimer.current), []);
 
@@ -139,6 +154,9 @@ export function VodPlayerScreen({params, navigate}) {
         if (s === 'error') devLog('vod: error', params?.vodId, detail);
         setState(s);
       },
+      onTracks: (next) => {
+        if (!cancelled) setTracks(next);
+      },
     });
     player.current = p;
     if (handles.current.surface) p.setSurfaceHandle(handles.current.surface);
@@ -176,7 +194,7 @@ export function VodPlayerScreen({params, navigate}) {
           handles.current.caption = h;
           player.current?.setCaptionViewHandle(h);
         }}
-        show={false}
+        show={Boolean(tracks?.textEnabled)}
         style={styles.captions}
       />
 
@@ -200,13 +218,16 @@ export function VodPlayerScreen({params, navigate}) {
       {hudVisible ? (
         <>
           <View style={styles.topbar}>
-            <HudButton icon="back" onPress={() => navigate('back')} onFocus={showHud} />
+            <View style={styles.centerGroup}>
+              <HudButton icon="back" onPress={() => navigate('back')} onFocus={showHud} />
+              {hasTrackOptions(tracks) ? <HudButton icon="subtitles" onPress={() => setPanel('tracks')} onFocus={showHud} /> : null}
+            </View>
             <View style={styles.centerGroup}>
               <HudButton icon="rewind" onPress={() => player.current?.seekTo(current - SKIP_SECONDS)} onFocus={showHud} />
               <HudButton
                 icon={paused ? 'play' : 'pause'}
                 primary
-                hasTVPreferredFocus={state !== 'error'}
+                hasTVPreferredFocus={!panel && state !== 'error'}
                 onPress={() => (paused ? player.current?.play() : player.current?.pause())}
                 onFocus={showHud}
               />
@@ -232,6 +253,14 @@ export function VodPlayerScreen({params, navigate}) {
             </View>
           </View>
         </>
+      ) : null}
+
+      {panel === 'tracks' ? (
+        <TracksPanel
+          tracks={tracks}
+          onSelectAudio={(id) => player.current?.selectAudioTrack(id)}
+          onSelectText={(id) => player.current?.selectTextTrack(id)}
+        />
       ) : null}
     </View>
   );

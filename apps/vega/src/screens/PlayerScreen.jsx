@@ -3,19 +3,22 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ActivityIndicator, BackHandler, FlatList, Image, Pressable, Text, View, useTVEventHandler} from 'react-native';
 import {KeplerCaptionsView, KeplerVideoSurfaceView} from '@amazon-devices/react-native-w3cmedia';
 import i18n from '@appvideo/core/locales/i18n';
-import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
+import {getActiveBrandConfig, isParentalControlEnabledForBrand} from '@appvideo/core/config/brandConfig';
+import {useParentalStore} from '@appvideo/core/store/parentalStore';
+import {getChannelStableId} from '@appvideo/core/utils/channelId';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
 import {useParentalGateStore} from '@appvideo/core/store/parentalGateStore';
 import {buildZappingChannelList} from '@appvideo/core/utils/channelZappingList';
 import {buildChannelLogoUrl} from '@appvideo/core/utils/bouquetLayoutConfig';
 import {getCurrentEpgEvent, getEpgEventTimeBoundsMs, getEpgEventTitle} from '@appvideo/core/utils/epgCurrentEvent';
 import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
+import {TracksPanel, hasTrackOptions} from '../player/TracksPanel';
 import {Clock} from '../components/Clock';
 import {FocusRing} from '../components/FocusRing';
 import {formatTime} from '../epg';
 import {getTheme} from '../theme';
 import {createScaledStyles, px} from '../scaledStyles';
-import {rememberChannel} from '../homeMemory';
+import {rememberChannel, rememberSection} from '../homeMemory';
 import {devLog} from '../devLog';
 
 const t = (key, opts) => i18n.t(key, opts);
@@ -25,7 +28,11 @@ const ROW_HEIGHT = 92;
 const ICONS = {
   back: require('../../assets/icons/app-back.png'),
   list: require('../../assets/icons/app-list.png'),
+  menu: require('../../assets/icons/app-menu.png'),
   info: require('../../assets/icons/app-info.png'),
+  lock: require('../../assets/icons/app-lock.png'),
+  lockOpen: require('../../assets/icons/app-lockOpen.png'),
+  subtitles: require('../../assets/icons/app-subtitles.png'),
   close: require('../../assets/icons/app-close.png'),
 };
 
@@ -112,7 +119,10 @@ function ChannelRow({channel, active, onPress, hasTVPreferredFocus, theme}) {
  */
 export function PlayerScreen({params, navigate}) {
   const theme = getTheme();
-  const playerCfg = getActiveBrandConfig()?.player || {};
+  const brand = getActiveBrandConfig();
+  const playerCfg = brand?.player || {};
+  const epgEnabled = brand?.EPG?.enabled !== false;
+  const parentalEnabled = isParentalControlEnabledForBrand(brand);
   const hideMs = Math.max(500, Number(playerCfg.hudAutoHideMs) || 6000);
   const arrowsZap = playerCfg.channelChangeWithArrows !== false;
   const closeListOnSelect = playerCfg.closeChannelSidebarOnSelect === true;
@@ -132,7 +142,8 @@ export function PlayerScreen({params, navigate}) {
   const [state, setState] = useState('loading');
   const [retryToken, setRetryToken] = useState(0);
   const [hudVisible, setHudVisible] = useState(true);
-  const [panel, setPanel] = useState(null); // null | 'channels' | 'info'
+  const [panel, setPanel] = useState(null); // null | 'channels' | 'info' | 'tracks'
+  const [tracks, setTracks] = useState(null);
   const [, setTick] = useState(0);
   const player = useRef(null);
   const handles = useRef({surface: null, caption: null});
@@ -164,6 +175,34 @@ export function PlayerScreen({params, navigate}) {
 
   // Cambiar de canal pasa por el control parental (como usePlayerChannelZapping).
   const requestPlayChannel = useParentalGateStore((s) => s.requestPlayChannel);
+  const requestSetupPin = useParentalGateStore((s) => s.requestSetupPin);
+  const parental = useParentalStore();
+  const currentChannelId = getChannelStableId(channel);
+  const currentChannelBlocked = Boolean(currentChannelId) && parental.isChannelBlocked(currentChannelId);
+
+  // Bloquear/desbloquear el canal actual (toggleCurrentChannelBlock de la web):
+  // bloquear sin PIN pide configurarlo; desbloquear pide el PIN.
+  const toggleCurrentChannelBlock = () => {
+    if (!currentChannelId) return;
+    if (!currentChannelBlocked && parental.hasPinConfigured() !== true) {
+      requestSetupPin({channel, title: t('parental.title'), message: t('parental.setupPinMessage')});
+      return;
+    }
+    const doToggle = () => parental.toggleBlock(currentChannelId);
+    if (currentChannelBlocked && parental.enabled && parental.hasPinConfigured()) {
+      requestPlayChannel({
+        channel,
+        purpose: 'action',
+        title: t('parental.title'),
+        message: t('parental.confirmChangeMessage'),
+        playFn: doToggle,
+      });
+      return;
+    }
+    if (!currentChannelBlocked && !parental.enabled) parental.setEnabled(true);
+    doToggle();
+  };
+
   const goTo = useCallback(
     (next) => requestPlayChannel({channel: channels[next], playFn: () => setIndex(next)}),
     [channels, requestPlayChannel],
@@ -210,12 +249,16 @@ export function PlayerScreen({params, navigate}) {
     let cancelled = false;
     rememberChannel(channelId(channel));
     setState('loading');
+    setTracks(null);
     const timer = setTimeout(() => {
       const p = new VegaHlsPlayer({
         onState: (s, detail) => {
           if (cancelled) return;
           if (s === 'error') devLog('player: error', channel.name, detail);
           setState(s);
+        },
+        onTracks: (next) => {
+          if (!cancelled) setTracks(next);
         },
       });
       player.current = p;
@@ -257,7 +300,7 @@ export function PlayerScreen({params, navigate}) {
           handles.current.caption = h;
           player.current?.setCaptionViewHandle(h);
         }}
-        show={false}
+        show={Boolean(tracks?.textEnabled)}
         style={styles.captions}
       />
 
@@ -286,8 +329,22 @@ export function PlayerScreen({params, navigate}) {
           <View style={styles.topbar}>
             <View style={styles.topGroup}>
               <HudButton icon="back" hasTVPreferredFocus={!panel && state !== 'error'} onPress={() => navigate('back')} onFocus={showHud} />
-              <HudButton icon="list" onPress={() => setPanel('channels')} onFocus={showHud} />
+              {epgEnabled ? (
+                <HudButton
+                  icon="list"
+                  onPress={() => {
+                    rememberSection('epg');
+                    navigate('back');
+                  }}
+                  onFocus={showHud}
+                />
+              ) : null}
+              {parentalEnabled ? (
+                <HudButton icon={currentChannelBlocked ? 'lockOpen' : 'lock'} onPress={toggleCurrentChannelBlock} onFocus={showHud} />
+              ) : null}
+              <HudButton icon="menu" onPress={() => setPanel('channels')} onFocus={showHud} />
               <HudButton icon="info" onPress={() => setPanel('info')} onFocus={showHud} />
+              {hasTrackOptions(tracks) ? <HudButton icon="subtitles" onPress={() => setPanel('tracks')} onFocus={showHud} /> : null}
             </View>
             <View style={styles.clock}>
               <Clock style={styles.clockText} />
@@ -346,6 +403,14 @@ export function PlayerScreen({params, navigate}) {
             />
           </View>
         </View>
+      ) : null}
+
+      {panel === 'tracks' ? (
+        <TracksPanel
+          tracks={tracks}
+          onSelectAudio={(id) => player.current?.selectAudioTrack(id)}
+          onSelectText={(id) => player.current?.selectTextTrack(id)}
+        />
       ) : null}
 
       {panel === 'info' && channel ? (

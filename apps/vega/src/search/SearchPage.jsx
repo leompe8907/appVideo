@@ -1,6 +1,6 @@
 import * as React from 'react';
-import {useEffect, useMemo, useState} from 'react';
-import {BackHandler, FlatList, Image, Pressable, Text, TextInput, View} from 'react-native';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {BackHandler, FlatList, Image, Pressable, Text, TextInput, View, useTVEventHandler} from 'react-native';
 import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
@@ -10,6 +10,7 @@ import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
 import {formatTime} from '../epg';
 import {VodDetail} from '../vod/VodDetail';
+import {focusTarget} from '../focusTargets';
 
 const t = (key, opts) => i18n.t(key, opts);
 const SECTION_ORDER = ['service', 'vod', 'catchup', 'epg'];
@@ -129,6 +130,15 @@ export function SearchPage({onPlayChannel, onPlayVod, onModalChange, active = tr
   const [text, setText] = useState(session.query || '');
   const [query, setQueryDebounced] = useState(session.query || '');
   const [inputFocused, setInputFocused] = useState(false);
+  const clearRef = useRef(null);
+
+  // Con texto, ◀ ▶ dentro del campo sólo mueven el cursor y el foco no sale:
+  // ▶ va a "Limpiar" y ◀ al menú lateral.
+  useTVEventHandler((evt) => {
+    if (!active || !inputFocused || !evt || evt.eventKeyAction !== 0) return;
+    if (evt.eventType === 'right') clearRef.current?.requestTVFocus?.();
+    else if (evt.eventType === 'left') focusTarget('sidebar');
+  });
   const [clearFocused, setClearFocused] = useState(false);
   const epgEnabled = brand?.EPG?.enabled !== false;
   const [detail, setDetail] = useState(null);
@@ -214,6 +224,7 @@ export function SearchPage({onPlayChannel, onPlayVod, onModalChange, active = tr
           ]}
         />
         <Pressable
+          ref={clearRef}
           onPress={() => setText('')}
           onFocus={() => setClearFocused(true)}
           onBlur={() => setClearFocused(false)}

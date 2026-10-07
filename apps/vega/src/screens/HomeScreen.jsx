@@ -85,6 +85,8 @@ export function HomeScreen({navigate}) {
       return;
     }
     const m = getHomeMemory();
+    // El reproductor puede pedir otra sección (botón Guía del HUD).
+    setSection((current) => (m.section && m.section !== current ? m.section : current));
     setPreferredFocus(m.channelId != null ? {bouquetKey: m.bouquetKey, channelId: m.channelId} : null);
   }, [isFocused]);
 

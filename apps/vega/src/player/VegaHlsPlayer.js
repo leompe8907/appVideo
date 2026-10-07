@@ -19,7 +19,10 @@ const SHAKA_SETTINGS = {secure: false, abrEnabled: true, abrMaxWidth: 1920, abrM
 
 export class VegaHlsPlayer {
   /**
-   * @param {{ onState?: (state: 'loading'|'playing'|'buffering'|'error', detail?: any) => void }} [callbacks]
+   * @param {{
+   *   onState?: (state: 'loading'|'playing'|'buffering'|'error', detail?: any) => void,
+   *   onTracks?: (tracks: ReturnType<VegaHlsPlayer['getTracks']>) => void,
+   * }} [callbacks]
    */
   constructor(callbacks = {}) {
     this.callbacks = callbacks;
@@ -98,6 +101,19 @@ export class VegaHlsPlayer {
         response.data = await unwrapPanaccessKey(response.data);
       }
     });
+    // Como en la web, los subtítulos arrancan apagados hasta que se elijan.
+    let textDefaultApplied = false;
+    const emitTracks = () => {
+      if (this.destroyed) return;
+      if (!textDefaultApplied && (shaka.player.getTextTracks() || []).length > 0) {
+        textDefaultApplied = true;
+        shaka.player.setTextTrackVisibility(false);
+      }
+      this.callbacks.onTracks?.(this.getTracks());
+    };
+    for (const ev of ['trackschanged', 'variantchanged', 'textchanged', 'texttrackvisibility']) {
+      shaka.player.addEventListener(ev, emitTracks);
+    }
     shaka.player.addEventListener('error', (e) => {
       const d = e?.detail || {};
       devLog('Shaka error', d.code, d.category, d.severity);
@@ -105,6 +121,60 @@ export class VegaHlsPlayer {
       if (d.severity === 2) this.emit('error', {source: 'shaka', code: d.code, category: d.category});
     });
     video.play();
+  }
+
+  /**
+   * Pistas como el motor web (`getTracks`): audio por idioma y subtítulos.
+   * @returns {{audio: Array<{id,label,lang}>, text: Array<{id,label,lang}>, selectedAudioId, selectedTextId, textEnabled}}
+   */
+  getTracks() {
+    const p = this.shaka?.player;
+    const empty = {audio: [], text: [], selectedAudioId: null, selectedTextId: null, textEnabled: false};
+    if (!p) return empty;
+    try {
+      const variants = p.getVariantTracks() || [];
+      const audio = [];
+      let selectedAudioId = null;
+      for (const v of variants) {
+        // "und" = idioma sin definir en el manifiesto: se muestra como "Audio N".
+        const lang = v.language && v.language !== 'und' ? v.language : '';
+        const id = v.language || 'und';
+        if (!audio.some((a) => a.id === id)) audio.push({id, label: v.label || lang || `Audio ${audio.length + 1}`, lang});
+        if (v.active) selectedAudioId = id;
+      }
+      const textEnabled = p.isTextTrackVisible();
+      let selectedTextId = null;
+      const text = (p.getTextTracks() || []).map((tr, i) => {
+        const id = String(tr.id ?? i);
+        if (tr.active && textEnabled) selectedTextId = id;
+        return {id, label: tr.label || tr.language || `Sub ${i + 1}`, lang: tr.language || ''};
+      });
+      return {audio, text, selectedAudioId, selectedTextId, textEnabled: textEnabled && selectedTextId != null};
+    } catch (e) {
+      devLog('tracks: error', e?.message);
+      return empty;
+    }
+  }
+
+  selectAudioTrack(id) {
+    const p = this.shaka?.player;
+    if (!p) return;
+    p.selectAudioLanguage(id === 'und' ? '' : id);
+    this.callbacks.onTracks?.(this.getTracks());
+  }
+
+  /** `id` null apaga los subtítulos. */
+  selectTextTrack(id) {
+    const p = this.shaka?.player;
+    if (!p) return;
+    if (id == null) {
+      p.setTextTrackVisibility(false);
+    } else {
+      const track = (p.getTextTracks() || []).find((tr, i) => String(tr.id ?? i) === String(id));
+      if (track) p.selectTextTrack(track);
+      p.setTextTrackVisibility(true);
+    }
+    this.callbacks.onTracks?.(this.getTracks());
   }
 
   /** Controles para VOD/catchup. */

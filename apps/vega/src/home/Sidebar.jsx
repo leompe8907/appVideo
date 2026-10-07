@@ -1,7 +1,8 @@
 import * as React from 'react';
-import {useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {Image, Pressable, TVFocusGuideView, Text, View} from 'react-native';
 import {getTheme} from '../theme';
+import {registerFocusTarget} from '../focusTargets';
 import {createScaledStyles, px} from '../scaledStyles';
 
 const ICONS = {
@@ -22,11 +23,11 @@ const COLLAPSE_DELAY_MS = 80;
 const TEXT_IDLE = 'rgba(255,255,255,0.42)';
 const TEXT_ACTIVE = '#ffffff';
 
-function SidebarItem({item, active, expanded, focused, onFocus, onBlur, onPress, accent}) {
+function SidebarItem({item, active, expanded, focused, onFocus, onBlur, onPress, accent, pressRef}) {
   const highlighted = active || focused;
   const color = expanded || highlighted ? TEXT_ACTIVE : TEXT_IDLE;
   return (
-    <Pressable onPress={onPress} onFocus={onFocus} onBlur={onBlur} style={styles.item}>
+    <Pressable ref={pressRef} onPress={onPress} onFocus={onFocus} onBlur={onBlur} style={styles.item}>
       <View style={styles.iconCell}>
         <Image source={ICONS[item.icon]} style={[styles.icon, {tintColor: color}]} />
         {!expanded && highlighted ? <View style={[styles.railIndicator, {backgroundColor: accent}]} /> : null}
@@ -52,7 +53,14 @@ export function Sidebar({account, items, activeKey, onSelect}) {
   const theme = getTheme();
   const [focusedKey, setFocusedKey] = useState(null);
   const blurTimer = useRef(null);
+  const activeRef = useRef(null);
   const expanded = focusedKey != null;
+
+  // Otras pantallas pueden mandar el foco al menú (ítem activo).
+  useEffect(() => {
+    registerFocusTarget('sidebar', activeRef);
+    return () => registerFocusTarget('sidebar', null);
+  }, []);
 
   const handleFocus = (key) => {
     if (blurTimer.current) clearTimeout(blurTimer.current);
@@ -69,15 +77,15 @@ export function Sidebar({account, items, activeKey, onSelect}) {
       key={item.key}
       item={item}
       active={item.key === activeKey}
+      pressRef={item.key === activeKey ? activeRef : undefined}
       expanded={expanded}
       focused={focusedKey === item.key}
       accent={theme.focusColor}
       onFocus={() => handleFocus(item.key)}
       onBlur={handleBlur}
-      onPress={() => {
-        setFocusedKey(null);
-        onSelect(item.key);
-      }}
+      // No se colapsa al elegir: si la sección nueva toma el foco, el onBlur
+      // lo colapsa; si no (misma sección), el foco sigue acá y debe verse.
+      onPress={() => onSelect(item.key)}
     />
   );
 

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {useState} from 'react';
-import {Image, Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
+import {Image, Pressable, StyleSheet, Text, TextInput, View, useTVEventHandler} from 'react-native';
 import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {clearSessionBeforeNewLogin, loginAndActivateLicense} from '@appvideo/core/services/loginFlow';
@@ -35,7 +35,7 @@ function loginErrorMessage(err) {
   }
 }
 
-function LoginInput({theme, inputRef, secure, rightSlot, hasTVPreferredFocus, ...props}) {
+function LoginInput({theme, inputRef, secure, rightSlot, hasTVPreferredFocus, onFocusChange, ...props}) {
   const [focused, setFocused] = useState(false);
   const l = theme.login;
   return (
@@ -48,8 +48,14 @@ function LoginInput({theme, inputRef, secure, rightSlot, hasTVPreferredFocus, ..
         autoCorrect={false}
         hasTVPreferredFocus={hasTVPreferredFocus}
         placeholderTextColor={l.inputPlaceholder}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onFocus={() => {
+          setFocused(true);
+          onFocusChange?.(true);
+        }}
+        onBlur={() => {
+          setFocused(false);
+          onFocusChange?.(false);
+        }}
         style={[
           styles.input,
           {backgroundColor: focused ? l.inputFocusedBg : l.inputBg, borderColor: l.inputBorder, color: l.inputText},
@@ -78,6 +84,13 @@ export function LoginScreen({navigate}) {
   const [toggleFocused, setToggleFocused] = useState(false);
   const [submitFocused, setSubmitFocused] = useState(false);
   const passwordRef = React.useRef(null);
+  const eyeRef = React.useRef(null);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+
+  // Con texto, ▶ dentro del campo sólo mueve el cursor: que llegue al ojo.
+  useTVEventHandler((evt) => {
+    if (passwordFocused && evt?.eventType === 'right' && evt.eventKeyAction === 0) eyeRef.current?.requestTVFocus?.();
+  });
 
   const submit = async () => {
     if (submitting) return;
@@ -105,6 +118,7 @@ export function LoginScreen({navigate}) {
 
   const eyeToggle = (
     <Pressable
+      ref={eyeRef}
       onPress={() => setShowPassword((v) => !v)}
       onFocus={() => setToggleFocused(true)}
       onBlur={() => setToggleFocused(false)}
@@ -143,6 +157,7 @@ export function LoginScreen({navigate}) {
           returnKeyType="done"
           onSubmitEditing={submit}
           rightSlot={eyeToggle}
+          onFocusChange={setPasswordFocused}
         />
 
         <View style={styles.submitWrap}>
