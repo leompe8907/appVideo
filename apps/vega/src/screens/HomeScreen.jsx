@@ -16,6 +16,7 @@ import {SearchPage} from '../search/SearchPage';
 import {AccountPage} from '../account/AccountPage';
 import {CatchupPage} from '../catchup/CatchupPage';
 import {EpgGuidePage} from '../epg/EpgGuidePage';
+import {PreloadScreen} from '../home/PreloadScreen';
 import {ReminderHost} from '../epg/ReminderHost';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {getCatchupStreamId, getEventTitle} from '@appvideo/core/utils/catchupEvent';
@@ -177,17 +178,11 @@ export function HomeScreen({navigate}) {
     return target ? {bouquetKey: String(target.bouquetId ?? target.id), channelId: preferredFocus.channelId} : first;
   }, [bouquets, preferredFocus]);
 
+  // Precarga a pantalla completa, sin menú lateral (como /preload en la web).
+  if (epg.status !== 'ready' && epg.status !== 'error') return <PreloadScreen />;
+
   let content;
-  if (epg.status !== 'ready' && epg.status !== 'error') {
-    const p = epg.progress || {};
-    content = (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#fff" />
-        <Text style={styles.message}>{epg.status === 'finishing' ? t('preload.finishing') : t('preload.message')}</Text>
-        {p.total ? <Text style={styles.sub}>{t('preload.channelsProgress', {current: p.current, total: p.total})}</Text> : null}
-      </View>
-    );
-  } else if (epg.status === 'error' && bouquets.length === 0) {
+  if (epg.status === 'error' && bouquets.length === 0) {
     content = (
       <View style={styles.center}>
         <Text style={styles.error}>{epg.error || t('bouquet.errorLoad')}</Text>

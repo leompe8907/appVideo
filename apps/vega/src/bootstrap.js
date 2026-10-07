@@ -11,14 +11,19 @@ import {
   setStorageBackend,
 } from '@appvideo/core/platform/storage';
 import {setPlatformRuntime} from '@appvideo/core/platform/runtime';
+import {DEFAULT_BRAND} from '@appvideo/core/config/defaultBrand';
 import {DEV_STORAGE_SEED} from './env.generated';
 import {devLog, installDevErrorLogging} from './devLog';
 
 installDevErrorLogging();
 
 // En builds de desarrollo se puede precargar una sesión con
-// `dev-session.local.json` (ver README.md); sólo completa claves que falten.
-const seed = __DEV__ ? DEV_STORAGE_SEED : {};
+// `dev-session.local.json` (ver README.md); sólo completa claves que falten y
+// sólo las de la marca del build (`<marca>.*`): la clave `brand` u otra marca
+// harían que esta app use el servidor y el token de otra.
+const seed = __DEV__
+  ? Object.fromEntries(Object.entries(DEV_STORAGE_SEED).filter(([key]) => key.startsWith(`${DEFAULT_BRAND}.`)))
+  : {};
 
 // Hasta que cargue AsyncStorage (asíncrono) se usa memoria.
 setStorageBackend(createMemoryStorage(seed));
@@ -56,7 +61,10 @@ setPlatformRuntime({
   getUserAgent: () => 'appVideo Vega (Fire TV)',
   getLanguage: () => 'es',
   isOnline: () => true,
-  getLaunchParam: () => null,
+  // Cada app de Fire TV es de una sola marca (la del build, VEGA_BRAND): se
+  // informa como el `?brand=` de la web, que tiene prioridad sobre la marca
+  // guardada en el almacenamiento.
+  getLaunchParam: (name) => (name === 'brand' ? DEFAULT_BRAND || null : null),
   onAppHidden(handler) {
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active') handler();
