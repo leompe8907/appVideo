@@ -212,7 +212,7 @@ export class VegaHlsPlayer {
     this.shaka = null;
     this.video = null;
     try {
-      shaka?.unload();
+      await shaka?.unload();
     } catch (e) {
       devLog('unload', e);
     }

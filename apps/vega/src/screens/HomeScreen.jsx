@@ -210,6 +210,11 @@ export function HomeScreen({navigate}) {
         <Text style={styles.error}>{epg.error || t('bouquet.errorLoad')}</Text>
       </View>
     );
+  } else if ((section === 'inicio' || section === 'channels') && !isFocused) {
+    // Con el reproductor encima no se mantiene el muro (sus imágenes ocupan
+    // memoria que el video necesita en un Fire TV de ~1 GB). Al volver se
+    // arma de nuevo con el foco en el canal visto.
+    content = null;
   } else if (section === 'inicio' || section === 'channels') {
     content =
       bouquets.length > 0 ? (

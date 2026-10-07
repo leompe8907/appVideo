@@ -303,6 +303,9 @@ export class ShakaPlayer implements PlayerInterface {
             inaccurateManifestTolerance: 0,
             rebufferingGoal: 0.01,
             bufferingGoal: 5,
+            // appVideo: el Fire TV Stick tiene ~1 GB; 30 s (por defecto) de video
+            // ya visto en memoria ayudaba a que el sistema matara la app.
+            bufferBehind: 10,
             alwaysStreamText: true,
             retryParameters : {
               maxAttempts: 3,
@@ -407,7 +410,7 @@ export class ShakaPlayer implements PlayerInterface {
         this.mediaElement.currentTime = time + 10;
     }
 
-    unload() : void {
+    async unload() : Promise<void> {
       console.log('shakaplayer:unload');
       if (ShakaPlayer.enableNativeXmlParsing && global.isNativeXmlParserSupported &&
         global.nativeParseFromString && global.unloadNativeXmlParser) {
@@ -419,8 +422,14 @@ export class ShakaPlayer implements PlayerInterface {
           console.log('shakaplayer: unloaded native Xml parser');
         }
       }
-      this.player.detach();
-      this.player.destroy();
+      // appVideo: se espera la liberación completa para no tener dos
+      // reproductores en memoria al hacer zapping.
+      const player = this.player;
       this.player = null;
+      try {
+        await player.detach();
+      } finally {
+        await player.destroy();
+      }
     }
 }

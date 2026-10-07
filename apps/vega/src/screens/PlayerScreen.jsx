@@ -146,6 +146,8 @@ export function PlayerScreen({params, navigate}) {
   const [tracks, setTracks] = useState(null);
   const [, setTick] = useState(0);
   const player = useRef(null);
+  // Liberación del reproductor anterior en curso (zapping).
+  const releasing = useRef(Promise.resolve());
   const handles = useRef({surface: null, caption: null});
   const hideTimer = useRef(null);
 
@@ -250,7 +252,10 @@ export function PlayerScreen({params, navigate}) {
     rememberChannel(channelId(channel));
     setState('loading');
     setTracks(null);
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
+      // No crear el reproductor nuevo hasta liberar el anterior (memoria).
+      await releasing.current;
+      if (cancelled) return;
       const p = new VegaHlsPlayer({
         onState: (s, detail) => {
           if (cancelled) return;
@@ -275,7 +280,7 @@ export function PlayerScreen({params, navigate}) {
       clearTimeout(timer);
       const p = player.current;
       player.current = null;
-      p?.destroy();
+      if (p) releasing.current = p.destroy().catch(() => {});
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, retryToken]);
