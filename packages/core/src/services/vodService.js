@@ -11,6 +11,9 @@ const VOD_CONTENT_MAX_OFFSET = 1000;
 /** Categoría sintética cuando la API no manda grupos de categorías (ver prepareDataForVOD). */
 export const FALLBACK_MOVIES_CATEGORY_ID = -2;
 
+/** Tipos de grupo de getOttCategoryGroups que van como filas: género, destacados, listas, recomendado. */
+export const OTT_SHELF_GROUP_TYPES = [1, 4, 5, 6];
+
 /** Plantillas por defecto 10foot: mismo patrón que config.js imageUrlVodPosterList/Info/Original */
 const DEFAULT_VOD_IMAGE_TEMPLATES = {
   posterList: '%base_url%/cv_data_pub/images/%image_id%/v/vod_poster_list.jpg',
@@ -153,8 +156,28 @@ export async function loadVODData(brandConfig, options = {}) {
   const library = Array.isArray(libraryResponse) && libraryResponse.length > 0
     ? libraryResponse[0]
     : (libraryResponse && typeof libraryResponse === 'object' && libraryResponse.categoryGroups != null ? libraryResponse : {});
-  const allGroups = library.categoryGroups || [];
-  const categoryGroups = allGroups.filter((g) => g.type === 5 || g.type === 6);
+  let allGroups = library.categoryGroups || [];
+  let categoryGroups = allGroups.filter((g) => g.type === 5 || g.type === 6);
+
+  // Sin grupos en la librería (operadores que quitaron getVodCategoryGroups):
+  // se piden con getOttCategoryGroups, como la app de Android, y se usan los
+  // grupos "curados" (género, destacados, listas, recomendado); actor,
+  // dirección y año son índices, no filas.
+  let fromOttGroups = false;
+  if (categoryGroups.length === 0) {
+    try {
+      const ott = await panaccessService.getOttCategoryGroups({ enableRetry });
+      const groups = Array.isArray(ott) ? ott : [];
+      const curated = groups.filter((g) => OTT_SHELF_GROUP_TYPES.includes(Number(g?.type)));
+      if (curated.length > 0) {
+        allGroups = groups;
+        categoryGroups = curated;
+        fromOttGroups = true;
+      }
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn('[vod] getOttCategoryGroups falló:', error?.cause?.message || error?.message);
+    }
+  }
 
   // Metadata VOD (por categorías) como en legacy: Actor / Direção.
   // En algunos backends viene como type 3 (Actor) y type 7 (Direção), o por name.
@@ -177,7 +200,7 @@ export async function loadVODData(brandConfig, options = {}) {
     directorByCategoryId.set(String(id), String(name));
   });
 
-  const categories = categoryGroups.flatMap((g) => g.categories || []);
+  const categories = categoryGroups.flatMap((g) => (g.categories || []).map((c) => ({ ...c, groupId: g.id })));
   categories.forEach((cat, i) => {
     if (cat.name && typeof t === 'function') {
       const key = `vod.categories.${cat.name}`;
@@ -187,8 +210,9 @@ export async function loadVODData(brandConfig, options = {}) {
   });
 
   let vodRecommendedId = -1;
-  const recGroup = (library.categoryGroups || []).find((g) => g.type === 6);
-  if (recGroup) vodRecommendedId = recGroup.id;
+  const recGroup = (fromOttGroups ? categoryGroups : library.categoryGroups || []).find((g) => g.type === 6);
+  // En getOttCategoryGroups el id que traen los títulos es el de la categoría del grupo.
+  if (recGroup) vodRecommendedId = fromOttGroups ? (recGroup.categories?.[0]?.id ?? recGroup.id) : recGroup.id;
 
   const allVods = [];
   let offset = 0;
@@ -222,7 +246,44 @@ export async function loadVODData(brandConfig, options = {}) {
     });
   }
 
-  return prepareDataForVOD(allVods, categories, vodRecommendedId, baseUrl, imageTemplates, t);
+  const data = prepareDataForVOD(allVods, categories, vodRecommendedId, baseUrl, imageTemplates, t);
+  if (fromOttGroups) data.categories = dedupeOttShelves(data.categories);
+  return data;
+}
+
+/**
+ * Filas de getOttCategoryGroups como en Android (VodShelves): sin filas de
+ * menos de 2 títulos y sin repetir entre grupos la misma fila. Hay operadores
+ * con "Listas" y "Genero" que traen las mismas categorías por nombre (con
+ * títulos casi iguales): entre grupos distintos se deja una sola por nombre
+ * (la de más títulos) y también se quitan las de títulos idénticos. Dentro de
+ * un mismo grupo no se deduplica. Las series (id 0) quedan siempre.
+ */
+export function dedupeOttShelves(categories) {
+  const titlesOf = (cat) => (cat.vods || []).map((v) => v.id ?? v.vodId);
+  const nameKey = (cat) => String(cat.name || '').trim().toLowerCase();
+  const candidates = (categories || []).filter((cat) => cat.id === 0 || titlesOf(cat).length >= 2);
+
+  // Por nombre: entre grupos distintos gana la de más títulos.
+  const bestByName = new Map();
+  candidates.forEach((cat) => {
+    if (cat.id === 0) return;
+    const key = nameKey(cat);
+    const best = bestByName.get(key);
+    if (!best || (best.groupId !== cat.groupId && titlesOf(cat).length > titlesOf(best).length)) bestByName.set(key, cat);
+  });
+
+  const ownerBySignature = new Map();
+  return candidates.filter((cat) => {
+    if (cat.id === 0) return true;
+    const best = bestByName.get(nameKey(cat));
+    if (best !== cat && best.groupId !== cat.groupId) return false;
+    const signature = titlesOf(cat).sort().join(',');
+    const owner = ownerBySignature.get(signature);
+    if (owner != null && owner !== cat.groupId) return false;
+    if (owner == null) ownerBySignature.set(signature, cat.groupId);
+    return true;
+  });
 }
 
 export default {

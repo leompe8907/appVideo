@@ -36,7 +36,7 @@ Detalle técnico y cómo reproducir: `~/Desktop/VegaPruebaRN/PRUEBA_VEGA.md`.
 Control parental probado en el Fire TV: PIN, bloqueo y desbloqueo de canal, PIN incorrecto. Su diseño de TV se replicó en la web ([VEGA_PARENTAL_A_WEB.md](VEGA_PARENTAL_A_WEB.md)). El reloj de Mi Cuenta y de los reproductores se actualiza solo.
 
 ### Pendientes pedidos (07-10-2026)
-1. **VOD por categorías:** las películas tienen categorías, pero hoy salen todas juntas en «Películas» porque `getVodCategoryGroups` responde sin permisos. Revisar cómo arma las categorías la app de Android y hacer lo mismo en `@appvideo/core`.
+1. ~~**VOD por categorías.**~~ Hecho (07-10): si `getVodLibraries` llega sin grupos, el núcleo los pide con `getOttCategoryGroups`, como Android (`~/Desktop/Hospitality`, `VodService.kt` / `VodShelves.kt`). Usa los grupos curados (género, destacados, listas, recomendado), sin filas de menos de 2 títulos y sin repetir por nombre entre grupos. INTV pasa de 1 fila a 18 categorías más Recomendado. Corrige también la web.
 2. **Reproductor:** faltan botones respecto de appVideo. Comparar los HUD de vivo y VOD con la web y completar (audio, subtítulos, calidad y lo que falte).
 3. **Barra inferior del menú lateral:** no es igual a la de appVideo. Compararla y corregirla.
 4. **Scroll con el control:** revisar el scroll en las cuatro direcciones en todas las pantallas. Si no se identifica la falla, preguntar al usuario.

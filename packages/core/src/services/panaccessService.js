@@ -655,6 +655,26 @@ class PanaccessService {
   }
 
   /**
+   * Grupos de categorías de OTT (`getOttCategoryGroups`, con sus categorías).
+   * Es lo que usa la app de Android para armar las filas de VOD; sirve cuando
+   * `getVodLibraries` llega sin `categoryGroups`.
+   * @param {Object} options - Opciones de la llamada.
+   * @returns {Promise<Array>}
+   */
+  async getOttCategoryGroups(options = {}) {
+    if (!this.client) {
+      throw new Error('Servicio no inicializado. Llama a initialize() primero.');
+    }
+    try {
+      return await this.callAuthenticatedApi('getOttCategoryGroups', { includeList: true }, options);
+    } catch (error) {
+      const customError = new Error('Error al obtener grupos de categorías.');
+      customError.cause = error;
+      throw customError;
+    }
+  }
+
+  /**
    * Obtener contenido VOD con paginación.
    * @param {Object} options - offset (default 0), limit (default 100), enableRetry...
    * @returns {Promise<Object>}
