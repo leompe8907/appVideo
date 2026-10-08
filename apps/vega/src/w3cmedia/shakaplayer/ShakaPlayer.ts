@@ -43,6 +43,11 @@ export interface ShakaPlayerSettings {
     abrEnabled: boolean,
     abrMaxWidth?: number,
     abrMaxHeight?: number,
+    // appVideo: buffer en vivo desde el flag de marca `player.liveBuffer`
+    // (mismos valores que hls.js en la web; ver liveBufferConfig.js del núcleo).
+    bufferingGoal?: number,
+    bufferBehind?: number,
+    liveSegmentsDelay?: number,
 }
 
 export class ShakaPlayer implements PlayerInterface {
@@ -301,11 +306,12 @@ export class ShakaPlayer implements PlayerInterface {
           streaming: {
             lowLatencyMode: false,
             inaccurateManifestTolerance: 0,
-            rebufferingGoal: 0.01,
-            bufferingGoal: 5,
-            // appVideo: el Fire TV Stick tiene ~1 GB; 30 s (por defecto) de video
-            // ya visto en memoria ayudaba a que el sistema matara la app.
-            bufferBehind: 10,
+            // appVideo: con bufferingGoal 5 y rebufferingGoal 0.01 (valores del
+            // ejemplo de Amazon) el video quedaba sin buffer con segmentos de ~9 s
+            // y se cortaba/saltaba. Ahora sale del flag de marca (como la web).
+            rebufferingGoal: 2,
+            bufferingGoal: this.setting_.bufferingGoal ?? 30,
+            bufferBehind: this.setting_.bufferBehind ?? 30,
             alwaysStreamText: true,
             retryParameters : {
               maxAttempts: 3,
@@ -316,7 +322,8 @@ export class ShakaPlayer implements PlayerInterface {
               disableXlinkProcessing: true
             },
             hls: {
-              sequenceMode: false
+              sequenceMode: false,
+              liveSegmentsDelay: this.setting_.liveSegmentsDelay ?? 3,
             }
           },
           abr : {

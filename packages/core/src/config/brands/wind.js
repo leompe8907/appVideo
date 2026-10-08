@@ -191,7 +191,14 @@ export default {
     "showPlaybackButtonsOnLive": false,
     "showSeekbarOnLive": false,
     "closeChannelSidebarOnSelect": false,
-    "channelChangeWithArrows": true
+    "channelChangeWithArrows": true,
+    "liveBuffer": {
+      "liveSyncDurationCount": 3,
+      "liveMaxLatencyDurationCount": 6,
+      "maxBufferLength": 20,
+      "maxMaxBufferLength": 40,
+      "backBufferLength": 30
+    }
   },
   "ui": {
     "splashDuration": 5000,

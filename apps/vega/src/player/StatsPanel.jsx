@@ -82,7 +82,18 @@ export function StatsPanel({playerRef}) {
 
       <Text style={styles.section}>Buffer y cortes</Text>
       <Row label="Buffer adelante" value={fmtS(d.bufferAheadS)} warn={lowBuffer} />
-      {d.live ? <Row label="Latencia vivo" value={fmtS(d.latencyS)} /> : null}
+      {d.live ? (
+        <Row
+          label="Latencia vivo"
+          value={`${fmtS(d.latencyS)}${d.segmentDurationS ? ` · .ts de ${d.segmentDurationS.toFixed(1)} s` : ''}${net.liveResyncs ? ` · ${net.liveResyncs} vueltas al vivo` : ''}`}
+        />
+      ) : null}
+      {d.liveBuffer ? (
+        <Row
+          label="Config. (marca)"
+          value={`${d.liveBuffer.liveSyncDurationCount} .ts del vivo · máx ${d.liveBuffer.liveMaxLatencyDurationCount} · ${d.liveBuffer.maxBufferLength} s adelante · ${d.liveBuffer.backBufferLength} s atrás`}
+        />
+      ) : null}
       <Row
         label="Cortes / saltos"
         value={`${d.stalls} cortes · ${d.gaps} saltos · ${fmtS(d.bufferingS)} cargando (${bufferingPct}%)`}

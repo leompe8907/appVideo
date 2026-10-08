@@ -10,12 +10,24 @@
 import {VideoPlayer} from '@amazon-devices/react-native-w3cmedia';
 import {ShakaPlayer} from '../w3cmedia/shakaplayer/ShakaPlayer';
 import {middlewareNeedsSession, withSessionId} from '@appvideo/core/player/panaccessPlayback';
+import {resolveLiveBuffer} from '@appvideo/core/player/liveBufferConfig';
+import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import * as userSession from '@appvideo/core/utils/userSession';
 import {isPanaccessRotatingKeyUri, unwrapPanaccessKey} from './keyUnwrap';
 import {devLog} from '../devLog';
 
 const KEY_REQUEST_TYPE = 6; // shaka.net.NetworkingEngine.RequestType.KEY
 const SHAKA_SETTINGS = {secure: false, abrEnabled: true, abrMaxWidth: 1920, abrMaxHeight: 1080};
+
+/** Ajustes de Shaka desde el flag de marca `player.liveBuffer` (como hls.js en la web). */
+function shakaSettingsFor(live) {
+  return {
+    ...SHAKA_SETTINGS,
+    bufferingGoal: live.maxBufferLength,
+    bufferBehind: live.backBufferLength,
+    liveSegmentsDelay: live.liveSyncDurationCount,
+  };
+}
 
 export class VegaHlsPlayer {
   /**
@@ -88,7 +100,9 @@ export class VegaHlsPlayer {
     if (this.captionHandle) video.setCaptionViewHandle(this.captionHandle);
 
     const sessionId = userSession.getSessionId();
-    const shaka = new ShakaPlayer(video, SHAKA_SETTINGS);
+    const live = resolveLiveBuffer(getActiveBrandConfig(), {windHost: /middleware\.wind\.do/i.test(url)});
+    this.liveBuffer = live;
+    const shaka = new ShakaPlayer(video, shakaSettingsFor(live));
     this.shaka = shaka;
     shaka.load({uri: withSessionId(url, sessionId), secure: 'false', drm_scheme: '', drm_license_uri: ''}, true);
 
@@ -126,7 +140,32 @@ export class VegaHlsPlayer {
       // Severidad 2 = crítica: la reproducción no sigue sola.
       if (d.severity === 2) this.emit('error', {source: 'shaka', code: d.code, category: d.category});
     });
+    this.startLiveLatencyWatch();
     video.play();
+  }
+
+  /**
+   * Como `liveMaxLatencyDurationCount` de hls.js: si en vivo queda más de N
+   * segmentos detrás del borde, vuelve al punto de arranque (N de arranque =
+   * `liveSyncDurationCount`, que Shaka ya respeta con liveSegmentsDelay).
+   */
+  startLiveLatencyWatch() {
+    if (this.latencyTimer) clearInterval(this.latencyTimer);
+    this.latencyTimer = setInterval(() => {
+      const p = this.shaka?.player;
+      const v = this.video;
+      if (this.destroyed || !p || !v || p.isLive?.() !== true || this.lastState !== 'playing') return;
+      const segS = this.net.segmentDurationS;
+      const range = p.seekRange?.();
+      if (!segS || !range || !Number.isFinite(range.end)) return;
+      const {liveSyncDurationCount: sync, liveMaxLatencyDurationCount: max} = this.liveBuffer;
+      const behindSync = range.end - (Number(v.currentTime) || 0);
+      if (behindSync > (max - sync) * segS) {
+        devLog('player: demasiado atrás del vivo, vuelve al punto de arranque', Math.round(behindSync));
+        this.net.liveResyncs = (this.net.liveResyncs || 0) + 1;
+        v.currentTime = range.end;
+      }
+    }, 5000);
   }
 
   /**
@@ -202,6 +241,10 @@ export class VegaHlsPlayer {
       const uri = String(response?.uri || '');
       const name = uri.split('?')[0].split('/').pop() || uri;
       const entry = {name, bytes, ms, kbps: ms > 0 ? Math.round((bytes * 8) / ms) : 0, at: Date.now()};
+      const seg = context?.segment;
+      if (kind === 'video' && seg && Number.isFinite(seg.endTime - seg.startTime)) {
+        n.segmentDurationS = seg.endTime - seg.startTime;
+      }
       n.last = {...n.last, [kind]: entry};
       n.recent = {...n.recent, [kind]: [entry, ...(n.recent[kind] || [])].slice(0, 5)};
     }
@@ -250,7 +293,14 @@ export class VegaHlsPlayer {
         streamKbps: Math.round((st.streamBandwidth || 0) / 1000),
         switches: (st.switchHistory || []).length,
         bufferAheadS: total ? Math.max(0, total.end - now) : 0,
-        latencyS: live && Number.isFinite(range.end) ? Math.max(0, range.end - now) : null,
+        // Distancia aproximada al borde en vivo: lo que queda hasta el punto de
+        // arranque más los segmentos de retraso configurados.
+        latencyS:
+          live && Number.isFinite(range.end)
+            ? Math.max(0, range.end - now) + (this.liveBuffer?.liveSyncDurationCount || 0) * (this.net.segmentDurationS || 0)
+            : null,
+        segmentDurationS: this.net.segmentDurationS || null,
+        liveBuffer: this.liveBuffer || null,
         stalls: st.stallsDetected || 0,
         gaps: st.gapsJumped || 0,
         bufferingS: st.bufferingTime || 0,
@@ -296,6 +346,7 @@ export class VegaHlsPlayer {
   async destroy() {
     if (this.destroyed) return;
     this.destroyed = true;
+    if (this.latencyTimer) clearInterval(this.latencyTimer);
     const {shaka, video} = this;
     this.shaka = null;
     this.video = null;
