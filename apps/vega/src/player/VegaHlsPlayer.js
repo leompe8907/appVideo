@@ -33,7 +33,7 @@ export class VegaHlsPlayer {
     this.destroyed = false;
     this.keyRequests = 0;
     // Diagnóstico (panel de estadísticas del reproductor).
-    this.net = {manifests: 0, segments: 0, keys: 0, bytes: 0, last: null, recent: [], errors: []};
+    this.net = {manifests: 0, segments: 0, keys: 0, bytes: 0, last: {}, recent: {}, counts: {}, errors: []};
     this.loadStartedAt = 0;
   }
 
@@ -98,8 +98,8 @@ export class VegaHlsPlayer {
       if (!current) return;
       request.uris = request.uris.map((u) => (middlewareNeedsSession(u) ? withSessionId(u, current) : u));
     });
-    net.registerResponseFilter(async (type, response) => {
-      this.recordResponse(type, response);
+    net.registerResponseFilter(async (type, response, context) => {
+      this.recordResponse(type, response, context);
       if (type !== KEY_REQUEST_TYPE) return;
       this.keyRequests += 1;
       if (isPanaccessRotatingKeyUri(response.uri)) {
@@ -183,20 +183,27 @@ export class VegaHlsPlayer {
     this.callbacks.onTracks?.(this.getTracks());
   }
 
-  /** Registra cada respuesta de red (tipos de Shaka: 0 manifiesto, 1 segmento, 6 key). */
-  recordResponse(type, response) {
+  /**
+   * Registra cada respuesta de red (tipos de Shaka: 0 manifiesto, 1 segmento,
+   * 6 key). Los segmentos se separan por pista (`context.stream.type`): hay
+   * streams con audio y video en .ts distintos, y el de audio es mucho más chico.
+   */
+  recordResponse(type, response, context) {
     const bytes = response?.data?.byteLength || 0;
     const ms = Number(response?.timeMs) || 0;
     const n = this.net;
     if (type === 0) n.manifests += 1;
     else if (type === 6) n.keys += 1;
     else if (type === 1) {
+      const kind = context?.stream?.type || 'video';
       n.segments += 1;
       n.bytes += bytes;
+      n.counts[kind] = (n.counts[kind] || 0) + 1;
       const uri = String(response?.uri || '');
       const name = uri.split('?')[0].split('/').pop() || uri;
-      n.last = {name, bytes, ms, kbps: ms > 0 ? Math.round((bytes * 8) / ms) : 0, at: Date.now()};
-      n.recent = [n.last, ...n.recent].slice(0, 5);
+      const entry = {name, bytes, ms, kbps: ms > 0 ? Math.round((bytes * 8) / ms) : 0, at: Date.now()};
+      n.last = {...n.last, [kind]: entry};
+      n.recent = {...n.recent, [kind]: [entry, ...(n.recent[kind] || [])].slice(0, 5)};
     }
   }
 
@@ -229,9 +236,16 @@ export class VegaHlsPlayer {
               audioLang: active.language || '',
             }
           : null,
-        profiles: tracks
-          .map((t) => ({height: t.height, kbps: Math.round((t.bandwidth || 0) / 1000), active: t.active}))
-          .sort((a, b) => a.kbps - b.kbps),
+        // Una variante por idioma de audio: se agrupan por resolución+bitrate.
+        profiles: Object.values(
+          tracks.reduce((acc, t) => {
+            const kbps = Math.round((t.bandwidth || 0) / 1000);
+            const key = `${t.height}-${kbps}`;
+            acc[key] = {height: t.height, kbps, active: Boolean(acc[key]?.active || t.active)};
+            return acc;
+          }, {}),
+        ).sort((a, b) => a.kbps - b.kbps),
+        audioLangs: [...new Set(tracks.map((t) => t.language).filter(Boolean))],
         estimatedKbps: Math.round((st.estimatedBandwidth || 0) / 1000),
         streamKbps: Math.round((st.streamBandwidth || 0) / 1000),
         switches: (st.switchHistory || []).length,

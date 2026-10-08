@@ -50,8 +50,13 @@ export function StatsPanel({playerRef}) {
 
   const p = d.profile;
   const net = d.net || {};
-  const last = net.last;
-  const avgKbps = net.recent?.length ? Math.round(net.recent.reduce((a, r) => a + r.kbps, 0) / net.recent.length) : 0;
+  const lastV = net.last?.video;
+  const lastA = net.last?.audio;
+  const recentV = net.recent?.video || [];
+  const avgKbps = recentV.length ? Math.round(recentV.reduce((a, r) => a + r.kbps, 0) / recentV.length) : 0;
+  const avgVideoKb = recentV.length ? Math.round(recentV.reduce((a, r) => a + r.bytes, 0) / recentV.length / 1024) : 0;
+  const segText = (x) => (x ? `${x.name} · ${Math.round(x.bytes / 1024)} KB · ${x.ms} ms · hace ${ago(x.at)}` : '—');
+  const bufferingPct = d.uptimeS > 0 ? Math.round((d.bufferingS / d.uptimeS) * 100) : 0;
   const lowBuffer = d.state === 'playing' && d.bufferAheadS < 2;
   const slowNet = p && avgKbps > 0 && avgKbps < p.kbps * 1.2;
 
@@ -67,14 +72,22 @@ export function StatsPanel({playerRef}) {
 
       <Text style={styles.section}>Red</Text>
       <Row label="Estimado (Shaka)" value={fmtKbps(d.estimatedKbps)} warn={p && d.estimatedKbps > 0 && d.estimatedKbps < p.kbps} />
-      <Row label="Últimos 5 .ts" value={fmtKbps(avgKbps)} warn={slowNet} />
-      <Row label="Último .ts" value={last ? `${last.name} · ${Math.round(last.bytes / 1024)} KB · ${last.ms} ms · hace ${ago(last.at)}` : '—'} />
-      <Row label="Descargas" value={`${net.segments} .ts · ${net.manifests} m3u8 · ${net.keys} keys · ${(net.bytes / 1048576).toFixed(1)} MB`} />
+      <Row label="Video, últimos 5" value={recentV.length ? `${fmtKbps(avgKbps)} · ${avgVideoKb} KB promedio` : '—'} warn={slowNet} />
+      <Row label="Último .ts video" value={segText(lastV)} />
+      {lastA ? <Row label="Último .ts audio" value={segText(lastA)} /> : null}
+      <Row
+        label="Descargas"
+        value={`${net.counts?.video || 0} .ts video${net.counts?.audio ? ` · ${net.counts.audio} .ts audio` : ''} · ${net.manifests} m3u8 · ${net.keys} keys · ${(net.bytes / 1048576).toFixed(1)} MB`}
+      />
 
       <Text style={styles.section}>Buffer y cortes</Text>
       <Row label="Buffer adelante" value={fmtS(d.bufferAheadS)} warn={lowBuffer} />
       {d.live ? <Row label="Latencia vivo" value={fmtS(d.latencyS)} /> : null}
-      <Row label="Cortes / saltos" value={`${d.stalls} cortes · ${d.gaps} saltos · ${fmtS(d.bufferingS)} cargando`} warn={d.stalls > 0} />
+      <Row
+        label="Cortes / saltos"
+        value={`${d.stalls} cortes · ${d.gaps} saltos · ${fmtS(d.bufferingS)} cargando (${bufferingPct}%)`}
+        warn={d.stalls > 0 || d.gaps > 0 || bufferingPct >= 5}
+      />
       <Row label="Cuadros" value={`${d.dropped} perdidos de ${d.decoded}`} warn={d.dropped > 0} />
       <Row
         label="Errores"
@@ -83,7 +96,7 @@ export function StatsPanel({playerRef}) {
       />
 
       <Text style={styles.section}>Otros</Text>
-      <Row label="Idioma" value={`audio ${p?.audioLang || '—'} · subtítulos ${d.textLang || 'no'}`} />
+      <Row label="Idioma" value={`audio ${p?.audioLang || '—'}${d.audioLangs?.length > 1 ? ` (de ${d.audioLangs.join(', ')})` : ''} · subtítulos ${d.textLang || 'no'}`} />
       <Row label="Memoria app (JS)" value={d.jsHeapMb != null ? `${d.jsHeapMb} MB` : '—'} />
     </View>
   );
