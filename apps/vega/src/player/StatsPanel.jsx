@@ -85,13 +85,21 @@ export function StatsPanel({playerRef}) {
       {d.live ? (
         <Row
           label="Latencia vivo"
-          value={`${fmtS(d.latencyS)}${d.segmentDurationS ? ` · .ts de ${d.segmentDurationS.toFixed(1)} s` : ''}${net.liveResyncs ? ` · ${net.liveResyncs} vueltas al vivo` : ''}`}
+          value={`${fmtS(d.latencyS)}${net.distanceSegs != null ? ` (${net.distanceSegs.toFixed(1)} .ts del borde, objetivo ${net.targetSegs ?? '?'})` : ''}${d.playlistSegments != null ? ` · manifiesto ${d.playlistSegments} .ts${d.playlist?.video?.target ? ` (target ${d.playlist.video.target} s)` : ''}` : ''}${d.segmentDurationS ? ` · .ts de ${d.segmentDurationS.toFixed(1)} s` : ''}`}
+          warn={net.distanceSegs != null && net.targetSegs != null && net.distanceSegs < net.targetSegs - 0.75}
+        />
+      ) : null}
+      {d.live ? (
+        <Row
+          label="Ajuste al vivo"
+          value={`ritmo ${(net.rate || 1).toFixed(2)}× · ${net.liveSlowdowns || 0} frenadas · ${net.liveBackJumps || 0} saltos atrás · ${net.liveResyncs || 0} vueltas al vivo${d.rateUnsupported ? ' · el equipo no cambia la velocidad' : ''}`}
+          warn={(net.rate || 1) !== 1}
         />
       ) : null}
       {d.liveBuffer ? (
         <Row
           label="Config. (marca)"
-          value={`${d.liveBuffer.liveSyncDurationCount} .ts del vivo · máx ${d.liveBuffer.liveMaxLatencyDurationCount} · ${d.liveBuffer.maxBufferLength} s adelante · ${d.liveBuffer.backBufferLength} s atrás`}
+          value={`${d.liveBuffer.liveSyncDurationCount} .ts del vivo (mín ${d.liveBuffer.liveMinLatencyDurationCount}, máx ${d.liveBuffer.liveMaxLatencyDurationCount}) · ${d.liveBuffer.maxBufferLength} s adelante · ${d.liveBuffer.backBufferLength} s atrás`}
         />
       ) : null}
       <Row

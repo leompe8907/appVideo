@@ -196,6 +196,8 @@ export default {
     "liveBuffer": {
       "liveSyncDurationCount": 3,
       "liveMaxLatencyDurationCount": 6,
+      "liveMinLatencyDurationCount": 2,
+      "liveSlowPlaybackRate": 0.95,
       "maxBufferLength": 30,
       "maxMaxBufferLength": 60,
       "backBufferLength": 30

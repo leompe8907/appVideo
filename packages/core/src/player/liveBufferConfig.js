@@ -8,12 +8,18 @@
  *
  * - liveSyncDurationCount: cuántos segmentos detrás del borde en vivo arranca.
  * - liveMaxLatencyDurationCount: si se atrasa más que esto, vuelve al punto anterior.
+ * - liveMinLatencyDurationCount: si queda más cerca del borde que esto (p. ej.
+ *   por los saltos sobre huecos del stream), reproduce un poco más lento
+ *   (liveSlowPlaybackRate) hasta recuperar liveSyncDurationCount. Sólo Fire TV:
+ *   hls.js en la web no tiene equivalente y lo ignora.
  * - maxBufferLength / maxMaxBufferLength: segundos de video a descargar por delante.
  * - backBufferLength: segundos ya vistos que se guardan.
  */
 export const DEFAULT_LIVE_BUFFER = Object.freeze({
   liveSyncDurationCount: 3,
   liveMaxLatencyDurationCount: 6,
+  liveMinLatencyDurationCount: 2,
+  liveSlowPlaybackRate: 0.95,
   maxBufferLength: 30,
   maxMaxBufferLength: 60,
   backBufferLength: 30,
@@ -40,6 +46,12 @@ export function resolveLiveBuffer(brand, { windHost = false } = {}) {
   for (const key of Object.keys(DEFAULT_LIVE_BUFFER)) {
     const v = positive(fromBrand[key]);
     if (v !== undefined) out[key] = v;
+  }
+  if (out.liveSlowPlaybackRate >= 1 || out.liveSlowPlaybackRate < 0.5) {
+    out.liveSlowPlaybackRate = DEFAULT_LIVE_BUFFER.liveSlowPlaybackRate;
+  }
+  if (out.liveMinLatencyDurationCount >= out.liveSyncDurationCount) {
+    out.liveMinLatencyDurationCount = Math.max(1, out.liveSyncDurationCount - 1);
   }
   if (out.liveMaxLatencyDurationCount <= out.liveSyncDurationCount) {
     out.liveMaxLatencyDurationCount = out.liveSyncDurationCount + 1;

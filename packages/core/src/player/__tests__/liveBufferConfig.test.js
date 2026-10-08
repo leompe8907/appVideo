@@ -28,4 +28,11 @@ describe('resolveLiveBuffer', () => {
     expect(out.liveMaxLatencyDurationCount).toBe(7);
     expect(out.maxMaxBufferLength).toBe(90);
   });
+
+  it('el mínimo queda por debajo del punto de arranque y el ritmo lento entre 0.5 y 1', () => {
+    const out = resolveLiveBuffer({ player: { liveBuffer: { liveSyncDurationCount: 3, liveMinLatencyDurationCount: 5, liveSlowPlaybackRate: 1.2 } } });
+    expect(out.liveMinLatencyDurationCount).toBe(2);
+    expect(out.liveSlowPlaybackRate).toBe(0.95);
+    expect(resolveLiveBuffer({ player: { liveBuffer: { liveSlowPlaybackRate: 0.9 } } }).liveSlowPlaybackRate).toBe(0.9);
+  });
 });

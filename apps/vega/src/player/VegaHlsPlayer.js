@@ -8,6 +8,7 @@
  * Una instancia por reproducción: `load()` y después `destroy()`.
  */
 import {VideoPlayer} from '@amazon-devices/react-native-w3cmedia';
+import {TextDecoder} from '@amazon-devices/react-native-w3cmedia/dist/headless';
 import {ShakaPlayer} from '../w3cmedia/shakaplayer/ShakaPlayer';
 import {middlewareNeedsSession, withSessionId} from '@appvideo/core/player/panaccessPlayback';
 import {resolveLiveBuffer} from '@appvideo/core/player/liveBufferConfig';
@@ -17,6 +18,9 @@ import {isPanaccessRotatingKeyUri, unwrapPanaccessKey} from './keyUnwrap';
 import {devLog} from '../devLog';
 
 const KEY_REQUEST_TYPE = 6; // shaka.net.NetworkingEngine.RequestType.KEY
+// Si el equipo no respeta playbackRate (Fire TV Stick 4K Select: no), no se
+// vuelve a intentar frenar en esta sesión: se salta atrás directamente.
+let playbackRateUnsupported = false;
 const SHAKA_SETTINGS = {secure: false, abrEnabled: true, abrMaxWidth: 1920, abrMaxHeight: 1080};
 
 /** Ajustes de Shaka desde el flag de marca `player.liveBuffer` (como hls.js en la web). */
@@ -25,6 +29,9 @@ function shakaSettingsFor(live) {
     ...SHAKA_SETTINGS,
     bufferingGoal: live.maxBufferLength,
     bufferBehind: live.backBufferLength,
+    // Shaka arranca a liveSyncDurationCount segmentos del borde (como hls.js).
+    // Probado: arrancar más cerca y mover el cabezal hacia atrás deja la zona
+    // sin descargar y el video vuelve a cargar (47 % del tiempo en Warner Hd).
     liveSegmentsDelay: live.liveSyncDurationCount,
   };
 }
@@ -145,28 +152,98 @@ export class VegaHlsPlayer {
   }
 
   /**
-   * Como `liveMaxLatencyDurationCount` de hls.js: si en vivo queda más de N
-   * segmentos detrás del borde, vuelve al punto de arranque (N de arranque =
-   * `liveSyncDurationCount`, que Shaka ya respeta con liveSegmentsDelay).
+   * Distancia al borde en vivo (flag de marca `player.liveBuffer`), en
+   * segmentos. Shaka arranca a liveSyncDurationCount del borde; después:
+   * - más cerca que liveMinLatencyDurationCount (los saltos sobre huecos del
+   *   stream lo van adelantando) → frena a liveSlowPlaybackRate o, si el equipo
+   *   no cambia la velocidad (Fire TV Stick: no), vuelve al punto de arranque;
+   * - más lejos que liveMaxLatencyDurationCount → vuelve al punto de arranque.
+   * Con manifiestos cortos el mínimo se achica (nunca deja menos de 1 segmento
+   * detrás del inicio de la ventana).
    */
   startLiveLatencyWatch() {
     if (this.latencyTimer) clearInterval(this.latencyTimer);
-    this.latencyTimer = setInterval(() => {
-      const p = this.shaka?.player;
-      const v = this.video;
-      if (this.destroyed || !p || !v || p.isLive?.() !== true || this.lastState !== 'playing') return;
-      const segS = this.net.segmentDurationS;
-      const range = p.seekRange?.();
-      if (!segS || !range || !Number.isFinite(range.end)) return;
-      const {liveSyncDurationCount: sync, liveMaxLatencyDurationCount: max} = this.liveBuffer;
-      const behindSync = range.end - (Number(v.currentTime) || 0);
-      if (behindSync > (max - sync) * segS) {
-        devLog('player: demasiado atrás del vivo, vuelve al punto de arranque', Math.round(behindSync));
-        this.net.liveResyncs = (this.net.liveResyncs || 0) + 1;
-        v.currentTime = range.end;
-      }
-    }, 5000);
+    this.slow = null; // {fromCurrent, fromWall} mientras va lento
+    this.latencyTimer = setInterval(() => this.checkLiveLatency(), 5000);
   }
+
+  setRate(rate) {
+    try {
+      this.video.playbackRate = rate;
+      return Math.abs(Number(this.video.playbackRate) - rate) < 0.001;
+    } catch (e) {
+      devLog('player: playbackRate no soportado', e?.message);
+      return false;
+    }
+  }
+
+  checkLiveLatency() {
+    const p = this.shaka?.player;
+    const v = this.video;
+    if (this.destroyed || !p || !v || p.isLive?.() !== true || this.lastState !== 'playing') return;
+    const segS = this.net.segmentDurationS;
+    const range = p.seekRange?.();
+    if (!segS || !range || !Number.isFinite(range.end)) return;
+    const cfg = this.liveBuffer;
+    const now = Number(v.currentTime) || 0;
+    const n = this.net;
+    const segments = this.playlistSegments();
+    const sync = cfg.liveSyncDurationCount;
+    const min = Math.max(0.5, Math.min(cfg.liveMinLatencyDurationCount, sync - 1, Number.isFinite(segments) ? segments - 2 : Infinity));
+    const dist = (range.end - now) / segS + sync;
+    n.distanceSegs = dist;
+    n.targetSegs = sync;
+    const backToSync = (why) => {
+      devLog(`player: ${why} (a ${dist.toFixed(1)} .ts del vivo), vuelve a ${sync}`);
+      v.currentTime = range.end;
+    };
+
+    if (dist > cfg.liveMaxLatencyDurationCount) {
+      n.liveResyncs = (n.liveResyncs || 0) + 1;
+      if (this.slow) this.setRate(1);
+      this.slow = null;
+      n.rate = 1;
+      backToSync('demasiado atrás del vivo');
+      return;
+    }
+
+    if (this.slow) {
+      if (dist >= sync) {
+        this.setRate(1);
+        this.slow = null;
+        n.rate = 1;
+        return;
+      }
+      // ¿Respeta la velocidad? A los 10 s el video tuvo que avanzar menos que el reloj.
+      const wall = (Date.now() - this.slow.fromWall) / 1000;
+      if (wall >= 10) {
+        if (now - this.slow.fromCurrent > wall * 0.99) {
+          playbackRateUnsupported = true;
+          this.setRate(1);
+          this.slow = null;
+          n.rate = 1;
+          n.liveBackJumps = (n.liveBackJumps || 0) + 1;
+          backToSync('el equipo no cambia la velocidad');
+        } else {
+          this.slow = {fromCurrent: now, fromWall: Date.now()};
+        }
+      }
+      return;
+    }
+
+    if (dist < min) {
+      n.liveSlowdowns = (n.liveSlowdowns || 0) + 1;
+      if (!playbackRateUnsupported && this.setRate(cfg.liveSlowPlaybackRate)) {
+        this.slow = {fromCurrent: now, fromWall: Date.now()};
+        n.rate = cfg.liveSlowPlaybackRate;
+      } else {
+        n.liveBackJumps = (n.liveBackJumps || 0) + 1;
+        backToSync('muy cerca del vivo');
+      }
+    }
+  }
+
+
 
   /**
    * Pistas como el motor web (`getTracks`): audio por idioma y subtítulos.
@@ -231,7 +308,10 @@ export class VegaHlsPlayer {
     const bytes = response?.data?.byteLength || 0;
     const ms = Number(response?.timeMs) || 0;
     const n = this.net;
-    if (type === 0) n.manifests += 1;
+    if (type === 0) {
+      n.manifests += 1;
+      this.recordPlaylist(response);
+    }
     else if (type === 6) n.keys += 1;
     else if (type === 1) {
       const kind = context?.stream?.type || 'video';
@@ -247,6 +327,41 @@ export class VegaHlsPlayer {
       }
       n.last = {...n.last, [kind]: entry};
       n.recent = {...n.recent, [kind]: [entry, ...(n.recent[kind] || [])].slice(0, 5)};
+    }
+  }
+
+  /**
+   * Lista de medios (.m3u8 con #EXTINF) tal como la manda el servidor:
+   * cuántos segmentos trae y su duración objetivo. Es lo que decide cuánto
+   * margen hay para ubicarse detrás del vivo.
+   */
+  recordPlaylist(response) {
+    try {
+      const data = response?.data;
+      if (!data || data.byteLength > 512 * 1024) return;
+      const text = new TextDecoder('utf-8').decode(data instanceof ArrayBuffer ? new Uint8Array(data) : data);
+      if (!text.includes('#EXTINF')) return; // lista maestra
+      const segments = (text.match(/#EXTINF/g) || []).length;
+      const target = Number((text.match(/#EXT-X-TARGETDURATION:\s*([\d.]+)/) || [])[1]) || null;
+      const kind = /audio/i.test(String(response?.uri || '')) ? 'audio' : 'video';
+      this.net.playlist = {...this.net.playlist, [kind]: {segments, target, endList: text.includes('#EXT-X-ENDLIST'), at: Date.now()}};
+    } catch (e) {
+      devLog('playlist: no se pudo leer', e?.message);
+    }
+  }
+
+  /** Segmentos que trae la lista de medios en vivo (la del servidor; si no, el índice de Shaka). */
+  playlistSegments() {
+    const fromServer = this.net.playlist?.video?.segments ?? this.net.playlist?.audio?.segments;
+    if (Number.isFinite(fromServer)) return fromServer;
+    try {
+      const p = this.shaka?.player;
+      const active = (p?.getVariantTracks() || []).find((t) => t.active);
+      const variant = (p?.getManifest?.()?.variants || []).find((x) => x.id === active?.id);
+      const n = variant?.video?.segmentIndex?.getNumReferences?.();
+      return Number.isFinite(n) ? n : null;
+    } catch {
+      return null;
     }
   }
 
@@ -300,6 +415,9 @@ export class VegaHlsPlayer {
             ? Math.max(0, range.end - now) + (this.liveBuffer?.liveSyncDurationCount || 0) * (this.net.segmentDurationS || 0)
             : null,
         segmentDurationS: this.net.segmentDurationS || null,
+        playlistSegments: this.playlistSegments(),
+        playlist: this.net.playlist || null,
+        rateUnsupported: playbackRateUnsupported,
         liveBuffer: this.liveBuffer || null,
         stalls: st.stallsDetected || 0,
         gaps: st.gapsJumped || 0,
