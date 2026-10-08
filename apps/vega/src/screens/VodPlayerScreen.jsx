@@ -7,6 +7,7 @@ import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
 import {VideoSurface} from '../player/VideoSurface';
+import {StatsPanel, getStatsVisible, setStatsVisible} from '../player/StatsPanel';
 import {TracksPanel, hasTrackOptions} from '../player/TracksPanel';
 import {Clock} from '../components/Clock';
 import {FocusRing} from '../components/FocusRing';
@@ -24,6 +25,7 @@ const ICONS = {
   play: require('../../assets/icons/app-play.png'),
   pause: require('../../assets/icons/app-pause.png'),
   subtitles: require('../../assets/icons/app-subtitles.png'),
+  stats: require('../../assets/icons/nav-settings.png'),
 };
 
 function hms(total) {
@@ -86,6 +88,11 @@ export function VodPlayerScreen({params, navigate}) {
 
   const [panel, setPanel] = useState(null); // null | 'tracks'
   const [tracks, setTracks] = useState(null);
+  const [statsOn, setStatsOn] = useState(getStatsVisible);
+  const toggleStats = () => {
+    setStatsVisible(!statsOn);
+    setStatsOn(!statsOn);
+  };
 
   // Atrás cierra el panel de pistas; sin panel, el stack vuelve al detalle.
   useEffect(() => {
@@ -179,6 +186,7 @@ export function VodPlayerScreen({params, navigate}) {
   return (
     <View style={styles.container}>
       <VideoSurface handlesRef={handles} playerRef={player} showCaptions={Boolean(tracks?.textEnabled)} />
+      {statsOn ? <StatsPanel playerRef={player} /> : null}
 
       {state === 'loading' || state === 'buffering' ? (
         <View style={styles.loading} pointerEvents="none">
@@ -203,6 +211,7 @@ export function VodPlayerScreen({params, navigate}) {
             <View style={styles.centerGroup}>
               <HudButton icon="back" onPress={() => navigate('back')} onFocus={showHud} />
               {hasTrackOptions(tracks) ? <HudButton icon="subtitles" onPress={() => setPanel('tracks')} onFocus={showHud} /> : null}
+              <HudButton icon="stats" onPress={toggleStats} onFocus={showHud} />
             </View>
             <View style={styles.centerGroup}>
               <HudButton icon="rewind" onPress={() => player.current?.seekTo(current - SKIP_SECONDS)} onFocus={showHud} />

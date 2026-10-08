@@ -32,6 +32,9 @@ export class VegaHlsPlayer {
     this.captionHandle = null;
     this.destroyed = false;
     this.keyRequests = 0;
+    // Diagnóstico (panel de estadísticas del reproductor).
+    this.net = {manifests: 0, segments: 0, keys: 0, bytes: 0, last: null, recent: [], errors: []};
+    this.loadStartedAt = 0;
   }
 
   setSurfaceHandle(handle) {
@@ -57,6 +60,7 @@ export class VegaHlsPlayer {
 
   async load(url) {
     this.emit('loading');
+    this.loadStartedAt = Date.now();
     const video = new VideoPlayer();
     this.video = video;
     await video.initialize();
@@ -95,6 +99,7 @@ export class VegaHlsPlayer {
       request.uris = request.uris.map((u) => (middlewareNeedsSession(u) ? withSessionId(u, current) : u));
     });
     net.registerResponseFilter(async (type, response) => {
+      this.recordResponse(type, response);
       if (type !== KEY_REQUEST_TYPE) return;
       this.keyRequests += 1;
       if (isPanaccessRotatingKeyUri(response.uri)) {
@@ -117,6 +122,7 @@ export class VegaHlsPlayer {
     shaka.player.addEventListener('error', (e) => {
       const d = e?.detail || {};
       devLog('Shaka error', d.code, d.category, d.severity);
+      this.net.errors = [{at: Date.now(), code: d.code, category: d.category, severity: d.severity}, ...this.net.errors].slice(0, 5);
       // Severidad 2 = crítica: la reproducción no sigue sola.
       if (d.severity === 2) this.emit('error', {source: 'shaka', code: d.code, category: d.category});
     });
@@ -175,6 +181,74 @@ export class VegaHlsPlayer {
       p.setTextTrackVisibility(true);
     }
     this.callbacks.onTracks?.(this.getTracks());
+  }
+
+  /** Registra cada respuesta de red (tipos de Shaka: 0 manifiesto, 1 segmento, 6 key). */
+  recordResponse(type, response) {
+    const bytes = response?.data?.byteLength || 0;
+    const ms = Number(response?.timeMs) || 0;
+    const n = this.net;
+    if (type === 0) n.manifests += 1;
+    else if (type === 6) n.keys += 1;
+    else if (type === 1) {
+      n.segments += 1;
+      n.bytes += bytes;
+      const uri = String(response?.uri || '');
+      const name = uri.split('?')[0].split('/').pop() || uri;
+      n.last = {name, bytes, ms, kbps: ms > 0 ? Math.round((bytes * 8) / ms) : 0, at: Date.now()};
+      n.recent = [n.last, ...n.recent].slice(0, 5);
+    }
+  }
+
+  /** Datos para el panel de estadísticas (null si no hay reproductor). */
+  getDiagnostics() {
+    const p = this.shaka?.player;
+    const v = this.video;
+    if (!p || !v) return null;
+    try {
+      const st = p.getStats() || {};
+      const tracks = p.getVariantTracks() || [];
+      const active = tracks.find((t) => t.active) || null;
+      const now = Number(v.currentTime) || 0;
+      const buffered = p.getBufferedInfo?.() || {};
+      const total = (buffered.total || []).find((r) => now >= r.start - 0.5 && now <= r.end + 0.5);
+      const range = p.seekRange?.() || {};
+      const live = p.isLive?.() === true;
+      const heap = global.HermesInternal?.getInstrumentedStats?.() || {};
+      return {
+        state: this.lastState,
+        live,
+        uptimeS: this.loadStartedAt ? Math.round((Date.now() - this.loadStartedAt) / 1000) : 0,
+        profile: active
+          ? {
+              width: active.width,
+              height: active.height,
+              kbps: Math.round((active.bandwidth || 0) / 1000),
+              fps: active.frameRate || null,
+              codecs: active.codecs || [active.videoCodec, active.audioCodec].filter(Boolean).join(', '),
+              audioLang: active.language || '',
+            }
+          : null,
+        profiles: tracks
+          .map((t) => ({height: t.height, kbps: Math.round((t.bandwidth || 0) / 1000), active: t.active}))
+          .sort((a, b) => a.kbps - b.kbps),
+        estimatedKbps: Math.round((st.estimatedBandwidth || 0) / 1000),
+        streamKbps: Math.round((st.streamBandwidth || 0) / 1000),
+        switches: (st.switchHistory || []).length,
+        bufferAheadS: total ? Math.max(0, total.end - now) : 0,
+        latencyS: live && Number.isFinite(range.end) ? Math.max(0, range.end - now) : null,
+        stalls: st.stallsDetected || 0,
+        gaps: st.gapsJumped || 0,
+        bufferingS: st.bufferingTime || 0,
+        dropped: st.droppedFrames || 0,
+        decoded: st.decodedFrames || 0,
+        textLang: (p.getTextTracks?.() || []).find((t) => t.active && p.isTextTrackVisible())?.language || '',
+        net: {...this.net},
+        jsHeapMb: heap.js_heapSize ? Math.round(heap.js_heapSize / 1048576) : null,
+      };
+    } catch (e) {
+      return {error: e?.message || String(e)};
+    }
   }
 
   /** Controles para VOD/catchup. */

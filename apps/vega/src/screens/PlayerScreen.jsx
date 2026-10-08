@@ -12,6 +12,7 @@ import {buildChannelLogoUrl} from '@appvideo/core/utils/bouquetLayoutConfig';
 import {getCurrentEpgEvent, getEpgEventTimeBoundsMs, getEpgEventTitle} from '@appvideo/core/utils/epgCurrentEvent';
 import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
 import {VideoSurface} from '../player/VideoSurface';
+import {StatsPanel, getStatsVisible, setStatsVisible} from '../player/StatsPanel';
 import {TracksPanel, hasTrackOptions} from '../player/TracksPanel';
 import {Clock} from '../components/Clock';
 import {FocusRing} from '../components/FocusRing';
@@ -34,6 +35,7 @@ const ICONS = {
   lock: require('../../assets/icons/app-lock.png'),
   lockOpen: require('../../assets/icons/app-lockOpen.png'),
   subtitles: require('../../assets/icons/app-subtitles.png'),
+  stats: require('../../assets/icons/nav-settings.png'),
   close: require('../../assets/icons/app-close.png'),
 };
 
@@ -149,6 +151,11 @@ export function PlayerScreen({params, navigate}) {
   const [hudVisible, setHudVisible] = useState(true);
   const [panel, setPanel] = useState(null); // null | 'channels' | 'info' | 'tracks'
   const [tracks, setTracks] = useState(null);
+  const [statsOn, setStatsOn] = useState(getStatsVisible);
+  const toggleStats = () => {
+    setStatsVisible(!statsOn);
+    setStatsOn(!statsOn);
+  };
   const [, setTick] = useState(0);
   const player = useRef(null);
   // Liberación del reproductor anterior en curso (zapping).
@@ -297,6 +304,7 @@ export function PlayerScreen({params, navigate}) {
   return (
     <View style={styles.container}>
       <VideoSurface handlesRef={handles} playerRef={player} showCaptions={Boolean(tracks?.textEnabled)} />
+      {statsOn ? <StatsPanel playerRef={player} /> : null}
 
       {state === 'loading' || state === 'buffering' ? (
         <View style={styles.loading} pointerEvents="none">
@@ -338,6 +346,7 @@ export function PlayerScreen({params, navigate}) {
               ) : null}
               <HudButton icon="menu" onPress={() => setPanel('channels')} onFocus={showHud} />
               <HudButton icon="info" onPress={() => setPanel('info')} onFocus={showHud} />
+              <HudButton icon="stats" onPress={toggleStats} onFocus={showHud} />
               {hasTrackOptions(tracks) ? <HudButton icon="subtitles" onPress={() => setPanel('tracks')} onFocus={showHud} /> : null}
             </View>
             <View style={styles.clock}>
