@@ -5,8 +5,8 @@ import {
   resolveHorizontalGridMode,
   resolveVerticalGridColumns,
 } from '@appvideo/core/utils/bouquetLayoutConfig';
-import {ChannelCard, cellWidthFor} from './ChannelCard';
-import {createScaledStyles, px} from '../scaledStyles';
+import {ChannelCard} from './ChannelCard';
+import {createScaledStyles} from '../scaledStyles';
 
 const TV = {isTV: true, isPC: false};
 const CARD_GAP = 32;
@@ -25,10 +25,10 @@ function toColumns(items, rows) {
 const BouquetRow = React.memo(function BouquetRow({bouquet, onPlay, preferredChannelId}) {
   const layout = resolveBouquetLayoutForDevice(bouquet, TV);
   const items = bouquet.items || [];
-  const width = cellWidthFor(layout.cardDesign);
   
-  const card = (channel, index) => (
+  const card = (channel, index, fillWidth = false) => (
     <ChannelCard
+      fillWidth={fillWidth}
       key={channelKey(channel, index)}
       channel={channel}
       cardDesign={layout.cardDesign}
@@ -42,11 +42,13 @@ const BouquetRow = React.memo(function BouquetRow({bouquet, onPlay, preferredCha
   let body;
   if (layout.containerType === 'vertical_grid') {
     const columns = resolveVerticalGridColumns(layout.gridColumns);
+    // Como la web (`repeat(N, minmax(0, 1fr))`): N columnas iguales que
+    // ocupan todo el ancho, con la tarjeta estirada a su columna.
     body = (
-      <View style={[styles.wrap, {width: px(columns * (width + CARD_GAP))}]}>
+      <View style={[styles.wrap, styles.gridFill]}>
         {items.map((c, i) => (
-          <View key={channelKey(c, i)} style={styles.gridCell}>
-            {card(c, i)}
+          <View key={channelKey(c, i)} style={[styles.gridFillCell, {width: `${100 / columns}%`}]}>
+            {card(c, i, true)}
           </View>
         ))}
       </View>
@@ -138,4 +140,6 @@ const styles = createScaledStyles({
   separator: {width: CARD_GAP},
   wrap: {flexDirection: 'row', flexWrap: 'wrap'},
   gridCell: {marginRight: CARD_GAP},
+  gridFill: {marginHorizontal: -CARD_GAP / 2},
+  gridFillCell: {paddingHorizontal: CARD_GAP / 2},
 });

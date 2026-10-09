@@ -51,7 +51,7 @@ function Progress({value, color}) {
  * Tarjeta de canal del muro de bouquets (BouquetLayouts.jsx de la web).
  * El anillo de foco rodea el marco de la tarjeta, sin escala.
  */
-function ChannelCardImpl({channel, cardDesign, logoIndex, backgroundColor, onPress, onFocus, hasTVPreferredFocus}) {
+function ChannelCardImpl({channel, cardDesign, logoIndex, backgroundColor, onPress, onFocus, hasTVPreferredFocus, fillWidth}) {
   const theme = getTheme();
   const variant = getChannelLayoutVariant(cardDesign);
   const width = cellWidthFor(cardDesign);
@@ -96,7 +96,7 @@ function ChannelCardImpl({channel, cardDesign, logoIndex, backgroundColor, onPre
 
   if (variant === 'logo_with_number') {
     return (
-      <Pressable {...pressableProps} style={[styles.card, {width: px(width)}]}>
+      <Pressable {...pressableProps} style={[styles.card, {width: fillWidth ? '100%' : px(width)}]}>
         <View>
           <View style={[styles.lwnFrame, {backgroundColor: channelBg || '#152a52'}]}>
             <Image resizeMethod="resize" source={logo} onError={onLogoError} style={styles.lwnLogo} resizeMode="contain" />
@@ -113,7 +113,7 @@ function ChannelCardImpl({channel, cardDesign, logoIndex, backgroundColor, onPre
 
   if (variant === 'event_and_logo') {
     return (
-      <Pressable {...pressableProps} style={[styles.card, {width: px(width)}]}>
+      <Pressable {...pressableProps} style={[styles.card, {width: fillWidth ? '100%' : px(width)}]}>
         <View>
           <View style={styles.ealFrame}>
             <View style={[styles.logoTop, {backgroundColor: backgroundColor || '#0a0a0a'}]}>
@@ -142,7 +142,7 @@ function ChannelCardImpl({channel, cardDesign, logoIndex, backgroundColor, onPre
 
   if (variant === 'event_and_logo_overlay') {
     return (
-      <Pressable {...pressableProps} style={[styles.card, {width: px(width)}]}>
+      <Pressable {...pressableProps} style={[styles.card, {width: fillWidth ? '100%' : px(width)}]}>
         <View>
           <View style={[styles.overlayFrame]}>
             <View style={[styles.logoTop, {backgroundColor: '#0a0a0a'}]}>
@@ -168,7 +168,7 @@ function ChannelCardImpl({channel, cardDesign, logoIndex, backgroundColor, onPre
   // logo / event / event_line: tarjeta de 208 de alto con radio 48.
   const isEvent = variant === 'event' || variant === 'event_line';
   return (
-    <Pressable {...pressableProps} style={[styles.card, {width: px(width)}]}>
+    <Pressable {...pressableProps} style={[styles.card, {width: fillWidth ? '100%' : px(width)}]}>
       <View>
         <View style={[styles.logoCard, {backgroundColor: channelBg || 'rgba(255,255,255,0.04)'}]}>
           <Image resizeMethod="resize"
@@ -194,7 +194,8 @@ export const ChannelCard = React.memo(
     a.cardDesign === b.cardDesign &&
     a.logoIndex === b.logoIndex &&
     a.backgroundColor === b.backgroundColor &&
-    a.hasTVPreferredFocus === b.hasTVPreferredFocus,
+    a.hasTVPreferredFocus === b.hasTVPreferredFocus &&
+    a.fillWidth === b.fillWidth,
 );
 
 // Medidas de _bouquet.scss a 1920×1080 (spec §2.4).

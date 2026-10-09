@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {useEffect, useState} from 'react';
-import {Image, Pressable, View, useTVEventHandler} from 'react-native';
+import {Image, Pressable, TVFocusGuideView, View, useTVEventHandler} from 'react-native';
 import {getDisplayTimeMs, isVideoUrl} from '@appvideo/core/utils/adsData';
 import {FocusRing} from '../components/FocusRing';
 import {createScaledStyles, px} from '../scaledStyles';
@@ -39,9 +39,13 @@ export function AdZone({ads, position, onActivate}) {
 
   if (!ad) return null;
   const maxHeight = position === 'bottom' ? 104 : 128;
+  // Como AdZone de la web: con más de un banner, ◄/► cambian de banner y la
+  // tecla no mueve el foco (sin esto el Fire TV lo llevaba a una tarjeta del
+  // bouquet de abajo). Con uno solo, ◄/► navegan normal.
+  const multiple = list.length > 1;
   return (
     <View style={[styles.zone, position === 'bottom' ? styles.bottom : styles.top]}>
-      <View>
+      <TVFocusGuideView trapFocusLeft={multiple} trapFocusRight={multiple}>
         <Pressable onPress={() => onActivate?.(ad)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}>
           <Image resizeMethod="resize"
             source={{uri: ad.file}}
@@ -50,7 +54,7 @@ export function AdZone({ads, position, onActivate}) {
           />
         </Pressable>
         <FocusRing visible={focused} radius={0} />
-      </View>
+      </TVFocusGuideView>
       {list.length > 1 ? (
         <View style={styles.dots}>
           {list.map((a, i) => (
