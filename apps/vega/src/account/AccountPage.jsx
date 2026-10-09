@@ -6,14 +6,21 @@ import {getActiveBrandConfig, isParentalControlEnabledForBrand} from '@appvideo/
 import {clearSessionBeforeNewLogin} from '@appvideo/core/services/loginFlow';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
 import {getActiveLicense, getCredentials} from '@appvideo/core/utils/userSession';
+import {hasDeviceSessionAuth, isDeviceSessionEnabled} from '@appvideo/core/services/deviceAuthService';
 import {Clock} from '../components/Clock';
 import {QrCode} from '../components/QrCode';
 import {ConfirmModal} from '../components/ConfirmModal';
 import {resetHomeMemory} from '../homeMemory';
 import {ParentalSettings} from '../parental/ParentalSettings';
+import {ChangePasswordPanel, CloseAccountPanel, LinkedDevicesPanel} from './SecurityPanels';
+import {devLog} from '../devLog';
 import {createScaledStyles, px} from '../scaledStyles';
 
 const t = (key, opts) => i18n.t(key, opts);
+
+// Paneles nativos (como MiCuentaPage de la web en TV) cuando la marca tiene
+// sesión de dispositivo (`login.deviceSession.enabled`).
+const NATIVE_PANELS = {changePassword: ChangePasswordPanel, linkedDevices: LinkedDevicesPanel, deleteAccount: CloseAccountPanel};
 
 const LINKS = [
   {key: 'changePassword', label: 'account.changePassword', step3: 'account.step3ChangePassword'},
@@ -82,8 +89,27 @@ export function AccountPage({navigate, active = true}) {
   };
 
   const selectedLink = [...links, deleteLink].find((l) => l && l.key === selected);
+  const nativeEnabled = isDeviceSessionEnabled(brand);
+  const hasSession = nativeEnabled && hasDeviceSessionAuth(brand?.brand);
+  const NativePanel = selectedLink && nativeEnabled ? NATIVE_PANELS[selectedLink.key] : null;
+  const logoutToLogin = React.useCallback(() => {
+    clearSessionBeforeNewLogin();
+    resetHomeMemory();
+    navigate('login');
+  }, [navigate]);
+  React.useEffect(() => {
+    if (nativeEnabled) devLog(`cuenta: sesión de dispositivo ${hasSession ? 'activa' : 'NO activa'}`);
+  }, [nativeEnabled, hasSession]);
+
   let content;
-  if (selectedLink) {
+  if (NativePanel && hasSession) {
+    content = (
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <Text style={[styles.contentTitle, {color: colors.title}]}>{t(selectedLink.label)}</Text>
+        <NativePanel key={selectedLink.key} brandConfig={brand} brand={brand?.brand} onLoggedOut={logoutToLogin} />
+      </ScrollView>
+    );
+  } else if (selectedLink) {
     const url = account.links?.[selectedLink.key]?.url || '';
     content = (
       <>
@@ -103,6 +129,14 @@ export function AccountPage({navigate, active = true}) {
             ))}
           </View>
         </View>
+        {NativePanel && !hasSession ? (
+          <Text style={[styles.stepText, styles.sessionNote, {color: colors.text}]}>
+            {t('account.deviceSessionMissing', {
+              defaultValue: 'La sesión de este equipo con {{app}} no está activa: por ahora esta opción se gestiona desde el celular con el código QR.',
+              app: brand?.appName || '',
+            })}
+          </Text>
+        ) : null}
       </>
     );
   } else if (selected === 'about') {
@@ -201,6 +235,7 @@ const styles = createScaledStyles({
   clock: {position: 'absolute', top: 21.6, right: 28.1, fontSize: 28, opacity: 0.9, fontVariant: ['tabular-nums']},
   contentTitle: {fontSize: 34, fontWeight: '700', marginBottom: 28, paddingRight: 110},
   qrRow: {flexDirection: 'row', alignItems: 'center', marginTop: 24},
+  sessionNote: {marginTop: 28, opacity: 0.75, maxWidth: 1100},
   qrBox: {width: 312, height: 312, flexShrink: 0, borderRadius: 14, alignItems: 'center', justifyContent: 'center', padding: 12, marginRight: 56},
   qrNotice: {color: 'rgba(10,20,30,0.65)', fontSize: 20, textAlign: 'center', padding: 16},
   steps: {flex: 1, maxWidth: 672},
