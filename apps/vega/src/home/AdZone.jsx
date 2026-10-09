@@ -50,7 +50,9 @@ export function AdZone({ads, position, onActivate}) {
           <Image resizeMethod="resize"
             source={{uri: ad.file}}
             resizeMode="contain"
-            style={{width: '100%', height: ratio ? undefined : px(maxHeight), aspectRatio: ratio || undefined, maxHeight: px(maxHeight * 2)}}
+            // Como .home-ad-media de la web: todo el ancho y alto según la
+            // proporción de la imagen (sin tope de alto, que la achicaba).
+            style={{width: '100%', height: ratio ? undefined : px(maxHeight), aspectRatio: ratio || undefined}}
           />
         </Pressable>
         <FocusRing visible={focused} radius={0} />
