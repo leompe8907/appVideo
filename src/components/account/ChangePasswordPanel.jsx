@@ -19,8 +19,9 @@
  * vinculados al cambiar la contraseña (mismo `sync_password_locally` en
  * los dos flujos), así que ambos fuerzan logout completo tras un éxito.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FocusableInput } from '../navigation/FocusableInput';
+import { useDevice } from '../../contexts/DeviceContext';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -138,6 +139,97 @@ function translateOtpError(t, code, fallbackMessage) {
   const entry = code ? OTP_ERROR_I18N[code] : null;
   if (!entry) return fallbackMessage;
   return t(`account.${entry.key}`, { defaultValue: entry.defaultValue });
+}
+
+/**
+ * Entrada del código OTP. TV: un solo campo numérico (FocusableInput abre el
+ * teclado numérico OSD). PC/web: una caja por dígito con avance automático,
+ * retroceso, flechas y pegado del código completo.
+ */
+function OtpDigitsInput({ length, value, onChange, disabled }) {
+  const { isTV } = useDevice();
+  const { t } = useTranslation();
+  const refs = useRef([]);
+
+  if (isTV) {
+    return (
+      <FocusableInput
+        id="change-password-otp"
+        title={t('account.changeOtpCodeLabel', { defaultValue: 'Código de acceso único' })}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        autoComplete="one-time-code"
+        className="account-security-input account-security-otp-tv-input"
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, length))}
+        maxLength={length}
+        disabled={disabled}
+        required
+      />
+    );
+  }
+
+  const digits = Array.from({ length }, (_, i) => value[i] || '');
+  const focusAt = (i) => refs.current[Math.max(0, Math.min(length - 1, i))]?.focus();
+  const setDigit = (i, d) => {
+    const arr = digits.slice();
+    arr[i] = d;
+    onChange(arr.join('').slice(0, length));
+  };
+
+  return (
+    <div className="account-security-otp-boxes" role="group" aria-label={t('account.changeOtpCodeLabel', { defaultValue: 'Código de acceso único' })}>
+      {digits.map((d, i) => (
+        <input
+          key={i}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
+          className="account-security-otp-box"
+          type="text"
+          inputMode="numeric"
+          autoComplete={i === 0 ? 'one-time-code' : 'off'}
+          maxLength={1}
+          value={d}
+          disabled={disabled}
+          aria-label={`${i + 1}/${length}`}
+          onChange={(e) => {
+            const v = e.target.value.replace(/\D/g, '');
+            if (!v) return setDigit(i, '');
+            // Si se escribe/autocompleta más de un dígito, se reparten.
+            if (v.length > 1) {
+              onChange((value.slice(0, i) + v).slice(0, length));
+              focusAt(Math.min(i + v.length, length - 1));
+              return;
+            }
+            setDigit(i, v);
+            if (i < length - 1) focusAt(i + 1);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Backspace' && !digits[i] && i > 0) {
+              e.preventDefault();
+              setDigit(i - 1, '');
+              focusAt(i - 1);
+            } else if (e.key === 'ArrowLeft') {
+              e.preventDefault();
+              focusAt(i - 1);
+            } else if (e.key === 'ArrowRight') {
+              e.preventDefault();
+              focusAt(i + 1);
+            }
+          }}
+          onPaste={(e) => {
+            const pasted = (e.clipboardData?.getData('text') || '').replace(/\D/g, '').slice(0, length);
+            if (!pasted) return;
+            e.preventDefault();
+            onChange(pasted);
+            focusAt(Math.min(pasted.length, length - 1));
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 /** Input de contraseña con botón de mostrar/ocultar interno (ver `.account-security-password-field` en _account-security.scss). */
@@ -515,8 +607,13 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
 
   if (step === 'verify') {
     return (
-      <form className="account-security-panel" onSubmit={handleContinueFromCode}>
-        <p className="account-security-hint">
+      <form
+        className="account-security-panel account-security-panel--centered account-security-panel--otp-verify"
+        onSubmit={handleContinueFromCode}
+      >
+        <div className="account-security-icon account-security-icon--lock" aria-hidden="true" />
+
+        <p className="account-security-hint--plain">
           {maskedEmail
             ? t('account.changeOtpVerifyHintWithEmail', {
                 email: maskedEmail,
@@ -529,33 +626,20 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
               })}
         </p>
 
-        <label className="account-security-label" htmlFor="change-password-otp">
-          {t('account.changeOtpCodeLabel', { defaultValue: 'Código de acceso único' })}
-        </label>
-        <FocusableInput
-          id="change-password-otp"
-          title={t('account.changeOtpCodeLabel', { defaultValue: 'Código de acceso único' })}
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          autoComplete="one-time-code"
-          className="account-security-input"
-          style={{ letterSpacing: '0.5em', textAlign: 'center', fontSize: '1.2em' }}
-          value={otpCode}
-          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, OTP_LENGTH))}
-          maxLength={OTP_LENGTH}
-          disabled={isSubmitting}
-          required
-        />
+        <OtpDigitsInput length={OTP_LENGTH} value={otpCode} onChange={setOtpCode} disabled={isSubmitting} />
 
         {error && <div className="account-security-error">{error}</div>}
 
-        <button type="submit" className="account-security-btn account-security-btn--primary" disabled={isSubmitting}>
+        <button
+          type="submit"
+          className="account-security-btn account-security-btn--primary account-security-btn--pill"
+          disabled={isSubmitting}
+        >
           {t('account.changeOtpContinue', { defaultValue: 'Continuar' })}
         </button>
         <button
           type="button"
-          className="account-security-btn account-security-btn--ghost"
+          className="account-security-btn account-security-btn--ghost account-security-btn--pill"
           disabled={isSubmitting}
           onClick={resetToRequest}
         >
@@ -563,7 +647,7 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
         </button>
         <button
           type="button"
-          className="account-security-btn account-security-btn--ghost"
+          className="account-security-link"
           disabled={isSubmitting}
           onClick={handleSendCode}
         >

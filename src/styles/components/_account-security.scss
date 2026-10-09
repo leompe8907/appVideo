@@ -548,3 +548,72 @@ $account-security-request-width: 22rem;
     padding: 16px 20px;
   }
 }
+
+// ============================================================
+// Cambiar contraseña, paso `verify` (código OTP): 6 cajas de un dígito en
+// PC/web y un campo numérico único en TV (ver `OtpDigitsInput`). Escopado
+// bajo `--otp-verify` para no tocar el paso "request" ya aprobado.
+// ============================================================
+.account-security-panel--otp-verify {
+  .account-security-btn--pill {
+    width: 100%;
+    max-width: 22rem;
+  }
+}
+
+.account-security-otp-boxes {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.account-security-otp-box {
+  width: 44px;
+  height: 54px;
+  padding: 0;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 12px;
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    border-color: var(--primary-color, #fff);
+    box-shadow: 0 0 0 2px var(--primary-color, #fff);
+  }
+}
+
+.account-security-otp-tv-input {
+  max-width: 14rem;
+  text-align: center;
+  letter-spacing: 0.6em;
+  font-size: 1.3rem;
+}
+
+.account-security-link {
+  background: none;
+  border: 0;
+  padding: 8px 12px;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  opacity: 0.85;
+  border-radius: 16px;
+
+  &:hover:not(:disabled),
+  &.focused,
+  &:focus-visible {
+    opacity: 1;
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
