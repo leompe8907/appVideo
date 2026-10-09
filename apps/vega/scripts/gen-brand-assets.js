@@ -28,16 +28,33 @@ function firstExisting(candidates) {
 }
 
 function toFullHdJpeg(from, to) {
-  if (/\.jpe?g$/i.test(from)) {
-    const size = execFileSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', from]).toString();
-    if (/pixelWidth: 1920/.test(size) && /pixelHeight: 1080/.test(size)) {
-      fs.copyFileSync(from, to);
-      return;
-    }
+  const size = execFileSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', from]).toString();
+  const w = Number((size.match(/pixelWidth: (\d+)/) || [])[1]);
+  const h = Number((size.match(/pixelHeight: (\d+)/) || [])[1]);
+  if (/\.jpe?g$/i.test(from) && w === 1920 && h === 1080) {
+    fs.copyFileSync(from, to);
+    return;
   }
-  execFileSync('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '85', '-z', '1080', '1920', from, '--out', to], {
+  // Si no es 16:9 se recorta al centro antes de escalar (si no, se deforma).
+  let src = from;
+  if (w && h && Math.abs(w / h - 16 / 9) > 0.01) {
+    const cropW = Math.min(w, Math.round((h * 16) / 9));
+    const cropH = Math.min(h, Math.round((w * 9) / 16));
+    src = `${to}.crop.png`;
+    execFileSync('sips', ['-s', 'format', 'png', '-c', String(cropH), String(cropW), from, '--out', src], {stdio: 'ignore'});
+  }
+  execFileSync('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '85', '-z', '1080', '1920', src, '--out', to], {
     stdio: 'ignore',
   });
+  if (src !== from) fs.rmSync(src, {force: true});
+}
+
+/** `login.backgroundImage` de la marca ({enabled, assetPath}) leído del archivo de marca. */
+function loginBackgroundAsset() {
+  const file = path.resolve(appRoot, '../../packages/core/src/config/brands', `${brand}.js`);
+  if (!fs.existsSync(file)) return null;
+  const m = fs.readFileSync(file, 'utf8').match(/"backgroundImage":\s*\{\s*"enabled":\s*(true|false),\s*"assetPath":\s*"([^"]*)"/);
+  return m && m[1] === 'true' && m[2] ? m[2] : null;
 }
 
 if (!fs.existsSync(path.join(webDir, 'logo.png'))) {
@@ -62,6 +79,19 @@ for (const name of FULL_SCREEN) {
   }
   toFullHdJpeg(from, path.join(target, `${name}.jpg`));
   report.push(`${name} ← ${path.relative(appRoot, from)}`);
+}
+
+// Fondo del login: `login.backgroundImage.assetPath` si la marca lo activa
+// (Wind: backgroundalt.webp), si no el fondo general (como LoginPage de la web).
+{
+  const asset = loginBackgroundAsset();
+  const from = asset ? firstExisting([path.join(sourceDir, `login-background.jpg`), path.join(webDir, asset)]) : null;
+  if (from) {
+    toFullHdJpeg(from, path.join(target, 'login-background.jpg'));
+    report.push(`login-background ← ${path.relative(appRoot, from)}`);
+  } else {
+    fs.copyFileSync(path.join(target, 'background.jpg'), path.join(target, 'login-background.jpg'));
+  }
 }
 
 for (const file of PNG_FILES) {

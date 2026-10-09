@@ -6,6 +6,7 @@ export const brandAssets = {
   logo: require('../assets/brand/logo.png'),
   logoTop: require('../assets/brand/logo-top.png'),
   background: require('../assets/brand/background.jpg'),
+  loginBackground: require('../assets/brand/login-background.jpg'),
   splash: require('../assets/brand/splash.jpg'),
   placeholder: require('../assets/brand/placeholder_220x160.png'),
 };

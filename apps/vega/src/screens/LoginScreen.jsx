@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {useState} from 'react';
-import {Image, Pressable, StyleSheet, Text, TextInput, View, useTVEventHandler} from 'react-native';
+import {BackHandler, Image, Modal, Pressable, StyleSheet, Text, TextInput, View, useTVEventHandler} from 'react-native';
 import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {clearSessionBeforeNewLogin, loginAndActivateLicense} from '@appvideo/core/services/loginFlow';
@@ -11,6 +11,7 @@ import {EyeIcon} from '../components/EyeIcon';
 import {FocusRing} from '../components/FocusRing';
 import {MessageModal} from '../components/MessageModal';
 import {FullScreenImage} from '../components/FullScreenImage';
+import {QrCode} from '../components/QrCode';
 import {getTheme} from '../theme';
 import {screenForWebRoute} from '../routes';
 import {createScaledStyles, ENTRY_SCALE, px} from '../scaledStyles';
@@ -68,6 +69,56 @@ function LoginInput({theme, inputRef, secure, rightSlot, hasTVPreferredFocus, on
   );
 }
 
+/** Botón secundario de TV (`.login-tv-action-button` de la web): píldora a todo el ancho. */
+function ActionButton({label, onPress}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={styles.actionWrap}>
+      <Pressable onPress={onPress} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={styles.action}>
+        <Text style={styles.actionText}>{label}</Text>
+      </Pressable>
+      <FocusRing visible={focused} radius={999} scale={ENTRY_SCALE} />
+    </View>
+  );
+}
+
+/** Modal con QR (registro / olvidé mi contraseña), como los de LoginPage de la web en TV. */
+function QrModal({title, hint, url, onClose}) {
+  const theme = getTheme();
+  const [focused, setFocused] = useState(false);
+  React.useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onClose]);
+  return (
+    <Modal transparent visible onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalBox}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          <Text style={styles.modalHint}>{hint}</Text>
+          <View style={styles.qrBox}>
+            <QrCode value={url} size={px(240, ENTRY_SCALE)} />
+          </View>
+          <View>
+            <Pressable
+              hasTVPreferredFocus
+              onPress={onClose}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              style={[styles.modalClose, {backgroundColor: theme.primary}]}>
+              <Text style={styles.modalCloseText}>{t('common.close')}</Text>
+            </Pressable>
+            <FocusRing visible={focused} radius={999} scale={ENTRY_SCALE} />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 /**
  * Login de TV con el diseño de appVideo (spec §5.2, LoginPage + _login.scss):
  * fondo de la marca con velo, card con logo, título, usuario, contraseña con
@@ -83,6 +134,17 @@ export function LoginScreen({navigate}) {
   const [error, setError] = useState('');
   const [toggleFocused, setToggleFocused] = useState(false);
   const [submitFocused, setSubmitFocused] = useState(false);
+  const [qrModal, setQrModal] = useState(null); // 'register' | 'forgot'
+  // Elementos configurables por marca (LoginPage de la web en TV):
+  // `login.forgotPassword` y `login.qrRegister` abren un QR.
+  const loginCfg = getActiveBrandConfig()?.login || {};
+  const forgotUrlRaw = typeof loginCfg.forgotPassword?.url === 'string' ? loginCfg.forgotPassword.url.trim() : '';
+  const forgotUrl = forgotUrlRaw ? `${forgotUrlRaw}${forgotUrlRaw.includes('?') ? '&' : '?'}origin=app` : '';
+  const showForgot = loginCfg.forgotPassword?.enabled === true && forgotUrl.length > 0;
+  const registerCfg = loginCfg.qrRegister || getActiveBrandConfig()?.qrRegister;
+  const registerUrl = typeof registerCfg?.url === 'string' ? registerCfg.url.trim() : '';
+  const showRegister = registerCfg?.enabled === true && registerUrl.length > 0;
+  const closeQr = React.useCallback(() => setQrModal(null), []);
   const passwordRef = React.useRef(null);
   const eyeRef = React.useRef(null);
   const [passwordFocused, setPasswordFocused] = useState(false);
@@ -129,7 +191,7 @@ export function LoginScreen({navigate}) {
 
   return (
     <View style={styles.container}>
-      <FullScreenImage source={theme.assets.background} blurRadius={2} />
+      <FullScreenImage source={theme.assets.loginBackground || theme.assets.background} blurRadius={2} />
       <View style={[StyleSheet.absoluteFill, styles.veil]} />
 
       <View style={[styles.card, {backgroundColor: l.cardBackground}]}>
@@ -160,6 +222,12 @@ export function LoginScreen({navigate}) {
           onFocusChange={setPasswordFocused}
         />
 
+        {showForgot ? (
+          <View style={styles.forgotRow}>
+            <ActionButton label={t('login.forgotPassword')} onPress={() => setQrModal('forgot')} />
+          </View>
+        ) : null}
+
         <View style={styles.submitWrap}>
           <Pressable
             onPress={submit}
@@ -178,7 +246,21 @@ export function LoginScreen({navigate}) {
           </Pressable>
           <FocusRing visible={submitFocused} radius={999} scale={ENTRY_SCALE} />
         </View>
+
+        {showRegister ? (
+          <View style={styles.subscribeRow}>
+            <Text style={styles.subscribeHint}>{t('login.noAccountYet')}</Text>
+            <ActionButton label={t('login.subscribeHere')} onPress={() => setQrModal('register')} />
+          </View>
+        ) : null}
       </View>
+
+      {qrModal === 'forgot' ? (
+        <QrModal title={t('login.forgotPasswordTitle')} hint={t('login.forgotPasswordHint')} url={forgotUrl} onClose={closeQr} />
+      ) : null}
+      {qrModal === 'register' ? (
+        <QrModal title={t('login.registerTitle')} hint={t('login.registerHint')} url={registerUrl} onClose={closeQr} />
+      ) : null}
 
       {error ? <MessageModal message={error} onClose={() => setError('')} /> : null}
     </View>
@@ -213,4 +295,18 @@ const styles = createScaledStyles({
   submitDisabled: {opacity: 0.5},
   submitDisabledBg: {backgroundColor: 'rgba(255,255,255,0.1)'},
   submitText: {fontSize: 16, fontWeight: '600', letterSpacing: 0.32},
+  // _login.scss en TV: .login-forgot-row, .login-subscribe-row, .login-tv-action-button.
+  forgotRow: {marginTop: -2.4, marginBottom: 13.6},
+  subscribeRow: {marginTop: 16, alignItems: 'center'},
+  subscribeHint: {fontSize: 14, color: 'rgba(255,255,255,0.82)', marginBottom: 8},
+  actionWrap: {alignSelf: 'stretch'},
+  action: {paddingVertical: 10.4, paddingHorizontal: 24, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)', backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center'},
+  actionText: {color: '#fff', fontSize: 14, fontWeight: '500'},
+  modalOverlay: {flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.7)'},
+  modalBox: {width: 420, padding: 28, borderRadius: 20, backgroundColor: 'rgba(24,24,28,0.98)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center'},
+  modalTitle: {color: '#fff', fontSize: 20, fontWeight: '600', marginBottom: 8, textAlign: 'center'},
+  modalHint: {color: 'rgba(255,255,255,0.8)', fontSize: 14, marginBottom: 16, textAlign: 'center'},
+  qrBox: {padding: 8, borderRadius: 8, backgroundColor: '#fff', marginBottom: 14.4},
+  modalClose: {paddingVertical: 10, paddingHorizontal: 40, borderRadius: 999},
+  modalCloseText: {color: '#fff', fontSize: 15, fontWeight: '600'},
 }, ENTRY_SCALE);
