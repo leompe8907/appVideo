@@ -26,3 +26,6 @@ azcopy
 *.njsproj
 *.sln
 *.sw?
+
+# Metadatos de macOS en discos exFAT
+._*
