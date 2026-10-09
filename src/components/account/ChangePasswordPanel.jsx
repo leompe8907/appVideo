@@ -20,6 +20,7 @@
  * los dos flujos), así que ambos fuerzan logout completo tras un éxito.
  */
 import { useEffect, useState } from 'react';
+import { FocusableInput } from '../navigation/FocusableInput';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -152,11 +153,20 @@ function PasswordToggleInput({
   show,
   onToggleShow,
   t,
+  ariaTitle = '',
 }) {
+  // Título del teclado OSD en TV (el input no tiene placeholder).
+  const fieldTitle =
+    id === 'change-password-current'
+      ? t('account.changePasswordCurrentLabel', { defaultValue: 'Contraseña actual' })
+      : id === 'change-password-confirm'
+        ? t('account.changePasswordConfirmLabel', { defaultValue: 'Confirmar nueva contraseña' })
+        : t('account.changePasswordNewLabel', { defaultValue: 'Nueva contraseña' });
   return (
     <div className="account-security-password-field">
-      <input
+      <FocusableInput
         id={id}
+        title={ariaTitle || fieldTitle}
         type={show ? 'text' : 'password'}
         className="account-security-input"
         value={value}
@@ -522,8 +532,9 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
         <label className="account-security-label" htmlFor="change-password-otp">
           {t('account.changeOtpCodeLabel', { defaultValue: 'Código de acceso único' })}
         </label>
-        <input
+        <FocusableInput
           id="change-password-otp"
+          title={t('account.changeOtpCodeLabel', { defaultValue: 'Código de acceso único' })}
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
@@ -642,7 +653,7 @@ function OtpChangePasswordFlow({ brandConfig, brand }) {
         })}
       </p>
 
-      <input
+      <FocusableInput
         type="email"
         className="account-security-input account-security-input--centered"
         placeholder={t('account.changeOtpEmailPlaceholder', { defaultValue: 'Escribe tu correo' })}

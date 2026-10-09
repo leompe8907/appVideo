@@ -33,6 +33,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ConfirmModal from '../ConfirmModal';
+import { FocusableInput } from '../navigation/FocusableInput';
 import { requestAccountDeletion } from '@appvideo/core/services/accountSecurityService';
 // Los estilos de este panel viven en styles/pages/_mi-cuenta.scss /
 // styles/components/_account-security.scss (importados desde
@@ -244,7 +245,7 @@ export function CloseAccountPanel({ brandConfig, brand }) {
           })}
         </p>
 
-        <input
+        <FocusableInput
           type="email"
           className="account-security-input account-security-input--centered"
           placeholder={t('account.deleteAccountEmailPlaceholder', { defaultValue: 'Escribe tu correo' })}

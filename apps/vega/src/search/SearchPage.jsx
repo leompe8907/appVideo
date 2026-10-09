@@ -181,10 +181,12 @@ export function SearchPage({onPlayChannel, onPlayVod, onModalChange, active = tr
       services: epg.streams || [],
       vods: vod.allVods || [],
       catchupGroups: catchup.groups || [],
+      bouquets: epg.bouquetsWithChannels || [],
+      vodCategories: vod.categories || [],
       vodDrmBaseUrl: brand?.drm,
     });
     return epgEnabled ? all : all.filter((r) => r.type !== 'epg');
-  }, [query, epg.streams, vod.allVods, catchup.groups, brand?.drm, epgEnabled]);
+  }, [query, epg.streams, epg.bouquetsWithChannels, vod.allVods, vod.categories, catchup.groups, brand?.drm, epgEnabled]);
 
   const byType = useMemo(() => {
     const m = {};

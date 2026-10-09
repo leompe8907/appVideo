@@ -42,6 +42,8 @@ const NATIVE_ACCOUNT_PANELS = {
   linkedDevices: LinkedDevicesPanel,
   deleteAccount: CloseAccountPanel,
 };
+// Paneles nativos listos para TV (todos sus campos usan FocusableInput).
+const TV_READY_NATIVE_PANELS = new Set(['linkedDevices', 'deleteAccount', 'changePassword']);
 export function MiCuentaPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -60,7 +62,11 @@ export function MiCuentaPage() {
   // si la marca usa perfiles (mismo flag que decide el redirect post-login
   // en utils/navigation.js), si no hay nada a qué "cambiar".
   const changeProfileEnabled = currentBrand?.features?.profiles === true;
-  const useNativeAccountFlow = !isTV && isDeviceSessionEnabled(currentBrand);
+  // En TV los paneles nativos se habilitan por sección: FocusableInput abre el
+  // teclado OSD (con grilla numérica para el OTP), así que ya no hace falta el QR.
+  const isNativeFlowEnabledForBrand = isDeviceSessionEnabled(currentBrand);
+  const canUseNativePanel = (key) =>
+    isNativeFlowEnabledForBrand && !!NATIVE_ACCOUNT_PANELS[key] && (!isTV || TV_READY_NATIVE_PANELS.has(key));
 
   // Flags independientes por funcionalidad (`brand.account.sections`): a
   // diferencia de `account.links` (que resuelve un QR/panel), estas son
@@ -339,7 +345,7 @@ export function MiCuentaPage() {
           ) : activeItem ? (
             <>
               <h1 className="mi-cuenta-content__title">{activeItem.label}</h1>
-              {useNativeAccountFlow && NATIVE_ACCOUNT_PANELS[activeItem.key] ? (
+              {canUseNativePanel(activeItem.key) ? (
                 (() => {
                   const NativePanel = NATIVE_ACCOUNT_PANELS[activeItem.key];
                   return <NativePanel brandConfig={currentBrand} brand={currentBrand?.brand} />;
