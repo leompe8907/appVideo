@@ -18,9 +18,9 @@ function Gap() {
  * Carril "Recomendado" de VOD debajo de los bouquets de Inicio
  * (VodRecommendedHomeRail de la web): si hay más de 9, la primera tarjeta es
  * "Ver todas las películas" (va a Películas). OK en una película abre su
- * detalle (lo maneja el home).
+ * detalle (lo maneja el home); al cerrarlo el foco vuelve a esa tarjeta (`focusId`).
  */
-export function VodRecommendedRail({onSelect, onSeeAll}) {
+export function VodRecommendedRail({onSelect, onSeeAll, focusId}) {
   const brand = getActiveBrandConfig();
   const vod = usePreloadStore((s) => s.vod);
   const loadVOD = usePreloadStore((s) => s.loadVOD);
@@ -55,7 +55,7 @@ export function VodRecommendedRail({onSelect, onSeeAll}) {
             item.__more ? (
               <VodSeeMoreCard label={t('vod.seeAllMovies')} onPress={onSeeAll} />
             ) : (
-              <VodCard item={item} onPress={() => onSelect(item)} />
+              <VodCard item={item} hasTVPreferredFocus={focusId != null && String(item?.id) === String(focusId)} onPress={() => onSelect(item)} />
             )
           }
         />

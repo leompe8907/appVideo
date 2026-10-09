@@ -136,9 +136,21 @@ export function HomeScreen({navigate}) {
 
   // Detalle de una película abierta desde el carril "Recomendado" de Inicio.
   const [inicioVod, setInicioVod] = useState(null);
+  const [inicioVodFocusId, setInicioVodFocusId] = useState(null);
+  const openInicioVod = (item) => {
+    setInicioVodFocusId(item?.id ?? null);
+    setInicioVod(item);
+  };
   useEffect(() => {
     if (section !== 'inicio') setInicioVod(null);
   }, [section]);
+  // El foco vuelve a la tarjeta al cerrar el detalle; después se suelta para
+  // que no se lo robe si el carril se vuelve a armar.
+  useEffect(() => {
+    if (inicioVod || inicioVodFocusId == null) return undefined;
+    const timer = setTimeout(() => setInicioVodFocusId(null), 1500);
+    return () => clearTimeout(timer);
+  }, [inicioVod, inicioVodFocusId]);
   useEffect(() => {
     if (section === 'inicio') setVodModalOpen(Boolean(inicioVod));
   }, [inicioVod, section]);
@@ -250,7 +262,11 @@ export function HomeScreen({navigate}) {
             onPlay={play}
             preferredFocus={focusTarget}
             header={section === 'inicio' && adsEnabled ? <AdZone ads={ads.top} position="top" onActivate={activateAd} /> : null}
-            footer={section === 'inicio' ? <VodRecommendedRail onSelect={setInicioVod} onSeeAll={() => selectSection('vod')} /> : null}
+            footer={
+              section === 'inicio' ? (
+                <VodRecommendedRail onSelect={openInicioVod} onSeeAll={() => selectSection('vod')} focusId={inicioVod ? null : inicioVodFocusId} />
+              ) : null
+            }
           />
           {section === 'inicio' && adsEnabled ? <AdZone ads={ads.bottom} position="bottom" onActivate={activateAd} /> : null}
           {section === 'inicio' && inicioVod ? <VodDetail item={inicioVod} categories={vod.categories || []} onPlay={playVod} /> : null}
@@ -302,7 +318,7 @@ export function HomeScreen({navigate}) {
     <View style={[styles.root, {backgroundColor: theme.background}]}>
       <FullScreenImage source={theme.assets.background} />
       <View style={styles.content}>
-        {isInicioHeaderEnabled(section) ? <InicioHeader /> : null}
+        {isInicioHeaderEnabled(section) && !(section === 'inicio' && inicioVod) ? <InicioHeader /> : null}
         {content}
       </View>
       <ReminderHost playerActive={!isFocused} onGoToChannel={(channel) => playChannel(channel)} />
