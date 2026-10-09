@@ -6,7 +6,7 @@ import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
 import {useParentalGateStore} from '@appvideo/core/store/parentalGateStore';
-import {filterBouquetsForInicio, filterBouquetsForTvRadioServices} from '@appvideo/core/services/tvDataService';
+import {filterBouquetsForInicio, filterBouquetsForTvRadioServices, sortBouquetsByPriority} from '@appvideo/core/services/tvDataService';
 import {FullScreenImage} from '../components/FullScreenImage';
 import {Sidebar, RAIL_WIDTH} from '../home/Sidebar';
 import {BouquetWall} from '../home/BouquetWall';
@@ -17,6 +17,10 @@ import {AccountPage} from '../account/AccountPage';
 import {CatchupPage} from '../catchup/CatchupPage';
 import {EpgGuidePage} from '../epg/EpgGuidePage';
 import {PreloadScreen} from '../home/PreloadScreen';
+import {InicioHeader, isInicioHeaderEnabled} from '../home/InicioHeader';
+import {useMostWatchedBouquet} from '../home/useMostWatchedBouquet';
+import {VodRecommendedRail} from '../home/VodRecommendedRail';
+import {VodDetail} from '../vod/VodDetail';
 import {ReminderHost} from '../epg/ReminderHost';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {getCatchupStreamId, getEventTitle} from '@appvideo/core/utils/catchupEvent';
@@ -119,11 +123,33 @@ export function HomeScreen({navigate}) {
     if (epgSettled) setInitialEpgDone(true);
   }, [epgSettled]);
   const hasEpgData = initialEpgDone && (epg.bouquetsWithChannels || []).length > 0;
+  // "Más vistos" (ranking del backend de la marca) compite por posición con
+  // los bouquets reales según su priority, como en la web (sólo en Inicio).
+  const mostWatched = useMostWatchedBouquet();
   const bouquets = useMemo(() => {
     if (epg.status !== 'ready' && !hasEpgData) return [];
     const list = epg.bouquetsWithChannels || [];
-    return section === 'channels' ? filterBouquetsForTvRadioServices(list) : filterBouquetsForInicio(list);
-  }, [epg.status, epg.bouquetsWithChannels, hasEpgData, section]);
+    if (section === 'channels') return filterBouquetsForTvRadioServices(list);
+    const base = filterBouquetsForInicio(list);
+    return mostWatched ? sortBouquetsByPriority([...base, mostWatched]) : base;
+  }, [epg.status, epg.bouquetsWithChannels, hasEpgData, section, mostWatched]);
+
+  // Detalle de una película abierta desde el carril "Recomendado" de Inicio.
+  const [inicioVod, setInicioVod] = useState(null);
+  useEffect(() => {
+    if (section !== 'inicio') setInicioVod(null);
+  }, [section]);
+  useEffect(() => {
+    if (section === 'inicio') setVodModalOpen(Boolean(inicioVod));
+  }, [inicioVod, section]);
+  useEffect(() => {
+    if (!isFocused || !inicioVod) return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setInicioVod(null);
+      return true;
+    });
+    return () => sub.remove();
+  }, [isFocused, inicioVod]);
 
   // Reproducir pasa por el control parental (requestPlayChannel, como la web).
   const requestPlayChannel = useParentalGateStore((s) => s.requestPlayChannel);
@@ -224,8 +250,10 @@ export function HomeScreen({navigate}) {
             onPlay={play}
             preferredFocus={focusTarget}
             header={section === 'inicio' && adsEnabled ? <AdZone ads={ads.top} position="top" onActivate={activateAd} /> : null}
+            footer={section === 'inicio' ? <VodRecommendedRail onSelect={setInicioVod} onSeeAll={() => selectSection('vod')} /> : null}
           />
           {section === 'inicio' && adsEnabled ? <AdZone ads={ads.bottom} position="bottom" onActivate={activateAd} /> : null}
+          {section === 'inicio' && inicioVod ? <VodDetail item={inicioVod} categories={vod.categories || []} onPlay={playVod} /> : null}
         </View>
       ) : (
         <View style={styles.center}>
@@ -273,7 +301,10 @@ export function HomeScreen({navigate}) {
   return (
     <View style={[styles.root, {backgroundColor: theme.background}]}>
       <FullScreenImage source={theme.assets.background} />
-      <View style={styles.content}>{content}</View>
+      <View style={styles.content}>
+        {isInicioHeaderEnabled(section) ? <InicioHeader /> : null}
+        {content}
+      </View>
       <ReminderHost playerActive={!isFocused} onGoToChannel={(channel) => playChannel(channel)} />
       <Sidebar
         account={account}

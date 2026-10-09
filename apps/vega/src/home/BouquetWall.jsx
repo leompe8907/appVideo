@@ -103,7 +103,7 @@ function Separator() {
  * vertical; cada bouquet con su layout de TV (`bouquetLayouts.tv` /
  * customData / layoutType).
  */
-export function BouquetWall({bouquets, onPlay, preferredFocus, header}) {
+export function BouquetWall({bouquets, onPlay, preferredFocus, header, footer}) {
   // Lista vertical virtualizada: sólo se arman los bouquets cerca de la
   // pantalla (con 10+ bouquets el ScrollView armaba cientos de tarjetas y
   // cada movimiento de foco se sentía lento). Se arma al menos hasta el
@@ -123,6 +123,7 @@ export function BouquetWall({bouquets, onPlay, preferredFocus, header}) {
         />
       )}
       ListHeaderComponent={header}
+      ListFooterComponent={footer}
       initialNumToRender={Math.max(3, preferredIndex + 2)}
       maxToRenderPerBatch={2}
       windowSize={3}
