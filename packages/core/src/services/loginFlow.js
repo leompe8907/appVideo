@@ -112,16 +112,19 @@ export function clearSessionBeforeNewLogin() {
  *   Si el caller ya obtuvo un JWT de este backend por otra vía (login
  *   social, que lo recibe en la misma respuesta de `/wind/auth/google|facebook/`),
  *   pasarlo acá evita repetir un login manual innecesario contra `/api/auth/login/`.
+ * @returns {Promise<{ok: boolean, error?: string, retryAfterSeconds?: number|null}|undefined>}
+ *   el resultado de `registerDeviceSession()` (el watchdog de reconexión lo usa
+ *   para decidir cuánto esperar), o `undefined` si no aplica o falló el login.
  */
 export async function maybeEstablishDeviceSession(brandConfig, credentials, precomputedSession) {
-  if (!deviceAuthService.isDeviceSessionEnabled(brandConfig)) return;
+  if (!deviceAuthService.isDeviceSessionEnabled(brandConfig)) return undefined;
 
   try {
     let session = precomputedSession;
     if (!session?.access) {
       session = await deviceAuthService.loginManualForDeviceSession(brandConfig, credentials);
     }
-    if (!session?.access) return;
+    if (!session?.access) return undefined;
 
     deviceAuthService.persistDeviceSessionAuth(session, brandConfig?.brand);
 
@@ -147,10 +150,12 @@ export async function maybeEstablishDeviceSession(brandConfig, credentials, prec
     if (import.meta.env.DEV) {
       console.log('[loginFlow] Device session:', result);
     }
+    return result;
   } catch (e) {
     if (import.meta.env.DEV) {
       console.warn('[loginFlow] maybeEstablishDeviceSession falló (no afecta el login):', e?.message);
     }
+    return undefined;
   }
 }
 

@@ -46,6 +46,7 @@ import {
 import { detectTvVendorFromApis } from '../utils/tvPlatformApis';
 import { getUserAgent } from '../platform/runtime';
 import { refreshDeviceSessionAccessToken, resolveDeviceAuthBaseUrl } from './deviceAuthService';
+import { classifyDeviceSocketClose, retryAfterSecondsFromReason } from './backendRetryPolicy';
 
 const STORAGE_KEYS = {
   deviceToken: 'deviceSession.deviceToken',
@@ -218,7 +219,8 @@ export function setOnDeviceListChanged(fn) {
 // nunca llegó a este porque su `ws/device/` se había caído horas antes sin
 // que nada lo notara. Este canal deja que `useAppLifecycle.js` reaccione de
 // inmediato al cierre inesperado, sin depender de un evento de
-// background/foreground para notarlo.
+// background/foreground para notarlo. Recibe `{error, closeCode,
+// retryAfterSeconds}` para decidir cuánto esperar (backendRetryPolicy.js).
 let onUnexpectedCloseGlobal = null;
 
 export function setOnDeviceSessionUnexpectedClose(fn) {
@@ -466,7 +468,7 @@ export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) 
         finish({ ok: false, error: 'ws_error' });
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         // Si ya se resolvió con éxito (`device_registered`) este cierre es de
         // una conexión que estuvo viva un rato y luego se cayó/cerró -- no
         // hay nada más que resolver. `finish()` ya es un no-op en ese caso.
@@ -482,18 +484,29 @@ export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) 
         if (wasActive) activeDeviceSocket = null;
         // El backend valida el JWT solo en el `connect()` inicial (ver
         // `wind/utils/ws_auth.py` / `device_consumers.py`): si el token ya
-        // expiró, cierra ANTES de aceptar la conexión (código 4001/4004) --
-        // el navegador nunca dispara `onopen`. Se distingue de un cierre
-        // normal (tras haber llegado a abrir) para no reintentar en casos
-        // donde el problema es de red y no de JWT.
+        // expiró, cierra ANTES de aceptar la conexión -- el navegador nunca
+        // dispara `onopen`. Se distingue de un cierre normal (tras haber
+        // llegado a abrir) para no reintentar en casos donde el problema es
+        // de red y no de JWT.
         if (!hasOpened) {
           finish({ ok: false, error: 'auth_failed_before_open' });
           return;
         }
-        finish({ ok: false, error: 'closed_before_ack' });
+        // Desde 2026-10-13 el backend acepta y después cierra con 4503 (base
+        // caída: reintentar sin tocar la sesión), 4004 (cuenta sin
+        // suscriptor: no reintentar) o 4001 + "Retry after Ns" (límite de
+        // conexiones). Ver backendRetryPolicy.js.
+        const closeKind = classifyDeviceSocketClose(event?.code);
+        const closeInfo = {
+          ok: false,
+          error: closeKind || 'closed_before_ack',
+          closeCode: event?.code,
+          retryAfterSeconds: retryAfterSecondsFromReason(event?.reason),
+        };
+        finish(closeInfo);
         if (wasActive) {
           try {
-            onUnexpectedCloseGlobal?.();
+            onUnexpectedCloseGlobal?.(closeInfo);
           } catch {
             // noop -- un listener global roto no debe afectar el resto del socket
           }

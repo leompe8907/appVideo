@@ -1,7 +1,7 @@
 import * as React from 'react';
 import {useEffect, useState} from 'react';
 import {Dimensions, StyleSheet, View} from 'react-native';
-import {NavigationContainer} from '@amazon-devices/react-navigation__native';
+import {NavigationContainer, createNavigationContainerRef} from '@amazon-devices/react-navigation__native';
 import {createStackNavigator} from '@amazon-devices/react-navigation__stack';
 import '@appvideo/core/locales/i18n';
 import {SplashScreen} from './screens/SplashScreen';
@@ -13,8 +13,12 @@ import {VodPlayerScreen} from './screens/VodPlayerScreen';
 import {devLog} from './devLog';
 import {storageReady} from './bootstrap';
 import {ParentalGateHost} from './parental/ParentalGateHost';
+import {useDeviceSessionLifecycle} from './deviceSessionLifecycle';
 
 const Stack = createStackNavigator();
+
+/** Para navegar fuera de una pantalla (p. ej. al login cuando revocan el dispositivo). */
+const navigationRef = createNavigationContainerRef();
 
 // Mismas opciones que vega-video-sample: sin encabezado ni animaciones.
 const SCREEN_OPTIONS = {headerShown: false, animationEnabled: false, cardStyle: {backgroundColor: '#000'}};
@@ -51,6 +55,7 @@ const VodPlayer = withNavigate(VodPlayerScreen);
 
 export function App() {
   const [ready, setReady] = useState(false);
+  useDeviceSessionLifecycle(navigationRef, ready);
 
   useEffect(() => {
     storageReady.finally(() => setReady(true));
@@ -60,7 +65,7 @@ export function App() {
   if (!ready) return <View style={styles.root} />;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator initialRouteName="splash" screenOptions={SCREEN_OPTIONS}>
         <Stack.Screen name="splash" component={Splash} />
         <Stack.Screen name="login" component={Login} />

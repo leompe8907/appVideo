@@ -2,11 +2,14 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
 import { usePlayer } from '../contexts/PlayerContext';
-import { isAuthenticated, getCredentials, getCredentialsWithFallback } from '@appvideo/core/utils/userSession';
+import { isAuthenticated } from '@appvideo/core/utils/userSession';
 import { validateSessionIfDue } from '../utils/sessionValidator';
-import { isDeviceSessionEnabled } from '@appvideo/core/services/deviceAuthService';
-import { isDeviceSessionActive, setOnDeviceSessionUnexpectedClose } from '@appvideo/core/services/deviceSessionService';
-import { maybeEstablishDeviceSession } from '@appvideo/core/services/loginFlow';
+import { setOnDeviceSessionUnexpectedClose } from '@appvideo/core/services/deviceSessionService';
+import {
+  ensureDeviceSessionConnected as ensureDeviceSessionConnectedNow,
+  resetDeviceSessionReconnect,
+  scheduleDeviceSessionReconnect,
+} from '@appvideo/core/services/deviceSessionWatchdog';
 import { syncPreferencesFromBackend } from '@appvideo/core/services/preferencesSyncService';
 
 /** Tiempo máximo en milisegundos en background antes de forzar revalidación silenciosa de token (30 min) */
@@ -24,36 +27,21 @@ const PLAYBACK_SNAPSHOT_KEY = 'app_player_snapshot_v1';
  * Motivo (auditoría, gap real encontrado): `splashAuthFlow.js` tiene un
  * camino "rápido" (sesión + licencia ya activas -> `reactivateLicense()`)
  * que nunca pasaba por `loginAndActivateLicense()`/`maybeEstablishDeviceSession()`
- * -- ese es el camino MÁS COMÚN al reabrir la app, así que en la práctica el
- * WebSocket casi nunca terminaba de abrirse ahí, y ese dispositivo no recibía
- * el aviso en vivo de "contraseña cambiada"/"dispositivo revocado". En vez de
- * parchear ese camino puntual (y arriesgarse a que aparezca el mismo hueco en
- * el próximo atajo que se agregue), este watchdog vive en un solo lugar
- * (`useAppLifecycle`, ya el punto central de "la app se activó/volvió de
- * background") y se dispara sin importar qué camino de login/reactivación se
- * tomó.
+ * -- ese es el camino MÁS COMÚN al reabrir la app. Este watchdog vive en un
+ * solo lugar (`useAppLifecycle`, el punto central de "la app se activó/volvió
+ * de background") y se dispara sin importar qué camino se tomó.
  *
- * `registerDeviceSession()` (deviceSessionService.js) ya cierra cualquier
- * conexión previa antes de abrir una nueva, así que llamar a esto de más no
- * duplica conexiones -- el chequeo `isDeviceSessionActive()` de abajo es solo
- * para no reabrir innecesariamente cuando ya hay una conexión viva.
+ * La lógica (reconectar con el JWT guardado, espera creciente con parte al
+ * azar, respetar los códigos de cierre del backend) está en
+ * `@appvideo/core/services/deviceSessionWatchdog.js`, compartida con Vega.
+ * Si el intento falla, se programa el siguiente con esa espera.
  */
 function ensureDeviceSessionConnected(brandConfig) {
-  try {
-    if (!brandConfig || !isDeviceSessionEnabled(brandConfig)) return;
-    if (isDeviceSessionActive()) return;
-
-    const credentials =
-      getCredentials(brandConfig?.brand) ?? getCredentialsWithFallback(brandConfig?.token, brandConfig?.brand);
-    if (!credentials) return;
-
-    // Fire-and-forget: nunca debe bloquear ni afectar el resto del ciclo de
-    // vida de la app (mismo criterio que `maybeEstablishDeviceSession`, que
-    // ya se traga sus propios errores).
-    maybeEstablishDeviceSession(brandConfig, credentials);
-  } catch {
-    // noop -- un fallo acá nunca debe afectar el resto de useAppLifecycle
-  }
+  // Fire-and-forget: nunca debe bloquear ni afectar el resto del ciclo de
+  // vida de la app (el watchdog ya se traga sus propios errores).
+  ensureDeviceSessionConnectedNow(brandConfig).then((result) => {
+    if (result && !result.ok) scheduleDeviceSessionReconnect(brandConfig, result);
+  });
 }
 
 function savePlaybackSnapshot(player) {
@@ -175,8 +163,13 @@ export function useAppLifecycle() {
   // de cerrarla).
   useEffect(() => {
     if (!currentBrand) return undefined;
-    setOnDeviceSessionUnexpectedClose(() => ensureDeviceSessionConnected(currentBrand));
-    return () => setOnDeviceSessionUnexpectedClose(null);
+    // Con espera (no al instante): si el backend se reinició o su base está
+    // saturada, todos los dispositivos reconectarían en el mismo segundo.
+    setOnDeviceSessionUnexpectedClose((info) => scheduleDeviceSessionReconnect(currentBrand, info));
+    return () => {
+      setOnDeviceSessionUnexpectedClose(null);
+      resetDeviceSessionReconnect();
+    };
   }, [currentBrand]);
 
   // Guardar continuamente la ruta activa cuando el usuario navega por la app
@@ -257,7 +250,10 @@ export function useAppLifecycle() {
         // haber cerrado el WebSocket mientras la app estaba en background,
         // dejando a este dispositivo sordo a `device_revoked` hasta que
         // alguien más dispare un login/reactivación completo (ver
-        // ensureDeviceSessionConnected arriba).
+        // ensureDeviceSessionConnected arriba). Volver al frente reinicia la
+        // espera: si había una reconexión programada (o ya se había dejado de
+        // reintentar), se intenta ahora.
+        resetDeviceSessionReconnect();
         ensureDeviceSessionConnected(currentBrand);
 
         // Mismo motivo: si otro dispositivo cambió control parental o

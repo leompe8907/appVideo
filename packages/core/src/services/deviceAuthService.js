@@ -34,6 +34,7 @@ import {
   setBrandItem,
 } from '../utils/brandStorage';
 import { getRecaptchaToken } from './recaptchaService';
+import { SERVICE_UNAVAILABLE_STATUS, serviceUnavailableRetryDelayMs } from './backendRetryPolicy';
 
 const STORAGE_KEYS = {
   access: 'deviceSession.access',
@@ -139,11 +140,13 @@ export async function loginManualForDeviceSession(brandConfig, { username, passw
 /**
  * Refresca el access token con el refresh guardado.
  *
- * No lanza nunca: devuelve `''` si no hay refresh guardado, o si el backend
+ * No lanza nunca: devuelve `''` si no hay refresh guardado, si el backend
  * lo rechaza (refresh expirado, o invalidado por un cambio de contraseña /
  * cierre de cuenta -- ver `PasswordAwareJWTAuthentication` en el backend
- * Wind). El caller debe tratar `''` como "hay que volver a loguearse contra
- * este backend" (no afecta la sesión de PanAccess, que es independiente).
+ * Wind), o si no se pudo refrescar ahora (sin red, 503 con la base del
+ * backend saturada). Sólo en el primer caso se borra la sesión guardada; en
+ * los otros se conserva para reintentar más tarde. No afecta la sesión de
+ * PanAccess, que es independiente.
  */
 export async function refreshDeviceSessionAccessToken(brandConfig, brand) {
   const base = resolveDeviceAuthBaseUrl(brandConfig);
@@ -174,10 +177,15 @@ export async function refreshDeviceSessionAccessToken(brandConfig, brand) {
       }
       return data.access;
     }
-  } catch {
-    // Refresh inválido/expirado -- se limpia para no reintentar en loop en
-    // cada arranque; el próximo login (manual o social) vuelve a crear uno.
-    clearDeviceSessionAuth(brand);
+  } catch (e) {
+    // Refresh inválido/expirado (400/401) -- se limpia para no reintentar en
+    // loop en cada arranque; el próximo login (manual o social) vuelve a
+    // crear uno. Antes se limpiaba ante CUALQUIER fallo: un 503 (base del
+    // backend saturada) o un corte de red borraban la sesión, y cada
+    // reconexión volvía a hacer el login completo con contraseña.
+    if (e?.status === 400 || e?.status === 401) {
+      clearDeviceSessionAuth(brand);
+    }
   }
   return '';
 }
@@ -231,6 +239,15 @@ export async function authorizedDeviceRequest(brandConfig, brand, path, init = {
     });
 
   let res = await doFetch(accessToken);
+  if (res.status === SERVICE_UNAVAILABLE_STATUS) {
+    // Base del backend saturada o caída (503 + Retry-After): un GET se
+    // reintenta una vez. Nunca cierra la sesión (ver backendRetryPolicy.js).
+    const waitMs = serviceUnavailableRetryDelayMs(init.method, res.headers?.get?.('Retry-After'));
+    if (waitMs != null) {
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      res = await doFetch(accessToken);
+    }
+  }
   if (res.status === 401) {
     const refreshed = await refreshDeviceSessionAccessToken(brandConfig, brand);
     if (refreshed) {
