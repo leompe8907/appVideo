@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
 import { getChannelStableId } from '@appvideo/core/utils/channelId';
+import { usableImageUrl, markImageFailed } from '@appvideo/core/utils/remoteImage';
 
 function buildLogoUrlFromLogo2Id(channel) {
   if (!channel) return null;
@@ -23,14 +24,15 @@ export function ParentalChannelCard({
     currentBrand?.assets?.placeholder || getImage?.('placeholder_220x160.png') || '';
 
   const initialLogoUrl = useMemo(() => {
-    const logo =
+    const logo = usableImageUrl(
       buildLogoUrlFromLogo2Id(channel) ||
       channel?.img ||
       channel?.imageUrl ||
       channel?.logoUrl ||
       channel?.logo ||
-      channel?.icon ||
-      '';
+      channel?.icon,
+      { allowRelative: true },
+    );
     return logo || placeholderImageUrl || '';
   }, [channel, placeholderImageUrl]);
 
@@ -55,6 +57,7 @@ export function ParentalChannelCard({
             src={logoSrc}
             alt={channel?.name ?? ''}
             onError={() => {
+              if (logoSrc !== placeholderImageUrl) markImageFailed(logoSrc);
               if (placeholderImageUrl && logoSrc !== placeholderImageUrl) {
                 setLogoSrc(placeholderImageUrl);
               } else if (logoSrc) {

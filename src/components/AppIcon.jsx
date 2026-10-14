@@ -76,6 +76,8 @@ export function AppIcon({ name, size = 18, className = '', title }) {
     // espejo horizontal exacto (960 - x en cada punto), no un path nuevo.
     chevronLeft: 'M640-80 240-480l400-400 71 71-329 329 329 329-71 71Z',
     chevronRight: 'M320-80 720-480 320-880 249-809 578-480 249-151Z',
+    // Estadísticas del reproductor: tres barras (geometría propia, solo rectas).
+    stats: 'M160-160v-320h120v320H160Zm260 0v-560h120v560H420Zm260 0v-440h120v440H680Z',
   };
 
   const d = paths[name];

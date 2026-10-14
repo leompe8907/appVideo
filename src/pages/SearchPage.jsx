@@ -5,6 +5,9 @@ import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import { usePreload } from '@appvideo/core/store/usePreload';
+import { usableImageUrl, markImageFailed } from '@appvideo/core/utils/remoteImage';
+
+const IMG_OPTS = { allowRelative: true };
 import panaccessService from '@appvideo/core/services/panaccessService';
 import { getSearchDebounceMs, searchAll } from '@appvideo/core/services/searchService';
 import { useParentalGate } from '../hooks/useParentalGate';
@@ -37,9 +40,9 @@ function ResultItem({ item, onSelect }) {
   const placeholderUrl = useBrandPlaceholderUrl();
   const resultKey = buildSearchResultKey(item);
 
-  const [imgSrc, setImgSrc] = useState(item.logo || '');
+  const [imgSrc, setImgSrc] = useState(usableImageUrl(item.logo, IMG_OPTS) || '');
   useEffect(() => {
-    setImgSrc(item.logo || '');
+    setImgSrc(usableImageUrl(item.logo, IMG_OPTS) || '');
   }, [item.logo, item.vodPosterFallback, item.type]);
 
   const timeText = (() => {
@@ -71,6 +74,7 @@ function ResultItem({ item, onSelect }) {
           src={imgSrc || placeholderUrl}
           alt={item.name}
           onError={() => {
+            if (imgSrc) markImageFailed(imgSrc);
             if (item.type === 'epg' && item.channelLogo && imgSrc !== item.channelLogo) {
               setImgSrc(item.channelLogo);
               return;

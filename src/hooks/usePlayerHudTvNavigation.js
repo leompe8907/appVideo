@@ -14,6 +14,7 @@ export const PLAYER_FOCUS_IDS = Object.freeze({
   CHANNELS: 'player-hud-channels',
   INFO: 'player-hud-info',
   TRACKS: 'player-hud-tracks',
+  STATS: 'player-hud-stats',
   REWIND: 'player-hud-rewind',
   PLAY: 'player-hud-play',
   FORWARD: 'player-hud-forward',

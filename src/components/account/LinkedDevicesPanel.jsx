@@ -21,6 +21,7 @@ const DEVICE_TYPE_LABELS = {
   web: 'PC / Web',
   lg: 'LG (webOS)',
   samsung: 'Samsung (Tizen)',
+  amazon: 'Fire TV',
 };
 
 function formatDate(iso) {

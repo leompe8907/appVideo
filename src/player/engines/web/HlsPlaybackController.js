@@ -1,5 +1,9 @@
 import Hls, { XhrLoader } from 'hls.js';
 import { buildHlsPlaybackConfig } from './hlsPlaybackConfig';
+import { LiveLatencyGuard } from './liveLatencyGuard';
+import { attachHlsDiagnostics } from './hlsDiagnostics';
+import { getActiveBrandConfig } from '@appvideo/core/config/brandConfig';
+import { resolveLiveBuffer } from '@appvideo/core/player/liveBufferConfig';
 import { isWindMiddlewareHost, windDirectM3u8FromAny } from './windHlsManifest';
 import { isPanaccessRotatingKeyUri } from './sessionHlsXhrSetup';
 import {
@@ -182,6 +186,8 @@ export class HlsPlaybackController {
     this._nonFatalMediaErrorCount = 0;
     this._adaptiveTimer = null;
     this._lastAdaptiveSwitchAt = 0;
+    this._latencyGuard = null;
+    this._diagnostics = null;
   }
 
   get instance() {
@@ -190,6 +196,11 @@ export class HlsPlaybackController {
 
   isActive() {
     return Boolean(this._hls || this._nativeMode);
+  }
+
+  /** Estadísticas para el panel del HUD (null en HLS nativo del navegador). */
+  getDiagnostics() {
+    return this._diagnostics?.getDiagnostics() ?? null;
   }
 
   destroy() {
@@ -211,6 +222,10 @@ export class HlsPlaybackController {
       this._adaptiveTimer = null;
     }
     this._lastAdaptiveSwitchAt = 0;
+    this._latencyGuard?.stop();
+    this._latencyGuard = null;
+    this._diagnostics?.detach();
+    this._diagnostics = null;
 
     if (this._hls) {
       try {
@@ -288,6 +303,20 @@ export class HlsPlaybackController {
     this._hls = hls;
 
     const wind = isWindMiddlewareHost(src);
+
+    // Distancia al vivo ("muy pegado al borde": frenar o saltar atrás) y
+    // estadísticas del panel del HUD. Ver liveLatencyGuard.js / hlsDiagnostics.js.
+    const liveBuffer = resolveLiveBuffer(getActiveBrandConfig(), { windHost: wind });
+    this._latencyGuard = new LiveLatencyGuard({
+      hls,
+      video: videoEl,
+      liveBuffer,
+      log: (msg) => {
+        if (import.meta.env.DEV) console.log('[HlsPlayback] vivo:', msg);
+      },
+    });
+    this._latencyGuard.start();
+    this._diagnostics = attachHlsDiagnostics(hls, videoEl, { liveBuffer, guard: this._latencyGuard });
 
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
       if (generation !== this._loadGeneration) return;

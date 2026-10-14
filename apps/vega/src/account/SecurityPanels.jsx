@@ -66,7 +66,7 @@ function translateError(table, err, fallback) {
   return entry ? t(`account.${entry[0]}`, entry[1]) : err?.message || fallback;
 }
 
-const DEVICE_TYPE_LABELS = {web: 'PC / Web', lg: 'LG (webOS)', samsung: 'Samsung (Tizen)', vega: 'Fire TV (Vega)', firetv: 'Fire TV'};
+const DEVICE_TYPE_LABELS = {web: 'PC / Web', lg: 'LG (webOS)', samsung: 'Samsung (Tizen)', amazon: 'Fire TV'};
 
 // ---------------------------------------------------------------- piezas
 

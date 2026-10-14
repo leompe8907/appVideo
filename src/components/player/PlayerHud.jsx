@@ -11,6 +11,8 @@ import panaccessService from '@appvideo/core/services/panaccessService';
 import { useBrand } from '../../contexts/BrandContext';
 import { isParentalControlEnabledForBrand } from '@appvideo/core/config/brandConfig';
 import AppIcon from '../AppIcon';
+import { PlayerStatsPanel } from './PlayerStatsPanel';
+import { getStatsVisible, setStatsVisible } from './playerStatsVisibility';
 import EpgEventModal from '../epg/EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useParental } from '@appvideo/core/store/useParental';
@@ -254,6 +256,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     containerRef,
     toggleMute,
     setVolume,
+    getDiagnostics,
   } = usePlayer();
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
@@ -268,6 +271,14 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   // brands.js). Default true: sin cambios. El botón de "info" del evento
   // actual (que no navega a la guía) queda fuera de este flag a propósito.
   const epgEnabledForBrand = currentBrand?.EPG?.enabled !== false;
+  // Bandera de marca: botón de estadísticas del reproductor (diagnóstico de
+  // cortes/saltos, igual que Fire TV). `player.statsPanel: false` lo oculta.
+  const statsPanelEnabled = currentBrand?.player?.statsPanel !== false;
+  const [statsOn, setStatsOn] = useState(getStatsVisible);
+  const toggleStats = () => {
+    setStatsVisible(!statsOn);
+    setStatsOn(!statsOn);
+  };
   const [visible, setVisible] = useState(true);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
@@ -951,6 +962,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
 
   return (
     <>
+      {statsPanelEnabled && statsOn ? <PlayerStatsPanel getDiagnostics={getDiagnostics} /> : null}
       {hasPlaybackError && (
         <div ref={errorRootRef} className="player-error-overlay" role="alert" aria-live="assertive">
           <div className="player-error-overlay__box">
@@ -1091,6 +1103,20 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
               aria-label={t('player.tracks', { defaultValue: 'Audio/Subtítulos' })}
             >
               <AppIcon name="subtitles" size="1em" />
+            </FocusableButton>
+          ) : null}
+          {statsPanelEnabled ? (
+            <FocusableButton
+              type="button"
+              className={`player-hud__iconbtn${statsOn ? ' player-hud__iconbtn--active' : ''}`}
+              id={PLAYER_FOCUS_IDS.STATS}
+              data-tv-nav="player-hud"
+              tabIndex={hudTvTabIndex}
+              onClick={toggleStats}
+              aria-pressed={statsOn}
+              aria-label={t('player.stats', { defaultValue: 'Estadísticas' })}
+            >
+              <AppIcon name="stats" size="1em" />
             </FocusableButton>
           ) : null}
         </div>

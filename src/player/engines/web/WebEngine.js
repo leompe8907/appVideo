@@ -479,6 +479,18 @@ export class WebEngine extends BaseEngine {
     }
   }
 
+  /**
+   * Estadísticas del reproductor (panel del HUD). Solo con hls.js; `null` si
+   * no hay HLS activo (MP4, HLS nativo, o adapter nativo LG/Samsung).
+   */
+  getDiagnostics() {
+    try {
+      return this.player?.tech?.(true)?.hlsProvider?.getDiagnostics?.() ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   getTracks() {
     const audio = [];
     const text = [];

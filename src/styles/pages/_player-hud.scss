@@ -934,3 +934,64 @@
 .player-hud__error-close {
   margin: 0 auto;
 }
+
+// Botón de estadísticas encendido.
+.player-hud__iconbtn--active {
+  background: rgba(127, 211, 255, 0.28);
+}
+
+// Panel de estadísticas del reproductor (PlayerStatsPanel.jsx): queda visible
+// aunque el HUD se oculte, y no recibe foco ni clics.
+.player-stats {
+  position: absolute;
+  top: 5.5em;
+  right: 1.25em;
+  z-index: 40;
+  width: min(43em, calc(100% - 2.5em));
+  max-height: calc(100% - 7em);
+  overflow: hidden;
+  padding: 1em;
+  border-radius: 0.75em;
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.player-stats__title {
+  font-size: 1.2em;
+  font-weight: 700;
+  margin-bottom: 0.3em;
+}
+
+.player-stats__section {
+  color: #7fd3ff;
+  font-weight: 700;
+  margin: 0.6em 0 0.2em;
+}
+
+.player-stats__row {
+  display: flex;
+  gap: 0.75em;
+  padding: 0.1em 0;
+}
+
+.player-stats__label {
+  flex: 0 0 12em;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.player-stats__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-stats__value--warn {
+  color: #ffb35c;
+}

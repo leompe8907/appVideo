@@ -852,6 +852,7 @@ export function PlayerProvider({ children }) {
     toggleMute,
     setVolume,
     getVideoElement: () => engineRef.current?.video ?? null,
+    getDiagnostics: () => engineRef.current?.getDiagnostics?.() ?? null,
     refreshTracks,
     selectAudioTrack,
     selectTextTrack,

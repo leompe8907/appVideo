@@ -7,6 +7,7 @@ import { parseEpgDateToMs, formatHHmmFromMs } from '@appvideo/core/utils/epgTime
 import { useParental } from '@appvideo/core/store/useParental';
 import { getChannelStableId } from '@appvideo/core/utils/channelId';
 import { proxyImageUrl } from '../../utils/imageProxy';
+import { usableImageUrl, markImageFailed } from '@appvideo/core/utils/remoteImage';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
 import {
   getBouquetHorizontalGridClasses,
@@ -251,10 +252,17 @@ export function ChannelCard({ channel, layoutType, logoIndex = '1', backgroundCo
   const brandBaseUrl = currentBrand?.drm || currentBrand?.baseUrl || '';
 
   // Imagen de evento: EPG primero, luego fallbacks. Cadena: evento → logo → placeholder
-  const eventImage = eventImageFromEpg || channel.eventImage || channel.currentEvent?.image || null;
-  const fallbackLogoImage = channel.img || null;
+  // URLs rotas del operador (vacías, sin id, o que ya fallaron antes) ni se
+  // piden: ver @appvideo/core/utils/remoteImage.
+  const imgOpts = { allowRelative: true };
+  const eventImage = usableImageUrl(
+    eventImageFromEpg || channel.eventImage || channel.currentEvent?.image,
+    imgOpts,
+  );
+  const fallbackLogoImage = usableImageUrl(channel.img, imgOpts);
   // Preferimos URLs absolutas (drm baseUrl) para evitar 404 en deploy (Vercel) con rutas relativas /cdn/...
-  const initialLogoUrl = buildChannelLogoUrl(channel, brandBaseUrl, logoIndex) || fallbackLogoImage;
+  const initialLogoUrl =
+    usableImageUrl(buildChannelLogoUrl(channel, brandBaseUrl, logoIndex), imgOpts) || fallbackLogoImage;
   const [logoImage, setLogoImage] = useState(() => initialLogoUrl);
   const currentEventKey = currentEpgEvent?.event_id ?? `${channel.id ?? ''}-${channel.lcn ?? ''}`;
   const [failedEventKey, setFailedEventKey] = useState(null);
@@ -277,6 +285,7 @@ export function ChannelCard({ channel, layoutType, logoIndex = '1', backgroundCo
   }, [initialLogoUrl, placeholderImageUrl, fallbackLogoImage, brandBaseUrl]);
 
   const handleLogoError = () => {
+    if (logoImage && logoImage !== placeholderImageUrl) markImageFailed(logoImage);
     if (fallbackLogoImage && logoImage !== fallbackLogoImage) {
       setLogoImage(fallbackLogoImage);
     } else if (placeholderImageUrl) {
@@ -285,6 +294,7 @@ export function ChannelCard({ channel, layoutType, logoIndex = '1', backgroundCo
   };
 
   const handleEventImageError = () => {
+    markImageFailed(eventImage);
     setFailedEventKey(currentEventKey);
   };
 

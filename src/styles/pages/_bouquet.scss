@@ -380,9 +380,18 @@ $bouquet-items-gap: 2rem;
         }
       }
 
+      // Filas que se envuelven (logo + número, etc.): las columnas se estiran
+      // para llenar el ancho en vez de dejar un hueco vacío a la derecha
+      // (igual que Fire TV). `--bouquet-cell-width` queda como ancho mínimo.
       &[data-grid-flow='row'] {
-        grid-template-columns: repeat(auto-fill, var(--bouquet-cell-width));
+        grid-template-columns: repeat(auto-fill, minmax(var(--bouquet-cell-width), 1fr));
+        justify-items: stretch;
         grid-auto-flow: row;
+
+        > .channel-card {
+          width: 100%;
+        }
+
         overflow: visible;
         padding-top: 0.35rem;
       }

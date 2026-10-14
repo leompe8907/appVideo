@@ -9,6 +9,7 @@ import EpgEventModal from './EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useEpgReminderStore } from '@appvideo/core/store/epgReminderStore';
 import { getChannelStableId, dedupeStreams } from '@appvideo/core/utils/channelId';
+import { usableImageUrl, markImageFailed } from '@appvideo/core/utils/remoteImage';
 import { useTvInitialFocus } from '../../hooks/useTvInitialFocus';
 import { asMs, clamp, computeLiveProgressStyle, computeSlots, formatHHmm } from '@appvideo/core/utils/epgSlots';
 import '../epg/epg-common.scss';
@@ -232,13 +233,15 @@ export function EpgCards({ onSelect }) {
           const channelPlayable = !now && !!resolveChannelLiveUrl(channel);
           const nowIsLive = isLive || channelPlayable;
 
-          const channelImg =
+          const channelImg = usableImageUrl(
             channel?.img ||
             channel?.imageUrl ||
             channel?.logoUrl ||
             channel?.logo ||
             channel?.icon ||
-            null;
+            null,
+            { allowRelative: true },
+          );
 
           const nowStart = (asMs(now?.startDate) ?? asMs(now?.start));
           const nowEnd = (asMs(now?.endDate) ?? asMs(now?.end));
@@ -290,6 +293,7 @@ export function EpgCards({ onSelect }) {
                     alt={channel.name ?? ''}
                     onError={(e) => {
                       // Ocultar si falla la carga (misma idea de legacy onerror).
+                      markImageFailed(channelImg);
                       e.currentTarget.style.display = 'none';
                     }}
                   />

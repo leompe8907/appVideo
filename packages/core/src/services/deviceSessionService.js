@@ -44,7 +44,7 @@ import {
   setBrandItem,
 } from '../utils/brandStorage';
 import { detectTvVendorFromApis } from '../utils/tvPlatformApis';
-import { getUserAgent } from '../platform/runtime';
+import { getUserAgent, getPlatformName } from '../platform/runtime';
 import { refreshDeviceSessionAccessToken, resolveDeviceAuthBaseUrl } from './deviceAuthService';
 import { classifyDeviceSocketClose, retryAfterSecondsFromReason } from './backendRetryPolicy';
 
@@ -57,6 +57,9 @@ export const DEVICE_TYPE = Object.freeze({
   WEB: 'web',
   LG: 'lg',
   SAMSUNG: 'samsung',
+  // Fire TV (app Vega). Valor del enum del backend Wind
+  // (`AppCredentials.APP_TYPES`: "amazon"), no uno nuevo.
+  AMAZON: 'amazon',
 });
 
 const HEARTBEAT_MS = 25000;
@@ -72,11 +75,15 @@ function detectSamsungFromUserAgent(ua) {
 /**
  * Determina el `device_type` a reportar al backend. El enum real del
  * backend Wind (`AppCredentials.APP_TYPES`) tiene más valores
- * (`android`/`androidtv`/`amazon`/`iOS`/`iOStv`), pero este repo (SPA web,
- * sin wrapper nativo Capacitor/Cordova/React Native) solo puede producir
- * de forma confiable `web`/`lg`/`samsung`.
+ * (`android`/`androidtv`/`amazon`/`iOS`/`iOStv`). La SPA web solo puede
+ * producir de forma confiable `web`/`lg`/`samsung`; la app de Fire TV
+ * (apps/vega, runtime "vega") reporta `amazon`.
  */
 export function resolveDeviceType() {
+  // App nativa de Fire TV (registra su runtime "vega" al arrancar): antes caía
+  // a "web" y en "Dispositivos vinculados" aparecía como "PC / Web".
+  if (getPlatformName() === 'vega') return DEVICE_TYPE.AMAZON;
+
   const vendor = detectTvVendorFromApis();
   if (vendor === 'lg') return DEVICE_TYPE.LG;
   if (vendor === 'samsung') return DEVICE_TYPE.SAMSUNG;
@@ -102,6 +109,7 @@ export function resolveDeviceType() {
 export function resolveDeviceModel(deviceType) {
   if (deviceType === DEVICE_TYPE.LG) return 'LG webOS TV';
   if (deviceType === DEVICE_TYPE.SAMSUNG) return 'Samsung Tizen TV';
+  if (deviceType === DEVICE_TYPE.AMAZON) return 'Amazon Fire TV (Vega)';
   return getUserAgent().slice(0, 200);
 }
 

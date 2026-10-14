@@ -69,6 +69,9 @@ function handleSource(source, tech) {
     get hls() {
       return controller.instance;
     },
+    getDiagnostics() {
+      return controller.getDiagnostics();
+    },
     dispose() {
       disposed = true;
       controller.destroy();
