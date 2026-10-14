@@ -8,7 +8,7 @@ import { HomeNavIcon as SidebarIcon } from './HomeNavIcon';
 import { TV_ACTION } from '../utils/tvRemote';
 import { navigationRouter } from '../navigation/NavigationRouter';
 import { focusFirstIn, moveFocus, scrollIntoViewWithinAncestors } from '../navigation/spatialNavigation';
-import { requestTvFocusRingSync } from './navigation/TvFocusRing';
+import { requestTvFocusRingSync } from './navigation/tvFocusRingSync';
 
 function SidebarLabel({ text, expanded }) {
   const ref = useRef(null);
@@ -174,7 +174,6 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
       }
     };
     // location.key: misma ruta con replace (p. ej. re-entrar a Inicio).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, location.key, isTV]);
 
   // Al expandir el rail (overlay), reposicionar scroll + anillo sobre el ítem activo.

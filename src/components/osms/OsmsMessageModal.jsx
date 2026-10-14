@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { FocusableButton } from '../navigation/FocusableButton';
@@ -10,14 +10,11 @@ import { focusElementSafe } from '../../navigation/spatialNavigation';
 export function OsmsMessageModal({ open, message, locale, onClose, onMarkRead }) {
   const { t } = useTranslation();
   const rootRef = useRef(null);
-  const zoneIdRef = useRef(null);
-  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('osms-message-modal');
-
+  const [zoneId] = useState(() => createZoneId('osms-message-modal'));
   // Navegación (LEFT/RIGHT/UP/DOWN por geometría entre "Volver"/"Marcar leído",
   // BACK cierra) delegada a una zona de FocusManager, igual que otros modales.
   useEffect(() => {
     if (!open) return undefined;
-    const zoneId = zoneIdRef.current;
     focusManager.push(zoneId, {
       containerEl: rootRef.current,
       onBack: () => {
@@ -27,7 +24,7 @@ export function OsmsMessageModal({ open, message, locale, onClose, onMarkRead })
     return () => {
       focusManager.pop(zoneId);
     };
-  }, [open, onClose]);
+  }, [open, onClose, zoneId]);
 
   useEffect(() => {
     if (!open) return undefined;

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -19,9 +19,7 @@ export function OsmsNotificationHost() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const rootRef = useRef(null);
-  const zoneIdRef = useRef(null);
-  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('osms-notification');
-
+  const [zoneId] = useState(() => createZoneId('osms-notification'));
   const enabled = Boolean(currentBrand?.features?.osms);
   const pendingNotification = useOsmsStore((s) => s.pendingNotification);
   const dismissOsmsNotification = useOsmsStore((s) => s.dismissOsmsNotification);
@@ -35,7 +33,6 @@ export function OsmsNotificationHost() {
   // delegada a una zona de FocusManager, igual que otros modales.
   useEffect(() => {
     if (!open) return undefined;
-    const zoneId = zoneIdRef.current;
     focusManager.push(zoneId, {
       containerEl: rootRef.current,
       onBack: () => {
@@ -45,7 +42,7 @@ export function OsmsNotificationHost() {
     return () => {
       focusManager.pop(zoneId);
     };
-  }, [open, dismissOsmsNotification]);
+  }, [open, dismissOsmsNotification, zoneId]);
 
   useEffect(() => {
     if (!open || !isTV) return undefined;

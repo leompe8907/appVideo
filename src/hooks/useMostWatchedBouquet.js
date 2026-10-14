@@ -73,6 +73,8 @@ export function useMostWatchedBouquet() {
     return () => {
       cancelled = true;
     };
+    // `t` fuera de deps a propósito: cambiarlo cancelaría un fetch en curso y requestedRef impide reintentarlo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, epg.status, epg.streams, currentBrand, brand]);
 
   return bouquet;

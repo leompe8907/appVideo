@@ -50,6 +50,8 @@
     el.onerror = function () {
       try {
         console.warn('[tv-platform-bootstrap] No se pudo cargar:', src);
+        // ES5 a propósito: sin optional catch binding, este archivo no pasa por Babel.
+        // eslint-disable-next-line no-unused-vars
       } catch (e) { /* noop */ }
       loadNext(index + 1, callback);
     };

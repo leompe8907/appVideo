@@ -327,10 +327,13 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     }
   }, []);
 
-  const log = (...args) => {
-    if (!debugEnabled) return;
-    console.log('[PlayerHud]', ...args);
-  };
+  const log = useCallback(
+    (...args) => {
+      if (!debugEnabled) return;
+      console.log('[PlayerHud]', ...args);
+    },
+    [debugEnabled],
+  );
 
   const forceHudVisible = useMemo(() => {
     try {
@@ -685,7 +688,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
       FULLSCREEN_CHANGE_EVENTS.forEach((ev) => document.removeEventListener(ev, onFsChange));
       window.removeEventListener('resize', onResize);
     };
-  }, [debugEnabled, syncPlayerFullscreenLayout]);
+  }, [debugEnabled, log, syncPlayerFullscreenLayout]);
 
   const showPlaybackButtons =
     hasContent &&
@@ -853,6 +856,31 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     return () => clearTimeout(timer);
   }, [showTracksPopover]);
 
+  // Debe ir antes del `return` condicional: un hook después de él rompe el orden
+  // de hooks cuando `hasContent` cambia sin desmontar el HUD.
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (isAppFullscreenActive()) {
+        log('fullscreen:exit requested');
+        exitAppFullscreenSync();
+        setIsFullscreen(false);
+        // Dar un frame para que el browser procese el exit antes de recalcular
+        requestAnimationFrame(() => syncPlayerFullscreenLayout());
+        return;
+      }
+
+      // enterAppFullscreen() es async: espera a que el browser confirme el cambio
+      // de viewport antes de sincronizar el layout. Sin el await, clientWidth/Height
+      // todavía reflejan el tamaño pre-fullscreen y el video queda mal dimensionado.
+      const mode = await enterAppFullscreen();
+      log('fullscreen:enter requested', { mode });
+      setIsFullscreen(true);
+      syncPlayerFullscreenLayout();
+    } catch (e) {
+      log('fullscreen:error', e);
+    }
+  }, [log, syncPlayerFullscreenLayout]);
+
   if (!hasContent) return null;
 
   const hudTvTabIndex = isTV ? (visible ? 0 : -1) : undefined;
@@ -920,29 +948,6 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     state?.type === 'vod' ||
     state?.type === 'catchup' ||
     (state?.type === 'service' && currentBrand?.player?.showSeekbarOnLive === true);
-
-  const toggleFullscreen = useCallback(async () => {
-    try {
-      if (isAppFullscreenActive()) {
-        log('fullscreen:exit requested');
-        exitAppFullscreenSync();
-        setIsFullscreen(false);
-        // Dar un frame para que el browser procese el exit antes de recalcular
-        requestAnimationFrame(() => syncPlayerFullscreenLayout());
-        return;
-      }
-
-      // enterAppFullscreen() es async: espera a que el browser confirme el cambio
-      // de viewport antes de sincronizar el layout. Sin el await, clientWidth/Height
-      // todavía reflejan el tamaño pre-fullscreen y el video queda mal dimensionado.
-      const mode = await enterAppFullscreen();
-      log('fullscreen:enter requested', { mode });
-      setIsFullscreen(true);
-      syncPlayerFullscreenLayout();
-    } catch (e) {
-      log('fullscreen:error', e);
-    }
-  }, [syncPlayerFullscreenLayout]);
 
   return (
     <>

@@ -168,7 +168,7 @@ export function VodPage() {
 
         {status === 'ready' && (
           <div className="vod-content">
-            {categories?.map((cat, catIndex) => {
+            {categories?.map((cat) => {
               const catVods = cat.vods || [];
               return (
                 <section

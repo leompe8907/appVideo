@@ -1,15 +1,6 @@
-import { createContext, useContext, useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { VirtualKeyboard } from '../components/navigation/VirtualKeyboard';
-
-const OsdKeyboardContext = createContext(null);
-
-export function useOsdKeyboard() {
-  const ctx = useContext(OsdKeyboardContext);
-  if (!ctx) {
-    throw new Error('useOsdKeyboard debe usarse dentro de OsdKeyboardProvider');
-  }
-  return ctx;
-}
+import { OsdKeyboardContext } from './osdKeyboardCore';
 
 export function OsdKeyboardProvider({ children }) {
   const [keyboardState, setKeyboardState] = useState({
@@ -72,5 +63,3 @@ export function OsdKeyboardProvider({ children }) {
     </OsdKeyboardContext.Provider>
   );
 }
-
-export default OsdKeyboardContext;

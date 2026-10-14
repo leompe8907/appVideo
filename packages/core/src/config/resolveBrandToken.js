@@ -141,7 +141,6 @@ export function resolveRecaptchaSiteKey(brandSlug) {
   return '';
 }
 
-/* global process */
 export function resolveBrandTokenFromProcessEnv(brandSlug) {
   const slug = String(brandSlug || '').trim();
   if (!slug) return '';

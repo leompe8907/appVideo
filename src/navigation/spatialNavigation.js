@@ -15,7 +15,7 @@
  * usar la distancia en el eje de movimiento como desempate.
  */
 
-import { requestTvFocusRingSync } from '../components/navigation/TvFocusRing';
+import { requestTvFocusRingSync } from '../components/navigation/tvFocusRingSync';
 
 /**
  * Selector de elementos potencialmente enfocables (mismo criterio en toda la app).

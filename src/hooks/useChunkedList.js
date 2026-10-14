@@ -115,7 +115,6 @@ export function useChunkedList(items, options = {}) {
     // Depende de `total` (largo), no de la referencia de `list`: igual que
     // antes, para no resetear el reveal/foco en cada render solo porque el
     // padre recrea el array (misma lista de fondo, referencia nueva).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total, shouldVirtualize, initial, chunkSize]);
 
   const reportFocusIndex = useCallback(

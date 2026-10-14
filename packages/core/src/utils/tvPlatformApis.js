@@ -1,4 +1,4 @@
-/* global window, document */ // sólo tras comprobar `typeof`: fuera de la web no existen
+/* global window */ // sólo tras comprobar `typeof`: fuera de la web no existen
 /**
  * Detección de plataforma TV por APIs nativas expuestas en runtime.
  * Complementa User-Agent (más fiable en emuladores y firmwares con UA genérico).

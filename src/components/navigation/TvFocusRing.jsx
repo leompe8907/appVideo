@@ -68,15 +68,6 @@ function isFocusEnabled() {
   }
 }
 
-/** Reposiciona el anillo tras cambios de layout (p. ej. sidebar expandido). */
-export function requestTvFocusRingSync() {
-  try {
-    window.dispatchEvent(new CustomEvent('tv-focus-ring-sync'));
-  } catch {
-    // noop
-  }
-}
-
 /**
  * Anillo de foco único en TV (10-foot). Sigue `document.activeElement` sin escalar cada tarjeta.
  */

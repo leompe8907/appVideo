@@ -26,13 +26,10 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
   const [error, setError] = useState(null);
   const [extraMeta, setExtraMeta] = useState(null);
   const rootRef = useRef(null);
-  const zoneIdRef = useRef(null);
-  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('vod-detail-classic-modal');
-
+  const [zoneId] = useState(() => createZoneId('vod-detail-classic-modal'));
   // Navegación (LEFT/RIGHT/UP/DOWN por geometría, BACK) delegada al motor central.
   useEffect(() => {
     if (!item) return undefined;
-    const zoneId = zoneIdRef.current;
     focusManager.push(zoneId, {
       containerEl: rootRef.current,
       onBack: () => {
@@ -42,7 +39,7 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
     return () => {
       focusManager.pop(zoneId);
     };
-  }, [item, onClose]);
+  }, [item, onClose, zoneId]);
 
   useEffect(() => {
     if (isTV && !loading) {

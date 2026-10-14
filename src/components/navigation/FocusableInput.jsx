@@ -1,6 +1,6 @@
 import { forwardRef, useRef } from 'react';
 import { useDevice } from '../../contexts/DeviceContext';
-import { useOsdKeyboard } from '../../contexts/OsdKeyboardContext';
+import { useOsdKeyboard } from '../../contexts/osdKeyboardCore';
 
 /**
  * Wrapper de <input> para TV y Web.

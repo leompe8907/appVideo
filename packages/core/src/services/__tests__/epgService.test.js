@@ -76,9 +76,7 @@ describe('loadEPGForChannels — carga en paralelo por tandas', () => {
       const toResolve = resolvers.splice(0, resolvers.length);
       resolvedCount += toResolve.length;
       toResolve.forEach((r) => r());
-      // eslint-disable-next-line no-await-in-loop
       await Promise.resolve();
-      // eslint-disable-next-line no-await-in-loop
       await Promise.resolve();
     }
     resolvers.forEach((r) => r());

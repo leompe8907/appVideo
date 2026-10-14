@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { focusManager, createZoneId } from '../navigation/FocusManager';
 import { focusElementSafe } from '../navigation/spatialNavigation';
@@ -33,14 +33,10 @@ export function ConfirmModal({
   const rootRef = useRef(null);
   const confirmBtnRef = useRef(null);
   const cancelBtnRef = useRef(null);
-  const zoneIdRef = useRef(null);
-  if (!zoneIdRef.current) {
-    zoneIdRef.current = createZoneId('confirm-modal');
-  }
+  const [zoneId] = useState(() => createZoneId('confirm-modal'));
 
   useEffect(() => {
     if (!open) return undefined;
-    const zoneId = zoneIdRef.current;
     const hasCancel = typeof onCancel === 'function';
     const hasConfirm = typeof onConfirm === 'function';
 
@@ -62,7 +58,7 @@ export function ConfirmModal({
       clearTimeout(timer);
       focusManager.pop(zoneId);
     };
-  }, [open, onCancel, onConfirm]);
+  }, [open, onCancel, onConfirm, zoneId]);
 
   if (!open) return null;
 

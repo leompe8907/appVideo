@@ -174,7 +174,7 @@ function getStoredEpgCache(brandConfig) {
   return null;
 }
 
-function saveEpgCache(brandConfig, bouquetsWithChannels, streams) {
+function saveEpgCache(brandConfig, bouquetsWithChannels) {
   const key = getEpgCacheKey(brandConfig);
 
   // Limpieza proactiva: Elimina cachés de EPG de otras marcas para no saturar el localStorage
@@ -182,7 +182,7 @@ function saveEpgCache(brandConfig, bouquetsWithChannels, streams) {
     storageKeys()
       .filter((k) => k.startsWith('app_epg_cache_') && k !== key)
       .forEach((k) => storageRemove(k));
-  } catch (e) {
+  } catch {
     // noop
   }
 
@@ -334,7 +334,7 @@ export const usePreloadStore = create(function (set, get) {
           },
         });
 
-        saveEpgCache(brandConfig, bouquets, allStreams);
+        saveEpgCache(brandConfig, bouquets);
 
         set(function (s) {
           return {

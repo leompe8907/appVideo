@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
@@ -43,14 +43,11 @@ export function EpgEventModal({
   const { t } = useTranslation();
   const { isTV } = useDevice();
   const rootRef = useRef(null);
-  const zoneIdRef = useRef(null);
-  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('epg-event-modal');
-
+  const [zoneId] = useState(() => createZoneId('epg-event-modal'));
   // Navegación (LEFT/RIGHT/UP/DOWN por geometría, escopada al modal, y BACK)
   // delegada al motor central en vez de un listener de keydown propio.
   useEffect(() => {
     if (!open) return undefined;
-    const zoneId = zoneIdRef.current;
     focusManager.push(zoneId, {
       containerEl: rootRef.current,
       onBack: () => {
@@ -60,7 +57,7 @@ export function EpgEventModal({
     return () => {
       focusManager.pop(zoneId);
     };
-  }, [open, onClose]);
+  }, [open, onClose, zoneId]);
 
   const eventTitle = getEventTitle(event);
   const eventDescription = getEventDescription(event);

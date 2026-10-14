@@ -19,9 +19,7 @@ export function ParentalPinGate({
   const pinInputRef = useRef(null);
   const okBtnRef = useRef(null);
   const rootRef = useRef(null);
-  const zoneIdRef = useRef(null);
-  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('parental-pin-gate');
-
+  const [zoneId] = useState(() => createZoneId('parental-pin-gate'));
   const digits = useMemo(() => ['1','2','3','4','5','6','7','8','9','0'], []);
 
   const handleSubmit = useCallback(async () => {
@@ -46,7 +44,6 @@ export function ParentalPinGate({
   // entre los botones del teclado numérico).
   useEffect(() => {
     if (!open) return undefined;
-    const zoneId = zoneIdRef.current;
     focusManager.push(zoneId, {
       containerEl: rootRef.current,
       onBack: () => {
@@ -56,7 +53,7 @@ export function ParentalPinGate({
     return () => {
       focusManager.pop(zoneId);
     };
-  }, [open, onCancel]);
+  }, [open, onCancel, zoneId]);
 
   useEffect(() => {
     if (!open) return undefined;

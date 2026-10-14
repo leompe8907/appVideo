@@ -13,7 +13,7 @@ import { getVodImageUrl } from '@appvideo/core/services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';
-import { requestTvFocusRingSync } from '../navigation/TvFocusRing';
+import { requestTvFocusRingSync } from '../navigation/tvFocusRingSync';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusElementSafe } from '../../navigation/spatialNavigation';
 
@@ -27,8 +27,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay, infoOnl
   const playerActiveRef = useRef(Boolean(playerState?.url));
   const wasPlayerActiveRef = useRef(Boolean(playerState?.url));
   const rootRef = useRef(null);
-  const zoneIdRef = useRef(null);
-  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('vod-detail-modal');
+  const [zoneId] = useState(() => createZoneId('vod-detail-modal'));
   const baseUrl = currentBrand?.drm || '';
   const [seriesInfo, setSeriesInfo] = useState(null);
   const [loading, setLoading] = useState(!!item?.isSeries);
@@ -56,7 +55,6 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay, infoOnl
   // esta zona se registra en FocusManager en vez de tener su propio listener de keydown.
   useEffect(() => {
     if (!item) return undefined;
-    const zoneId = zoneIdRef.current;
     focusManager.push(zoneId, {
       containerEl: rootRef.current,
       onBack: () => {
@@ -68,7 +66,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay, infoOnl
     return () => {
       focusManager.pop(zoneId);
     };
-  }, [item, onClose]);
+  }, [item, onClose, zoneId]);
 
   useEffect(() => {
     if (!isTV || loading) return undefined;
