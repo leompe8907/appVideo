@@ -24,9 +24,12 @@ let playbackRateUnsupported = false;
 const SHAKA_SETTINGS = {secure: false, abrEnabled: true, abrMaxWidth: 1920, abrMaxHeight: 1080};
 
 /** Ajustes de Shaka desde el flag de marca `player.liveBuffer` (como hls.js en la web). */
-function shakaSettingsFor(live) {
+function shakaSettingsFor(live, brand) {
   return {
     ...SHAKA_SETTINGS,
+    // Flag de marca: alinear la lista por número de segmento y no por
+    // #EXT-X-PROGRAM-DATE-TIME (Wind; ver ShakaPlayer.ts).
+    ignoreProgramDateTime: brand?.player?.ignorePlaylistDateTime === true,
     bufferingGoal: live.maxBufferLength,
     bufferBehind: live.backBufferLength,
     // Shaka arranca a liveSyncDurationCount segmentos del borde (como hls.js).
@@ -107,9 +110,10 @@ export class VegaHlsPlayer {
     if (this.captionHandle) video.setCaptionViewHandle(this.captionHandle);
 
     const sessionId = userSession.getSessionId();
-    const live = resolveLiveBuffer(getActiveBrandConfig(), {windHost: /middleware\.wind\.do/i.test(url)});
+    const brand = getActiveBrandConfig();
+    const live = resolveLiveBuffer(brand, {windHost: /middleware\.wind\.do/i.test(url)});
     this.liveBuffer = live;
-    const shaka = new ShakaPlayer(video, shakaSettingsFor(live));
+    const shaka = new ShakaPlayer(video, shakaSettingsFor(live, brand));
     this.shaka = shaka;
     shaka.load({uri: withSessionId(url, sessionId), secure: 'false', drm_scheme: '', drm_license_uri: ''}, true);
 

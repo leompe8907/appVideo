@@ -192,6 +192,7 @@ export default {
     "showSeekbarOnLive": false,
     "closeChannelSidebarOnSelect": false,
     "channelChangeWithArrows": true,
+    "ignorePlaylistDateTime": true,
     "liveBuffer": {
       "liveSyncDurationCount": 3,
       "liveMaxLatencyDurationCount": 6,

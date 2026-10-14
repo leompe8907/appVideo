@@ -93,8 +93,38 @@ function isArrayBufferLike(value) {
  * ('keyInfo' in context la identifica sin ambigüedad, es el campo propio del
  * contexto de key de hls.js) a `super.load()` sin tocar nada.
  */
+/** Listas (.m3u8) que pide hls.js: maestra, nivel y pistas de audio/subtítulos. */
+const PLAYLIST_CONTEXT_TYPES = new Set(['manifest', 'level', 'audioTrack', 'subtitleTrack']);
+
+/**
+ * Flag de marca `player.ignorePlaylistDateTime` (Wind): quita
+ * #EXT-X-PROGRAM-DATE-TIME de las listas. Wind pone ahí la hora de reloj en
+ * que se escribió cada segmento (5,24 a 6,33 s entre segmentos de 6,006 s);
+ * hls.js la usa para alinear la lista al cambiar de calidad y elegía un
+ * segmento corrido (corte o salto). Sin esa hora alinea por número de
+ * segmento, como ExoPlayer en Android y Shaka en Fire TV con el mismo flag.
+ */
+export function stripProgramDateTime(text) {
+  if (typeof text !== 'string' || !text.includes('#EXT-X-PROGRAM-DATE-TIME')) return text;
+  return text.replace(/^#EXT-X-PROGRAM-DATE-TIME:[^\r\n]*(\r?\n)?/gm, '');
+}
+
 export class PanaccessKeyUnwrapLoader extends XhrLoader {
   load(context, config, callbacks) {
+    if (
+      PLAYLIST_CONTEXT_TYPES.has(context?.type) &&
+      getActiveBrandConfig()?.player?.ignorePlaylistDateTime === true
+    ) {
+      const onPlaylist = callbacks.onSuccess;
+      super.load(context, config, {
+        ...callbacks,
+        onSuccess: (response, stats, ctx, networkDetails) => {
+          onPlaylist({ ...response, data: stripProgramDateTime(response?.data) }, stats, ctx, networkDetails);
+        },
+      });
+      return;
+    }
+
     const isKeyRequest = 'keyInfo' in context && isPanaccessRotatingKeyUri(context.url || '');
     if (!isKeyRequest) {
       super.load(context, config, callbacks);

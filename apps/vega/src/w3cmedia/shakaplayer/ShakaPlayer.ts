@@ -48,6 +48,8 @@ export interface ShakaPlayerSettings {
     bufferingGoal?: number,
     bufferBehind?: number,
     liveSegmentsDelay?: number,
+    // appVideo: flag de marca `player.ignorePlaylistDateTime` (ver abajo).
+    ignoreProgramDateTime?: boolean,
 }
 
 export class ShakaPlayer implements PlayerInterface {
@@ -305,7 +307,12 @@ export class ShakaPlayer implements PlayerInterface {
           preferredAudioCodecs : [content.acodec],
           streaming: {
             lowLatencyMode: false,
-            inaccurateManifestTolerance: 0,
+            // appVideo: el ejemplo de Amazon traía 0 (fiarse exacto de los tiempos
+            // del manifiesto). Wind los corre unas décimas en cada recarga de la
+            // lista: con 0, tras cada recarga Shaka volvía a bajar y anexar el
+            // último segmento (todo se descargaba dos veces y se pisaba lo que se
+            // estaba viendo). Se vuelve al valor por defecto de Shaka.
+            inaccurateManifestTolerance: 2,
             // appVideo: con bufferingGoal 5 y rebufferingGoal 0.01 (valores del
             // ejemplo de Amazon) el video quedaba sin buffer con segmentos de ~9 s
             // y se cortaba/saltaba. Ahora sale del flag de marca (como la web).
@@ -323,6 +330,16 @@ export class ShakaPlayer implements PlayerInterface {
             },
             hls: {
               sequenceMode: false,
+              // appVideo: flag de marca `player.ignorePlaylistDateTime` (Wind).
+              // Wind pone en #EXT-X-PROGRAM-DATE-TIME la hora de reloj en que se
+              // escribió cada segmento (6,26 / 5,24 s entre segmentos con #EXTINF
+              // 6,006). Shaka alinea cada recarga de la lista con esa hora: corría
+              // el último segmento ~0,25 s, lo tomaba como nuevo y lo volvía a
+              // bajar y anexar → cargas dobles, huecos, esperas y saltos. Con el
+              // flag alinea por número de segmento, como ExoPlayer en Android.
+              // No se activa para todos: con audio y video en listas separadas
+              // Shaka usa esa hora para sincronizarlos.
+              ignoreManifestProgramDateTime: this.setting_.ignoreProgramDateTime === true,
               liveSegmentsDelay: this.setting_.liveSegmentsDelay ?? 3,
             }
           },
