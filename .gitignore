@@ -29,3 +29,6 @@ azcopy
 
 # Metadatos de macOS en discos exFAT
 ._*
+
+# Graphify (grafo de conocimiento generado)
+graphify-out/
