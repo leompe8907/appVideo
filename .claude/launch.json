@@ -4,7 +4,18 @@
     {
       "name": "appvideo-dev",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "appvideo-dev-node20",
+      "runtimeExecutable": "/usr/local/opt/node@20/bin/node",
+      "runtimeArgs": [
+        "node_modules/vite/bin/vite.js"
+      ],
       "port": 3000
     }
   ]
