@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {ActivityIndicator, BackHandler, Image, Pressable, Text, View, useTVEventHandler} from 'react-native';
+import {ActivityIndicator, AppState, BackHandler, Image, Pressable, Text, View, useTVEventHandler} from 'react-native';
 import LinearGradient from '@amazon-devices/react-linear-gradient';
 import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
@@ -116,6 +116,24 @@ export function VodPlayerScreen({params, navigate}) {
   }, [panel, state, showHud]);
 
   useEffect(() => () => hideTimer.current && clearTimeout(hideTimer.current), []);
+
+  // Segundo plano (como useAppLifecycle de la web): pausa el VOD/catchup y lo
+  // retoma al volver sólo si lo pausó esta lógica.
+  useEffect(() => {
+    let pausedByBackground = false;
+    const sub = AppState.addEventListener('change', (next) => {
+      const p = player.current;
+      if (!p) return;
+      if (next !== 'active' && !p.paused) {
+        pausedByBackground = true;
+        p.pause();
+      } else if (next === 'active' && pausedByBackground) {
+        pausedByBackground = false;
+        p.play();
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   useTVEventHandler((evt) => {
     if (!evt) return;
