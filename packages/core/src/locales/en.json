@@ -10,7 +10,8 @@
     "about": "About",
     "refresh": "Refresh",
     "logout": "Log out",
-    "exit": "Exit"
+    "exit": "Exit",
+    "retry": "Retry"
   },
   "inicio": {
     "header": "Home header"
@@ -535,6 +536,8 @@
     "auth": "Invalid credentials. Check your username and password.",
     "api": "Request error. Try again.",
     "server": "Server error. Try again later.",
-    "unknown": "Unknown error"
+    "unknown": "Unknown error",
+    "loadAppTitle": "The app couldn't load",
+    "loadAppHint": "An unexpected error occurred. Try again; if the problem continues, close the app and open it again."
   }
 }

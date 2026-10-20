@@ -14,6 +14,7 @@ import {devLog} from './devLog';
 import {storageReady} from './bootstrap';
 import {ParentalGateHost} from './parental/ParentalGateHost';
 import {useDeviceSessionLifecycle} from './deviceSessionLifecycle';
+import {ErrorBoundary} from './components/ErrorBoundary';
 
 const Stack = createStackNavigator();
 
@@ -55,6 +56,7 @@ const VodPlayer = withNavigate(VodPlayerScreen);
 
 export function App() {
   const [ready, setReady] = useState(false);
+  const [navKey, setNavKey] = useState(0);
   useDeviceSessionLifecycle(navigationRef, ready);
 
   useEffect(() => {
@@ -65,17 +67,21 @@ export function App() {
   if (!ready) return <View style={styles.root} />;
 
   return (
-    <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator initialRouteName="splash" screenOptions={SCREEN_OPTIONS}>
-        <Stack.Screen name="splash" component={Splash} />
-        <Stack.Screen name="login" component={Login} />
-        <Stack.Screen name="smartcard" component={SmartCard} />
-        <Stack.Screen name="home" component={Home} />
-        <Stack.Screen name="player" component={Player} />
-        <Stack.Screen name="vodplayer" component={VodPlayer} />
-      </Stack.Navigator>
-      <ParentalGateHost />
-    </NavigationContainer>
+    // Reintentar rearma la navegación desde cero (key nueva → splash): volver a
+    // dibujar la misma pantalla, o restaurar su estado, suele fallar igual.
+    <ErrorBoundary onRetry={() => setNavKey((k) => k + 1)}>
+      <NavigationContainer key={navKey} ref={navigationRef}>
+        <Stack.Navigator initialRouteName="splash" screenOptions={SCREEN_OPTIONS}>
+          <Stack.Screen name="splash" component={Splash} />
+          <Stack.Screen name="login" component={Login} />
+          <Stack.Screen name="smartcard" component={SmartCard} />
+          <Stack.Screen name="home" component={Home} />
+          <Stack.Screen name="player" component={Player} />
+          <Stack.Screen name="vodplayer" component={VodPlayer} />
+        </Stack.Navigator>
+        <ParentalGateHost />
+      </NavigationContainer>
+    </ErrorBoundary>
   );
 }
 

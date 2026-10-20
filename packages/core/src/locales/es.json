@@ -10,7 +10,8 @@
     "about": "Acerca de",
     "refresh": "Refrescar",
     "logout": "Cerrar sesión",
-    "exit": "Salir"
+    "exit": "Salir",
+    "retry": "Reintentar"
   },
   "inicio": {
     "header": "Cabecera de inicio"
@@ -535,6 +536,8 @@
     "auth": "Credenciales inválidas. Verifica tu usuario y contraseña.",
     "api": "Error en la solicitud. Intenta de nuevo.",
     "server": "Error del servidor. Intenta más tarde.",
-    "unknown": "Error desconocido"
+    "unknown": "Error desconocido",
+    "loadAppTitle": "No se pudo cargar la aplicación",
+    "loadAppHint": "Ocurrió un error inesperado. Intenta de nuevo; si el problema sigue, cierra la aplicación y vuelve a abrirla."
   }
 }
