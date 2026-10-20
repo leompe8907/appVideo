@@ -43,6 +43,7 @@ export class VegaHlsPlayer {
   /**
    * @param {{
    *   onState?: (state: 'loading'|'playing'|'buffering'|'error', detail?: any) => void,
+   *   onEnded?: () => void,
    *   onTracks?: (tracks: ReturnType<VegaHlsPlayer['getTracks']>) => void,
    * }} [callbacks]
    */
@@ -103,6 +104,7 @@ export class VegaHlsPlayer {
       lastTime = t;
     });
     video.addEventListener('waiting', () => this.emit('buffering'));
+    video.addEventListener('ended', () => this.callbacks.onEnded?.());
     video.addEventListener('error', () =>
       this.emit('error', {source: 'video', code: video.error?.code, message: video.error?.message}),
     );

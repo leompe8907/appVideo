@@ -199,7 +199,7 @@ export function HomeScreen({navigate}) {
       ratingRaw: event?.parentalRating,
       title: t('parental.restrictedTitle'),
       message: t('parental.restrictedMessage'),
-      playFn: () => navigate('vodplayer', {url, title: getEventTitle(event)}),
+      playFn: () => navigate('vodplayer', {url, title: getEventTitle(event), kind: 'catchup', catchupId, item: event}),
     });
   };
 

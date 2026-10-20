@@ -22,6 +22,7 @@ import {getTheme} from '../theme';
 import {createScaledStyles, px} from '../scaledStyles';
 import {rememberChannel, rememberSection} from '../homeMemory';
 import {devLog} from '../devLog';
+import telemetryService from '@appvideo/core/services/telemetryService';
 
 const t = (key, opts) => i18n.t(key, opts);
 const ZAP_DELAY_MS = 600;
@@ -284,6 +285,8 @@ export function PlayerScreen({params, navigate}) {
       if (handles.current.surface) p.setSurfaceHandle(handles.current.surface);
       if (handles.current.caption) p.setCaptionViewHandle(handles.current.caption);
       devLog('player: cargando', channel.name);
+      // Cambiar de canal cierra el registro anterior (anti-zapping en core).
+      telemetryService.recordSwitch({type: 'service', id: channel.id ?? channel.epgStreamId, item: channel});
       p.load(channel.url).catch((e) => {
         devLog('player: load', e?.message);
         if (!cancelled) setState('error');
@@ -298,6 +301,9 @@ export function PlayerScreen({params, navigate}) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, retryToken]);
+
+  // Al salir del reproductor se cierra el registro del canal.
+  useEffect(() => () => telemetryService.stopCurrent({finished: false}), []);
 
   const {now, next} = nowNext(channel);
 

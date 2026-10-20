@@ -14,6 +14,8 @@ import {FocusRing} from '../components/FocusRing';
 import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
 import {devLog} from '../devLog';
+import telemetryService from '@appvideo/core/services/telemetryService';
+import {telemetryTargetForVodPlayer} from '../player/playbackTelemetry';
 
 const t = (key) => i18n.t(key);
 const SKIP_SECONDS = 10;
@@ -164,8 +166,13 @@ export function VodPlayerScreen({params, navigate}) {
       onTracks: (next) => {
         if (!cancelled) setTracks(next);
       },
+      onEnded: () => {
+        if (!cancelled) telemetryService.stopCurrent({finished: true, timeIndex: p.currentTime});
+      },
     });
     player.current = p;
+    const target = telemetryTargetForVodPlayer(params);
+    if (target) telemetryService.recordSwitch(target);
     if (handles.current.surface) p.setSurfaceHandle(handles.current.surface);
     if (handles.current.caption) p.setCaptionViewHandle(handles.current.caption);
     devLog('vod: cargando', params?.vodId, params?.title);
@@ -176,8 +183,12 @@ export function VodPlayerScreen({params, navigate}) {
     return () => {
       cancelled = true;
       player.current = null;
+      // Si ya terminó solo, el registro está cerrado y esto no hace nada.
+      telemetryService.stopCurrent({finished: false, timeIndex: p.currentTime});
       p.destroy();
     };
+    // params no cambia mientras la pantalla está abierta: se recarga sólo si cambia lo que se reproduce.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params?.vodId, params?.url, params?.title]);
 
   const {current, duration, paused} = pos;

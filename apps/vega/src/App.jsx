@@ -17,6 +17,7 @@ import {ParentalGateHost} from './parental/ParentalGateHost';
 import {useDeviceSessionLifecycle} from './deviceSessionLifecycle';
 import {ErrorBoundary} from './components/ErrorBoundary';
 import {InactivityHost} from './components/InactivityHost';
+import telemetryService from '@appvideo/core/services/telemetryService';
 
 const Stack = createStackNavigator();
 
@@ -70,6 +71,13 @@ export function App() {
     if (navigationRef.isReady() && navigationRef.canGoBack()) navigationRef.goBack();
   }, []);
   useDeviceSessionLifecycle(navigationRef, ready);
+
+  // Telemetría de reproducción a PanAccess (player.telemetryEnabled): flush periódico y al ir a segundo plano.
+  useEffect(() => {
+    if (!ready) return undefined;
+    telemetryService.init();
+    return () => telemetryService.destroy();
+  }, [ready]);
 
   useEffect(() => {
     storageReady.finally(() => setReady(true));
