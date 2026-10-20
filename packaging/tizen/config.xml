@@ -10,6 +10,8 @@
   <icon src="icon.png"/>
   <name>appVideo</name>
   <tizen:privilege name="http://tizen.org/privilege/internet"/>
+  <!-- Requerido para tizen.tvinputdevice.registerKey (CH±, media, números, colores) -->
+  <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
   <tizen:privilege name="http://developer.samsung.com/privilege/avplay"/>
   <tizen:privilege name="http://developer.samsung.com/privilege/drmplay"/>
   <!-- Requerido para window.webapis.avplay -->

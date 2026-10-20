@@ -14,6 +14,7 @@ import App from './App';
 import { runCompatCheck, showCompatError } from './utils/compatCheck';
 import { installGlobalErrorReporting } from './utils/errorReporting';
 import { registerParentalGateWebFocus } from './utils/parentalGateWebFocus';
+import { registerTvKeys } from './utils/tvNavigation/registerTvKeys';
 
 import './styles/main.scss';
 
@@ -22,6 +23,8 @@ import './styles/main.scss';
 // única forma de enterarse de que algo rompió en producción.
 installGlobalErrorReporting();
 registerParentalGateWebFocus();
+// Samsung: sin registrar, CH±, media y números no llegan al keydown.
+registerTvKeys();
 
 // Foco visible (PC + 10-foot): aplica/quita clase `.focused` automáticamente.
 // Controlado por bandera: html[data-focus="on|off"] (setea BrandTheme).
