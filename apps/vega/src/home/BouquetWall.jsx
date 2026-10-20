@@ -6,6 +6,7 @@ import {
   resolveVerticalGridColumns,
 } from '@appvideo/core/utils/bouquetLayoutConfig';
 import {ChannelCard} from './ChannelCard';
+import {setFocusedChannel} from './focusedChannel';
 import {createScaledStyles} from '../scaledStyles';
 
 const TV = {isTV: true, isPC: false};
@@ -36,6 +37,7 @@ const BouquetRow = React.memo(function BouquetRow({bouquet, onPlay, preferredCha
       backgroundColor={layout.backgroundColor}
       hasTVPreferredFocus={preferredChannelId != null && preferredChannelId === channelKey(channel, index)}
       onPress={() => onPlay(bouquet, index)}
+      onFocus={() => setFocusedChannel(channel)}
     />
   );
 

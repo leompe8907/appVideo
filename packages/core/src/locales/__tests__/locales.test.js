@@ -23,6 +23,9 @@ const PLAYER_KEYS = [
   'player.noSubtitleTracks',
   'common.comingSoon',
   'vod.episodeNumber',
+  'inicio.serviceInfo.current',
+  'inicio.serviceInfo.next',
+  'inicio.serviceInfo.empty',
 ];
 
 describe('locales', () => {

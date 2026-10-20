@@ -344,7 +344,7 @@ export function HomeScreen({navigate}) {
     <View style={[styles.root, {backgroundColor: theme.background}]}>
       <FullScreenImage source={theme.assets.background} />
       <View style={styles.content}>
-        {isInicioHeaderEnabled(section) && !(section === 'inicio' && inicioVod) ? <InicioHeader /> : null}
+        {isInicioHeaderEnabled(section) && !(section === 'inicio' && inicioVod) ? <InicioHeader section={section} /> : null}
         {content}
       </View>
       <ReminderHost playerActive={!isFocused} onGoToChannel={(channel) => playChannel(channel)} />

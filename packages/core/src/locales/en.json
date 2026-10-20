@@ -15,7 +15,12 @@
     "comingSoon": "Coming soon"
   },
   "inicio": {
-    "header": "Home header"
+    "header": "Home header",
+    "serviceInfo": {
+      "current": "Now",
+      "next": "Next",
+      "empty": "Select a channel to see its information."
+    }
   },
   "sidebar": {
     "menu": "Menu",

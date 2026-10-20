@@ -1,7 +1,10 @@
 import * as React from 'react';
-import {Image, View} from 'react-native';
-import {getActiveBrandConfig, resolveHeaderActivado, resolveHomeShellHeaderEnabled, resolveShellMode} from '@appvideo/core/config/brandConfig';
+import {Image, Text, View} from 'react-native';
+import i18n from '@appvideo/core/locales/i18n';
+import {getActiveBrandConfig, resolveHeaderActivado, resolveHomeShellHeaderEnabled, resolveShellMode, resolveSubheaderActivado} from '@appvideo/core/config/brandConfig';
 import {Clock} from '../components/Clock';
+import {getNowNext} from '../epg';
+import {useFocusedChannel} from './focusedChannel';
 import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
 
@@ -19,10 +22,11 @@ const JUSTIFY = {left: 'flex-start', center: 'center', right: 'flex-end'};
 /**
  * Cabecera de las secciones del home (InicioHeader de la web): fila con tres
  * zonas (`brand.header.areas.left|center|right`) que pueden mostrar el logo
- * (`showLogo`) y la hora (`showTime`). La subcabecera con el programa del
- * canal enfocado (`header.subheader`) todavía no está en Fire TV.
+ * (`showLogo`) y la hora (`showTime`). En Inicio, la subcabecera
+ * (`header.subheader`, zonas con `showServiceInfo`) muestra el canal con foco y
+ * su programa actual y siguiente.
  */
-export function InicioHeader() {
+export function InicioHeader({section}) {
   const brand = getActiveBrandConfig();
   const theme = getTheme();
   const areas = brand?.header?.areas || {};
@@ -31,7 +35,14 @@ export function InicioHeader() {
     const a = areas[k] || {};
     return a.enabled !== false && ((a.showLogo && !topbar) || a.showTime);
   });
-  if (!hasContent) return null;
+  const sub = brand?.header?.subheader || {};
+  const subAreas = sub.areas || {};
+  const showSubheader =
+    section === 'inicio' &&
+    (sub.enabled ?? true) &&
+    resolveSubheaderActivado(brand, true) &&
+    ['left', 'center', 'right'].some((k) => subAreas[k]?.enabled !== false && subAreas[k]?.showServiceInfo);
+  if (!hasContent && !showSubheader) return null;
 
   const renderArea = (key) => {
     const a = areas[key] || {};
@@ -44,7 +55,61 @@ export function InicioHeader() {
     );
   };
 
-  return <View style={styles.header}>{['left', 'center', 'right'].map(renderArea)}</View>;
+  const renderSubArea = (key) => {
+    const a = subAreas[key] || {};
+    const on = a.enabled !== false && a.showServiceInfo;
+    return (
+      <View key={key} style={[styles.col, {justifyContent: JUSTIFY[a.contentAlign] || 'flex-start'}]}>
+        {on ? <ServiceInfo /> : null}
+      </View>
+    );
+  };
+
+  return (
+    <View>
+      {hasContent ? <View style={styles.header}>{['left', 'center', 'right'].map(renderArea)}</View> : null}
+      {showSubheader ? <View style={styles.subheader}>{['left', 'center', 'right'].map(renderSubArea)}</View> : null}
+    </View>
+  );
+}
+
+/** Canal con foco y su programa actual / siguiente (renderServiceInfo de la web). */
+function ServiceInfo() {
+  const channel = useFocusedChannel();
+  const {current, next} = getNowNext(channel);
+  if (!current && !next) {
+    return <Text style={styles.subEmpty}>{i18n.t('inicio.serviceInfo.empty')}</Text>;
+  }
+  const lcn = channel?.lcn ?? channel?.LCN;
+  return (
+    <View style={styles.serviceInfo}>
+      <Text style={styles.subChannel} numberOfLines={1}>
+        {lcn != null && lcn !== '' ? `${lcn} ` : ''}
+        {channel?.name || ''}
+      </Text>
+      {[
+        ['current', current],
+        ['next', next],
+      ].map(([key, ev]) =>
+        ev ? (
+          <View key={key} style={styles.subBlock}>
+            <Text style={styles.subLabel}>
+              {i18n.t(`inicio.serviceInfo.${key}`)}
+              {ev.time ? `  ${ev.time}` : ''}
+            </Text>
+            <Text style={styles.subTitle} numberOfLines={1}>
+              {ev.title || '—'}
+            </Text>
+            {ev.description ? (
+              <Text style={styles.subDesc} numberOfLines={2}>
+                {ev.description}
+              </Text>
+            ) : null}
+          </View>
+        ) : null,
+      )}
+    </View>
+  );
 }
 
 // _home-shell.scss (.inicio-header) a 1920×1080.
@@ -53,4 +118,13 @@ const styles = createScaledStyles({
   col: {flex: 1, flexDirection: 'row', alignItems: 'center'},
   logo: {height: 64, width: 240},
   time: {color: '#fff', fontSize: 32.8, fontVariant: ['tabular-nums']},
+  // .inicio-subheader / .inicio-service-info
+  subheader: {flexDirection: 'row', minHeight: 164, paddingVertical: 8, paddingHorizontal: 44},
+  serviceInfo: {maxWidth: 1100},
+  subChannel: {color: '#fff', fontSize: 26, fontWeight: '700', marginBottom: 6},
+  subBlock: {marginBottom: 6},
+  subLabel: {color: 'rgba(255,255,255,0.7)', fontSize: 20, fontWeight: '600'},
+  subTitle: {color: '#fff', fontSize: 24},
+  subDesc: {color: 'rgba(255,255,255,0.75)', fontSize: 19},
+  subEmpty: {color: 'rgba(255,255,255,0.7)', fontSize: 22},
 });

@@ -15,7 +15,12 @@
     "comingSoon": "Em breve"
   },
   "inicio": {
-    "header": "Cabeçalho do início"
+    "header": "Cabeçalho do início",
+    "serviceInfo": {
+      "current": "Agora",
+      "next": "A seguir",
+      "empty": "Selecione um canal para ver as informações."
+    }
   },
   "sidebar": {
     "menu": "Menu",
