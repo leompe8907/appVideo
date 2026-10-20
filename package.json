@@ -22,6 +22,7 @@
     "build:wind": "cross-env VITE_BRAND=wind VITE_DEFAULT_BRAND=wind vite build",
     "build:cableatlantico": "cross-env VITE_BRAND=cableatlantico VITE_DEFAULT_BRAND=cableatlantico vite build",
     "build:delancertv": "cross-env VITE_BRAND=cableatlantico VITE_DEFAULT_BRAND=cableatlantico vite build",
+    "build:multiplustv": "cross-env VITE_BRAND=multiplustv VITE_DEFAULT_BRAND=multiplustv vite build",
     "preview": "vite preview",
     "preview:telecable": "cross-env VITE_BRAND=telecable VITE_DEFAULT_BRAND=telecable vite preview --outDir dist/telecable",
     "preview:telecable:full": "pnpm run build:telecable && pnpm run preview:telecable",
@@ -37,6 +38,8 @@
     "preview:cableatlantico:full": "pnpm run build:cableatlantico && pnpm run preview:cableatlantico",
     "preview:delancertv": "cross-env VITE_BRAND=cableatlantico VITE_DEFAULT_BRAND=cableatlantico vite preview --outDir dist/cableatlantico",
     "preview:delancertv:full": "pnpm run build:delancertv && pnpm run preview:delancertv",
+    "preview:multiplustv": "cross-env VITE_BRAND=multiplustv VITE_DEFAULT_BRAND=multiplustv vite preview --outDir dist/multiplustv",
+    "preview:multiplustv:full": "pnpm run build:multiplustv && pnpm run preview:multiplustv",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -54,13 +57,15 @@
     "prebuild:wind": "node scripts/check-brand-secrets.js",
     "prebuild:cableatlantico": "node scripts/check-brand-secrets.js",
     "prebuild:delancertv": "node scripts/check-brand-secrets.js",
+    "prebuild:multiplustv": "node scripts/check-brand-secrets.js",
     "postbuild:telecable": "node scripts/postbuild-es-check.js telecable",
     "postbuild:bromteck": "node scripts/postbuild-es-check.js bromteck",
     "postbuild:intv": "node scripts/postbuild-es-check.js intv",
     "postbuild:gigmax": "node scripts/postbuild-es-check.js gigmax",
     "postbuild:wind": "node scripts/postbuild-es-check.js wind",
     "postbuild:cableatlantico": "node scripts/postbuild-es-check.js cableatlantico",
-    "postbuild:delancertv": "node scripts/postbuild-es-check.js cableatlantico"
+    "postbuild:delancertv": "node scripts/postbuild-es-check.js cableatlantico",
+    "postbuild:multiplustv": "node scripts/postbuild-es-check.js multiplustv"
   },
   "dependencies": {
     "@appvideo/core": "workspace:*",
