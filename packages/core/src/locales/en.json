@@ -317,7 +317,9 @@
     "editCancel": "Cancel",
     "editSuccess": "Profile updated successfully.",
     "editError": "Error updating profile.",
-    "editProfileAria": "Edit profile {{name}}"
+    "editProfileAria": "Edit profile {{name}}",
+    "unavailableTitle": "This account uses profiles",
+    "unavailableMessage": "Profiles aren't available in this app yet. Log out or sign in from the web."
   },
   "smartcard": {
     "loadingLicenses": "Loading licenses...",

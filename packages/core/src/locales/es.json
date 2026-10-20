@@ -317,7 +317,9 @@
     "editCancel": "Cancelar",
     "editSuccess": "Perfil actualizado correctamente.",
     "editError": "Error al actualizar el perfil.",
-    "editProfileAria": "Editar perfil {{name}}"
+    "editProfileAria": "Editar perfil {{name}}",
+    "unavailableTitle": "Esta cuenta usa perfiles",
+    "unavailableMessage": "Los perfiles todavía no están disponibles en esta app. Cierra sesión o entra desde la web."
   },
   "smartcard": {
     "loadingLicenses": "Cargando licencias...",

@@ -10,9 +10,10 @@ export function screenForWebRoute(route) {
   if (path.startsWith('/home')) return 'home';
   if (path.startsWith('/smartcard')) return 'smartcard';
   if (path.startsWith('/profile')) {
-    // TODO(Fase 4): pantalla de perfiles. Ninguna marca de prueba la usa todavía.
-    devLog('ruta /profile sin pantalla en Vega: se va al home');
-    return 'home';
+    // Sin pantalla de perfiles todavía (tarea 34). Con perfiles externos (wind)
+    // la licencia la elige el perfil: ir al home dejaría la app sin licencia.
+    devLog('ruta /profile sin pantalla en Vega: aviso de perfiles');
+    return 'profiles';
   }
   return 'login';
 }
