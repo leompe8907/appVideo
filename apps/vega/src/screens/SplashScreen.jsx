@@ -46,7 +46,8 @@ export function SplashScreen({navigate}) {
       const remaining = theme.splashDurationMs - (Date.now() - started);
       if (remaining > 0) await wait(remaining);
       devLog('splash: destino', route);
-      if (!cancelled) navigate(screenForWebRoute(route));
+      const hasActiveLicense = Boolean(userSession.getActiveLicense()?.licenseKey);
+      if (!cancelled) navigate(screenForWebRoute(route, {hasActiveLicense}));
     })();
     return () => {
       cancelled = true;
