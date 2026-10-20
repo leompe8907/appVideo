@@ -16,6 +16,7 @@ import {storageReady} from './bootstrap';
 import {ParentalGateHost} from './parental/ParentalGateHost';
 import {useDeviceSessionLifecycle} from './deviceSessionLifecycle';
 import {ErrorBoundary} from './components/ErrorBoundary';
+import {InactivityHost} from './components/InactivityHost';
 
 const Stack = createStackNavigator();
 
@@ -24,6 +25,9 @@ const navigationRef = createNavigationContainerRef();
 
 // Mismas opciones que vega-video-sample: sin encabezado ni animaciones.
 const SCREEN_OPTIONS = {headerShown: false, animationEnabled: false, cardStyle: {backgroundColor: '#000'}};
+
+/** Pantallas con video: mientras están arriba corre el control de inactividad. */
+const PLAYER_SCREENS = new Set(['player', 'vodplayer']);
 
 /** Pantallas raíz: al llegar se descarta el historial (Atrás no vuelve al splash). */
 const ROOT_SCREENS = new Set(['login', 'smartcard', 'home', 'profiles']);
@@ -59,6 +63,12 @@ const ProfilesUnavailable = withNavigate(ProfilesUnavailableScreen);
 export function App() {
   const [ready, setReady] = useState(false);
   const [navKey, setNavKey] = useState(0);
+  const [routeName, setRouteName] = useState(null);
+  const syncRouteName = () => setRouteName(navigationRef.getCurrentRoute()?.name ?? null);
+  // Inactividad: cierra el reproductor y vuelve a la pantalla anterior.
+  const stopPlayback = React.useCallback(() => {
+    if (navigationRef.isReady() && navigationRef.canGoBack()) navigationRef.goBack();
+  }, []);
   useDeviceSessionLifecycle(navigationRef, ready);
 
   useEffect(() => {
@@ -72,7 +82,7 @@ export function App() {
     // Reintentar rearma la navegación desde cero (key nueva → splash): volver a
     // dibujar la misma pantalla, o restaurar su estado, suele fallar igual.
     <ErrorBoundary onRetry={() => setNavKey((k) => k + 1)}>
-      <NavigationContainer key={navKey} ref={navigationRef}>
+      <NavigationContainer key={navKey} ref={navigationRef} onReady={syncRouteName} onStateChange={syncRouteName}>
         <Stack.Navigator initialRouteName="splash" screenOptions={SCREEN_OPTIONS}>
           <Stack.Screen name="splash" component={Splash} />
           <Stack.Screen name="login" component={Login} />
@@ -83,6 +93,7 @@ export function App() {
           <Stack.Screen name="profiles" component={ProfilesUnavailable} />
         </Stack.Navigator>
         <ParentalGateHost />
+        <InactivityHost playbackActive={PLAYER_SCREENS.has(routeName)} onStop={stopPlayback} />
       </NavigationContainer>
     </ErrorBoundary>
   );

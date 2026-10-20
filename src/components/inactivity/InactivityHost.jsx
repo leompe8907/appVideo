@@ -6,9 +6,10 @@ import { usePreload } from '@appvideo/core/store/usePreload';
 import { useInactivityStore } from '@appvideo/core/store/inactivityStore';
 import * as userSession from '@appvideo/core/utils/userSession';
 import {
+  formatInactivityCountdown,
   resolveInactivityGraceSec,
   resolveInactivityTimeoutSec,
-} from '../../utils/inactivityConfig';
+} from '@appvideo/core/utils/inactivityConfig';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusElementSafe } from '../../navigation/spatialNavigation';
 
@@ -79,13 +80,6 @@ function preloadImage(src) {
     img.onerror = () => resolve(false);
     img.src = src;
   });
-}
-
-function formatCountdown(sec) {
-  const s = Math.max(0, Math.floor(sec));
-  const mm = Math.floor(s / 60);
-  const ss = s % 60;
-  return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
 }
 
 export function InactivityHost() {
@@ -289,7 +283,7 @@ export function InactivityHost() {
   const title = t('inactivity.title', { defaultValue: '¿Sigues ahí?' });
   const message = t('inactivity.message', {
     defaultValue: 'El contenido se detendrá por inactividad en {{time}}.',
-    time: formatCountdown(secondsLeft),
+    time: formatInactivityCountdown(secondsLeft),
   });
 
   const bg = screensaverUrls[screensaverIdx] || '';

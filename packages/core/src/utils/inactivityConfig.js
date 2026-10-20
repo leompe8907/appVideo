@@ -57,3 +57,22 @@ export function resolveInactivityGraceSec(clientConfig, brand) {
   const v = Number(brand?.player?.inactivityGraceSec);
   return Number.isFinite(v) && v >= 10 ? v : 60;
 }
+
+/**
+ * En qué fase está la inactividad mientras se reproduce: 'active' (sin aviso),
+ * 'warning' ("¿Sigues ahí?" con `secondsLeft`) o 'expired' (detener y salvapantallas).
+ * Función pura: el que la usa la evalúa cada segundo.
+ */
+export function resolveInactivityPhase({ nowMs, lastInteractionAtMs, timeoutSec, graceSec }) {
+  if (!Number.isFinite(timeoutSec) || timeoutSec <= 0) return { phase: 'active', secondsLeft: graceSec };
+  const warningAtMs = lastInteractionAtMs + timeoutSec * 1000;
+  if (nowMs < warningAtMs) return { phase: 'active', secondsLeft: graceSec };
+  const secondsLeft = Math.max(0, Math.ceil(graceSec - (nowMs - warningAtMs) / 1000));
+  return secondsLeft > 0 ? { phase: 'warning', secondsLeft } : { phase: 'expired', secondsLeft: 0 };
+}
+
+/** Cuenta regresiva del aviso, `mm:ss`. */
+export function formatInactivityCountdown(sec) {
+  const s = Math.max(0, Math.floor(sec));
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
