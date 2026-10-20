@@ -47,7 +47,7 @@ export function EpgEventModal({channel, event, context, isLive, onPlayCatchup, o
   const logo = channel?.img || channel?.imageUrl || channel?.logoUrl || channel?.logo || channel?.icon;
   const image = getEventImage(event);
   const rating = event?.parentalRating;
-  const badge = context === 'catchup' ? 'Catchup' : isLive ? t('epg.live') : t('epg.notLive');
+  const badge = context === 'catchup' ? t('catchup.title') : isLive ? t('epg.live') : t('epg.notLive');
 
   return (
     <View style={styles.overlay}>

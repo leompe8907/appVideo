@@ -11,7 +11,8 @@
     "refresh": "Refrescar",
     "logout": "Cerrar sesión",
     "exit": "Salir",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "comingSoon": "Próximamente"
   },
   "inicio": {
     "header": "Cabecera de inicio"
@@ -150,7 +151,8 @@
     "deleteAccountEmailMismatch": "El correo no coincide con tu cuenta.",
     "deleteAccountAlreadyClosed": "Esta cuenta ya está cerrada.",
     "deleteAccountAlreadyScheduled": "Ya hay una eliminación en curso para esta cuenta.",
-    "deleteAccountNoEmailOnFile": "No hay un correo registrado para esta cuenta. Contacta a soporte."
+    "deleteAccountNoEmailOnFile": "No hay un correo registrado para esta cuenta. Contacta a soporte.",
+    "deviceSessionMissing": "La sesión de este equipo con {{app}} no está activa: por ahora esta opción se gestiona desde el celular con el código QR."
   },
   "osms": {
     "title": "Mensajes",
@@ -378,7 +380,16 @@
     "play": "Reproducir",
     "pause": "Pausar",
     "playbackError": "Error en reproducción",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "now": "En este momento:",
+    "next": "Siguiente:",
+    "channelList": "Listado de canales",
+    "tracks": "Audio/Subtítulos",
+    "audio": "Audio",
+    "subtitles": "Subtítulos",
+    "subtitlesOff": "Desactivados",
+    "noAudioTracks": "Sin pistas de audio",
+    "noSubtitleTracks": "Sin subtítulos"
   },
   "catchup": {
     "title": "Catchup",
@@ -449,7 +460,8 @@
       "Séries": "Series",
       "Terror": "Horror",
       "Variedades": "Variedades"
-    }
+    },
+    "episodeNumber": "Episodio {{n}}"
   },
   "parental": {
     "title": "Control parental",

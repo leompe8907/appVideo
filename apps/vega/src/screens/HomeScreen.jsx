@@ -335,7 +335,7 @@ export function HomeScreen({navigate}) {
   } else {
     content = (
       <View style={styles.center}>
-        <Text style={styles.message}>Próximamente</Text>
+        <Text style={styles.message}>{t('common.comingSoon')}</Text>
       </View>
     );
   }

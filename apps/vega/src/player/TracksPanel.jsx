@@ -6,16 +6,7 @@ import {FocusRing} from '../components/FocusRing';
 import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
 
-// Mismos textos por defecto que el PlayerHud de la web (estas claves no están en los locales).
-const DEFAULTS = {
-  'player.tracks': 'Audio/Subtítulos',
-  'player.audio': 'Audio',
-  'player.subtitles': 'Subtítulos',
-  'player.subtitlesOff': 'Desactivados',
-  'player.noAudioTracks': 'Sin pistas de audio',
-  'player.noSubtitleTracks': 'Sin subtítulos',
-};
-const t = (key) => i18n.t(key, {defaultValue: DEFAULTS[key]});
+const t = (key) => i18n.t(key);
 
 /** Hay algo que elegir: más de un audio o algún subtítulo (hasTrackOptions de la web). */
 export const hasTrackOptions = (tracks) => (tracks?.audio || []).length > 1 || (tracks?.text || []).length > 0;

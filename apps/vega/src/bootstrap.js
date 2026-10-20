@@ -3,7 +3,7 @@
  * de plataforma de `@appvideo/core` antes de que sus módulos lean el
  * almacenamiento o el entorno.
  */
-import {AppState} from 'react-native';
+import {AppState, I18nManager} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createAsyncBackedStorage,
@@ -59,7 +59,14 @@ export const storageReady = (async () => {
 setPlatformRuntime({
   name: 'vega',
   getUserAgent: () => 'appVideo Vega (Fire TV)',
-  getLanguage: () => 'es',
+  // Idioma del Fire TV (p. ej. "en-US"): i18n de core elige es / en / pt por el prefijo.
+  getLanguage: () => {
+    try {
+      return I18nManager.getAppLocale?.() || I18nManager.getSystemLocale?.() || 'es';
+    } catch {
+      return 'es';
+    }
+  },
   isOnline: () => true,
   // Cada app de Fire TV es de una sola marca (la del build, VEGA_BRAND): se
   // informa como el `?brand=` de la web, que tiene prioridad sobre la marca

@@ -11,7 +11,8 @@
     "refresh": "Refresh",
     "logout": "Log out",
     "exit": "Exit",
-    "retry": "Retry"
+    "retry": "Retry",
+    "comingSoon": "Coming soon"
   },
   "inicio": {
     "header": "Home header"
@@ -150,7 +151,8 @@
     "deleteAccountEmailMismatch": "The email doesn't match your account.",
     "deleteAccountAlreadyClosed": "This account is already closed.",
     "deleteAccountAlreadyScheduled": "A deletion is already in progress for this account.",
-    "deleteAccountNoEmailOnFile": "There is no email on file for this account. Contact support."
+    "deleteAccountNoEmailOnFile": "There is no email on file for this account. Contact support.",
+    "deviceSessionMissing": "This device's session with {{app}} isn't active: for now this option is managed from your phone with the QR code."
   },
   "osms": {
     "title": "Messages",
@@ -378,7 +380,16 @@
     "play": "Play",
     "pause": "Pause",
     "playbackError": "Playback error",
-    "retry": "Retry"
+    "retry": "Retry",
+    "now": "Now:",
+    "next": "Next:",
+    "channelList": "Channel list",
+    "tracks": "Audio/Subtitles",
+    "audio": "Audio",
+    "subtitles": "Subtitles",
+    "subtitlesOff": "Off",
+    "noAudioTracks": "No audio tracks",
+    "noSubtitleTracks": "No subtitles"
   },
   "catchup": {
     "title": "Catchup",
@@ -449,7 +460,8 @@
       "Séries": "Series",
       "Terror": "Horror",
       "Variedades": "Variety"
-    }
+    },
+    "episodeNumber": "Episode {{n}}"
   },
   "parental": {
     "title": "Parental control",

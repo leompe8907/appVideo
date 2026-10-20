@@ -175,7 +175,7 @@ export function VodDetail({item, categories, onPlay}) {
                     </View>
                     <View style={styles.episodeInfo}>
                       <Text style={styles.episodeName} numberOfLines={1}>
-                        {ep?.name ?? ep?.title ?? ep?.episodeTitle ?? `Episode ${i + 1}`}
+                        {ep?.name ?? ep?.title ?? ep?.episodeTitle ?? t('vod.episodeNumber', {n: i + 1})}
                       </Text>
                       {epMinutes > 0 ? <Text style={styles.episodeDuration}>{`${epMinutes} ${t('vod.minutes')}`}</Text> : null}
                     </View>

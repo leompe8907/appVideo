@@ -389,13 +389,13 @@ export function PlayerScreen({params, navigate}) {
                 </Text>
                 {now ? (
                   <Text style={styles.program} numberOfLines={1}>
-                    <Text style={styles.programLabel}>En este momento: </Text>
+                    <Text style={styles.programLabel}>{`${t('player.now')} `}</Text>
                     {now.title}
                   </Text>
                 ) : null}
                 {next ? (
                   <Text style={styles.program} numberOfLines={1}>
-                    <Text style={styles.programLabel}>Siguiente: </Text>
+                    <Text style={styles.programLabel}>{`${t('player.next')} `}</Text>
                     {next.title}
                   </Text>
                 ) : null}
@@ -409,7 +409,7 @@ export function PlayerScreen({params, navigate}) {
       {panel === 'channels' ? (
         <View style={styles.panelOverlay}>
           <View style={styles.channelPanel}>
-            <Text style={styles.panelTitle}>Listado de canales</Text>
+            <Text style={styles.panelTitle}>{t('player.channelList')}</Text>
             <FlatList
               data={channels.slice(0, 400)}
               keyExtractor={(c, i) => channelId(c) || String(i)}
