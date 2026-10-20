@@ -162,6 +162,47 @@ build para TV con `base: './'` y un router que funcione con `file://`.
 
 ## Fase 3: Vega, brechas que afectan a las marcas publicadas
 
+### Tarea 33: Vega, que una marca con perfiles externos no entre al home sin licencia
+**Descripción:** Con `profilesSource: 'externo'` (hoy wind), `resolvePostLoginRoute`
+devuelve `/profile`, porque la licencia la elige el perfil. Vega manda `/profile` al home
+(`apps/vega/src/routes.js`), así que entraría sin licencia activa. Mientras no exista la
+pantalla de perfiles (tarea 34), Vega tiene que cortar ese camino de forma clara.
+
+**Criterios de aceptación:**
+- [ ] Con `usesExternalProfiles(marca)` y sin pantalla de perfiles, Vega no navega al home: muestra un mensaje ("Esta cuenta usa perfiles; todavía no están disponibles en esta app") con "Cerrar sesión".
+- [ ] Las marcas con `profilesSource: 'panaccess'` (o sin perfiles) siguen igual que hoy.
+- [ ] `screenForWebRoute('/profile')` deja de devolver `'home'` en silencio.
+
+**Verificación:**
+- [ ] Test de la decisión de ruta (función pura, en core o en Vega con vitest).
+- [ ] Lint en verde. Prueba en el stick con wind la hace el equipo que compila Vega.
+
+**Dependencias:** ninguna
+**Archivos probables:** `apps/vega/src/routes.js`, `apps/vega/src/screens/SplashScreen.jsx`, `apps/vega/src/screens/LoginScreen.jsx`
+**Tamaño:** S
+
+### Tarea 34: Vega, pantalla de perfiles externos
+**Descripción:** Portar a Vega la parte de selección de `ExternalProfilePage` de la web,
+usando la lógica que ya está en core (`externalProfilesService`, `externalProfileSession`,
+`activeProfileStore`): lista de perfiles, PIN del perfil si lo tiene, licencia elegida
+por el perfil (con préstamo si la suya está en uso) y "continuar aquí" si están todas en
+uso. Crear, editar y borrar perfiles queda para una tarea aparte.
+
+**Criterios de aceptación:**
+- [ ] Después del login de wind aparece la lista de perfiles; al elegir uno, entra al home con la licencia que eligió el perfil.
+- [ ] Un perfil con PIN pide el PIN (teclado numérico del sistema) y un PIN incorrecto muestra el error del servidor.
+- [ ] Al abrir la app vuelve a entrar sola al último perfil si no tiene PIN (igual que la web).
+- [ ] Si la cuenta tiene `profiles_disabled` o no hay sesión con el backend, sigue el flujo de siempre (smartcard/home).
+- [ ] La edad máxima del perfil bloquea lo que la supera (lo hace `parentalGateStore` de core: verificar que Vega lo respeta).
+
+**Verificación:**
+- [ ] Lint en verde; tests de core sin cambios en verde.
+- [ ] En el stick con wind: elegir perfil, reproducir, cerrar y volver a abrir la app.
+
+**Dependencias:** 33; piloto web probado; backend `leompe8907/panaccess_wind_integration#27`; D4 (que wind vaya a Fire TV)
+**Archivos probables:** `apps/vega/src/screens/ProfileScreen.jsx` (nuevo), `apps/vega/src/App.jsx`, `apps/vega/src/routes.js`, `apps/vega/src/account/AccountPage.jsx` ("Cambiar perfil")
+**Tamaño:** M–L (si crece, separar "Cambiar perfil" en Mi Cuenta)
+
 ### Tarea 8: Vega, ErrorBoundary y aviso de "sin conexión"
 **Descripción:** Hoy, un error de render en Vega deja la pantalla en blanco o cierra la app,
 e `isOnline()` siempre devuelve verdadero. Hay que agregar un ErrorBoundary con "Reintentar"
@@ -520,7 +561,7 @@ y conectarla: EME en la web, Shaka en Vega y los motores nativos si se mantienen
 
 ## Fase 7: bajo impacto (ninguna marca lo activa hoy)
 
-- [ ] **Tarea 29:** Vega, perfiles (elegir, crear, editar, borrar, avatares). Hacerla cuando alguna marca active `features.profiles`. Tamaño L: partirla en elegir / crear / editar-borrar.
+- [ ] **Tarea 29:** Vega, perfiles de PanAccess (`profilesSource: 'panaccess'`: elegir, crear, editar, borrar, avatares). Hacerla cuando alguna marca los active. Los perfiles externos (wind) están en las tareas 33 y 34. Tamaño L: partirla en elegir / crear / editar-borrar.
 - [ ] **Tarea 30:** Vega, "Ir al vivo", retroceder dentro del vivo y botones de reproducción en vivo. Hacerla cuando alguna marca active `showPlaybackButtonsOnLive`.
 - [ ] **Tarea 31:** Vega, catchup "legacy" y detalle VOD "classic". Sólo si alguna marca los configura.
 - [ ] **Tarea 32:** limpieza: quitar los 12 módulos sin uso de `src/` (lista en la auditoría) y `apps/vega/src/components/FocusButton.jsx`. Verificar con `grep` y build.

@@ -1,6 +1,6 @@
 # Plan de implementación: paridad web / LG / Samsung / Fire TV (Vega)
 
-Fecha: 2026-10-20 · Rama base: `vega/core`
+Fecha: 2026-10-20 (actualizado el mismo día: perfiles externos, `profilesSource`) · Rama base: `vega/core`
 Detalle de cada tarea (criterios de aceptación, verificación, archivos): [todo.md](todo.md).
 
 ## Resumen
@@ -18,18 +18,34 @@ El orden va de mayor a menor impacto. Para medir el impacto se tuvo en cuenta:
 
 | Flag | Marcas que lo tienen activo |
 |---|---|
-| `login.udid.enabled` (login con código) | bromteck, cableatlantico, multiplustv, sattv |
+| `login.udid.enabled` (login con código) | bromteck, cableatlantico, multiplustv, sattv (pero ninguna tiene URLs de producción: ver tarea 10) |
 | `features.osms` | bromteck, cableatlantico, wind |
 | `login.telemetry.enabled` ("Más vistos" + telemetría) | wind |
-| `features.profiles` | **ninguna** |
+| `features.profiles` + `profilesSource: 'externo'` (perfiles del backend de la marca) | wind |
+| `features.profiles` + `profilesSource: 'panaccess'` | **ninguna** |
 | `player.showPlaybackButtonsOnLive` / `showSeekbarOnLive` | **ninguna** |
 | `player.nativeAdaptersEnabled` | **ninguna** (LG y Samsung usan el reproductor web) |
 
 3. **Si desbloquea otras tareas.** Por ejemplo, el empaquetado es necesario para poder
    probar en un televisor real.
 
-Por eso perfiles y los botones de reproducción en vivo de Vega quedan al final: hoy
-ninguna marca los activa.
+Por eso los botones de reproducción en vivo y los perfiles de PanAccess quedan al
+final: hoy ninguna marca los activa. Los **perfiles externos** (wind) sí están activos y
+suben a la fase 3 (tareas 33 y 34).
+
+### Perfiles externos (`features.profilesSource`)
+Agregado el 2026-10-20 (commits `4b9c4ce`, `0ce7dca`, `3890f6f`, piloto web):
+- `'panaccess'` (por defecto): los perfiles de siempre (`ProfilePage`).
+- `'externo'`: perfiles del backend propio de la marca (`/api/v1/profiles/`, hoy sólo
+  wind). La licencia la elige el perfil, por eso después del login se va **siempre** a
+  `/profile` (`resolvePostLoginRoute` en core). Lógica en core
+  (`externalProfilesService`, `externalProfileSession`, `activeProfileStore`); pantalla
+  en la web (`ExternalProfilePage`).
+- **Riesgo en Vega:** Vega usa el mismo `resolvePostLoginRoute`, pero manda `/profile`
+  al home (`apps/vega/src/routes.js`). Wind en Fire TV entraría al home sin que el
+  perfil elija la licencia (probablemente sin licencia activa). No está probado.
+- Depende del backend con el préstamo de licencias
+  (`leompe8907/panaccess_wind_integration#27`).
 
 ## Decisiones de arquitectura
 
@@ -51,16 +67,16 @@ ninguna marca los activa.
 | D1 | En LG y Samsung, ¿la app va **empaquetada** (IPK/WGT con archivos locales) o es un **lanzador de URL** que abre la web publicada? | Tareas 5–7 |
 | D2 | ¿Alguna marca necesita **DRM** (Widevine/PlayReady) en alguna plataforma? | Fase 6 |
 | D3 | En LG y Samsung, ¿se **arregla el reproductor nativo** o se queda el web y se elimina el código nativo? | Fase 6 |
-| D4 | ¿Qué marcas se publican en Fire TV y cuándo? (hoy: intv y multiplustv) | Prioridad dentro de las fases 3 y 4 |
+| D4 | ¿Qué marcas se publican en Fire TV y cuándo? (hoy: intv y multiplustv). En particular, ¿wind va a Fire TV? | Prioridad dentro de las fases 3 y 4; tarea 34 |
 | D5 | Para reanudar VOD, ¿el backend guarda la posición o queda sólo en el dispositivo? | Tarea 23 |
 
 ## Lista de tareas (orden de impacto)
 
 ### Fase 1: control remoto en LG y Samsung
 Afecta hoy a todos los usuarios de TV y cuesta poco.
-- [ ] 1. Samsung: registrar las teclas del control (`tizen.tvinputdevice`)
-- [ ] 2. LG: mapear CH± (33/34) y agregar tests de `tvRemote`
-- [ ] 3. LG y Samsung: teclas de media (play/pausa/stop/FF/RW) en el reproductor
+- [x] 1. Samsung: registrar las teclas del control (`tizen.tvinputdevice`) — `3b36f47`; falta probar en TV
+- [x] 2. LG: mapear CH± (33/34) y agregar tests de `tvRemote` — `a0f2300`; falta probar en TV
+- [x] 3. LG y Samsung: teclas de media (play/pausa/stop/FF/RW) en el reproductor — `a0f2300`; falta probar en TV
 
 **Checkpoint 1:** tests y build en verde; en un Samsung y un LG reales funcionan
 CH± y Play/Pausa.
@@ -76,14 +92,20 @@ Sin esto no se puede publicar en las tiendas de LG y Samsung.
 y reproducen en el televisor.
 
 ### Fase 3: Vega, brechas que afectan a las marcas publicadas
-- [ ] 8. Vega: ErrorBoundary y aviso de "sin conexión"
-- [ ] 9. Core: mover el flujo de login con código (UDID) a `@appvideo/core`
-- [ ] 10. Vega: pantalla de login con código (UDID) y QR
+- [ ] 33. Vega: que una marca con perfiles externos no entre al home sin licencia (guardia mientras no exista la pantalla)
+- [ ] 34. Vega: pantalla de perfiles externos (elegir perfil con PIN y licencia; crear/editar después)
+- [ ] 8. Vega: ErrorBoundary y aviso de "sin conexión" — ErrorBoundary hecho (`19133c3`); "sin conexión" bloqueado (falta decidir `@amazon-devices/keplerscript-netmgr-lib`)
+- [x] 9. Core: mover el flujo de login con código (UDID) a `@appvideo/core` — `ca3c5a5`
+- [ ] 10. Vega: pantalla de login con código (UDID) y QR — **en espera:** ninguna marca tiene URLs de producción del backend UDID
 - [ ] 11. Vega: el buscador abre los resultados de Catchup y Guía
 - [ ] 12. Core + Vega: inactividad ("¿Sigues ahí?" y salvapantallas)
 
-**Checkpoint 3:** build Release de multiplustv en el stick; login con código,
-buscador e inactividad probados en el aparato.
+Las tareas 33 y 34 van primero sólo si wind se publica en Fire TV (D4); si no, quedan
+después de la 12.
+
+**Checkpoint 3:** build Release de multiplustv en el stick; buscador e inactividad
+probados en el aparato. Si se hicieron las tareas 33–34: build de wind en el stick,
+elegir perfil y reproducir con la licencia del perfil.
 
 ### Fase 4: Vega, paridad para las marcas que activan cada función
 - [ ] 13. Vega: telemetría de reproducción (Wind)
@@ -116,7 +138,7 @@ Impacto medio. Son mejoras visibles y aplican a todas las marcas.
 **Checkpoint 6:** si se activó el nativo, contenido con DRM probado en LG y Samsung reales.
 
 ### Fase 7: bajo impacto (ninguna marca lo activa hoy)
-- [ ] 29. Vega: perfiles (cuando alguna marca active `features.profiles`)
+- [ ] 29. Vega: perfiles de PanAccess (`profilesSource: 'panaccess'`; cuando alguna marca los active)
 - [ ] 30. Vega: "Ir al vivo" y botones de reproducción en vivo (cuando alguna marca active `showPlaybackButtonsOnLive`)
 - [ ] 31. Vega: catchup "legacy" y detalle VOD "classic" (sólo si alguna marca los configura)
 - [ ] 32. Limpieza: quitar los módulos que nadie importa (12 en `src/` y `FocusButton` en Vega)
@@ -131,6 +153,8 @@ viendo", guía con línea de tiempo, grabaciones y siguiente episodio.
 - Las tareas 9 y 12 (core) deben estar mergeadas antes de las tareas 10 y 12 de Vega.
   Cambiar `packages/core` también cambia la web: hay que correr los tests de ambas.
 - Las tareas 14–15 (OSMS) y 13 (telemetría) son independientes entre sí.
+- La tarea 34 no toca core: la lógica de perfiles externos ya está ahí. Si hace falta
+  cambiarla, hay que coordinar con el piloto web, que la está usando.
 
 ## Riesgos
 
@@ -141,6 +165,8 @@ viendo", guía con línea de tiempo, grabaciones y siguiente episodio.
 | Vega no tiene una API de red equivalente a NetInfo | Medio | Tarea 8 empieza con una prueba corta; si no existe, se detecta la falta de red por errores de fetch |
 | `$WEBAPIS` no carga desde un `<script>` inyectado en Tizen | Medio | Verificarlo en la tarea 1; si falla, poner el `<script>` fijo en el `index.html` del paquete Tizen |
 | En Debug, Vega se cierra a los ~7,5 min reproduciendo | Bajo | Probar inactividad y telemetría en Release |
+| Wind en Fire TV entra al home sin licencia (perfiles externos sin pantalla en Vega) | Alto si wind se publica en Fire TV | Tarea 33 antes de cualquier build de wind para Fire TV |
+| Los perfiles externos todavía son un piloto web sin probar y dependen del backend #27 | Medio | Hacer la tarea 34 después de que el piloto web se pruebe; mientras, sólo la 33 |
 
 ## Notas
 
