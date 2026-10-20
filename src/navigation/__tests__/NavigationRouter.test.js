@@ -38,6 +38,26 @@ describe('NavigationRouter', () => {
     expect(e2.defaultPrevented).toBe(true);
   });
 
+  it('despacha las teclas de media a los handlers de zona y consume si las manejan', () => {
+    const calls = [];
+    navigationRouter.register('global', (action) => {
+      calls.push(action);
+      return true;
+    });
+
+    const e = dispatchKey(10252, 'MediaPlayPause');
+    dispatchKey(413, 'MediaStop');
+
+    expect(calls).toEqual([TV_ACTION.PLAY_PAUSE, TV_ACTION.STOP]);
+    expect(e.defaultPrevented).toBe(true);
+  });
+
+  it('teclas de media sin handler que las maneje no se consumen', () => {
+    navigationRouter.register('global', () => false);
+    const e = dispatchKey(415, 'MediaPlay');
+    expect(e.defaultPrevented).toBe(false);
+  });
+
   it('CHANNEL_UP/CHANNEL_DOWN sin handlers registrados no lanza y no consume el evento', () => {
     const e = dispatchKey(427, 'ChannelUp');
     expect(e.defaultPrevented).toBe(false);

@@ -13,6 +13,13 @@ export const TV_ACTION = Object.freeze({
   CHANNEL_UP: 'channel_up',
   /** CH− / Channel Down (10foot: PDOWN → channelDown) */
   CHANNEL_DOWN: 'channel_down',
+  // Teclas de media del control (LG/Samsung; en Samsung requieren registerTvKeys).
+  PLAY: 'play',
+  PAUSE: 'pause',
+  PLAY_PAUSE: 'play_pause',
+  STOP: 'stop',
+  FAST_FORWARD: 'fast_forward',
+  REWIND: 'rewind',
 });
 
 function toInt(v) {
@@ -50,6 +57,18 @@ export function getTvActionFromKeyEvent(e) {
   // CH+ / CH− (Tizen 427/428; también nombres estándar en otros TV)
   if (key === 'ChannelUp' || code === 'ChannelUp' || keyCode === 427) return TV_ACTION.CHANNEL_UP;
   if (key === 'ChannelDown' || code === 'ChannelDown' || keyCode === 428) return TV_ACTION.CHANNEL_DOWN;
+  // LG webOS manda CH± como PageUp/PageDown (33/34). Si ningún handler de zona
+  // la consume, NavigationRouter la deja pasar (en PC la página sigue desplazándose).
+  if (key === 'PageUp' || code === 'PageUp' || keyCode === 33) return TV_ACTION.CHANNEL_UP;
+  if (key === 'PageDown' || code === 'PageDown' || keyCode === 34) return TV_ACTION.CHANNEL_DOWN;
+
+  // Media: mismos keyCodes en LG y Samsung (10252 = PlayPause, sólo Samsung).
+  if (key === 'MediaPlayPause' || keyCode === 10252) return TV_ACTION.PLAY_PAUSE;
+  if (key === 'MediaPlay' || keyCode === 415) return TV_ACTION.PLAY;
+  if (key === 'MediaPause' || key === 'Pause' || keyCode === 19) return TV_ACTION.PAUSE;
+  if (key === 'MediaStop' || keyCode === 413) return TV_ACTION.STOP;
+  if (key === 'MediaFastForward' || keyCode === 417) return TV_ACTION.FAST_FORWARD;
+  if (key === 'MediaRewind' || keyCode === 412) return TV_ACTION.REWIND;
 
   return null;
 }

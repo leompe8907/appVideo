@@ -795,6 +795,28 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   const channelArrowsEnabled =
     !isTV && isLiveService && currentBrand?.features?.playerChannelArrows === true;
 
+  const handlePlayPause = () => {
+    if (state?.isPlaying) {
+      pause();
+      return;
+    }
+    play({
+      type: state?.type,
+      id: state?.id,
+      url: state?.url,
+      item: state?.item,
+      autoPlay: true,
+    });
+  };
+
+  const isLiveWithWindow = state?.type === 'service' && !!liveWindow;
+  // ±10 s: los botones del HUD y las teclas FF/RW del control usan lo mismo.
+  const seekBy = (seconds) => {
+    if (isLiveWithWindow) skipLiveBy(seconds);
+    else if (seconds < 0) backward(-seconds);
+    else forward(seconds);
+  };
+
   usePlayerHudTvNavigation({
     isTV,
     hasContent,
@@ -806,6 +828,9 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     channelChangeWithArrows,
     isLiveService,
     isPlaybackMaximized: isPlaybackMaximized && hasContent,
+    isPlaying: !!state?.isPlaying,
+    onPlayPause: handlePlayPause,
+    onSeekBy: seekBy,
   });
 
   // Overlay de "info" sin modal EPG/VOD (VOD/catchup, o vivo sin evento actual):
@@ -939,21 +964,6 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     doToggle();
   };
 
-  const handlePlayPause = () => {
-    if (state?.isPlaying) {
-      pause();
-      return;
-    }
-    play({
-      type: state?.type,
-      id: state?.id,
-      url: state?.url,
-      item: state?.item,
-      autoPlay: true,
-    });
-  };
-
-  const isLiveWithWindow = state?.type === 'service' && !!liveWindow;
   const clockText = formatHHmm(Date.now());
   const showSeekbar =
     state?.type === 'vod' ||
@@ -1129,7 +1139,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
               id={PLAYER_FOCUS_IDS.REWIND}
               data-tv-nav="player-hud"
               tabIndex={hudTvTabIndex}
-              onClick={() => (isLiveWithWindow ? skipLiveBy(-10) : backward(10))}
+              onClick={() => seekBy(-10)}
               aria-label={t('player.rewind10', { defaultValue: 'Retroceder 10s' })}
             >
               <AppIcon name="rewind" size="1em" />
@@ -1151,7 +1161,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
               id={PLAYER_FOCUS_IDS.FORWARD}
               data-tv-nav="player-hud"
               tabIndex={hudTvTabIndex}
-              onClick={() => (isLiveWithWindow ? skipLiveBy(10) : forward(10))}
+              onClick={() => seekBy(10)}
               aria-label={t('player.forward10', { defaultValue: 'Adelantar 10s' })}
             >
               <AppIcon name="forward" size="1em" />

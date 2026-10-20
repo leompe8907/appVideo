@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { TV_ACTION } from '../utils/tvRemote';
 import { navigationRouter } from '../navigation/NavigationRouter';
 import { focusElementSafe } from '../navigation/spatialNavigation';
@@ -24,6 +24,35 @@ export const PLAYER_FOCUS_IDS = Object.freeze({
 });
 
 const INITIAL_FOCUS_DELAY_MS = 280;
+const MEDIA_SEEK_SECONDS = 10;
+
+/**
+ * Qué hace una tecla de media del control en el reproductor. Sigue las mismas
+ * reglas que el HUD: Play/Pausa/FF/RW sólo si el HUD muestra los botones de
+ * reproducción (VOD, catchup, o vivo con `showPlaybackButtonsOnLive`); Stop
+ * cierra siempre, como BACK.
+ * @returns {{type:'togglePlay'}|{type:'seek',seconds:number}|{type:'close'}|{type:'none'}|null}
+ *   null si `action` no es una tecla de media.
+ */
+export function resolvePlayerMediaKey(action, { showPlaybackButtons, isPlaying }) {
+  const none = { type: 'none' };
+  switch (action) {
+    case TV_ACTION.STOP:
+      return { type: 'close' };
+    case TV_ACTION.PLAY_PAUSE:
+      return showPlaybackButtons ? { type: 'togglePlay' } : none;
+    case TV_ACTION.PLAY:
+      return showPlaybackButtons && !isPlaying ? { type: 'togglePlay' } : none;
+    case TV_ACTION.PAUSE:
+      return showPlaybackButtons && isPlaying ? { type: 'togglePlay' } : none;
+    case TV_ACTION.FAST_FORWARD:
+      return showPlaybackButtons ? { type: 'seek', seconds: MEDIA_SEEK_SECONDS } : none;
+    case TV_ACTION.REWIND:
+      return showPlaybackButtons ? { type: 'seek', seconds: -MEDIA_SEEK_SECONDS } : none;
+    default:
+      return null;
+  }
+}
 
 /**
  * Navegación TV (LRUD + BACK) para el `PlayerHud`.
@@ -47,6 +76,7 @@ const INITIAL_FOCUS_DELAY_MS = 280;
  *    genérica debe correr para UP/DOWN — retorna `false` (no lo manejé) para
  *    que el propio handler de `usePlayerChannelZapping`, registrado en la
  *    misma zona 'global' de `NavigationRouter`, sea quien lo consuma.
+ *  - Teclas de media del control (ver `resolvePlayerMediaKey`).
  */
 export function usePlayerHudTvNavigation({
   isTV,
@@ -59,7 +89,17 @@ export function usePlayerHudTvNavigation({
   channelChangeWithArrows = false,
   isLiveService = false,
   isPlaybackMaximized = false,
+  isPlaying = false,
+  onPlayPause,
+  onSeekBy,
 }) {
+  // Último valor sin re-registrar el handler en cada render (isPlaying cambia
+  // seguido y los callbacks del HUD no son estables).
+  const mediaRef = useRef({ isPlaying, onPlayPause, onSeekBy });
+  useEffect(() => {
+    mediaRef.current = { isPlaying, onPlayPause, onSeekBy };
+  });
+
   useEffect(() => {
     if (!isTV || !hasContent) return undefined;
 
@@ -94,6 +134,23 @@ export function usePlayerHudTvNavigation({
 
       if (action === TV_ACTION.BACK) {
         onClosePlayer?.();
+        return true;
+      }
+
+      const media = mediaRef.current;
+      const mediaCommand = resolvePlayerMediaKey(action, {
+        showPlaybackButtons,
+        isPlaying: media.isPlaying,
+      });
+      if (mediaCommand) {
+        if (mediaCommand.type === 'close') {
+          onClosePlayer?.();
+          return true;
+        }
+        if (mediaCommand.type === 'none') return false;
+        onWakeHud?.();
+        if (mediaCommand.type === 'togglePlay') media.onPlayPause?.();
+        else if (mediaCommand.type === 'seek') media.onSeekBy?.(mediaCommand.seconds);
         return true;
       }
 
