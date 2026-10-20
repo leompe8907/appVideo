@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { useParentalStore } from './parentalStore';
 import { usePreloadStore } from './preloadStore';
+import { useActiveProfileStore } from './activeProfileStore';
 import { getChannelStableId } from '../utils/channelId';
 import { normalizeBrParentalRating } from '../utils/parentalRatingBR';
 import { getCurrentEpgEvent } from '../utils/epgCurrentEvent';
@@ -38,13 +39,31 @@ const initial = {
   playFn: null,
   title: '',
   message: '',
-  gateKind: 'channel', // 'channel' | 'rating' | 'parentalControl' | 'setupPin'
+  gateKind: 'channel', // 'channel' | 'rating' | 'parentalControl' | 'setupPin' | 'profileAge'
   purpose: 'playback', // 'playback' | 'action'
   unlockScope: 'channel', // 'channel' | 'global'
   pcUnlockMode: null, // 'session' | 'ttl' | null
   pcUnlockTtlMs: null,
   lastFocusedEl: null,
 };
+
+/**
+ * Edad máxima del perfil de Wind activo (`null` = sin límite). Va antes que el
+ * control parental de la app y no se desbloquea con PIN: para ver ese
+ * contenido hay que cambiar de perfil. Sin clasificación cuenta como apto,
+ * salvo el contenido marcado para adultos (`parentalControl`), que es 18.
+ */
+function profileMaxAge() {
+  const profile = useActiveProfileStore.getState();
+  return profile?.source === 'wind' && Number.isFinite(profile.maxAge) ? profile.maxAge : null;
+}
+
+function exceedsProfileAge(rating, isAdult) {
+  const maxAge = profileMaxAge();
+  if (maxAge == null) return false;
+  const effective = isAdult ? 18 : rating;
+  return effective != null && effective > maxAge;
+}
 
 function boolish(v) {
   return v === true || v === 1 || v === '1' || String(v).toLowerCase() === 'true';
@@ -102,9 +121,39 @@ export const useParentalGateStore = create((set, get) => ({
     }
   },
 
+  requestProfileAgeBlock: ({ channel } = {}) => {
+    const name = useActiveProfileStore.getState()?.name || '';
+    set({
+      open: true,
+      channel: channel || null,
+      playFn: null,
+      title: i18n.t('profile.ageBlockedTitle', { defaultValue: 'No disponible en este perfil' }),
+      message: i18n.t('profile.ageBlockedMessage', {
+        name,
+        defaultValue: 'Este contenido supera la edad permitida para el perfil {{name}}. Cambia de perfil para verlo.',
+      }),
+      gateKind: 'profileAge',
+      purpose: 'playback',
+      unlockScope: 'global',
+      lastFocusedEl: captureGateFocusSnapshot(),
+    });
+    return true;
+  },
+
   requestPlayChannel: ({ channel, playFn, title, message, purpose, unlockScope }) => {
     if (!channel || typeof playFn !== 'function') return false;
     const channelId = getChannelStableId(channel);
+
+    if (purpose !== 'action') {
+      const currentEvent = getCurrentEpgEvent(channel?.epgItems || []);
+      const rating = normalizeBrParentalRating(
+        currentEvent?.parentalRating ?? currentEvent?.parental_rating
+          ?? channel?.parentalRating ?? channel?.parental_rating ?? null
+      );
+      if (exceedsProfileAge(rating, getParentalControlFlag(channel))) {
+        return get().requestProfileAgeBlock({ channel });
+      }
+    }
 
     // Si la marca no tiene el flag `account.sections.parentalControl`, la
     // funcionalidad completa (bloqueo por canal, contenido adulto, rating)
@@ -258,6 +307,13 @@ export const useParentalGateStore = create((set, get) => ({
 
   requestPlayMedia: ({ item, ratingRaw, playFn, title, message }) => {
     if (!item || typeof playFn !== 'function') return false;
+
+    const mediaRating = normalizeBrParentalRating(
+      ratingRaw ?? item?.parentalRating ?? item?.parental_rating ?? null
+    );
+    if (exceedsProfileAge(mediaRating, getParentalControlFlag(item))) {
+      return get().requestProfileAgeBlock({ channel: item });
+    }
 
     if (!isParentalControlEnabledForBrand(getActiveBrandConfig())) {
       playFn();

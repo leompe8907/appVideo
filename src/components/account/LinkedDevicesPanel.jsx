@@ -171,6 +171,11 @@ export function LinkedDevicesPanel({ brandConfig, brand }) {
                       )}
                     </span>
                     {d.device_model && <span className="linked-devices-row__model">{d.device_model}</span>}
+                    {d.active_profile?.name && (
+                      <span className="linked-devices-row__meta">
+                        {t('account.linkedDevicesProfile', { defaultValue: 'Perfil' })}: {d.active_profile.name}
+                      </span>
+                    )}
                     <span className="linked-devices-row__meta">
                       {t('account.linkedDevicesLastSeen', { defaultValue: 'Última conexión' })}:{' '}
                       {formatDate(d.last_seen_at)}

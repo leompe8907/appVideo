@@ -20,6 +20,8 @@ export function ParentalGateHost() {
   }, [gate?.title, gate?.channel?.name, t]);
 
   const isSetupPin = gate?.gateKind === 'setupPin';
+  // Contenido por encima de la edad del perfil de Wind: no se desbloquea con PIN.
+  const isProfileAge = gate?.gateKind === 'profileAge';
 
   return (
     <>
@@ -46,8 +48,26 @@ export function ParentalGateHost() {
         onCancel={closeGate}
       />
 
+      <ConfirmModal
+        open={!!gate?.open && isProfileAge}
+        title={title}
+        message={gate?.message || ''}
+        confirmText={t('account.changeProfile', { defaultValue: 'Cambiar perfil' })}
+        cancelText={t('common.close', { defaultValue: 'Cerrar' })}
+        onConfirm={() => {
+          closeGate();
+          try {
+            close?.();
+          } catch {
+            // noop
+          }
+          navigate('/profile', { state: { switchProfile: true } });
+        }}
+        onCancel={closeGate}
+      />
+
       <ParentalPinGate
-        open={!!gate?.open && !isSetupPin}
+        open={!!gate?.open && !isSetupPin && !isProfileAge}
         title={title}
         message={gate?.message || t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para continuar' })}
         onCancel={closeGate}

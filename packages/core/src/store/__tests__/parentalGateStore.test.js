@@ -71,3 +71,45 @@ describe('parentalGateStore: TTL de desbloqueo de canal por marca', () => {
     });
   });
 });
+
+const { useActiveProfileStore } = await import('../activeProfileStore');
+
+describe('edad máxima del perfil de Wind', () => {
+  beforeEach(() => {
+    parentalState = { enabled: false };
+    useParentalGateStore.getState().closeGate();
+  });
+
+  it('bloquea sin PIN lo que supera la edad del perfil, aunque el control parental esté apagado', () => {
+    useActiveProfileStore.getState().setActiveProfile({ id: 1, name: 'Peque', source: 'wind', maxAge: 10 });
+    const playFn = vi.fn();
+
+    useParentalGateStore.getState().requestPlayMedia({ item: { id: 'm1' }, ratingRaw: '14', playFn });
+
+    expect(playFn).not.toHaveBeenCalled();
+    expect(useParentalGateStore.getState()).toMatchObject({ open: true, gateKind: 'profileAge' });
+  });
+
+  it('contenido para adultos cuenta como 18 y sin clasificación como apto', () => {
+    useActiveProfileStore.getState().setActiveProfile({ id: 1, name: 'Peque', source: 'wind', maxAge: 16 });
+    const adult = vi.fn();
+    const unrated = vi.fn();
+
+    useParentalGateStore.getState().requestPlayChannel({ channel: { id: 'a', parentalControl: true }, playFn: adult });
+    useParentalGateStore.getState().closeGate();
+    useParentalGateStore.getState().requestPlayChannel({ channel: { id: 'b' }, playFn: unrated });
+
+    expect(adult).not.toHaveBeenCalled();
+    expect(unrated).toHaveBeenCalled();
+  });
+
+  it('un perfil sin límite o sin perfil de Wind no cambia nada', () => {
+    useActiveProfileStore.getState().setActiveProfile({ id: 1, name: 'Papá', source: 'wind', maxAge: null });
+    const playFn = vi.fn();
+
+    useParentalGateStore.getState().requestPlayMedia({ item: { id: 'm1' }, ratingRaw: '18', playFn });
+
+    expect(playFn).toHaveBeenCalled();
+    useActiveProfileStore.getState().clearActiveProfile();
+  });
+});

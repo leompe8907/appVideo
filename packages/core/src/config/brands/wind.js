@@ -375,7 +375,10 @@ export default {
     }
   },
   "features": {
-    "profiles": false,
+    // Perfiles propios de Wind (backend `/api/v1/profiles/`), no los de PanAccess. Una cuenta
+    // sin perfiles encendidos en el backend (`profiles_disabled`) sigue como antes.
+    "profiles": true,
+    "profilesSource": "wind",
     "showRating": true,
     "osms": true,
     "osmsInline": true,

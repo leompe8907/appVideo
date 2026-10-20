@@ -116,6 +116,31 @@ export function clearSessionBeforeNewLogin() {
  *   el resultado de `registerDeviceSession()` (el watchdog de reconexión lo usa
  *   para decidir cuánto esperar), o `undefined` si no aplica o falló el login.
  */
+// Último establecimiento de la sesión de dispositivo en curso (ver `waitForDeviceSessionAuth`).
+let pendingDeviceSession = null;
+
+/**
+ * Espera a que haya JWT del backend externo. El login lo obtiene en segundo
+ * plano (`maybeEstablishDeviceSession` sin `await`), pero los perfiles de Wind
+ * lo necesitan antes de elegir la licencia. Nunca lanza.
+ * @param {number} [timeoutMs]
+ * @returns {Promise<boolean>} `true` si hay JWT.
+ */
+export async function waitForDeviceSessionAuth(timeoutMs = 15000) {
+  if (deviceAuthService.hasDeviceSessionAuth()) return true;
+  if (pendingDeviceSession) {
+    let timer;
+    await Promise.race([
+      pendingDeviceSession.catch(() => undefined),
+      new Promise((resolve) => {
+        timer = setTimeout(resolve, timeoutMs);
+      }),
+    ]);
+    clearTimeout(timer);
+  }
+  return deviceAuthService.hasDeviceSessionAuth();
+}
+
 export async function maybeEstablishDeviceSession(brandConfig, credentials, precomputedSession) {
   if (!deviceAuthService.isDeviceSessionEnabled(brandConfig)) return undefined;
 
@@ -245,6 +270,42 @@ async function activateLicenseWithContentCheck(service, license, options = {}) {
 }
 
 /**
+ * Activa una licencia concreta (por ejemplo la de un perfil de Wind) y
+ * confirma que trae contenido. No lanza: `null` si no se pudo (en uso con
+ * `failIfInUse`, sin contenido, error de red).
+ * @param {{ key: string, pin: string }} license
+ * @param {{ failIfInUse?: boolean }} [options]
+ * @returns {Promise<{ key: string, pin: string }|null>}
+ */
+export async function activateLicense(brandConfig, license, { failIfInUse = true } = {}) {
+  if (!panaccessService.client) {
+    await panaccessService.initialize(brandConfig);
+  }
+  return activateLicenseWithContentCheck(panaccessService, license, { failIfInUse, requireContent: true });
+}
+
+/**
+ * Licencias de la cuenta con su PIN de tarjeta (las guardadas en el login, o
+ * pedidas de nuevo a PanAccess si falta alguna de `requiredKeys`).
+ * @param {string[]} [requiredKeys]
+ * @returns {Promise<Array<{ key: string, pin: string }>>}
+ */
+export async function getLicensesWithPins(brandConfig, requiredKeys = []) {
+  const stored = userSession.getLicenses() || [];
+  const known = new Set(stored.map((l) => getLicenseKey(l)));
+  if (requiredKeys.every((key) => known.has(key))) return stored;
+
+  if (!panaccessService.client) {
+    await panaccessService.initialize(brandConfig);
+  }
+  const licenses = normalizeLicenses(
+    await panaccessService.getStreamingLicenses({ withPins: true, enableRetry: false }),
+  );
+  if (licenses.length > 0) userSession.setLicenses(licenses);
+  return licenses;
+}
+
+/**
  * Login completo: autenticar → getClientConfig → getStreamingLicenses → opcionalmente activar licencia.
  * @param {Object} brandConfig - Configuración de la marca (currentBrand).
  * @param {{ username: string, password: string }} credentials
@@ -297,7 +358,7 @@ export async function loginAndActivateLicense(brandConfig, credentials, options 
   // caller, los 4 caminos que llegan hasta acá: login manual, login social
   // (Google/Facebook, vía `opts.deviceSessionAuth` si ya viene el JWT), TV pareada
   // por QR (credenciales ya descifradas) y reactivación de sesión en splash.
-  maybeEstablishDeviceSession(brandConfig, credentials, opts.deviceSessionAuth);
+  pendingDeviceSession = maybeEstablishDeviceSession(brandConfig, credentials, opts.deviceSessionAuth);
 
   // Evita "licencia vieja" en storage si la activación falla (ej. license in use).
   // Esto es clave para rutas automáticas (splash/login) que dependen de si hay licencia activa.

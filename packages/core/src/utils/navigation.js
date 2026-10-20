@@ -18,11 +18,22 @@ export function getInitialRoute(brandConfig) {
 }
 
 /**
+ * Perfiles propios de Wind (`features.profilesSource: 'wind'`) en vez de los
+ * de PanAccess: la licencia la elige el perfil (ver `windProfileSession.js`).
+ */
+export function usesWindProfiles(brandConfig) {
+  return brandConfig?.features?.profiles === true && brandConfig?.features?.profilesSource === 'wind';
+}
+
+/**
  * Ruta post-login/splash: solo va a home si hay licencia activa (verificada con contenido en loginFlow).
+ * Con perfiles de Wind va siempre a '/profile', aunque no haya licencia: la elige el perfil.
  * @param {Object} brandConfig
  * @returns {string} '/profile' | '/home/inicio' | '/smartcard'
  */
 export function resolvePostLoginRoute(brandConfig) {
+  if (usesWindProfiles(brandConfig)) return '/profile';
+
   const active = getActiveLicense();
   const licenseKey = active?.licenseKey ? String(active.licenseKey).trim() : '';
   if (!licenseKey) return '/smartcard';
