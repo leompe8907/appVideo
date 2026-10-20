@@ -6,11 +6,15 @@ import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
 import {getSearchDebounceMs, searchAll} from '@appvideo/core/services/searchService';
 import {buildSearchResultKey, useSearchSessionStore} from '@appvideo/core/store/searchSessionStore';
+import {useEpgReminderStore} from '@appvideo/core/store/epgReminderStore';
+import {catchupEventToChannel, catchupGroupToChannel, findCatchupGroupForEvent} from '@appvideo/core/utils/catchupEvent';
 import {RemoteImage} from '../components/RemoteImage';
 import {getTheme} from '../theme';
 import {createScaledStyles} from '../scaledStyles';
 import {formatTime} from '../epg';
 import {VodDetail} from '../vod/VodDetail';
+import {EpgEventModal} from '../epg/EpgEventModal';
+import {buildEventReminder, reminderIdFor} from '../epg/reminders';
 import {focusTarget} from '../focusTargets';
 
 const t = (key, opts) => i18n.t(key, opts);
@@ -119,7 +123,7 @@ function Pill({label, active, colors, onPress}) {
  * VOD y catchup ya cargados, con pestañas y grilla de 6 columnas. En Fire TV
  * se usa el teclado del sistema (OK sobre el campo).
  */
-export function SearchPage({onPlayChannel, onPlayVod, onModalChange, active = true}) {
+export function SearchPage({onPlayChannel, onPlayVod, onPlayCatchup, onModalChange, active = true}) {
   const brand = getActiveBrandConfig();
   const colors = searchColors();
   const epg = usePreloadStore((s) => s.epg);
@@ -143,20 +147,27 @@ export function SearchPage({onPlayChannel, onPlayVod, onModalChange, active = tr
   const [clearFocused, setClearFocused] = useState(false);
   const epgEnabled = brand?.EPG?.enabled !== false;
   const [detail, setDetail] = useState(null);
+  // Detalle de un resultado de Guía o Catchup: {context, channel, event, isLive}.
+  const [eventDetail, setEventDetail] = useState(null);
+  const reminders = useEpgReminderStore((s) => s.reminders);
+  const addReminder = useEpgReminderStore((s) => s.addReminder);
+  const removeReminder = useEpgReminderStore((s) => s.removeReminder);
+  const modalOpen = Boolean(detail || eventDetail);
 
   useEffect(() => {
-    onModalChange?.(Boolean(detail));
-  }, [detail, onModalChange]);
+    onModalChange?.(modalOpen);
+  }, [modalOpen, onModalChange]);
 
   // Atrás cierra el detalle (sólo con el home en primer plano).
   useEffect(() => {
-    if (!active || !detail) return undefined;
+    if (!active || !modalOpen) return undefined;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       setDetail(null);
+      setEventDetail(null);
       return true;
     });
     return () => sub.remove();
-  }, [active, detail]);
+  }, [active, modalOpen]);
 
   useEffect(() => {
     session.bindBrand?.(brand?.brand);
@@ -202,7 +213,15 @@ export function SearchPage({onPlayChannel, onPlayVod, onModalChange, active = tr
     session.setFocusedResultKey(buildSearchResultKey(item));
     if (item.type === 'service') onPlayChannel(item.raw);
     else if (item.type === 'vod') setDetail(item.raw);
-    // TODO: catchup / EPG (EpgEventModal) cuando se porte Catchup.
+    else if (item.type === 'epg') {
+      const now = Date.now();
+      const isLive = item.startMs != null && item.endMs != null && now >= item.startMs && now < item.endMs;
+      setEventDetail({context: 'epg', channel: item.raw?.channel, event: item.raw?.event, isLive});
+    } else if (item.type === 'catchup') {
+      const event = item.raw;
+      const group = findCatchupGroupForEvent(event, catchup.groups);
+      setEventDetail({context: 'catchup', channel: catchupGroupToChannel(group) || catchupEventToChannel(event), event});
+    }
   };
 
   const restoredKey = session.focusedResultKey;
@@ -274,6 +293,29 @@ export function SearchPage({onPlayChannel, onPlayVod, onModalChange, active = tr
         )}
       </View>
       {detail ? <VodDetail item={detail} categories={vod.categories} onPlay={onPlayVod} /> : null}
+      {eventDetail ? (
+        <EpgEventModal
+          context={eventDetail.context}
+          channel={eventDetail.channel}
+          event={eventDetail.event}
+          isLive={eventDetail.isLive}
+          reminded={reminders.some((r) => r.id === reminderIdFor(eventDetail.event))}
+          onPlayLive={() => {
+            const channel = eventDetail.channel;
+            setEventDetail(null);
+            onPlayChannel(channel);
+          }}
+          onPlayCatchup={(event) => {
+            setEventDetail(null);
+            onPlayCatchup?.(event);
+          }}
+          onToggleReminder={() => {
+            const id = reminderIdFor(eventDetail.event);
+            if (reminders.some((r) => r.id === id)) removeReminder(id);
+            else addReminder(buildEventReminder(eventDetail.channel, eventDetail.event));
+          }}
+        />
+      ) : null}
     </View>
   );
 }

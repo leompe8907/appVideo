@@ -214,6 +214,29 @@ export function catchupEventToChannel(event) {
   };
 }
 
+/**
+ * Grupo de catchup de un evento: por `catchupGroupId` (que a veces trae el
+ * epgStreamId del grupo) o, si no hay, por el `epgStreamId` del evento.
+ */
+export function findCatchupGroupForEvent(event, groups) {
+  if (!event) return null;
+  const list = Array.isArray(groups) ? groups : [];
+  const gid = event.catchupGroupId ?? event.catchup_group_id;
+  if (gid != null && gid !== '') {
+    const match = list.find(
+      (g) =>
+        String(g?.catchupGroupId ?? g?.catchup_group_id ?? '') === String(gid) ||
+        String(g?.epgStreamId ?? g?.epg_stream_id ?? '') === String(gid),
+    );
+    if (match) return match;
+  }
+  const epgId = event.epgStreamId ?? event.epg_stream_id;
+  if (epgId != null && epgId !== '') {
+    return list.find((g) => String(g?.epgStreamId ?? g?.epg_stream_id ?? '') === String(epgId)) ?? null;
+  }
+  return null;
+}
+
 /** Objeto canal compatible con EpgEventModal a partir del grupo catchup. */
 export function catchupGroupToChannel(group) {
   if (!group) return null;

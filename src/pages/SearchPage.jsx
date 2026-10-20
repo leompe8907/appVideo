@@ -18,7 +18,7 @@ import EpgEventModal from '../components/epg/EpgEventModal';
 import VodDetailModal from '../components/vod/VodDetailModal';
 import VodDetailModalClassic from '../components/vod/VodDetailModalClassic';
 import { useBrandPlaceholderUrl } from '../hooks/useBrandPlaceholderUrl';
-import { catchupGroupToChannel, catchupEventToChannel } from '@appvideo/core/utils/catchupEvent';
+import { catchupGroupToChannel, catchupEventToChannel, findCatchupGroupForEvent } from '@appvideo/core/utils/catchupEvent';
 import '../styles/pages/_search.scss';
 
 function SearchTab({ id, label, active, hidden, onSelect }) {
@@ -285,26 +285,6 @@ export function SearchPage() {
     resultCount: visibleCount,
   });
 
-  const findCatchupGroupForEvent = useCallback((event, groups) => {
-    if (!event) return null;
-    const list = Array.isArray(groups) ? groups : [];
-    const gid = event.catchupGroupId ?? event.catchup_group_id;
-    if (gid != null && gid !== '') {
-      const match = list.find(
-        (g) =>
-          String(g?.catchupGroupId ?? g?.catchup_group_id ?? '') === String(gid) ||
-          String(g?.epgStreamId ?? g?.epg_stream_id ?? '') === String(gid),
-      );
-      if (match) return match;
-    }
-    const epgId = event.epgStreamId ?? event.epg_stream_id;
-    if (epgId != null && epgId !== '') {
-      return (
-        list.find((g) => String(g?.epgStreamId ?? g?.epg_stream_id ?? '') === String(epgId)) ?? null
-      );
-    }
-    return null;
-  }, []);
 
   const handleSelect = (item) => {
     if (!item) return;

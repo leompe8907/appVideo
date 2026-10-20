@@ -10,6 +10,7 @@ import {buildChannelLogoUrl} from '@appvideo/core/utils/bouquetLayoutConfig';
 import {getEpgEventTitle} from '@appvideo/core/utils/epgCurrentEvent';
 import {asMs, computeSlots} from '@appvideo/core/utils/epgSlots';
 import {EpgEventModal} from './EpgEventModal';
+import {buildEventReminder, reminderIdFor} from './reminders';
 import {RemoteImage} from '../components/RemoteImage';
 import {FocusRing} from '../components/FocusRing';
 import {formatTime} from '../epg';
@@ -97,7 +98,6 @@ export function EpgGuidePage({onPlayChannel, onPlayCatchup, onModalChange, activ
   const slotKeys = epgPast ? ['before', 'now', 'next', 'later'] : ['now', 'next', 'later'];
   const slotLabel = {before: t('epg.before'), now: t('epg.now'), next: t('epg.next'), later: t('epg.later')};
 
-  const reminderId = (event) => String(event?.event_id ?? event?.eventId ?? event?.id);
 
   const header = (
     <View style={[styles.tableHeader, {backgroundColor: colors.headerBg}]}>
@@ -166,7 +166,7 @@ export function EpgGuidePage({onPlayChannel, onPlayCatchup, onModalChange, activ
           channel={detail.channel}
           event={detail.event}
           isLive={detail.isLive}
-          reminded={reminders.some((r) => r.id === reminderId(detail.event))}
+          reminded={reminders.some((r) => r.id === reminderIdFor(detail.event))}
           onPlayLive={() => {
             const ch = detail.channel;
             setDetail(null);
@@ -177,16 +177,9 @@ export function EpgGuidePage({onPlayChannel, onPlayCatchup, onModalChange, activ
             onPlayCatchup(event);
           }}
           onToggleReminder={() => {
-            const id = reminderId(detail.event);
+            const id = reminderIdFor(detail.event);
             if (reminders.some((r) => r.id === id)) removeReminder(id);
-            else
-              addReminder({
-                id,
-                eventId: detail.event?.event_id ?? detail.event?.eventId ?? detail.event?.id,
-                title: getEpgEventTitle(detail.event),
-                startMs: startOf(detail.event),
-                channelStableId: getChannelStableId(detail.channel),
-              });
+            else addReminder(buildEventReminder(detail.channel, detail.event));
           }}
         />
       ) : null}

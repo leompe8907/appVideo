@@ -283,6 +283,7 @@ export function HomeScreen({navigate}) {
         onModalChange={setVodModalOpen}
         onPlayChannel={(channel) => playChannel(channel)}
         onPlayVod={playVod}
+        onPlayCatchup={playCatchup}
       />
     );
   } else if (section === 'vod') {
