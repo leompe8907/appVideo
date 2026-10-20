@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';
-import { formatFullDate } from '../../utils/osmsFormat';
+import { formatFullDate } from '@appvideo/core/utils/osmsFormat';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusElementSafe } from '../../navigation/spatialNavigation';
 

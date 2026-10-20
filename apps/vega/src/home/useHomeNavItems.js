@@ -4,6 +4,7 @@ import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
 import {hasTvRadioServiceBouquets} from '@appvideo/core/services/tvDataService';
 import {getSubscriberName} from '@appvideo/core/utils/userSession';
+import {useOsmsStore} from '@appvideo/core/store/osmsStore';
 
 const t = (key, opts) => i18n.t(key, opts);
 
@@ -17,6 +18,7 @@ const DEFAULT_ORDER = ['search', 'inicio', 'channels', 'vod', 'epg', 'catchup'];
  */
 export function useHomeNavItems() {
   const brand = getActiveBrandConfig();
+  const osmsUnread = useOsmsStore((st) => (brand?.features?.osms === true ? st.unreadCount : 0));
   const epg = usePreloadStore((s) => s.epg);
   const vod = usePreloadStore((s) => s.vod);
   const catchup = usePreloadStore((s) => s.catchup);
@@ -55,7 +57,7 @@ export function useHomeNavItems() {
 
   const order = brand?.layout?.navOrder || DEFAULT_ORDER;
   return {
-    account: {key: 'account', label: getSubscriberName() || t('sidebar.account'), icon: 'account'},
+    account: {key: 'account', label: getSubscriberName() || t('sidebar.account'), icon: 'account', badge: osmsUnread}, // badge: OSMS sin leer
     navItems: order.map((k) => items[k]).filter(Boolean),
   };
 }

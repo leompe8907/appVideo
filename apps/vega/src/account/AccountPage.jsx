@@ -12,6 +12,7 @@ import {QrCode} from '../components/QrCode';
 import {ConfirmModal} from '../components/ConfirmModal';
 import {resetHomeMemory} from '../homeMemory';
 import {ParentalSettings} from '../parental/ParentalSettings';
+import {OsmsPanel} from '../osms/OsmsPanel';
 import {ChangePasswordPanel, CloseAccountPanel, LinkedDevicesPanel} from './SecurityPanels';
 import {devLog} from '../devLog';
 import {createScaledStyles, px} from '../scaledStyles';
@@ -54,7 +55,7 @@ function MenuItem({label, active, danger, onPress, hasTVPreferredFocus, colors})
  * `account.links` / `account.sections`; los links se muestran como QR con
  * pasos; "Acerca de"; Refrescar; Cerrar sesión y Salir con confirmación.
  */
-export function AccountPage({navigate, active = true}) {
+export function AccountPage({navigate, active = true, initialSelected, openOsmId}) {
   const brand = getActiveBrandConfig();
   const account = brand?.account || {};
   const th = account.theme || {};
@@ -75,7 +76,8 @@ export function AccountPage({navigate, active = true}) {
   const sections = account.sections || {};
   const links = LINKS.filter((l) => account.links?.[l.key]?.enabled !== false);
   const deleteLink = account.links?.deleteAccount?.enabled !== false ? {key: 'deleteAccount', label: 'account.deleteAccount', step3: 'account.step3DeleteAccount'} : null;
-  const [selected, setSelected] = useState(links[0]?.key || 'about');
+  const osmsEnabled = brand?.features?.osms === true;
+  const [selected, setSelected] = useState(initialSelected || links[0]?.key || 'about');
   const [confirm, setConfirm] = useState(null); // 'logout' | 'exit'
   const loadEPG = usePreloadStore((s) => s.loadEPG);
   const loadVOD = usePreloadStore((s) => s.loadVOD);
@@ -166,6 +168,8 @@ export function AccountPage({navigate, active = true}) {
     content = <Text style={[styles.contentTitle, {color: colors.title}]}>{t('account.refresh')} ✓</Text>;
   } else if (selected === 'parental') {
     content = <ParentalSettings colors={colors} />;
+  } else if (selected === 'osms' && osmsEnabled) {
+    content = <OsmsPanel colors={colors} openOsmId={openOsmId} />;
   }
 
   return (
@@ -173,11 +177,14 @@ export function AccountPage({navigate, active = true}) {
       <ScrollView style={[styles.menu, {backgroundColor: colors.sidebarBg}]} contentContainerStyle={styles.menuInner}>
         <Text style={[styles.menuTitle, {color: colors.text}]}>{t('account.title')}</Text>
         {links.map((l, i) => (
-          <MenuItem key={l.key} label={t(l.label)} active={selected === l.key} colors={colors} hasTVPreferredFocus={active && i === 0} onPress={() => setSelected(l.key)} />
+          <MenuItem key={l.key} label={t(l.label)} active={selected === l.key} colors={colors} hasTVPreferredFocus={active && i === 0 && !initialSelected} onPress={() => setSelected(l.key)} />
         ))}
         {links.length ? <View style={[styles.divider, {backgroundColor: colors.divider}]} /> : null}
         {sections.parentalControl !== false && isParentalControlEnabledForBrand(brand) ? (
           <MenuItem label={t('account.advancedSettings')} active={selected === 'parental'} colors={colors} onPress={() => setSelected('parental')} />
+        ) : null}
+        {osmsEnabled ? (
+          <MenuItem label={t('account.messages', {defaultValue: 'Mensajes'})} active={selected === 'osms'} colors={colors} hasTVPreferredFocus={active && initialSelected === 'osms'} onPress={() => setSelected('osms')} />
         ) : null}
         {sections.about !== false ? (
           <MenuItem label={t('account.about')} active={selected === 'about'} colors={colors} hasTVPreferredFocus={active && links.length === 0} onPress={() => setSelected('about')} />

@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useBrand } from '../../contexts/BrandContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useOsmsStore } from '@appvideo/core/store/osmsStore';
-import { previewText } from '../../utils/osmsFormat';
+import { previewText } from '@appvideo/core/utils/osmsFormat';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';

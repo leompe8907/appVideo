@@ -9,7 +9,7 @@ import {
   formatFullDate,
   groupOsmsByDay,
   previewText,
-} from '../utils/osmsFormat';
+} from '@appvideo/core/utils/osmsFormat';
 import { useOsmsTvNav } from '../hooks/useOsmsTvNav';
 import '../styles/pages/_osms.scss';
 

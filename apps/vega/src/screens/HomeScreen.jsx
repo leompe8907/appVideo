@@ -22,6 +22,8 @@ import {useMostWatchedBouquet} from '../home/useMostWatchedBouquet';
 import {VodRecommendedRail} from '../home/VodRecommendedRail';
 import {VodDetail} from '../vod/VodDetail';
 import {ReminderHost} from '../epg/ReminderHost';
+import {useOsmsPolling} from '../osms/useOsmsPolling';
+import {OsmsNotification} from '../osms/OsmsNotification';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {getCatchupStreamId, getEventTitle} from '@appvideo/core/utils/catchupEvent';
 import {useHomeNavItems} from '../home/useHomeNavItems';
@@ -98,6 +100,16 @@ export function HomeScreen({navigate}) {
     rememberSection(key);
     setSection(key);
     setPreferredFocus(null);
+    setAccountTarget(null);
+  };
+
+  // Mensajes OSMS: sondeo mientras el home está montado; el aviso sale sobre el home (no sobre el video).
+  const osmsEnabled = brand?.features?.osms === true;
+  useOsmsPolling(osmsEnabled);
+  const [accountTarget, setAccountTarget] = useState(null); // {section: 'osms', openOsmId}
+  const openOsmsMessage = (openOsmId) => {
+    selectSection('account');
+    setAccountTarget({section: 'osms', openOsmId});
   };
 
   // Atrás: desde otra sección vuelve a Inicio (como HomeInputDispatcher); en Inicio, el sistema cierra la app.
@@ -306,7 +318,15 @@ export function HomeScreen({navigate}) {
       />
     );
   } else if (section === 'account') {
-    content = <AccountPage active={isFocused} navigate={navigate} />;
+    content = (
+      <AccountPage
+        key={accountTarget ? `osms-${accountTarget.openOsmId}` : 'account'}
+        active={isFocused}
+        navigate={navigate}
+        initialSelected={accountTarget?.section}
+        openOsmId={accountTarget?.openOsmId}
+      />
+    );
   } else {
     content = (
       <View style={styles.center}>
@@ -323,6 +343,7 @@ export function HomeScreen({navigate}) {
         {content}
       </View>
       <ReminderHost playerActive={!isFocused} onGoToChannel={(channel) => playChannel(channel)} />
+      <OsmsNotification visible={osmsEnabled && isFocused && !(section === 'account' && accountTarget?.section === 'osms')} onView={openOsmsMessage} />
       <Sidebar
         account={account}
         items={navItems}

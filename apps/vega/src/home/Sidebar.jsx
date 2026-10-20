@@ -30,6 +30,11 @@ function SidebarItem({item, active, expanded, focused, onFocus, onBlur, onPress,
     <Pressable ref={pressRef} onPress={onPress} onFocus={onFocus} onBlur={onBlur} style={styles.item}>
       <View style={styles.iconCell}>
         <Image source={ICONS[item.icon]} style={[styles.icon, {tintColor: color}]} />
+        {item.badge > 0 ? (
+          <View style={[styles.badge, {backgroundColor: accent}]}>
+            <Text style={styles.badgeText}>{item.badge > 9 ? '9+' : item.badge}</Text>
+          </View>
+        ) : null}
         {!expanded && highlighted ? <View style={[styles.railIndicator, {backgroundColor: accent}]} /> : null}
       </View>
       {expanded ? (
@@ -121,4 +126,6 @@ const styles = createScaledStyles({
   label: {fontSize: 38.4, fontWeight: '400'},
   labelWrap: {alignSelf: 'flex-start', maxWidth: '100%'},
   underline: {alignSelf: 'stretch', height: 2, borderRadius: 1, marginTop: 5.6},
+  badge: {position: 'absolute', top: 6, right: 22, minWidth: 26, height: 26, borderRadius: 13, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center'},
+  badgeText: {color: '#fff', fontSize: 16, fontWeight: '700'},
 });
