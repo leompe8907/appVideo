@@ -1,6 +1,6 @@
 /**
- * "¿Quién está viendo?" con los perfiles propios de Wind
- * (`features.profilesSource: 'externo'`; ver `windProfileSession.js`).
+ * "¿Quién está viendo?" con los perfiles del backend externo
+ * (`features.profilesSource: 'externo'`; ver `externalProfileSession.js`).
  *
  * - Al abrir la app vuelve a entrar sola al último perfil si no tiene PIN (o
  *   si la cuenta tiene un único perfil sin PIN). "Cambiar perfil" (Mi cuenta)
@@ -19,8 +19,8 @@ import ConfirmModal from '../components/ConfirmModal';
 import { MessageModal } from '../components/MessageModal';
 import ParentalPinGate from '../components/parental/ParentalPinGate';
 import AppIcon from '../components/AppIcon';
-import { WindProfileFormModal } from '../components/Profile/WindProfileFormModal';
-import { maxAgeLabel } from '../components/Profile/windProfileAge';
+import { ExternalProfileFormModal } from '../components/Profile/ExternalProfileFormModal';
+import { maxAgeLabel } from '../components/Profile/externalProfileAge';
 import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import { focusManager, createZoneId } from '../navigation/FocusManager';
 import { getProfileAvatars } from '../constants/images';
@@ -32,12 +32,12 @@ import {
   listProfiles,
   resetProfilePin,
   verifyProfilePin,
-} from '@appvideo/core/services/windProfilesService';
+} from '@appvideo/core/services/externalProfilesService';
 import {
   enterProfile,
   forgetActiveProfile,
   takeOverProfileLicense,
-} from '@appvideo/core/services/windProfileSession';
+} from '@appvideo/core/services/externalProfileSession';
 import { useActiveProfileStore } from '@appvideo/core/store/activeProfileStore';
 import '../styles/pages/_profile.scss';
 
@@ -48,7 +48,7 @@ function routeWithoutProfiles() {
   return getActiveLicense()?.licenseKey ? HOME_ROUTE : '/smartcard';
 }
 
-export function WindProfilePage() {
+export function ExternalProfilePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -217,7 +217,7 @@ export function WindProfilePage() {
   return (
     <div className="profile-page" style={backgroundPath ? { backgroundImage: `url(${backgroundPath})` } : {}}>
       {form && (
-        <WindProfileFormModal
+        <ExternalProfileFormModal
           mode={form.mode}
           profile={form.profile}
           currentPin={form.currentPin}
@@ -268,7 +268,7 @@ export function WindProfilePage() {
         {error && (
           <div className="profile-error">
             <p className="profile-error-text">{error}</p>
-            <div className="wind-profile-error-actions">
+            <div className="external-profile-error-actions">
               <FocusableButton className="profile-back-button" onClick={fetchProfiles}>
                 {t('common.retry', { defaultValue: 'Reintentar' })}
               </FocusableButton>
@@ -287,7 +287,7 @@ export function WindProfilePage() {
         ) : (
           <div className={`profiles-grid ${busyId != null ? 'profiles-grid-disabled' : ''}`}>
             {profiles.map((profile, index) => (
-              <WindProfileCard
+              <ExternalProfileCard
                 key={profile.id}
                 index={index}
                 profile={profile}
@@ -324,7 +324,7 @@ export function WindProfilePage() {
         )}
 
         {!isLoading && slots.total > 0 && (
-          <p className="wind-profile-slots">
+          <p className="external-profile-slots">
             {t('profile.slotsInfo', {
               used: slots.used,
               total: slots.total,
@@ -343,7 +343,7 @@ export function WindProfilePage() {
   );
 }
 
-function WindProfileCard({ profile, index, imageUrl, isBusy, disabled, isTV, onSelect, onEdit, onForgotPin }) {
+function ExternalProfileCard({ profile, index, imageUrl, isBusy, disabled, isTV, onSelect, onEdit, onForgotPin }) {
   const { t } = useTranslation();
   const activate = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -386,7 +386,7 @@ function WindProfileCard({ profile, index, imageUrl, isBusy, disabled, isTV, onS
             )}
           </div>
           {profile.hasPin && (
-            <span className="wind-profile-lock" aria-label={t('profile.hasPin', { defaultValue: 'Con PIN' })}>
+            <span className="external-profile-lock" aria-label={t('profile.hasPin', { defaultValue: 'Con PIN' })}>
               <AppIcon name="lock" size={16} />
             </span>
           )}
@@ -394,7 +394,7 @@ function WindProfileCard({ profile, index, imageUrl, isBusy, disabled, isTV, onS
         </div>
         <div className="profile-name">{profile.name}</div>
         {(profile.isKids || profile.maxAge != null) && (
-          <div className="wind-profile-badge">
+          <div className="external-profile-badge">
             {profile.isKids ? t('profile.kidsBadge', { defaultValue: 'Infantil' }) : null}
             {profile.isKids && profile.maxAge != null ? ' · ' : null}
             {profile.maxAge != null ? maxAgeLabel(t, profile.maxAge) : null}
@@ -419,7 +419,7 @@ function WindProfileCard({ profile, index, imageUrl, isBusy, disabled, isTV, onS
 function ResetPinModal({ profile, onClose, onDone }) {
   const { t } = useTranslation();
   const rootRef = useRef(null);
-  const [zoneId] = useState(() => createZoneId('wind-reset-pin'));
+  const [zoneId] = useState(() => createZoneId('external-reset-pin'));
   const [password, setPassword] = useState('');
   const [newPin, setNewPin] = useState('');
   const [error, setError] = useState(null);
@@ -456,13 +456,13 @@ function ResetPinModal({ profile, onClose, onDone }) {
 
   return (
     <div ref={rootRef} className="create-profile-overlay" role="dialog" aria-modal="true">
-      <div className="create-profile-modal create-profile-modal--wizard create-profile-modal--wind">
+      <div className="create-profile-modal create-profile-modal--wizard create-profile-modal--external">
         <h2 className="create-profile-title">{t('profile.forgotPin', { defaultValue: 'Olvidé el PIN' })}: {profile.name}</h2>
         <form onSubmit={handleSubmit} className="create-profile-form">
           <div className="form-group">
-            <label htmlFor="wind-reset-password">{t('profile.accountPassword', { defaultValue: 'Contraseña de la cuenta' })}</label>
+            <label htmlFor="external-reset-password">{t('profile.accountPassword', { defaultValue: 'Contraseña de la cuenta' })}</label>
             <FocusableInput
-              id="wind-reset-password"
+              id="external-reset-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -471,9 +471,9 @@ function ResetPinModal({ profile, onClose, onDone }) {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="wind-reset-pin">{t('profile.newPinOptional', { defaultValue: 'PIN nuevo (vacío para quitarlo)' })}</label>
+            <label htmlFor="external-reset-pin">{t('profile.newPinOptional', { defaultValue: 'PIN nuevo (vacío para quitarlo)' })}</label>
             <FocusableInput
-              id="wind-reset-pin"
+              id="external-reset-pin"
               type="password"
               inputMode="numeric"
               value={newPin}
@@ -498,4 +498,4 @@ function ResetPinModal({ profile, onClose, onDone }) {
   );
 }
 
-export default WindProfilePage;
+export default ExternalProfilePage;

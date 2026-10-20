@@ -48,7 +48,7 @@ const initial = {
 };
 
 /**
- * Edad máxima del perfil de Wind activo (`null` = sin límite). Va antes que el
+ * Edad máxima del perfil externo activo (`null` = sin límite). Va antes que el
  * control parental de la app y no se desbloquea con PIN: para ver ese
  * contenido hay que cambiar de perfil. Sin clasificación cuenta como apto,
  * salvo el contenido marcado para adultos (`parentalControl`), que es 18.

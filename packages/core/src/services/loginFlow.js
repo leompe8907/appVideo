@@ -121,7 +121,7 @@ let pendingDeviceSession = null;
 
 /**
  * Espera a que haya JWT del backend externo. El login lo obtiene en segundo
- * plano (`maybeEstablishDeviceSession` sin `await`), pero los perfiles de Wind
+ * plano (`maybeEstablishDeviceSession` sin `await`), pero los perfiles externos
  * lo necesitan antes de elegir la licencia. Nunca lanza.
  * @param {number} [timeoutMs]
  * @returns {Promise<boolean>} `true` si hay JWT.
@@ -270,7 +270,7 @@ async function activateLicenseWithContentCheck(service, license, options = {}) {
 }
 
 /**
- * Activa una licencia concreta (por ejemplo la de un perfil de Wind) y
+ * Activa una licencia concreta (por ejemplo la de un perfil externo) y
  * confirma que trae contenido. No lanza: `null` si no se pudo (en uso con
  * `failIfInUse`, sin contenido, error de red).
  * @param {{ key: string, pin: string }} license

@@ -21,7 +21,7 @@ export function getInitialRoute(brandConfig) {
  * De dónde salen los perfiles (`features.profilesSource`): `'panaccess'` (por
  * defecto, los de PanAccess) o `'externo'` (los del backend externo de la
  * marca, hoy solo Wind: `/api/v1/profiles/`). Con `'externo'` la licencia la
- * elige el perfil (ver `windProfileSession.js`).
+ * elige el perfil (ver `externalProfileSession.js`).
  */
 export const PROFILE_SOURCE_EXTERNAL = 'externo';
 

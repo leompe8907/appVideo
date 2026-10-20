@@ -27,7 +27,7 @@ import { usesExternalProfiles } from '@appvideo/core/utils/navigation';
 const SplashPage = lazy(() => import('./pages/SplashPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const WindProfilePage = lazy(() => import('./pages/WindProfilePage'));
+const ExternalProfilePage = lazy(() => import('./pages/ExternalProfilePage'));
 const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
 const TvRadioServicesPage = lazy(() => import('./pages/TvRadioServicesPage'));
 const VodPage = lazy(() => import('./pages/VodPage'));
@@ -166,7 +166,7 @@ function App() {
                 <Route path="/" element={<Suspense fallback={<Loading />}><SplashPage /></Suspense>}/>
                 <Route path="/login" element={<Suspense fallback={<Loading />}><LoginPage /></Suspense>}/>
                 {/* Rutas protegidas */}
-                <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<Loading />}>{usesExternalProfiles(currentBrand) ? <WindProfilePage /> : <ProfilePage />}</Suspense></ProtectedRoute>}/>
+                <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<Loading />}>{usesExternalProfiles(currentBrand) ? <ExternalProfilePage /> : <ProfilePage />}</Suspense></ProtectedRoute>}/>
                 <Route path="/smartcard" element={<ProtectedRoute><Suspense fallback={<Loading />}><SmartCardPage /></Suspense></ProtectedRoute>}/>
                 <Route path="/preload" element={<ProtectedRoute><Suspense fallback={<Loading />}><PreloadDataPage /></Suspense></ProtectedRoute>}/>
                 <Route path="/inicio" element={<Navigate to="/home/inicio" replace />}/>

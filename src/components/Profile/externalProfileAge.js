@@ -1,4 +1,4 @@
-/** Edad máxima de un perfil de Wind: escala de Brasil (la del backend y de `parentalRatingBR.js`). */
+/** Edad máxima de un perfil externo: escala de Brasil (la del backend y de `parentalRatingBR.js`). */
 
 // null = sin límite.
 export const MAX_AGE_OPTIONS = [null, 0, 10, 12, 14, 16, 18];

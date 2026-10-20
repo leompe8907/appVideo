@@ -1,5 +1,5 @@
 /**
- * Crear o editar un perfil de Wind (`windProfilesService.js`): nombre, avatar,
+ * Crear o editar un perfil externo (`externalProfilesService.js`): nombre, avatar,
  * infantil, edad máxima y PIN propio del perfil (opcional, de 4 a 6 dígitos;
  * NO es el PIN de la tarjeta). Al editar un perfil con PIN, quien abre el
  * modal ya lo verificó y lo pasa en `currentPin` para el PATCH/DELETE.
@@ -13,14 +13,14 @@ import { FocusableButton } from '../navigation/FocusableButton';
 import { AvatarOption } from './AvatarOption';
 import ConfirmModal from '../ConfirmModal';
 import { getProfileAvatars } from '../../constants/images';
-import { MAX_AGE_OPTIONS, maxAgeLabel } from './windProfileAge';
+import { MAX_AGE_OPTIONS, maxAgeLabel } from './externalProfileAge';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusElementSafe } from '../../navigation/spatialNavigation';
 import {
   createProfile,
   deleteProfile,
   updateProfile,
-} from '@appvideo/core/services/windProfilesService';
+} from '@appvideo/core/services/externalProfilesService';
 
 const KIDS_DEFAULT_MAX_AGE = 10;
 const PIN_RE = /^\d{4,6}$/;
@@ -40,7 +40,7 @@ function errorMessage(t, err, fallback) {
   }
 }
 
-export function WindProfileFormModal({ mode, profile, currentPin, onClose, onSaved, onDeleted }) {
+export function ExternalProfileFormModal({ mode, profile, currentPin, onClose, onSaved, onDeleted }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
   const { currentBrand } = useBrand();
@@ -57,7 +57,7 @@ export function WindProfileFormModal({ mode, profile, currentPin, onClose, onSav
   const [error, setError] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const rootRef = useRef(null);
-  const [zoneId] = useState(() => createZoneId('wind-profile-form'));
+  const [zoneId] = useState(() => createZoneId('external-profile-form'));
 
   useEffect(() => {
     focusManager.push(zoneId, { containerEl: rootRef.current, onBack: () => onClose?.() });
@@ -67,7 +67,7 @@ export function WindProfileFormModal({ mode, profile, currentPin, onClose, onSav
 
   useEffect(() => {
     if (!isTV) return undefined;
-    const timer = setTimeout(() => focusElementSafe(document.getElementById('wind-profile-name')), 300);
+    const timer = setTimeout(() => focusElementSafe(document.getElementById('external-profile-name')), 300);
     return () => clearTimeout(timer);
   }, [isTV]);
 
@@ -125,7 +125,7 @@ export function WindProfileFormModal({ mode, profile, currentPin, onClose, onSav
   };
 
   return (
-    <div ref={rootRef} className="create-profile-overlay" role="dialog" aria-modal="true" aria-labelledby="wind-profile-title">
+    <div ref={rootRef} className="create-profile-overlay" role="dialog" aria-modal="true" aria-labelledby="external-profile-title">
       <ConfirmModal
         open={confirmDelete}
         title={t('profile.deleteTitle')}
@@ -135,16 +135,16 @@ export function WindProfileFormModal({ mode, profile, currentPin, onClose, onSav
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
       />
-      <div className="create-profile-modal create-profile-modal--wizard create-profile-modal--wind">
-        <h2 id="wind-profile-title" className="create-profile-title">
+      <div className="create-profile-modal create-profile-modal--wizard create-profile-modal--external">
+        <h2 id="external-profile-title" className="create-profile-title">
           {isEdit ? t('profile.editTitle') : t('profile.createTitle')}
         </h2>
 
         <form onSubmit={handleSubmit} className="create-profile-form">
           <div className="form-group">
-            <label htmlFor="wind-profile-name">{t('profile.createName')}</label>
+            <label htmlFor="external-profile-name">{t('profile.createName')}</label>
             <FocusableInput
-              id="wind-profile-name"
+              id="external-profile-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -173,7 +173,7 @@ export function WindProfileFormModal({ mode, profile, currentPin, onClose, onSav
           <div className="form-group">
             <FocusableButton
               type="button"
-              className={`wind-profile-toggle ${isKids ? 'active' : ''}`}
+              className={`external-profile-toggle ${isKids ? 'active' : ''}`}
               aria-pressed={isKids}
               onClick={toggleKids}
               disabled={isSubmitting}
@@ -184,12 +184,12 @@ export function WindProfileFormModal({ mode, profile, currentPin, onClose, onSav
 
           <div className="form-group">
             <label>{t('profile.maxAgeLabel', { defaultValue: 'Contenido permitido hasta' })}</label>
-            <div className="wind-profile-chips" role="group">
+            <div className="external-profile-chips" role="group">
               {MAX_AGE_OPTIONS.map((value) => (
                 <FocusableButton
                   key={String(value)}
                   type="button"
-                  className={`wind-profile-chip ${maxAge === value ? 'active' : ''}`}
+                  className={`external-profile-chip ${maxAge === value ? 'active' : ''}`}
                   aria-pressed={maxAge === value}
                   onClick={() => setMaxAge(value)}
                   disabled={isSubmitting}
@@ -201,13 +201,13 @@ export function WindProfileFormModal({ mode, profile, currentPin, onClose, onSav
           </div>
 
           <div className="form-group">
-            <label htmlFor="wind-profile-pin">
+            <label htmlFor="external-profile-pin">
               {isEdit && profile?.hasPin
                 ? t('profile.changePin', { defaultValue: 'Nuevo PIN (vacío para no cambiarlo)' })
                 : t('profile.createPin')}
             </label>
             <FocusableInput
-              id="wind-profile-pin"
+              id="external-profile-pin"
               type="password"
               inputMode="numeric"
               value={newPin}
@@ -220,7 +220,7 @@ export function WindProfileFormModal({ mode, profile, currentPin, onClose, onSav
             {isEdit && profile?.hasPin && (
               <FocusableButton
                 type="button"
-                className={`wind-profile-toggle ${removePin ? 'active' : ''}`}
+                className={`external-profile-toggle ${removePin ? 'active' : ''}`}
                 aria-pressed={removePin}
                 onClick={() => setRemovePin((v) => !v)}
                 disabled={isSubmitting}
@@ -258,4 +258,4 @@ export function WindProfileFormModal({ mode, profile, currentPin, onClose, onSav
   );
 }
 
-export default WindProfileFormModal;
+export default ExternalProfileFormModal;

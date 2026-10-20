@@ -74,7 +74,7 @@ describe('parentalGateStore: TTL de desbloqueo de canal por marca', () => {
 
 const { useActiveProfileStore } = await import('../activeProfileStore');
 
-describe('edad máxima del perfil de Wind', () => {
+describe('edad máxima del perfil externo', () => {
   beforeEach(() => {
     parentalState = { enabled: false };
     useParentalGateStore.getState().closeGate();
@@ -103,7 +103,7 @@ describe('edad máxima del perfil de Wind', () => {
     expect(unrated).toHaveBeenCalled();
   });
 
-  it('un perfil sin límite o sin perfil de Wind no cambia nada', () => {
+  it('un perfil sin límite o sin perfil externo no cambia nada', () => {
     useActiveProfileStore.getState().setActiveProfile({ id: 1, name: 'Papá', source: 'externo', maxAge: null });
     const playFn = vi.fn();
 

@@ -8,7 +8,7 @@
  * Con perfiles externos (`features.profilesSource: 'externo'`, hoy Wind) también guarda la
  * política del perfil (`maxAge`, `isKids`, `hasPin`) y la licencia que se
  * consiguió al entrar (`licenseSn`, `loan`: si es un préstamo). Ver
- * `services/windProfileSession.js`.
+ * `services/externalProfileSession.js`.
  *
  * `clearBrandStorage` (ver `utils/brandStorage.js`) ya borra esta clave
  * automáticamente en todo logout (cae bajo el prefijo `{brand}.`, igual que

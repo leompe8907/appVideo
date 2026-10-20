@@ -1,11 +1,11 @@
 /**
- * Perfiles propios de Wind (`/api/v1/profiles/`), con el mismo JWT de
+ * Perfiles del backend externo de la marca (`/api/v1/profiles/`, hoy Wind), con el mismo JWT de
  * "dispositivos vinculados" (`deviceAuthService.js`). Contrato en el repo de
  * Back-Wind-V2: docs/IMPLEMENTACION_PERFILES_WIND_2026-10-15.md.
  *
- * Un perfil de Wind lleva una licencia de streaming de la cuenta. Para
+ * Un perfil externo lleva una licencia de streaming de la cuenta. Para
  * reproducir, la app sigue activando la licencia con `setStreamingLicense`
- * como siempre; Wind solo dice cuál (`selectProfile` devuelve las candidatas
+ * como siempre; el backend solo dice cuál (`selectProfile` devuelve las candidatas
  * en orden) y registra cuál se consiguió (`confirmProfileLicense`). Las
  * funciones de perfiles de PanAccess no se usan.
  *

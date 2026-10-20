@@ -20,7 +20,7 @@ export function ParentalGateHost() {
   }, [gate?.title, gate?.channel?.name, t]);
 
   const isSetupPin = gate?.gateKind === 'setupPin';
-  // Contenido por encima de la edad del perfil de Wind: no se desbloquea con PIN.
+  // Contenido por encima de la edad del perfil externo: no se desbloquea con PIN.
   const isProfileAge = gate?.gateKind === 'profileAge';
 
   return (

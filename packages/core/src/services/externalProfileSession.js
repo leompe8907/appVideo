@@ -1,8 +1,8 @@
 /**
- * Entrar a un perfil de Wind: el backend dice qué licencias puede usar el
+ * Entrar a un perfil externo: el backend dice qué licencias puede usar el
  * perfil (la suya primero, después las libres para préstamo) y la app las
  * prueba en orden con `setStreamingLicense(..., failIfInUse: true)`, como ya
- * hace al iniciar sesión. PanAccess decide cuál está en uso; Wind solo se
+ * hace al iniciar sesión. PanAccess decide cuál está en uso; el backend solo se
  * entera de cuál se consiguió (`confirmProfileLicense`), para atribuir la
  * telemetría al perfil.
  *
@@ -16,12 +16,12 @@ import * as userSession from '../utils/userSession';
 import { getLicenseKey, getLicensePin } from '../utils/licenseProducts';
 import { useActiveProfileStore } from '../store/activeProfileStore';
 import { activateLicense, getLicensesWithPins } from './loginFlow';
-import { confirmProfileLicense, selectProfile } from './windProfilesService';
+import { confirmProfileLicense, selectProfile } from './externalProfilesService';
 import { syncPreferencesFromBackend } from './preferencesSyncService';
 
 function devWarn(label, error) {
   if (import.meta.env.DEV) {
-    console.warn(`[windProfileSession] ${label}:`, error?.message || error);
+    console.warn(`[externalProfileSession] ${label}:`, error?.message || error);
   }
 }
 

@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Entrar a un perfil de Wind: probar las licencias que da el backend en orden,
+ * Entrar a un perfil externo: probar las licencias que da el backend en orden,
  * confirmar la que funcionó y guardar el perfil JUNTO con esa licencia (antes,
  * con los perfiles de PanAccess, la licencia guardada no cambiaba al elegir
  * perfil y la recuperación del reproductor volvía a una licencia vieja).
  */
 
-vi.mock('../windProfilesService', () => ({
+vi.mock('../externalProfilesService', () => ({
   selectProfile: vi.fn(),
   confirmProfileLicense: vi.fn(async () => ({ success: true })),
 }));
@@ -22,12 +22,12 @@ vi.mock('../../utils/userSession', () => ({
   setActiveLicense: vi.fn(),
 }));
 
-import { selectProfile, confirmProfileLicense } from '../windProfilesService';
+import { selectProfile, confirmProfileLicense } from '../externalProfilesService';
 import { activateLicense, getLicensesWithPins } from '../loginFlow';
 import { syncPreferencesFromBackend } from '../preferencesSyncService';
 import { setActiveLicense } from '../../utils/userSession';
 import { useActiveProfileStore } from '../../store/activeProfileStore';
-import { enterProfile, takeOverProfileLicense } from '../windProfileSession';
+import { enterProfile, takeOverProfileLicense } from '../externalProfileSession';
 
 const BRAND = { brand: 'wind' };
 const PROFILE = { id: 7, name: 'Peque', avatarId: 88, isKids: true, maxAge: 10, hasPin: false };

@@ -1,12 +1,12 @@
 /**
- * Perfiles de Wind (`WindProfilePage.jsx`, `WindProfileFormModal.jsx`): lo que
+ * Perfiles externos (`ExternalProfilePage.jsx`, `ExternalProfileFormModal.jsx`): lo que
  * no existe en `_profile.scss` / `_create-profile.scss`.
  */
 
 @use '../variables' as *;
 
 .profile-page {
-  .wind-profile-lock {
+  .external-profile-lock {
     position: absolute;
     right: 6px;
     bottom: 6px;
@@ -17,14 +17,14 @@
     color: #fff;
   }
 
-  .wind-profile-badge {
+  .external-profile-badge {
     margin-top: $spacing-xs;
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.7);
     text-align: center;
   }
 
-  .wind-profile-slots {
+  .external-profile-slots {
     margin-top: $spacing-sm;
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.6);
@@ -32,7 +32,7 @@
   }
 
   // Sin `gap` en flexbox: varios WebKit de Smart TV no lo soportan (ver _create-profile.scss).
-  .wind-profile-error-actions {
+  .external-profile-error-actions {
     display: flex;
     justify-content: center;
     margin-top: $spacing-sm;
@@ -43,9 +43,9 @@
   }
 }
 
-// El formulario de Wind es más largo que el wizard de PanAccess: alto máximo con scroll y
+// El formulario de perfiles externos es más largo que el wizard de PanAccess: alto máximo con scroll y
 // avatares más chicos, para que la edad, el PIN y los botones entren en una pantalla de TV.
-.create-profile-modal.create-profile-modal--wind {
+.create-profile-modal.create-profile-modal--external {
   overflow-y: auto;
 
   .create-profile-avatar-option {
@@ -55,7 +55,7 @@
 }
 
 .create-profile-modal {
-  .wind-profile-chips {
+  .external-profile-chips {
     display: flex;
     flex-wrap: wrap;
 
@@ -64,8 +64,8 @@
     }
   }
 
-  .wind-profile-chip,
-  .wind-profile-toggle {
+  .external-profile-chip,
+  .external-profile-toggle {
     padding: $spacing-xs $spacing-sm;
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: $border-radius-md;
@@ -86,7 +86,7 @@
     }
   }
 
-  .wind-profile-toggle {
+  .external-profile-toggle {
     margin-top: $spacing-xs;
   }
 }
