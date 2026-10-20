@@ -55,7 +55,7 @@ const initial = {
  */
 function profileMaxAge() {
   const profile = useActiveProfileStore.getState();
-  return profile?.source === 'wind' && Number.isFinite(profile.maxAge) ? profile.maxAge : null;
+  return profile?.source === 'externo' && Number.isFinite(profile.maxAge) ? profile.maxAge : null;
 }
 
 function exceedsProfileAge(rating, isAdult) {

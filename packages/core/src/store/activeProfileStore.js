@@ -5,7 +5,7 @@
  * `ProfilePage.jsx` sin depender de otro round-trip a la API -- se guarda
  * acá en el momento exacto en que el usuario selecciona un perfil.
  *
- * Con perfiles de Wind (`features.profilesSource: 'wind'`) también guarda la
+ * Con perfiles externos (`features.profilesSource: 'externo'`, hoy Wind) también guarda la
  * política del perfil (`maxAge`, `isKids`, `hasPin`) y la licencia que se
  * consiguió al entrar (`licenseSn`, `loan`: si es un préstamo). Ver
  * `services/windProfileSession.js`.
@@ -26,7 +26,7 @@ const initial = {
   id: null,
   name: '',
   imageId: null,
-  source: null, // 'wind' | null (perfil de PanAccess)
+  source: null, // 'externo' | null (perfil de PanAccess)
   maxAge: null,
   isKids: false,
   hasPin: false,
@@ -43,7 +43,7 @@ function normalize(data = {}) {
     id: data.id ?? null,
     name: typeof data.name === 'string' ? data.name : '',
     imageId: finiteOrNull(data.imageId),
-    source: data.source === 'wind' ? 'wind' : null,
+    source: data.source === 'externo' ? 'externo' : null,
     maxAge: finiteOrNull(data.maxAge),
     isKids: data.isKids === true,
     hasPin: data.hasPin === true,

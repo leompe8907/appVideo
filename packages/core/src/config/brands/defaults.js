@@ -389,6 +389,8 @@ export default {
   },
   "features": {
     "profiles": false,
+    // 'panaccess' (perfiles de PanAccess) | 'externo' (backend externo de la marca, ver navigation.js).
+    "profilesSource": "panaccess",
     "showRating": true,
     "osms": false,
     "osmsInline": true,

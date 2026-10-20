@@ -38,7 +38,7 @@ async function finishEntering(profile, license, loan, selection) {
     id: profile.id,
     name: profile.name,
     imageId: profile.avatarId,
-    source: 'wind',
+    source: 'externo',
     maxAge: profile.maxAge,
     isKids: profile.isKids,
     hasPin: profile.hasPin,

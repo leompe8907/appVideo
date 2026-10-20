@@ -1,6 +1,6 @@
 /**
  * "¿Quién está viendo?" con los perfiles propios de Wind
- * (`features.profilesSource: 'wind'`; ver `windProfileSession.js`).
+ * (`features.profilesSource: 'externo'`; ver `windProfileSession.js`).
  *
  * - Al abrir la app vuelve a entrar sola al último perfil si no tiene PIN (o
  *   si la cuenta tiene un único perfil sin PIN). "Cambiar perfil" (Mi cuenta)
@@ -87,7 +87,7 @@ export function WindProfilePage() {
       } else {
         // Cuenta sin licencias sincronizadas todavía: elegir tarjeta como siempre.
         useActiveProfileStore.getState().setActiveProfile({
-          id: profile.id, name: profile.name, imageId: profile.avatarId, source: 'wind',
+          id: profile.id, name: profile.name, imageId: profile.avatarId, source: 'externo',
           maxAge: profile.maxAge, isKids: profile.isKids, hasPin: profile.hasPin,
         });
         navigate('/smartcard', { replace: true });

@@ -18,7 +18,7 @@ import { isDeviceSessionEnabled } from '@appvideo/core/services/deviceAuthServic
 import { clearSessionBeforeNewLogin } from '@appvideo/core/services/loginFlow';
 import { exitAppBestEffort } from '../utils/tvNavigation';
 import { getActiveLicense, getCredentials } from '@appvideo/core/utils/userSession';
-import { usesWindProfiles } from '@appvideo/core/utils/navigation';
+import { usesExternalProfiles } from '@appvideo/core/utils/navigation';
 import { useActiveProfileStore } from '@appvideo/core/store/activeProfileStore';
 import '../styles/pages/_mi-cuenta.scss';
 
@@ -63,11 +63,11 @@ export function MiCuentaPage() {
   // salida de esa pantalla era cerrar sesión completa. Solo tiene sentido
   // si la marca usa perfiles (mismo flag que decide el redirect post-login
   // en utils/navigation.js), si no hay nada a qué "cambiar".
-  // Con perfiles de Wind, solo si la cuenta los tiene (si el backend no los
+  // Con perfiles externos (Wind), solo si la cuenta los tiene (si el backend no los
   // encendió para ella, no hay perfil activo y /profile volvería al inicio).
   const activeProfileId = useActiveProfileStore((s) => s.id);
   const changeProfileEnabled =
-    currentBrand?.features?.profiles === true && (!usesWindProfiles(currentBrand) || activeProfileId != null);
+    currentBrand?.features?.profiles === true && (!usesExternalProfiles(currentBrand) || activeProfileId != null);
   // En TV los paneles nativos se habilitan por sección: FocusableInput abre el
   // teclado OSD (con grilla numérica para el OTP), así que ya no hace falta el QR.
   const isNativeFlowEnabledForBrand = isDeviceSessionEnabled(currentBrand);

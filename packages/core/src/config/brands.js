@@ -72,6 +72,9 @@
  *
  * @param {Object} features - Funcionalidades activas o no para esta marca:
  *   @param {boolean} features.profiles - true: tras login redirige a /profile; false: redirige a /smartcard.
+ *   @param {'panaccess'|'externo'} [features.profilesSource='panaccess'] - De dónde salen los perfiles:
+ *     'panaccess' (los de PanAccess) o 'externo' (los del backend externo de la marca, con la licencia
+ *     elegida por el perfil; hoy solo Wind). Solo aplica con `features.profiles: true`.
  *   @param {boolean} features.showRating - true: muestra la clasificación/rating de contenido; false: la oculta.
  *   @param {boolean} features.osms - true: habilita la integración OSMS y su menú; false: la deshabilita.
  *   @param {boolean} [features.osmsInline=false] - Solo aplica si features.osms es true. true: "Mensajes"

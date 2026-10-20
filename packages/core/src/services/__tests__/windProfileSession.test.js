@@ -66,7 +66,7 @@ describe('enterProfile', () => {
     expect(confirmProfileLicense).toHaveBeenCalledWith(7, { licenseSn: 'SN1', confirmToken: 'tok' });
     expect(setActiveLicense).toHaveBeenCalledWith({ licenseKey: 'SN1', pin: '1111' });
     const stored = useActiveProfileStore.getState();
-    expect(stored).toMatchObject({ id: 7, source: 'wind', maxAge: 10, licenseSn: 'SN1', loan: false, imageId: 88 });
+    expect(stored).toMatchObject({ id: 7, source: 'externo', maxAge: 10, licenseSn: 'SN1', loan: false, imageId: 88 });
     expect(syncPreferencesFromBackend).toHaveBeenCalled();
   });
 

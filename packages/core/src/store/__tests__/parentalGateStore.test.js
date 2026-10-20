@@ -81,7 +81,7 @@ describe('edad máxima del perfil de Wind', () => {
   });
 
   it('bloquea sin PIN lo que supera la edad del perfil, aunque el control parental esté apagado', () => {
-    useActiveProfileStore.getState().setActiveProfile({ id: 1, name: 'Peque', source: 'wind', maxAge: 10 });
+    useActiveProfileStore.getState().setActiveProfile({ id: 1, name: 'Peque', source: 'externo', maxAge: 10 });
     const playFn = vi.fn();
 
     useParentalGateStore.getState().requestPlayMedia({ item: { id: 'm1' }, ratingRaw: '14', playFn });
@@ -91,7 +91,7 @@ describe('edad máxima del perfil de Wind', () => {
   });
 
   it('contenido para adultos cuenta como 18 y sin clasificación como apto', () => {
-    useActiveProfileStore.getState().setActiveProfile({ id: 1, name: 'Peque', source: 'wind', maxAge: 16 });
+    useActiveProfileStore.getState().setActiveProfile({ id: 1, name: 'Peque', source: 'externo', maxAge: 16 });
     const adult = vi.fn();
     const unrated = vi.fn();
 
@@ -104,7 +104,7 @@ describe('edad máxima del perfil de Wind', () => {
   });
 
   it('un perfil sin límite o sin perfil de Wind no cambia nada', () => {
-    useActiveProfileStore.getState().setActiveProfile({ id: 1, name: 'Papá', source: 'wind', maxAge: null });
+    useActiveProfileStore.getState().setActiveProfile({ id: 1, name: 'Papá', source: 'externo', maxAge: null });
     const playFn = vi.fn();
 
     useParentalGateStore.getState().requestPlayMedia({ item: { id: 'm1' }, ratingRaw: '18', playFn });

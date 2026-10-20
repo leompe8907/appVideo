@@ -374,6 +374,7 @@ export default {
   },
   "features": {
     "profiles": false,
+    "profilesSource": "panaccess",
     "showRating": true,
     "osms": true,
     "osmsInline": true,
