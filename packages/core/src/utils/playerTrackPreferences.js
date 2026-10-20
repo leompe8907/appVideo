@@ -12,7 +12,8 @@ import {
   setChannelData,
   setPlayerAudioLang,
   setPlayerSubtitleLang,
-} from '@appvideo/core/utils/userPreferences';
+} from './userPreferences';
+import { getLanguage } from '../platform/runtime';
 
 const PROP_AUDIO = 'audio';
 const PROP_SUBTITLES = 'subtitles';
@@ -58,7 +59,7 @@ export function getPlaybackChannelKey(playback) {
 
 /** Fallback de audio como 10foot: Device.getLanguageIso6392() → match por language. */
 export function getDeviceAudioLanguageFallback() {
-  const raw = (navigator.language || navigator.userLanguage || '').toLowerCase();
+  const raw = String(getLanguage() || '').toLowerCase();
   const two = raw.split('-')[0];
   return ISO6392_FROM_BROWSER[two] || two;
 }

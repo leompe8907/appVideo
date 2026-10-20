@@ -13,7 +13,7 @@ import {
   getSavedTrackPreferences,
   persistAudioPreference,
   persistSubtitlePreference,
-} from '../utils/playerTrackPreferences';
+} from '@appvideo/core/utils/playerTrackPreferences';
 import { getSavedVolumePreference, saveVolumePreference } from '../utils/playerVolumePreference';
 
 const PlayerContext = createContext(null);

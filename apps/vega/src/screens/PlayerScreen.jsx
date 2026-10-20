@@ -22,7 +22,19 @@ import {getTheme} from '../theme';
 import {createScaledStyles, px} from '../scaledStyles';
 import {rememberChannel, rememberSection} from '../homeMemory';
 import {devLog} from '../devLog';
+import {applySavedTrackPreferences, persistAudioPreference, persistSubtitlePreference} from '@appvideo/core/utils/playerTrackPreferences';
+import {resolveBrandId} from '@appvideo/core/utils/brandStorage';
 import telemetryService from '@appvideo/core/services/telemetryService';
+
+// Memoria de audio/subtítulos por canal (playerTrackPreferences de core, igual que la web).
+const brandId = () => resolveBrandId(getActiveBrandConfig()?.brand);
+const playbackOf = (channel) => ({type: 'service', id: channel?.id, item: channel});
+// VegaHlsPlayer apaga subtítulos con selectTextTrack(null): no necesita setSubtitlesEnabled.
+const trackEngine = (p) => ({
+  selectAudioTrack: (id) => (p.selectAudioTrack(id), true),
+  setSubtitlesEnabled: () => true,
+  selectTextTrack: (id) => (p.selectTextTrack(id), true),
+});
 
 const t = (key, opts) => i18n.t(key, opts);
 const ZAP_DELAY_MS = 600;
@@ -264,6 +276,7 @@ export function PlayerScreen({params, navigate}) {
       return undefined;
     }
     let cancelled = false;
+    let tracksRestored = false;
     rememberChannel(channelId(channel));
     setState('loading');
     setTracks(null);
@@ -278,7 +291,13 @@ export function PlayerScreen({params, navigate}) {
           setState(s);
         },
         onTracks: (next) => {
-          if (!cancelled) setTracks(next);
+          if (cancelled) return;
+          setTracks(next);
+          // Primera vez que el canal informa pistas: aplicar las guardadas para ese canal.
+          if (!tracksRestored && (next?.audio?.length || next?.text?.length)) {
+            tracksRestored = true;
+            applySavedTrackPreferences(trackEngine(p), brandId(), playbackOf(channel), next);
+          }
         },
       });
       player.current = p;
@@ -417,8 +436,15 @@ export function PlayerScreen({params, navigate}) {
       {panel === 'tracks' ? (
         <TracksPanel
           tracks={tracks}
-          onSelectAudio={(id) => player.current?.selectAudioTrack(id)}
-          onSelectText={(id) => player.current?.selectTextTrack(id)}
+          onSelectAudio={(id) => {
+            player.current?.selectAudioTrack(id);
+            persistAudioPreference(brandId(), playbackOf(channel), (tracks?.audio || []).find((a) => a.id === id));
+          }}
+          onSelectText={(id) => {
+            player.current?.selectTextTrack(id);
+            const track = (tracks?.text || []).find((x) => x.id === id);
+            persistSubtitlePreference(brandId(), playbackOf(channel), {enabled: id != null, track});
+          }}
         />
       ) : null}
 
