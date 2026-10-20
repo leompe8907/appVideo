@@ -342,9 +342,12 @@ export const useParentalGateStore = create((set, get) => ({
           ttlMs: pcUnlockTtlMs,
         });
       }
+      // TTL por marca; inválido o <= 0 -> undefined para que el store use su default.
+      const ttlMs = Number(getActiveBrandConfig?.()?.parental?.channelUnlockTtlMs);
       return parental.unlockWithPin?.(pin, {
         scope: unlockScope === 'global' ? 'global' : 'channel',
         channelId,
+        ttlMs: Number.isFinite(ttlMs) && ttlMs > 0 ? ttlMs : undefined,
       });
     })();
     if (!ok) return false;

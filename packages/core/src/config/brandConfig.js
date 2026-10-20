@@ -258,6 +258,8 @@ export function enrichConfigWithAssets(config) {
     // TTL por defecto para unlock global cuando hay múltiples canales con parentalControl:true
     // dentro del mismo bouquet. Se puede sobreescribir por marca en brands.js
     parentalControlMultiTtlMs: config.parental?.parentalControlMultiTtlMs ?? 40 * 60 * 1000,
+    // Duración del desbloqueo con PIN de un canal bloqueado por el usuario.
+    channelUnlockTtlMs: config.parental?.channelUnlockTtlMs ?? 15 * 60 * 1000,
     ...(config.parental || {}),
   };
 

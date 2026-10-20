@@ -164,6 +164,10 @@ export default {
       "exitApp": true
     }
   },
+  "parental": {
+    "channelUnlockTtlMs": 900000,
+    "parentalControlMultiTtlMs": 2400000
+  },
   "EPG": {
     "enabled": true,
     "daysOffset": 2,
