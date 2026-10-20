@@ -169,9 +169,9 @@ devuelve `/profile`, porque la licencia la elige el perfil. Vega manda `/profile
 pantalla de perfiles (tarea 34), Vega tiene que cortar ese camino de forma clara.
 
 **Criterios de aceptación:**
-- [ ] Con `usesExternalProfiles(marca)` y sin pantalla de perfiles, Vega no navega al home: muestra un mensaje ("Esta cuenta usa perfiles; todavía no están disponibles en esta app") con "Cerrar sesión".
-- [ ] Las marcas con `profilesSource: 'panaccess'` (o sin perfiles) siguen igual que hoy.
-- [ ] `screenForWebRoute('/profile')` deja de devolver `'home'` en silencio.
+- [x] Con `usesExternalProfiles(marca)` y sin pantalla de perfiles, Vega no navega al home: muestra un mensaje ("Esta cuenta usa perfiles; todavía no están disponibles en esta app") con "Cerrar sesión".
+- [x] Las marcas con `profilesSource: 'panaccess'` (o sin perfiles) siguen igual que hoy.
+- [x] `screenForWebRoute('/profile')` deja de devolver `'home'` en silencio.
 
 **Verificación:**
 - [ ] Test de la decisión de ruta (función pura, en core o en Vega con vitest).
@@ -264,8 +264,8 @@ pasa nada (TODO en `SearchPage.jsx:205`). Tienen que abrir `EpgEventModal` en el
 contexto que corresponda.
 
 **Criterios de aceptación:**
-- [ ] Un resultado de la Guía abre el modal con "Reproducir canal", "Recordarme" o "Ver (Catchup)", según el horario.
-- [ ] Un resultado de Catchup abre el modal en contexto catchup y reproduce con el control parental.
+- [x] Un resultado de la Guía abre el modal con "Reproducir canal", "Recordarme" o "Ver (Catchup)", según el horario.
+- [x] Un resultado de Catchup abre el modal en contexto catchup y reproduce con el control parental.
 - [ ] Al cerrar el modal, el foco vuelve al resultado.
 
 **Verificación:**
@@ -283,9 +283,9 @@ televisor puede quedar transmitiendo toda la noche. Hay que pasar la lógica de
 hacer la pantalla en Vega.
 
 **Criterios de aceptación:**
-- [ ] Mientras se reproduce y no se toca el control durante el tiempo configurado, aparece "¿Sigues ahí?" con la cuenta regresiva.
-- [ ] Si se acaba la cuenta, se cierra el reproductor y se muestra el salvapantallas; cualquier tecla lo quita.
-- [ ] La lógica compartida tiene tests en core y la web se sigue comportando igual.
+- [x] Mientras se reproduce y no se toca el control durante el tiempo configurado, aparece "¿Sigues ahí?" con la cuenta regresiva.
+- [x] Si se acaba la cuenta, se cierra el reproductor y se muestra el salvapantallas; cualquier tecla lo quita.
+- [x] La lógica compartida tiene tests en core y la web se sigue comportando igual.
 
 **Verificación:**
 - [ ] Tests de core en verde.
@@ -310,9 +310,9 @@ Vega, como en `PlayerContext` de la web: cambio de contenido, inicio y fin. Hoy 
 Wind la tiene activa, y de esos datos sale "Más vistos".
 
 **Criterios de aceptación:**
-- [ ] Con `player.telemetryEnabled` se envían los mismos registros que en la web (con el mismo umbral anti-zapping).
+- [x] Con `player.telemetryEnabled` se envían los mismos registros que en la web (con el mismo umbral anti-zapping).
 - [ ] La cola se guarda y se envía al volver de segundo plano.
-- [ ] Con la telemetría desactivada no se hace ninguna llamada.
+- [x] Con la telemetría desactivada no se hace ninguna llamada.
 
 **Verificación:**
 - [ ] Ver en los logs de Debug el envío a PanAccess con la marca wind.
@@ -327,9 +327,9 @@ Wind la tiene activa, y de esos datos sale "Más vistos".
 con "Ver" y "Descartar".
 
 **Criterios de aceptación:**
-- [ ] Sólo funciona si `features.osms` está activo.
+- [x] Sólo funciona si `features.osms` está activo.
 - [ ] Cuando llega un mensaje nuevo aparece el aviso; si estaba en el reproductor, el reproductor sigue.
-- [ ] El menú lateral muestra el contador de no leídos.
+- [x] El menú lateral muestra el contador de no leídos.
 
 **Verificación:**
 - [ ] En el stick con wind o bromteck, enviando un mensaje de prueba desde el backend.
@@ -343,8 +343,8 @@ con "Ver" y "Descartar".
 leído y "marcar como visto". Va dentro de Mi Cuenta (`osmsInline`).
 
 **Criterios de aceptación:**
-- [ ] "Ver" en el aviso de la tarea 14 abre directamente ese mensaje.
-- [ ] Al abrir un mensaje queda como visto y el contador baja.
+- [x] "Ver" en el aviso de la tarea 14 abre directamente ese mensaje.
+- [x] Al abrir un mensaje queda como visto y el contador baja.
 
 **Verificación:**
 - [ ] En el stick, navegando sólo con el control.
@@ -360,7 +360,7 @@ sistema funcionen, y pausar VOD y catchup al pasar a segundo plano (como en la w
 
 **Criterios de aceptación:**
 - [ ] Play/Pausa, FF y RW del control de Fire TV funcionan en VOD sin tener el foco en el botón.
-- [ ] Al salir a la pantalla de inicio de Fire TV, el VOD se pausa y al volver sigue desde donde estaba.
+- [x] Al salir a la pantalla de inicio de Fire TV, el VOD se pausa y al volver sigue desde donde estaba.
 
 **Verificación:**
 - [ ] En el stick, en Release.
@@ -374,7 +374,7 @@ sistema funcionen, y pausar VOD y catchup al pasar a segundo plano (como en la w
 
 **Criterios de aceptación:**
 - [ ] Los banners de video se reproducen en silencio y en bucle y se detienen al salir de Inicio o al abrir el reproductor.
-- [ ] `catchup_id=N` abre el catchup con el control parental.
+- [x] `catchup_id=N` abre el catchup con el control parental.
 - [ ] Si el video falla, se muestra la imagen del banner o se pasa al siguiente.
 
 **Verificación:**
@@ -389,8 +389,8 @@ sistema funcionen, y pausar VOD y catchup al pasar a segundo plano (como en la w
 con `userPreferences` de core). En Vega no se recuerda.
 
 **Criterios de aceptación:**
-- [ ] Si se elige un audio o subtítulo en un canal, al volver a ese canal se aplica solo (buscando por etiqueta).
-- [ ] La preferencia usa la misma clave que la web, para que la sincronización sirva en los dos lados.
+- [x] Si se elige un audio o subtítulo en un canal, al volver a ese canal se aplica solo (buscando por etiqueta).
+- [x] La preferencia usa la misma clave que la web, para que la sincronización sirva en los dos lados.
 
 **Verificación:**
 - [ ] Test de la función de preferencia (si se mueve a core) y prueba en el stick.
@@ -406,7 +406,7 @@ dispositivo en lugar de fijar `es`.
 
 **Criterios de aceptación:**
 - [ ] `grep` de los textos fijos que se conocen en `apps/vega/src` no devuelve nada.
-- [ ] Las claves nuevas están en es, en y pt.
+- [x] Las claves nuevas están en es, en y pt.
 - [ ] Con el Fire TV en inglés, la app aparece en inglés.
 
 **Verificación:**
@@ -421,7 +421,7 @@ dispositivo en lugar de fijar `es`.
 foco, y Ahora/Siguiente con el horario.
 
 **Criterios de aceptación:**
-- [ ] Sólo aparece si la marca la configura.
+- [x] Sólo aparece si la marca la configura.
 - [ ] Se actualiza al mover el foco sin causar tirones; si hace falta, se le aplica un debounce.
 
 **Verificación:**

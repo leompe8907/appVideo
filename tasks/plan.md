@@ -92,13 +92,13 @@ Sin esto no se puede publicar en las tiendas de LG y Samsung.
 y reproducen en el televisor.
 
 ### Fase 3: Vega, brechas que afectan a las marcas publicadas
-- [ ] 33. Vega: que una marca con perfiles externos no entre al home sin licencia (guardia mientras no exista la pantalla)
+- [x] 33. Vega: que una marca con perfiles externos no entre al home sin licencia (guardia mientras no exista la pantalla) — `dfb2b1e`, `fc5a39c` (con licencia activa sigue al home)
 - [ ] 34. Vega: pantalla de perfiles externos (elegir perfil con PIN y licencia; crear/editar después)
 - [ ] 8. Vega: ErrorBoundary y aviso de "sin conexión" — ErrorBoundary hecho (`19133c3`); "sin conexión" bloqueado (falta decidir `@amazon-devices/keplerscript-netmgr-lib`)
 - [x] 9. Core: mover el flujo de login con código (UDID) a `@appvideo/core` — `ca3c5a5`
 - [ ] 10. Vega: pantalla de login con código (UDID) y QR — **en espera:** ninguna marca tiene URLs de producción del backend UDID
-- [ ] 11. Vega: el buscador abre los resultados de Catchup y Guía
-- [ ] 12. Core + Vega: inactividad ("¿Sigues ahí?" y salvapantallas)
+- [x] 11. Vega: el buscador abre los resultados de Catchup y Guía — `7fe09d9`
+- [x] 12. Core + Vega: inactividad ("¿Sigues ahí?" y salvapantallas) — `b85d6b1`
 
 Las tareas 33 y 34 van primero sólo si wind se publica en Fire TV (D4); si no, quedan
 después de la 12.
@@ -108,14 +108,14 @@ probados en el aparato. Si se hicieron las tareas 33–34: build de wind en el s
 elegir perfil y reproducir con la licencia del perfil.
 
 ### Fase 4: Vega, paridad para las marcas que activan cada función
-- [ ] 13. Vega: telemetría de reproducción (Wind)
-- [ ] 14. Vega: OSMS, sondeo y aviso de mensaje nuevo
-- [ ] 15. Vega: OSMS, página de mensajes en Mi Cuenta
-- [ ] 16. Vega: controles de media del sistema y pausa en segundo plano
-- [ ] 17. Vega: banners de video y banners con `catchup_id`
-- [ ] 18. Vega: recordar audio y subtítulos por canal
-- [ ] 19. Vega: textos traducidos (sin textos fijos) e idioma del dispositivo
-- [ ] 20. Vega: subcabecera de Inicio
+- [x] 13. Vega: telemetría de reproducción — `ce14e25` (`player.telemetryEnabled` está activo en **todas** las marcas, no sólo wind)
+- [x] 14. Vega: OSMS, sondeo y aviso de mensaje nuevo — `ba5c80e`
+- [x] 15. Vega: OSMS, página de mensajes en Mi Cuenta — `ba5c80e`
+- [ ] 16. Vega: controles de media del sistema y pausa en segundo plano — pausa en segundo plano hecha (`f1ed95e`); las teclas del control ya funcionaban; falta `kepler_media_controls` (Alexa/sistema), a probar en el aparato
+- [ ] 17. Vega: banners de video y banners con `catchup_id` — `catchup_id` y `vod_id` hechos (`68cbf5e`); banners de video pendientes (posible conflicto de decodificador, a probar en el aparato)
+- [x] 18. Vega: recordar audio y subtítulos por canal — `f31b470`
+- [x] 19. Vega: textos traducidos (sin textos fijos) e idioma del dispositivo — `c70c6f8`
+- [x] 20. Vega: subcabecera de Inicio — `6e29545`
 
 **Checkpoint 4:** los tests de core pasan; Vega con wind y con bromteck
 (OSMS, telemetría) probado en el stick.
@@ -169,6 +169,11 @@ viendo", guía con línea de tiempo, grabaciones y siguiente episodio.
 | Los perfiles externos todavía son un piloto web sin probar y dependen del backend #27 | Medio | Hacer la tarea 34 después de que el piloto web se pruebe; mientras, sólo la 33 |
 
 ## Notas
+
+- **Nada de las fases 3–4 está probado en un Fire TV**: se verificó con tests (vitest
+  ahora corre también los módulos puros de `apps/vega/src`), lint y builds de la web.
+- De paso se arreglaron claves de i18n que la web sólo tenía como `defaultValue` en
+  español (pantalla de error, HUD del reproductor, panel de pistas, subcabecera).
 
 - `graphify-out/` no existe y la CLI `graphify` no está instalada: este plan sale de
   leer el código directamente.
