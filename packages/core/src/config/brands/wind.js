@@ -58,7 +58,7 @@ export default {
       "assetPath": "backgroundalt.webp"
     },
     "qrRegister": {
-      "enabled": false,
+      "enabled": true,
       "url": "https://backend.wind.do/wind/register/"
     },
     "forgotPassword": {
