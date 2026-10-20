@@ -23,6 +23,7 @@ import {VodRecommendedRail} from '../home/VodRecommendedRail';
 import {VodDetail} from '../vod/VodDetail';
 import {ReminderHost} from '../epg/ReminderHost';
 import {useOsmsPolling} from '../osms/useOsmsPolling';
+import {parseAdTarget} from '../home/adTarget';
 import {OsmsNotification} from '../osms/OsmsNotification';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {getCatchupStreamId, getEventTitle} from '@appvideo/core/utils/catchupEvent';
@@ -225,16 +226,20 @@ export function HomeScreen({navigate}) {
     [],
   );
 
-  // Banner activado (adActivate.js de la web): stream_id=N → canal; vod_id=N → Películas.
+  // Banner activado (adActivate.js de la web): canal, catchup (con control
+  // parental) o detalle de la película; si la película no está cargada, Películas.
   const activateAd = (ad) => {
-    const generic = ad?.genericData != null ? String(ad.genericData) : '';
-    const id = parseInt(generic.split('=')[1], 10);
-    if (Number.isNaN(id)) return;
-    if (generic.startsWith('stream_id')) {
-      const stream = (epg.streams || []).find((s) => String(s?.id) === String(id));
+    const target = parseAdTarget(ad);
+    if (!target) return;
+    if (target.kind === 'stream') {
+      const stream = (epg.streams || []).find((s) => String(s?.id) === String(target.id));
       if (stream) playChannel(stream);
-    } else if (generic.startsWith('vod_id=')) {
-      selectSection('vod');
+    } else if (target.kind === 'catchup') {
+      playCatchup({catchupId: target.id});
+    } else if (target.kind === 'vod') {
+      const item = (vod.allVods || []).find((v) => String(v?.id) === String(target.id));
+      if (item) openInicioVod(item);
+      else selectSection('vod');
     }
   };
 

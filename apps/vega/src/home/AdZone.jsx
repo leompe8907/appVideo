@@ -8,10 +8,10 @@ import {createScaledStyles, px} from '../scaledStyles';
 /**
  * Zona de banners (AdZone de la web, spec §2.8): imagen a todo el ancho,
  * rotación cada `displayTime` (pausada con foco), puntos, ◄/► cambian de
- * banner con foco y OK lo activa. Los videos se omiten por ahora (se muestran
- * sólo banners de imagen).
- * TODO: banners de video; probar con una marca que tenga publicidad
- * (la cuenta de prueba de INTV no devuelve ninguno).
+ * banner con foco y OK lo activa. Los videos se omiten (sólo banners de imagen):
+ * un segundo reproductor w3cmedia en el home podría competir por el decodificador
+ * con el de video en un Fire TV de ~1 GB. Pendiente probarlo en el aparato
+ * (tasks/todo.md, tarea 17) con una marca que tenga publicidad.
  */
 export function AdZone({ads, position, onActivate}) {
   const list = (ads || []).filter((a) => a?.file && !isVideoUrl(a.file));
