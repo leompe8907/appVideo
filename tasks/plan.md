@@ -93,7 +93,7 @@ y reproducen en el televisor.
 
 ### Fase 3: Vega, brechas que afectan a las marcas publicadas
 - [x] 33. Vega: que una marca con perfiles externos no entre al home sin licencia (guardia mientras no exista la pantalla) — `dfb2b1e`, `fc5a39c` (con licencia activa sigue al home)
-- [ ] 34. Vega: pantalla de perfiles externos (elegir perfil con PIN y licencia; crear/editar después)
+- [x] 34. Vega: pantalla de perfiles externos (elegir perfil con PIN y licencia) — `0b5853b`, `38df116`. Pendiente en otra tarea: crear/editar/borrar, "Olvidé el PIN" y "Cambiar perfil" en Mi Cuenta
 - [ ] 8. Vega: ErrorBoundary y aviso de "sin conexión" — ErrorBoundary hecho (`19133c3`); "sin conexión" bloqueado (falta decidir `@amazon-devices/keplerscript-netmgr-lib`)
 - [x] 9. Core: mover el flujo de login con código (UDID) a `@appvideo/core` — `ca3c5a5`
 - [ ] 10. Vega: pantalla de login con código (UDID) y QR — **en espera:** ninguna marca tiene URLs de producción del backend UDID

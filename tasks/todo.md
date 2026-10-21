@@ -189,11 +189,11 @@ por el perfil (con préstamo si la suya está en uso) y "continuar aquí" si est
 uso. Crear, editar y borrar perfiles queda para una tarea aparte.
 
 **Criterios de aceptación:**
-- [ ] Después del login de wind aparece la lista de perfiles; al elegir uno, entra al home con la licencia que eligió el perfil.
-- [ ] Un perfil con PIN pide el PIN (teclado numérico del sistema) y un PIN incorrecto muestra el error del servidor.
-- [ ] Al abrir la app vuelve a entrar sola al último perfil si no tiene PIN (igual que la web).
-- [ ] Si la cuenta tiene `profiles_disabled` o no hay sesión con el backend, sigue el flujo de siempre (smartcard/home).
-- [ ] La edad máxima del perfil bloquea lo que la supera (lo hace `parentalGateStore` de core: verificar que Vega lo respeta).
+- [x] Después del login de wind aparece la lista de perfiles; al elegir uno, entra al home con la licencia que eligió el perfil.
+- [x] Un perfil con PIN pide el PIN (teclado numérico del sistema) y un PIN incorrecto muestra el error del servidor.
+- [x] Al abrir la app vuelve a entrar sola al último perfil si no tiene PIN (igual que la web).
+- [x] Si la cuenta tiene `profiles_disabled` o no hay sesión con el backend, sigue el flujo de siempre (smartcard/home).
+- [ ] La edad máxima del perfil bloquea lo que la supera (lo hace `parentalGateStore` de core; Vega usa ese store para canal y contenido: falta comprobarlo en el aparato).
 
 **Verificación:**
 - [ ] Lint en verde; tests de core sin cambios en verde.
