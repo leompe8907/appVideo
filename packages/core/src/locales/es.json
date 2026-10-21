@@ -12,7 +12,8 @@
     "logout": "Cerrar sesión",
     "exit": "Salir",
     "retry": "Reintentar",
-    "comingSoon": "Próximamente"
+    "comingSoon": "Próximamente",
+    "cancel": "Cancelar"
   },
   "inicio": {
     "header": "Cabecera de inicio",
@@ -326,7 +327,23 @@
     "editError": "Error al actualizar el perfil.",
     "editProfileAria": "Editar perfil {{name}}",
     "unavailableTitle": "Esta cuenta usa perfiles",
-    "unavailableMessage": "Los perfiles todavía no están disponibles en esta app. Cierra sesión o entra desde la web."
+    "unavailableMessage": "Los perfiles todavía no están disponibles en esta app. Cierra sesión o entra desde la web.",
+    "accountPassword": "Contraseña de la cuenta",
+    "continueWithoutProfile": "Continuar sin perfil",
+    "enterPin": "Ingresa el PIN del perfil",
+    "forgotPin": "Olvidé el PIN",
+    "hasPin": "Con PIN",
+    "inUseConfirm": "Continuar aquí",
+    "inUseMessage": "{{name}} se está viendo en {{device}} y no quedan pantallas libres. Si continúas aquí, se detendrá allá.",
+    "inUseTitle": "Perfil en uso",
+    "kidsBadge": "Infantil",
+    "maxAgeNone": "Sin límite",
+    "newPinOptional": "PIN nuevo (vacío para quitarlo)",
+    "otherDevice": "otro dispositivo",
+    "pinFormatError": "El PIN debe tener de 4 a 6 dígitos.",
+    "pinLocked": "Demasiados intentos. Intenta de nuevo en unos minutos.",
+    "slotsInfo": "{{used}} de {{total}} perfiles",
+    "wrongPassword": "La contraseña no es correcta."
   },
   "smartcard": {
     "loadingLicenses": "Cargando licencias...",

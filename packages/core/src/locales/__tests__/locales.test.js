@@ -27,6 +27,26 @@ const PLAYER_KEYS = [
   'inicio.serviceInfo.next',
   'inicio.serviceInfo.empty',
 ];
+// Perfiles externos (web y Vega).
+const PROFILE_KEYS = [
+  'common.cancel',
+  'profile.accountPassword',
+  'profile.continueWithoutProfile',
+  'profile.enterPin',
+  'profile.forgotPin',
+  'profile.hasPin',
+  'profile.inUseConfirm',
+  'profile.inUseMessage',
+  'profile.inUseTitle',
+  'profile.kidsBadge',
+  'profile.maxAgeNone',
+  'profile.newPinOptional',
+  'profile.otherDevice',
+  'profile.pinFormatError',
+  'profile.pinLocked',
+  'profile.slotsInfo',
+  'profile.wrongPassword',
+];
 
 describe('locales', () => {
   for (const [lang, dict] of Object.entries({ es, en, pt })) {
@@ -38,6 +58,12 @@ describe('locales', () => {
 
     it(`${lang} tiene las claves del reproductor`, () => {
       for (const key of PLAYER_KEYS) {
+        expect(typeof get(dict, key), key).toBe('string');
+      }
+    });
+
+    it(`${lang} tiene las claves de perfiles externos`, () => {
+      for (const key of PROFILE_KEYS) {
         expect(typeof get(dict, key), key).toBe('string');
       }
     });

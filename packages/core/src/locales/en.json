@@ -12,7 +12,8 @@
     "logout": "Log out",
     "exit": "Exit",
     "retry": "Retry",
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "cancel": "Cancel"
   },
   "inicio": {
     "header": "Home header",
@@ -326,7 +327,23 @@
     "editError": "Error updating profile.",
     "editProfileAria": "Edit profile {{name}}",
     "unavailableTitle": "This account uses profiles",
-    "unavailableMessage": "Profiles aren't available in this app yet. Log out or sign in from the web."
+    "unavailableMessage": "Profiles aren't available in this app yet. Log out or sign in from the web.",
+    "accountPassword": "Account password",
+    "continueWithoutProfile": "Continue without a profile",
+    "enterPin": "Enter the profile PIN",
+    "forgotPin": "Forgot PIN",
+    "hasPin": "PIN protected",
+    "inUseConfirm": "Continue here",
+    "inUseMessage": "{{name}} is being watched on {{device}} and there are no free screens. If you continue here, it will stop there.",
+    "inUseTitle": "Profile in use",
+    "kidsBadge": "Kids",
+    "maxAgeNone": "No limit",
+    "newPinOptional": "New PIN (leave empty to remove it)",
+    "otherDevice": "another device",
+    "pinFormatError": "The PIN must have 4 to 6 digits.",
+    "pinLocked": "Too many attempts. Try again in a few minutes.",
+    "slotsInfo": "{{used}} of {{total}} profiles",
+    "wrongPassword": "The password is incorrect."
   },
   "smartcard": {
     "loadingLicenses": "Loading licenses...",

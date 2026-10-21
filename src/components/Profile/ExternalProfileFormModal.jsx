@@ -13,7 +13,7 @@ import { FocusableButton } from '../navigation/FocusableButton';
 import { AvatarOption } from './AvatarOption';
 import ConfirmModal from '../ConfirmModal';
 import { getProfileAvatars } from '../../constants/images';
-import { MAX_AGE_OPTIONS, maxAgeLabel } from './externalProfileAge';
+import { MAX_AGE_OPTIONS, maxAgeLabel } from '@appvideo/core/utils/externalProfiles';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusElementSafe } from '../../navigation/spatialNavigation';
 import {

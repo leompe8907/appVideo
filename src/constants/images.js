@@ -1,4 +1,5 @@
 import { getBrandAsset } from '@appvideo/core/utils/assetLoader';
+import { PROFILE_AVATAR_FILES } from '@appvideo/core/utils/externalProfiles';
 
 /**
  * Avatares de perfil (pantalla "¿Quién está mirando?" / modal de creación).
@@ -16,17 +17,7 @@ import { getBrandAsset } from '@appvideo/core/utils/assetLoader';
  * asociación con cualquier perfil que ya se haya creado en el backend con el
  * esquema viejo.
  */
-const AVATAR_FILENAMES = {
-  87: 'avatars/1.png',
-  88: 'avatars/2.png',
-  89: 'avatars/3.png',
-  90: 'avatars/4.png',
-  91: 'avatars/5.png',
-  92: 'avatars/6.png',
-  93: 'avatars/7.png',
-  94: 'avatars/8.png',
-  95: 'avatars/9.png',
-};
+// Mapeo id → archivo compartido con Vega (`PROFILE_AVATAR_FILES` de core).
 
 /**
  * Devuelve la lista de avatares disponibles para perfiles, resueltos con los
@@ -36,7 +27,7 @@ const AVATAR_FILENAMES = {
  * @returns {Array<{ id: number, img: string }>}
  */
 export function getProfileAvatars(brand) {
-  return Object.entries(AVATAR_FILENAMES).map(([id, filename]) => ({
+  return Object.entries(PROFILE_AVATAR_FILES).map(([id, filename]) => ({
     id: Number(id),
     img: getBrandAsset(brand, filename),
   }));

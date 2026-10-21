@@ -20,7 +20,13 @@ import { MessageModal } from '../components/MessageModal';
 import ParentalPinGate from '../components/parental/ParentalPinGate';
 import AppIcon from '../components/AppIcon';
 import { ExternalProfileFormModal } from '../components/Profile/ExternalProfileFormModal';
-import { maxAgeLabel } from '../components/Profile/externalProfileAge';
+import {
+  maxAgeLabel,
+  nextStepAfterEnter,
+  pickAutoEnterProfile,
+  profileErrorMessageKey,
+  routeWithoutProfiles,
+} from '@appvideo/core/utils/externalProfiles';
 import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import { focusManager, createZoneId } from '../navigation/FocusManager';
 import { getProfileAvatars } from '../constants/images';
@@ -41,12 +47,6 @@ import {
 import { useActiveProfileStore } from '@appvideo/core/store/activeProfileStore';
 import '../styles/pages/_profile.scss';
 
-const HOME_ROUTE = '/home/inicio';
-
-/** Sin perfiles: lo mismo que hacía la app antes (home con licencia, si no elegir tarjeta). */
-function routeWithoutProfiles() {
-  return getActiveLicense()?.licenseKey ? HOME_ROUTE : '/smartcard';
-}
 
 export function ExternalProfilePage() {
   const { t } = useTranslation();
@@ -73,32 +73,33 @@ export function ExternalProfilePage() {
 
   const leaveWithoutProfiles = useCallback(() => {
     forgetActiveProfile();
-    navigate(routeWithoutProfiles(), { replace: true });
+    // Sin perfiles: lo de antes (home con licencia, si no elegir tarjeta).
+    navigate(routeWithoutProfiles(Boolean(getActiveLicense()?.licenseKey)), { replace: true });
   }, [navigate]);
 
   const doEnter = useCallback(async (profile, pin) => {
     setBusyId(profile.id);
     try {
-      const result = await enterProfile(currentBrand, profile, { pin });
-      if (result.status === 'ok') {
-        navigate(HOME_ROUTE, { replace: true });
-      } else if (result.status === 'in_use') {
-        setInUse(result.selection);
-      } else {
+      const step = nextStepAfterEnter(await enterProfile(currentBrand, profile, { pin }));
+      if (step.inUse) {
+        setInUse(step.inUse);
+        return;
+      }
+      if (step.keepProfileWithoutLicense) {
         // Cuenta sin licencias sincronizadas todavía: elegir tarjeta como siempre.
         useActiveProfileStore.getState().setActiveProfile({
           id: profile.id, name: profile.name, imageId: profile.avatarId, source: 'externo',
           maxAge: profile.maxAge, isKids: profile.isKids, hasPin: profile.hasPin,
         });
-        navigate('/smartcard', { replace: true });
       }
+      navigate(step.route, { replace: true });
     } finally {
       setBusyId(null);
     }
   }, [currentBrand, navigate]);
 
   const showError = useCallback((err, fallback) => {
-    if (err?.code === 'pin_locked') {
+    if (profileErrorMessageKey(err) === 'profile.pinLocked') {
       setMessage(t('profile.pinLocked', { defaultValue: 'Demasiados intentos. Intenta de nuevo en unos minutos.' }));
     } else {
       setMessage(err?.message || fallback);
@@ -132,13 +133,8 @@ export function ExternalProfilePage() {
 
       if (!switchProfile && !autoEnterTried.current) {
         autoEnterTried.current = true;
-        const rememberedId = useActiveProfileStore.getState().id;
-        const remembered = data.profiles.find((p) => p.id === rememberedId);
-        const only = data.profiles.length === 1 ? data.profiles[0] : null;
-        const target = remembered || only;
-        if (target && !target.hasPin) {
-          await handleSelect(target);
-        }
+        const target = pickAutoEnterProfile(data.profiles, useActiveProfileStore.getState().id);
+        if (target) await handleSelect(target);
       }
     } catch (err) {
       if (isProfilesDisabledError(err)) {
@@ -193,7 +189,7 @@ export function ExternalProfilePage() {
     setBusyId(selection?.profile?.id ?? null);
     try {
       const result = await takeOverProfileLicense(currentBrand, selection);
-      if (result.status === 'ok') navigate(HOME_ROUTE, { replace: true });
+      if (result.status === 'ok') navigate(nextStepAfterEnter(result).route, { replace: true });
       else setMessage(t('profile.errorActivate'));
     } finally {
       setBusyId(null);
