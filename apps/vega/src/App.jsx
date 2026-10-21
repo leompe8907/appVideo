@@ -11,6 +11,7 @@ import {PlayerScreen} from './screens/PlayerScreen';
 import {SmartCardScreen} from './screens/SmartCardScreen';
 import {VodPlayerScreen} from './screens/VodPlayerScreen';
 import {ProfilesUnavailableScreen} from './screens/ProfilesUnavailableScreen';
+import {ProfileScreen} from './screens/ProfileScreen';
 import {devLog} from './devLog';
 import {storageReady} from './bootstrap';
 import {ParentalGateHost} from './parental/ParentalGateHost';
@@ -31,7 +32,7 @@ const SCREEN_OPTIONS = {headerShown: false, animationEnabled: false, cardStyle: 
 const PLAYER_SCREENS = new Set(['player', 'vodplayer']);
 
 /** Pantallas raíz: al llegar se descarta el historial (Atrás no vuelve al splash). */
-const ROOT_SCREENS = new Set(['login', 'smartcard', 'home', 'profiles']);
+const ROOT_SCREENS = new Set(['login', 'smartcard', 'home', 'profiles', 'profile']);
 
 /**
  * Adapta las pantallas (que reciben `navigate(nombre, params)` y `params`)
@@ -60,6 +61,7 @@ const Player = withNavigate(PlayerScreen);
 const SmartCard = withNavigate(SmartCardScreen);
 const VodPlayer = withNavigate(VodPlayerScreen);
 const ProfilesUnavailable = withNavigate(ProfilesUnavailableScreen);
+const Profile = withNavigate(ProfileScreen);
 
 export function App() {
   const [ready, setReady] = useState(false);
@@ -99,6 +101,7 @@ export function App() {
           <Stack.Screen name="player" component={Player} />
           <Stack.Screen name="vodplayer" component={VodPlayer} />
           <Stack.Screen name="profiles" component={ProfilesUnavailable} />
+          <Stack.Screen name="profile" component={Profile} />
         </Stack.Navigator>
         <ParentalGateHost />
         <InactivityHost playbackActive={PLAYER_SCREENS.has(routeName)} onStop={stopPlayback} />

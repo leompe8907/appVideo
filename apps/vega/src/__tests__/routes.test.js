@@ -19,4 +19,9 @@ describe('screenForWebRoute', () => {
   it('/profile con licencia activa sigue al home (no rompe una sesión que ya funciona)', () => {
     expect(screenForWebRoute('/profile', { hasActiveLicense: true })).toBe('home');
   });
+
+  it('con perfiles externos, /profile va a la pantalla de perfiles (con o sin licencia)', () => {
+    expect(screenForWebRoute('/profile', { externalProfiles: true })).toBe('profile');
+    expect(screenForWebRoute('/profile', { externalProfiles: true, hasActiveLicense: true })).toBe('profile');
+  });
 });

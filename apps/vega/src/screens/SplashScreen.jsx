@@ -7,6 +7,7 @@ import * as userSession from '@appvideo/core/utils/userSession';
 import {FullScreenImage} from '../components/FullScreenImage';
 import {getTheme} from '../theme';
 import {screenForWebRoute} from '../routes';
+import {usesExternalProfiles} from '@appvideo/core/utils/navigation';
 import {devLog} from '../devLog';
 
 const AUTH_TIMEOUT_MS = 60000;
@@ -47,7 +48,8 @@ export function SplashScreen({navigate}) {
       if (remaining > 0) await wait(remaining);
       devLog('splash: destino', route);
       const hasActiveLicense = Boolean(userSession.getActiveLicense()?.licenseKey);
-      if (!cancelled) navigate(screenForWebRoute(route, {hasActiveLicense}));
+      const externalProfiles = usesExternalProfiles(getActiveBrandConfig());
+      if (!cancelled) navigate(screenForWebRoute(route, {hasActiveLicense, externalProfiles}));
     })();
     return () => {
       cancelled = true;

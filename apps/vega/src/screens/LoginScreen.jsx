@@ -5,7 +5,7 @@ import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {clearSessionBeforeNewLogin, loginAndActivateLicense} from '@appvideo/core/services/loginFlow';
 import {classifyError, ERROR_TYPES} from '@appvideo/core/cv/errorClassifier';
-import {resolvePostLoginRoute} from '@appvideo/core/utils/navigation';
+import {resolvePostLoginRoute, usesExternalProfiles} from '@appvideo/core/utils/navigation';
 import {getActiveLicense} from '@appvideo/core/utils/userSession';
 import {CssBackground} from '../components/CssBackground';
 import {EyeIcon} from '../components/EyeIcon';
@@ -170,7 +170,12 @@ export function LoginScreen({navigate}) {
         {username: username.trim(), password: password.trim()},
         {autoActivateLicense: true, failIfInUse: true, activationRecursive: true, storeClientConfig: true, storeLicenses: true},
       );
-      navigate(screenForWebRoute(resolvePostLoginRoute(brand), {hasActiveLicense: Boolean(getActiveLicense()?.licenseKey)}));
+      navigate(
+        screenForWebRoute(resolvePostLoginRoute(brand), {
+          hasActiveLicense: Boolean(getActiveLicense()?.licenseKey),
+          externalProfiles: usesExternalProfiles(brand),
+        }),
+      );
     } catch (err) {
       devLog('login: error', err?.message, err?.errorInfo?.type);
       setError(loginErrorMessage(err));

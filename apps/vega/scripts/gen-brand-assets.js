@@ -9,6 +9,8 @@
  *   de la web con sips (macOS).
  * - Logos y placeholder: PNG de public/<marca>/ (con transparencia). Si falta
  *   alguno se usa el logo, para que el require no falle.
+ * - Avatares de perfil: public/<marca>/avatars/1..9.png (ids 87-95 de
+ *   PROFILE_AVATAR_FILES en core). Si falta alguno se usa el logo.
  */
 const fs = require('fs');
 const path = require('path');
@@ -22,6 +24,7 @@ const target = path.join(appRoot, 'assets/brand');
 
 const FULL_SCREEN = ['splash', 'background'];
 const PNG_FILES = ['logo.png', 'logo-top.png', 'placeholder_220x160.png'];
+const AVATAR_COUNT = 9;
 
 function firstExisting(candidates) {
   return candidates.find((f) => fs.existsSync(f));
@@ -99,5 +102,14 @@ for (const file of PNG_FILES) {
   fs.copyFileSync(from, path.join(target, file));
   if (!from.endsWith(file)) report.push(`${file} ← logo.png (falta)`);
 }
+
+fs.mkdirSync(path.join(target, 'avatars'), {recursive: true});
+let missingAvatars = 0;
+for (let i = 1; i <= AVATAR_COUNT; i++) {
+  const from = firstExisting([path.join(webDir, 'avatars', `${i}.png`)]);
+  if (!from) missingAvatars++;
+  fs.copyFileSync(from || path.join(webDir, 'logo.png'), path.join(target, 'avatars', `${i}.png`));
+}
+if (missingAvatars) report.push(`avatares: ${missingAvatars} ← logo.png (faltan)`);
 
 console.log(`assets de ${brand}: ${report.join('; ')}`);
