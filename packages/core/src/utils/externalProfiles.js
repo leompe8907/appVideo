@@ -34,14 +34,15 @@ export function maxAgeLabel(t, value) {
 }
 
 /**
- * Perfil al que se entra solo al abrir la app: el último usado o, si la cuenta
- * tiene uno solo, ese. Nunca uno con PIN (hay que pedirlo).
+ * Perfil al que se entra solo al abrir la app: solo si la cuenta tiene UN perfil
+ * y no tiene PIN. Con varios perfiles se muestra siempre "¿Quién está viendo?",
+ * como Netflix, Disney+, Max o Prime Video (no se entra solo al último usado:
+ * así nadie queda en el perfil de otro). Ver docs/PERFILES_EXTERNOS.md.
  */
-export function pickAutoEnterProfile(profiles, rememberedId) {
+export function pickAutoEnterProfile(profiles) {
   const list = Array.isArray(profiles) ? profiles : [];
-  const remembered = rememberedId != null ? list.find((p) => p.id === rememberedId) : null;
-  const target = remembered || (list.length === 1 ? list[0] : null);
-  return target && !target.hasPin ? target : null;
+  const only = list.length === 1 ? list[0] : null;
+  return only && !only.hasPin ? only : null;
 }
 
 /** Sin perfiles (cuenta sin perfiles o sin sesión con el backend): lo de antes. */

@@ -108,7 +108,8 @@ function AddProfileCard({onPress, disabled}) {
 /**
  * "¿Quién está viendo?" con perfiles externos (ExternalProfilePage de la web,
  * `features.profilesSource: 'externo'`): la licencia la elige el perfil.
- * - Entra solo al último perfil (o al único) si no tiene PIN.
+ * - Entra solo únicamente si la cuenta tiene un perfil y sin PIN; con varios,
+ *   siempre la lista (`pickAutoEnterProfile`, docs/PERFILES_EXTERNOS.md).
  * - Perfil con PIN: lo pide (lo verifica el backend).
  * - Si todas las licencias del perfil están en uso: "Continuar aquí".
  * - Sin perfiles en el backend o sin sesión con él: sigue como antes.
@@ -200,7 +201,7 @@ export function ProfileScreen({navigate, params}) {
       setSlots(data.slots);
       if (!switchProfile && !autoEnterTried.current) {
         autoEnterTried.current = true;
-        const target = pickAutoEnterProfile(data.profiles, useActiveProfileStore.getState().id);
+        const target = pickAutoEnterProfile(data.profiles);
         if (target) {
           try {
             await enter(target);

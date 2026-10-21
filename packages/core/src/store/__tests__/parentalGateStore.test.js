@@ -113,3 +113,21 @@ describe('edad máxima del perfil externo', () => {
     useActiveProfileStore.getState().clearActiveProfile();
   });
 });
+
+describe('bloqueo por edad del perfil externo y PIN', () => {
+  it('ningún PIN desbloquea el contenido por encima de la edad del perfil', async () => {
+    const { useActiveProfileStore: store } = await import('../activeProfileStore');
+    parentalState = { enabled: true, unlockWithPin: vi.fn(async () => true) };
+    store.getState().setActiveProfile({ id: 1, name: 'Peque', source: 'externo', maxAge: 10 });
+    const playFn = vi.fn();
+
+    useParentalGateStore.getState().requestPlayMedia({ item: { id: 'm1' }, ratingRaw: '14', playFn });
+    const ok = await useParentalGateStore.getState().submitPin('1234');
+
+    expect(ok).toBe(false);
+    expect(parentalState.unlockWithPin).not.toHaveBeenCalled();
+    expect(playFn).not.toHaveBeenCalled();
+    store.getState().clearActiveProfile();
+    useParentalGateStore.getState().closeGate();
+  });
+});

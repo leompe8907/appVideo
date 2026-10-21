@@ -2,9 +2,10 @@
  * "¿Quién está viendo?" con los perfiles del backend externo
  * (`features.profilesSource: 'externo'`; ver `externalProfileSession.js`).
  *
- * - Al abrir la app vuelve a entrar sola al último perfil si no tiene PIN (o
- *   si la cuenta tiene un único perfil sin PIN). "Cambiar perfil" (Mi cuenta)
- *   llega con `state.switchProfile` y siempre muestra la lista.
+ * - Al abrir la app entra sola solo si la cuenta tiene un único perfil sin PIN;
+ *   con varios perfiles muestra siempre la lista, como las apps del mercado
+ *   (`pickAutoEnterProfile`, docs/PERFILES_EXTERNOS.md). "Cambiar perfil"
+ *   (Mi cuenta) llega con `state.switchProfile` y siempre muestra la lista.
  * - Si la cuenta no tiene perfiles en el backend (`profiles_disabled`) o no
  *   hay sesión con el backend, la app sigue como antes de los perfiles.
  */
@@ -133,7 +134,7 @@ export function ExternalProfilePage() {
 
       if (!switchProfile && !autoEnterTried.current) {
         autoEnterTried.current = true;
-        const target = pickAutoEnterProfile(data.profiles, useActiveProfileStore.getState().id);
+        const target = pickAutoEnterProfile(data.profiles);
         if (target) await handleSelect(target);
       }
     } catch (err) {

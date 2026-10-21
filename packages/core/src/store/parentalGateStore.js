@@ -370,6 +370,8 @@ export const useParentalGateStore = create((set, get) => ({
 
   submitPin: async (pin) => {
     const { channel, playFn, purpose, unlockScope, gateKind, pcUnlockMode, pcUnlockTtlMs } = get();
+    // La edad del perfil externo no se desbloquea con ningún PIN.
+    if (gateKind === 'profileAge') return false;
     const parental = useParentalStore.getState();
     const channelId = getChannelStableId(channel);
 

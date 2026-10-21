@@ -13,6 +13,20 @@ export function ParentalGateHost() {
   const gate = useParentalGateStore();
   if (!gate.open) return null;
 
+  // Contenido por encima de la edad del perfil externo: no se desbloquea con PIN
+  // (hay que cambiar de perfil desde Mi Cuenta), así que no se muestra el teclado.
+  if (gate.gateKind === 'profileAge') {
+    return (
+      <ConfirmModal
+        title={gate.title}
+        message={gate.message}
+        confirmLabel={i18n.t('common.close')}
+        onConfirm={gate.closeGate}
+        onCancel={gate.closeGate}
+      />
+    );
+  }
+
   if (gate.gateKind === 'setupPin') {
     return (
       <ConfirmModal

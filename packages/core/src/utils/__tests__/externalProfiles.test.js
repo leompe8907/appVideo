@@ -19,19 +19,19 @@ describe('pickAutoEnterProfile', () => {
   const a = { id: 1, hasPin: false };
   const b = { id: 2, hasPin: true };
 
-  it('entra solo al último perfil usado si no tiene PIN', () => {
-    expect(pickAutoEnterProfile([a, b], 1)).toBe(a);
-    expect(pickAutoEnterProfile([a, b], 2)).toBeNull();
-  });
-
   it('si hay un único perfil sin PIN, entra a ese', () => {
-    expect(pickAutoEnterProfile([a], null)).toBe(a);
-    expect(pickAutoEnterProfile([b], null)).toBeNull();
+    expect(pickAutoEnterProfile([a])).toBe(a);
   });
 
-  it('con varios perfiles y ninguno recordado, muestra la lista', () => {
-    expect(pickAutoEnterProfile([a, b], null)).toBeNull();
-    expect(pickAutoEnterProfile([], 1)).toBeNull();
+  it('un único perfil con PIN muestra la lista (hay que pedir el PIN)', () => {
+    expect(pickAutoEnterProfile([b])).toBeNull();
+  });
+
+  it('con varios perfiles muestra siempre la lista, aunque el último usado no tenga PIN', () => {
+    const c = { id: 3, hasPin: false };
+    expect(pickAutoEnterProfile([a, c])).toBeNull();
+    expect(pickAutoEnterProfile([a, b])).toBeNull();
+    expect(pickAutoEnterProfile([])).toBeNull();
   });
 });
 
