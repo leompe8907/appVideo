@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   PROFILE_AVATAR_FILES,
+  buildProfilePayload,
+  canChangeProfile,
+  maxAgeAfterKidsToggle,
+  profileFormErrorKey,
+  validateProfileForm,
   maxAgeLabel,
   nextStepAfterEnter,
   pickAutoEnterProfile,
@@ -63,5 +68,54 @@ describe('avatares y edad', () => {
     expect(maxAgeLabel(t, null)).toBe('profile.maxAgeNone');
     expect(maxAgeLabel(t, 0)).toBe('L');
     expect(maxAgeLabel(t, 14)).toBe('14');
+  });
+});
+
+describe('formulario de perfil', () => {
+  it('valida nombre obligatorio y PIN de 4 a 6 dígitos (opcional)', () => {
+    expect(validateProfileForm({ name: '  ', newPin: '' })).toBe('profile.createNameRequired');
+    expect(validateProfileForm({ name: 'Ana', newPin: '12' })).toBe('profile.pinFormatError');
+    expect(validateProfileForm({ name: 'Ana', newPin: '1234567' })).toBe('profile.pinFormatError');
+    expect(validateProfileForm({ name: 'Ana', newPin: '' })).toBeNull();
+    expect(validateProfileForm({ name: 'Ana', newPin: '1234' })).toBeNull();
+  });
+
+  it('al marcar infantil sin edad, la edad queda en 10 (como el backend)', () => {
+    expect(maxAgeAfterKidsToggle(true, null)).toBe(10);
+    expect(maxAgeAfterKidsToggle(true, 14)).toBe(14);
+    expect(maxAgeAfterKidsToggle(false, 10)).toBe(10);
+  });
+
+  it('crear: manda el PIN sólo si se escribió', () => {
+    const base = { mode: 'create', name: ' Ana ', avatarId: 87, isKids: false, maxAge: null };
+    expect(buildProfilePayload({ ...base, newPin: '' })).toEqual({ name: 'Ana', avatarId: 87, isKids: false, maxAge: null });
+    expect(buildProfilePayload({ ...base, newPin: '1234' }).pin).toBe('1234');
+  });
+
+  it('editar: newPin con el PIN nuevo, null para quitarlo, o sin cambio', () => {
+    const base = { mode: 'edit', name: 'Ana', avatarId: 88, isKids: true, maxAge: 10 };
+    expect(buildProfilePayload({ ...base, newPin: '', removePin: false })).toEqual({ name: 'Ana', avatarId: 88, isKids: true, maxAge: 10 });
+    expect(buildProfilePayload({ ...base, newPin: '5678', removePin: false }).newPin).toBe('5678');
+    expect(buildProfilePayload({ ...base, newPin: '5678', removePin: true }).newPin).toBeNull();
+  });
+
+  it('errores del backend con mensaje propio', () => {
+    expect(profileFormErrorKey({ code: 'name_taken' })).toBe('profile.errorNameTaken');
+    expect(profileFormErrorKey({ code: 'no_free_license' })).toBe('profile.errorNoFreeLicense');
+    expect(profileFormErrorKey({ code: 'invalid_pin_format' })).toBe('profile.pinFormatError');
+    expect(profileFormErrorKey({ code: 'owner_profile' })).toBe('profile.errorOwner');
+    expect(profileFormErrorKey({ code: 'otro' })).toBeNull();
+  });
+});
+
+describe('canChangeProfile', () => {
+  const external = { features: { profiles: true, profilesSource: 'externo' } };
+  it('con perfiles externos, sólo si hay un perfil activo', () => {
+    expect(canChangeProfile(external, 5)).toBe(true);
+    expect(canChangeProfile(external, null)).toBe(false);
+  });
+  it('sin perfiles, nunca; con perfiles de PanAccess, siempre', () => {
+    expect(canChangeProfile({ features: { profiles: false } }, 5)).toBe(false);
+    expect(canChangeProfile({ features: { profiles: true, profilesSource: 'panaccess' } }, null)).toBe(true);
   });
 });

@@ -13,7 +13,9 @@
     "exit": "Exit",
     "retry": "Retry",
     "comingSoon": "Coming soon",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "yes": "Yes",
+    "no": "No"
   },
   "inicio": {
     "header": "Home header",
@@ -343,7 +345,15 @@
     "pinFormatError": "The PIN must have 4 to 6 digits.",
     "pinLocked": "Too many attempts. Try again in a few minutes.",
     "slotsInfo": "{{used}} of {{total}} profiles",
-    "wrongPassword": "The password is incorrect."
+    "wrongPassword": "The password is incorrect.",
+    "changePin": "New PIN (leave empty to keep it)",
+    "errorNameTaken": "You already have a profile with that name.",
+    "errorNoFreeLicense": "Your plan doesn't allow more profiles.",
+    "errorOwner": "The main profile can't be deleted.",
+    "kidsLabel": "Kids profile",
+    "maxAgeLabel": "Content allowed up to",
+    "pinPlaceholder": "4 to 6 digits",
+    "removePin": "Remove PIN"
   },
   "smartcard": {
     "loadingLicenses": "Loading licenses...",

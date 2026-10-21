@@ -13,7 +13,14 @@ import { FocusableButton } from '../navigation/FocusableButton';
 import { AvatarOption } from './AvatarOption';
 import ConfirmModal from '../ConfirmModal';
 import { getProfileAvatars } from '../../constants/images';
-import { MAX_AGE_OPTIONS, maxAgeLabel } from '@appvideo/core/utils/externalProfiles';
+import {
+  MAX_AGE_OPTIONS,
+  buildProfilePayload,
+  maxAgeAfterKidsToggle,
+  maxAgeLabel,
+  profileFormErrorKey,
+  validateProfileForm,
+} from '@appvideo/core/utils/externalProfiles';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusElementSafe } from '../../navigation/spatialNavigation';
 import {
@@ -22,22 +29,9 @@ import {
   updateProfile,
 } from '@appvideo/core/services/externalProfilesService';
 
-const KIDS_DEFAULT_MAX_AGE = 10;
-const PIN_RE = /^\d{4,6}$/;
-
 function errorMessage(t, err, fallback) {
-  switch (err?.code) {
-    case 'name_taken':
-      return t('profile.errorNameTaken', { defaultValue: 'Ya tienes un perfil con ese nombre.' });
-    case 'no_free_license':
-      return t('profile.errorNoFreeLicense', { defaultValue: 'Tu plan no permite más perfiles.' });
-    case 'invalid_pin_format':
-      return t('profile.pinFormatError', { defaultValue: 'El PIN debe tener de 4 a 6 dígitos.' });
-    case 'owner_profile':
-      return t('profile.errorOwner', { defaultValue: 'El perfil principal no se puede eliminar.' });
-    default:
-      return err?.message || fallback;
-  }
+  const key = profileFormErrorKey(err);
+  return key ? t(key) : err?.message || fallback;
 }
 
 export function ExternalProfileFormModal({ mode, profile, currentPin, onClose, onSaved, onDeleted }) {
@@ -74,34 +68,24 @@ export function ExternalProfileFormModal({ mode, profile, currentPin, onClose, o
   const toggleKids = () => {
     const next = !isKids;
     setIsKids(next);
-    // Mismo default que el backend: un perfil infantil sin edad queda en 10.
-    if (next && maxAge == null) setMaxAge(KIDS_DEFAULT_MAX_AGE);
+    setMaxAge(maxAgeAfterKidsToggle(next, maxAge));
   };
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (isSubmitting) return;
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setError(t('profile.createNameRequired'));
-      return;
-    }
-    if (newPin && !PIN_RE.test(newPin)) {
-      setError(t('profile.pinFormatError', { defaultValue: 'El PIN debe tener de 4 a 6 dígitos.' }));
+    const invalid = validateProfileForm({ name, newPin });
+    if (invalid) {
+      setError(t(invalid));
       return;
     }
 
     setIsSubmitting(true);
     setError(null);
     try {
-      if (isEdit) {
-        const changes = { name: trimmed, avatarId, isKids, maxAge };
-        if (removePin) changes.newPin = null;
-        else if (newPin) changes.newPin = newPin;
-        await updateProfile(profile.id, changes, currentPin);
-      } else {
-        await createProfile({ name: trimmed, avatarId, isKids, maxAge, pin: newPin || undefined });
-      }
+      const payload = buildProfilePayload({ mode, name, avatarId, isKids, maxAge, newPin, removePin });
+      if (isEdit) await updateProfile(profile.id, payload, currentPin);
+      else await createProfile(payload);
       onSaved?.();
     } catch (err) {
       setError(errorMessage(t, err, isEdit ? t('profile.editError') : t('profile.createError')));

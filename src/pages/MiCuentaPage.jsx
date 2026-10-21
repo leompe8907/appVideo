@@ -18,7 +18,7 @@ import { isDeviceSessionEnabled } from '@appvideo/core/services/deviceAuthServic
 import { clearSessionBeforeNewLogin } from '@appvideo/core/services/loginFlow';
 import { exitAppBestEffort } from '../utils/tvNavigation';
 import { getActiveLicense, getCredentials } from '@appvideo/core/utils/userSession';
-import { usesExternalProfiles } from '@appvideo/core/utils/navigation';
+import { canChangeProfile } from '@appvideo/core/utils/externalProfiles';
 import { useActiveProfileStore } from '@appvideo/core/store/activeProfileStore';
 import '../styles/pages/_mi-cuenta.scss';
 
@@ -66,8 +66,7 @@ export function MiCuentaPage() {
   // Con perfiles externos (Wind), solo si la cuenta los tiene (si el backend no los
   // encendió para ella, no hay perfil activo y /profile volvería al inicio).
   const activeProfileId = useActiveProfileStore((s) => s.id);
-  const changeProfileEnabled =
-    currentBrand?.features?.profiles === true && (!usesExternalProfiles(currentBrand) || activeProfileId != null);
+  const changeProfileEnabled = canChangeProfile(currentBrand, activeProfileId);
   // En TV los paneles nativos se habilitan por sección: FocusableInput abre el
   // teclado OSD (con grilla numérica para el OTP), así que ya no hace falta el QR.
   const isNativeFlowEnabledForBrand = isDeviceSessionEnabled(currentBrand);

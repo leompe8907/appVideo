@@ -4,6 +4,7 @@
  * (ExternalProfilePage) y Vega (ProfileScreen). La lógica que habla con el
  * backend está en `services/externalProfileSession.js`.
  */
+import { usesExternalProfiles } from './navigation';
 
 export const HOME_ROUTE = '/home/inicio';
 
@@ -63,4 +64,56 @@ export function nextStepAfterEnter(result) {
 /** Clave del mensaje para un error al entrar a un perfil. */
 export function profileErrorMessageKey(error) {
   return error?.code === 'pin_locked' ? 'profile.pinLocked' : 'profile.errorActivate';
+}
+
+// --- Formulario de crear / editar perfil ---
+
+const KIDS_DEFAULT_MAX_AGE = 10;
+const PIN_RE = /^\d{4,6}$/;
+
+/** Clave del error de validación, o null si el formulario está bien. El PIN es opcional. */
+export function validateProfileForm({ name, newPin }) {
+  if (!String(name || '').trim()) return 'profile.createNameRequired';
+  if (newPin && !PIN_RE.test(newPin)) return 'profile.pinFormatError';
+  return null;
+}
+
+/** Mismo default que el backend: un perfil infantil sin edad queda en 10. */
+export function maxAgeAfterKidsToggle(nextIsKids, maxAge) {
+  return nextIsKids && maxAge == null ? KIDS_DEFAULT_MAX_AGE : maxAge;
+}
+
+/**
+ * Lo que se manda al backend: para crear (`createProfile`, con `pin` si se
+ * escribió) o los cambios para editar (`updateProfile`: `newPin` nuevo, `null`
+ * para quitarlo, o sin la clave si no cambia).
+ */
+export function buildProfilePayload({ mode, name, avatarId, isKids, maxAge, newPin, removePin }) {
+  const base = { name: String(name || '').trim(), avatarId, isKids, maxAge };
+  if (mode === 'edit') {
+    if (removePin) return { ...base, newPin: null };
+    return newPin ? { ...base, newPin } : base;
+  }
+  return newPin ? { ...base, pin: newPin } : base;
+}
+
+const FORM_ERROR_KEYS = {
+  name_taken: 'profile.errorNameTaken',
+  no_free_license: 'profile.errorNoFreeLicense',
+  invalid_pin_format: 'profile.pinFormatError',
+  owner_profile: 'profile.errorOwner',
+};
+
+/** Clave del mensaje para un error del backend al guardar o borrar, o null (usar el genérico). */
+export function profileFormErrorKey(error) {
+  return FORM_ERROR_KEYS[error?.code] || null;
+}
+
+/**
+ * "Cambiar perfil" en Mi Cuenta: con perfiles externos, sólo si la cuenta los
+ * tiene (hay perfil activo); si no, /profile volvería al inicio.
+ */
+export function canChangeProfile(brandConfig, activeProfileId) {
+  if (brandConfig?.features?.profiles !== true) return false;
+  return !usesExternalProfiles(brandConfig) || activeProfileId != null;
 }

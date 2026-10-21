@@ -46,6 +46,22 @@ const PROFILE_KEYS = [
   'profile.pinLocked',
   'profile.slotsInfo',
   'profile.wrongPassword',
+  'common.yes',
+  'common.no',
+  'profile.changePin',
+  'profile.errorNameTaken',
+  'profile.errorNoFreeLicense',
+  'profile.errorOwner',
+  'profile.kidsLabel',
+  'profile.maxAgeLabel',
+  'profile.pinPlaceholder',
+  'profile.removePin',
+  'profile.editTitle',
+  'profile.editSubmit',
+  'profile.editSubmitting',
+  'profile.editError',
+  'profile.editCancel',
+  'account.changeProfile',
 ];
 
 describe('locales', () => {

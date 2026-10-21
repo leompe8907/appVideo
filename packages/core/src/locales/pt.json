@@ -13,7 +13,9 @@
     "exit": "Sair",
     "retry": "Tentar novamente",
     "comingSoon": "Em breve",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "yes": "Sim",
+    "no": "Não"
   },
   "inicio": {
     "header": "Cabeçalho do início",
@@ -343,7 +345,15 @@
     "pinFormatError": "O PIN deve ter de 4 a 6 dígitos.",
     "pinLocked": "Muitas tentativas. Tente novamente em alguns minutos.",
     "slotsInfo": "{{used}} de {{total}} perfis",
-    "wrongPassword": "A senha está incorreta."
+    "wrongPassword": "A senha está incorreta.",
+    "changePin": "Novo PIN (vazio para não alterar)",
+    "errorNameTaken": "Você já tem um perfil com esse nome.",
+    "errorNoFreeLicense": "Seu plano não permite mais perfis.",
+    "errorOwner": "O perfil principal não pode ser excluído.",
+    "kidsLabel": "Perfil infantil",
+    "maxAgeLabel": "Conteúdo permitido até",
+    "pinPlaceholder": "4 a 6 dígitos",
+    "removePin": "Remover o PIN"
   },
   "smartcard": {
     "loadingLicenses": "Carregando licenças...",
