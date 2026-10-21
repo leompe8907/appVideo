@@ -5,7 +5,7 @@ import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {waitForDeviceSessionAuth} from '@appvideo/core/services/loginFlow';
-import {isProfilesDisabledError, listProfiles} from '@appvideo/core/services/externalProfilesService';
+import {isProfilesDisabledError, listProfiles, verifyProfilePin} from '@appvideo/core/services/externalProfilesService';
 import {enterProfile, forgetActiveProfile, takeOverProfileLicense} from '@appvideo/core/services/externalProfileSession';
 import {useActiveProfileStore} from '@appvideo/core/store/activeProfileStore';
 import {getActiveLicense, setLoggedOut} from '@appvideo/core/utils/userSession';
@@ -22,6 +22,8 @@ import {FocusRing} from '../components/FocusRing';
 import {FullScreenImage} from '../components/FullScreenImage';
 import {MessageModal} from '../components/MessageModal';
 import {PinModal} from '../parental/PinModal';
+import {ProfileFormModal} from '../profile/ProfileFormModal';
+import {ResetPinModal} from '../profile/ResetPinModal';
 import {resetHomeMemory} from '../homeMemory';
 import {screenForWebRoute} from '../routes';
 import {getTheme} from '../theme';
@@ -31,7 +33,7 @@ import {devLog} from '../devLog';
 const t = (key, opts) => i18n.t(key, opts);
 const toScreen = (route) => screenForWebRoute(route);
 
-function ProfileCard({profile, avatar, busy, disabled, hasTVPreferredFocus, onPress}) {
+function ProfileCard({profile, avatar, busy, disabled, hasTVPreferredFocus, onPress, onEdit, onForgotPin}) {
   const theme = getTheme();
   const [focused, setFocused] = useState(false);
   const badge = [profile.isKids ? t('profile.kidsBadge') : null, profile.maxAge != null ? maxAgeLabel(t, profile.maxAge) : null]
@@ -64,6 +66,41 @@ function ProfileCard({profile, avatar, busy, disabled, hasTVPreferredFocus, onPr
       </Text>
       {profile.hasPin ? <Text style={styles.meta}>{`🔒 ${t('profile.hasPin')}`}</Text> : null}
       {badge ? <Text style={styles.meta}>{badge}</Text> : null}
+      {onEdit ? <SmallAction label={t('profile.editButton')} disabled={disabled} onPress={onEdit} /> : null}
+      {onForgotPin ? <SmallAction label={t('profile.forgotPin')} disabled={disabled} onPress={onForgotPin} /> : null}
+    </View>
+  );
+}
+
+function SmallAction({label, disabled, onPress}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <Pressable
+      onPress={disabled ? undefined : onPress}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={[styles.action, focused && styles.actionFocused]}>
+      <Text style={[styles.actionText, focused && styles.actionTextFocused]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function AddProfileCard({onPress, disabled}) {
+  const theme = getTheme();
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={styles.card}>
+      <Pressable
+        onPress={disabled ? undefined : onPress}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        accessibilityLabel={t('profile.addProfileAria')}>
+        <View style={[styles.avatar, styles.addAvatar, {backgroundColor: theme.surface}]}>
+          <Text style={styles.addPlus}>+</Text>
+        </View>
+        <FocusRing visible={focused} radius={16} />
+      </Pressable>
+      <Text style={[styles.name, focused && styles.nameFocused]}>{t('profile.addProfile')}</Text>
     </View>
   );
 }
@@ -75,17 +112,23 @@ function ProfileCard({profile, avatar, busy, disabled, hasTVPreferredFocus, onPr
  * - Perfil con PIN: lo pide (lo verifica el backend).
  * - Si todas las licencias del perfil están en uso: "Continuar aquí".
  * - Sin perfiles en el backend o sin sesión con él: sigue como antes.
- * Crear, editar y borrar perfiles queda para otra tarea.
+ * - Agregar (si quedan lugares), editar / borrar (pide el PIN si tiene) y
+ *   "Olvidé el PIN" con la contraseña de la cuenta.
+ * - `params.switchProfile` ("Cambiar perfil" de Mi Cuenta): no entra solo.
  */
-export function ProfileScreen({navigate}) {
+export function ProfileScreen({navigate, params}) {
   const theme = getTheme();
   const brand = getActiveBrandConfig();
   const [profiles, setProfiles] = useState([]);
+  const [slots, setSlots] = useState({total: 0, used: 0, free: 0});
+  const [form, setForm] = useState(null); // {mode: 'create'|'edit', profile, currentPin}
+  const [resetFor, setResetFor] = useState(null);
+  const switchProfile = params?.switchProfile === true;
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [message, setMessage] = useState(null);
-  const [pinFor, setPinFor] = useState(null);
+  const [pinPrompt, setPinPrompt] = useState(null); // {profile, purpose: 'enter'|'edit'}
   const [inUse, setInUse] = useState(null);
   const autoEnterTried = useRef(false);
 
@@ -133,7 +176,7 @@ export function ProfileScreen({navigate}) {
   const select = async (profile) => {
     if (busyId != null) return;
     if (profile.hasPin) {
-      setPinFor(profile);
+      setPinPrompt({profile, purpose: 'enter'});
       return;
     }
     try {
@@ -154,7 +197,8 @@ export function ProfileScreen({navigate}) {
       }
       const data = await listProfiles();
       setProfiles(data.profiles);
-      if (!autoEnterTried.current) {
+      setSlots(data.slots);
+      if (!switchProfile && !autoEnterTried.current) {
         autoEnterTried.current = true;
         const target = pickAutoEnterProfile(data.profiles, useActiveProfileStore.getState().id);
         if (target) {
@@ -175,7 +219,7 @@ export function ProfileScreen({navigate}) {
     } finally {
       setLoading(false);
     }
-  }, [enter, leaveWithoutProfiles]);
+  }, [enter, leaveWithoutProfiles, switchProfile]);
 
   useEffect(() => {
     load();
@@ -184,19 +228,36 @@ export function ProfileScreen({navigate}) {
   }, []);
 
   const submitPin = async (pin) => {
-    const profile = pinFor;
+    const {profile, purpose} = pinPrompt || {};
     if (!profile) return true;
     try {
-      // El modal sigue abierto mientras se prueba la licencia: un PIN incorrecto se reintenta ahí.
-      await enter(profile, pin);
-      setPinFor(null);
+      if (purpose === 'edit') {
+        await verifyProfilePin(profile.id, pin);
+        setPinPrompt(null);
+        setForm({mode: 'edit', profile, currentPin: pin});
+      } else {
+        // El modal sigue abierto mientras se prueba la licencia: un PIN incorrecto se reintenta ahí.
+        await enter(profile, pin);
+        setPinPrompt(null);
+      }
       return true;
     } catch (err) {
       if (err?.code === 'pin_incorrect') return false;
-      setPinFor(null);
+      setPinPrompt(null);
       showError(err);
       return true;
     }
+  };
+
+  const editProfile = (profile) => {
+    if (profile.hasPin) setPinPrompt({profile, purpose: 'edit'});
+    else setForm({mode: 'edit', profile, currentPin: undefined});
+  };
+
+  const afterChange = () => {
+    setForm(null);
+    setResetFor(null);
+    load();
   };
 
   const takeOver = async () => {
@@ -253,7 +314,12 @@ export function ProfileScreen({navigate}) {
         ) : profiles.length === 0 ? (
           <View style={styles.center}>
             <Text style={styles.sub}>{t('profile.noProfiles')}</Text>
-            <FocusButton label={t('profile.continueWithoutProfile')} onPress={leaveWithoutProfiles} hasTVPreferredFocus primary />
+            <View style={styles.row}>
+              {slots.free > 0 ? (
+                <FocusButton label={t('profile.addProfile')} onPress={() => setForm({mode: 'create', profile: null})} hasTVPreferredFocus primary />
+              ) : null}
+              <FocusButton label={t('profile.continueWithoutProfile')} onPress={leaveWithoutProfiles} hasTVPreferredFocus={slots.free <= 0} style={styles.gap} />
+            </View>
           </View>
         ) : (
           <ScrollView horizontal contentContainerStyle={styles.grid} showsHorizontalScrollIndicator={false}>
@@ -266,17 +332,39 @@ export function ProfileScreen({navigate}) {
                 disabled={busyId != null}
                 hasTVPreferredFocus={i === 0}
                 onPress={() => select(p)}
+                onEdit={() => editProfile(p)}
+                onForgotPin={p.hasPin ? () => setResetFor(p) : null}
               />
             ))}
+            {slots.free > 0 ? <AddProfileCard disabled={busyId != null} onPress={() => setForm({mode: 'create', profile: null})} /> : null}
           </ScrollView>
         )}
 
+        {!loading && slots.total > 0 ? (
+          <Text style={styles.slots}>{t('profile.slotsInfo', {used: slots.used, total: slots.total})}</Text>
+        ) : null}
         <FocusButton label={t('common.backLogout')} onPress={logout} style={styles.logout} />
       </View>
 
-      {pinFor ? (
-        <PinModal title={pinFor.name} message={t('profile.enterPin')} onSubmit={submitPin} onCancel={() => setPinFor(null)} />
+      {pinPrompt ? (
+        <PinModal
+          title={pinPrompt.profile.name}
+          message={t('profile.enterPin')}
+          onSubmit={submitPin}
+          onCancel={() => setPinPrompt(null)}
+        />
       ) : null}
+      {form ? (
+        <ProfileFormModal
+          mode={form.mode}
+          profile={form.profile}
+          currentPin={form.currentPin}
+          onClose={() => setForm(null)}
+          onSaved={afterChange}
+          onDeleted={afterChange}
+        />
+      ) : null}
+      {resetFor ? <ResetPinModal profile={resetFor} onClose={() => setResetFor(null)} onDone={afterChange} /> : null}
       {inUse ? (
         <ConfirmModal
           title={t('profile.inUseTitle')}
@@ -312,4 +400,11 @@ const styles = createScaledStyles({
   nameFocused: {color: '#fff', fontWeight: '700'},
   meta: {color: 'rgba(255,255,255,0.7)', fontSize: 20, marginTop: 4},
   logout: {marginTop: 32},
+  slots: {color: 'rgba(255,255,255,0.7)', fontSize: 22, marginTop: 16},
+  action: {marginTop: 10, paddingVertical: 6, paddingHorizontal: 16, borderRadius: 8, borderWidth: 2, borderColor: 'transparent'},
+  actionFocused: {borderColor: '#fff', backgroundColor: 'rgba(255,255,255,0.12)'},
+  actionText: {color: 'rgba(255,255,255,0.7)', fontSize: 20},
+  actionTextFocused: {color: '#fff'},
+  addAvatar: {borderWidth: 3, borderColor: 'rgba(255,255,255,0.35)', borderStyle: 'dashed'},
+  addPlus: {color: '#fff', fontSize: 96, fontWeight: '300'},
 });

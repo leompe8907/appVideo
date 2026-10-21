@@ -13,6 +13,8 @@ import {ConfirmModal} from '../components/ConfirmModal';
 import {resetHomeMemory} from '../homeMemory';
 import {ParentalSettings} from '../parental/ParentalSettings';
 import {OsmsPanel} from '../osms/OsmsPanel';
+import {canChangeProfile} from '@appvideo/core/utils/externalProfiles';
+import {useActiveProfileStore} from '@appvideo/core/store/activeProfileStore';
 import {ChangePasswordPanel, CloseAccountPanel, LinkedDevicesPanel} from './SecurityPanels';
 import {devLog} from '../devLog';
 import {createScaledStyles, px} from '../scaledStyles';
@@ -77,6 +79,8 @@ export function AccountPage({navigate, active = true, initialSelected, openOsmId
   const links = LINKS.filter((l) => account.links?.[l.key]?.enabled !== false);
   const deleteLink = account.links?.deleteAccount?.enabled !== false ? {key: 'deleteAccount', label: 'account.deleteAccount', step3: 'account.step3DeleteAccount'} : null;
   const osmsEnabled = brand?.features?.osms === true;
+  const activeProfileId = useActiveProfileStore((s) => s.id);
+  const changeProfileEnabled = canChangeProfile(brand, activeProfileId);
   const [selected, setSelected] = useState(initialSelected || links[0]?.key || 'about');
   const [confirm, setConfirm] = useState(null); // 'logout' | 'exit'
   const loadEPG = usePreloadStore((s) => s.loadEPG);
@@ -182,6 +186,9 @@ export function AccountPage({navigate, active = true, initialSelected, openOsmId
         {links.length ? <View style={[styles.divider, {backgroundColor: colors.divider}]} /> : null}
         {sections.parentalControl !== false && isParentalControlEnabledForBrand(brand) ? (
           <MenuItem label={t('account.advancedSettings')} active={selected === 'parental'} colors={colors} onPress={() => setSelected('parental')} />
+        ) : null}
+        {changeProfileEnabled ? (
+          <MenuItem label={t('account.changeProfile')} colors={colors} onPress={() => navigate('profile', {switchProfile: true})} />
         ) : null}
         {osmsEnabled ? (
           <MenuItem label={t('account.messages', {defaultValue: 'Mensajes'})} active={selected === 'osms'} colors={colors} hasTVPreferredFocus={active && initialSelected === 'osms'} onPress={() => setSelected('osms')} />
