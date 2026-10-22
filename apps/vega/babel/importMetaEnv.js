@@ -29,17 +29,35 @@ function parseEnvFile(file) {
   return out;
 }
 
+/**
+ * Quita el token y la URL de middleware (`VITE_BRAND_TOKEN_<MARCA>` /
+ * `VITE_BRAND_DRM_<MARCA>`) de las otras marcas: el paquete se entrega al
+ * cliente y no debe llevar credenciales ajenas. Mismo nombre de variable que
+ * resolveBrandToken (mayúsculas, guiones → _).
+ */
+function filterBrandEnv(env, brand) {
+  const own = String(brand || '').trim().toUpperCase().replace(/-/g, '_');
+  const out = {};
+  for (const [key, value] of Object.entries(env)) {
+    const m = key.match(/^VITE_BRAND_(?:TOKEN|DRM)_(.+)$/);
+    if (m && m[1] !== own) continue;
+    out[key] = value;
+  }
+  return out;
+}
+
 function loadViteEnv() {
   const merged = {
     ...parseEnvFile(path.join(REPO_ROOT, '.env')),
     ...parseEnvFile(path.join(REPO_ROOT, '.env.local')),
     ...process.env,
   };
-  const env = {};
+  const all = {};
   for (const [key, value] of Object.entries(merged)) {
-    if (key.startsWith('VITE_')) env[key] = value;
+    if (key.startsWith('VITE_')) all[key] = value;
   }
   const brand = process.env.VEGA_BRAND || 'intv';
+  const env = filterBrandEnv(all, brand);
   env.VITE_BRAND = brand;
   env.VITE_DEFAULT_BRAND = brand;
   env.MODE = 'vega';
@@ -99,3 +117,5 @@ module.exports = function importMetaEnv({ types: t }) {
     },
   };
 };
+
+module.exports.filterBrandEnv = filterBrandEnv;
