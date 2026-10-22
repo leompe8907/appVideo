@@ -4,6 +4,8 @@ schema-version = 1
 title = "inTV Play"
 version = "0.1.0"
 id = "com.bromteck.appvideo"
+# Ícono del launcher: lo genera scripts/gen-brand-assets.js para la marca del build.
+icon = "@image/icon.png"
 
 [os.version]
 min = "1.2"

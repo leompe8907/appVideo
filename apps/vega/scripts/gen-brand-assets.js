@@ -11,10 +11,15 @@
  *   alguno se usa el logo, para que el require no falle.
  * - Avatares de perfil: public/<marca>/avatars/1..9.png (ids 87-95 de
  *   PROFILE_AVATAR_FILES en core). Si falta alguno se usa el logo.
+ * - Ícono del launcher: assets/image/icon.png (ignorado por git), el logo
+ *   centrado sobre `ui.primaryColor` de la marca, PNG RGBA de 512×512 como pide
+ *   Vega (`icon = "@image/icon.png"` en manifest.toml). Sin ícono, el Fire TV
+ *   muestra el cuadro gris "APP".
  */
 const fs = require('fs');
 const path = require('path');
 const {execFileSync} = require('child_process');
+const {Resvg} = require('@resvg/resvg-js');
 
 const appRoot = path.resolve(__dirname, '..');
 const brand = process.env.VEGA_BRAND || 'intv';
@@ -25,6 +30,8 @@ const target = path.join(appRoot, 'assets/brand');
 const FULL_SCREEN = ['splash', 'background'];
 const PNG_FILES = ['logo.png', 'logo-top.png', 'placeholder_220x160.png'];
 const AVATAR_COUNT = 9;
+const ICON_SIZE = 512;
+const ICON_LOGO_BOX = 384; // margen de 64 px por lado
 
 function firstExisting(candidates) {
   return candidates.find((f) => fs.existsSync(f));
@@ -58,6 +65,27 @@ function loginBackgroundAsset() {
   if (!fs.existsSync(file)) return null;
   const m = fs.readFileSync(file, 'utf8').match(/"backgroundImage":\s*\{\s*"enabled":\s*(true|false),\s*"assetPath":\s*"([^"]*)"/);
   return m && m[1] === 'true' && m[2] ? m[2] : null;
+}
+
+const brandFile = path.resolve(appRoot, '../../packages/core/src/config/brands', `${brand}.js`);
+
+/** `ui.primaryColor` de la marca como #rrggbb (sin alfa: el ícono va opaco). */
+function brandPrimaryColor() {
+  const src = fs.existsSync(brandFile) ? fs.readFileSync(brandFile, 'utf8') : '';
+  const m = src.match(/"primaryColor":\s*"(#[0-9a-fA-F]{6})/);
+  return m ? m[1] : '#000000';
+}
+
+function writeLauncherIcon(logoFile, to) {
+  const logo = fs.readFileSync(logoFile).toString('base64');
+  const pad = (ICON_SIZE - ICON_LOGO_BOX) / 2;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${ICON_SIZE}" height="${ICON_SIZE}">` +
+    `<rect width="100%" height="100%" fill="${brandPrimaryColor()}"/>` +
+    `<image x="${pad}" y="${pad}" width="${ICON_LOGO_BOX}" height="${ICON_LOGO_BOX}" preserveAspectRatio="xMidYMid meet" xlink:href="data:image/png;base64,${logo}"/>` +
+    `</svg>`;
+  fs.mkdirSync(path.dirname(to), {recursive: true});
+  fs.writeFileSync(to, new Resvg(svg).render().asPng());
 }
 
 if (!fs.existsSync(path.join(webDir, 'logo.png'))) {
@@ -111,5 +139,8 @@ for (let i = 1; i <= AVATAR_COUNT; i++) {
   fs.copyFileSync(from || path.join(webDir, 'logo.png'), path.join(target, 'avatars', `${i}.png`));
 }
 if (missingAvatars) report.push(`avatares: ${missingAvatars} ← logo.png (faltan)`);
+
+writeLauncherIcon(path.join(webDir, 'logo.png'), path.join(appRoot, 'assets/image/icon.png'));
+report.push(`icon ← logo.png sobre ${brandPrimaryColor()}`);
 
 console.log(`assets de ${brand}: ${report.join('; ')}`);

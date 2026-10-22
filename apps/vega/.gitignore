@@ -5,6 +5,7 @@ build
 buildinfo.json
 src/env.generated.js
 assets/brand
+assets/image
 dev-session.local.json
 
 # Shaka 4.8.5 parcheado por Amazon (build de Vega): sí se versiona.
