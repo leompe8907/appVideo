@@ -16,6 +16,10 @@ describe('computeSlots', () => {
       next: null,
       later: null,
       isLive: false,
+      canPageBefore: false,
+      canPageLater: false,
+      beforeOffset: 0,
+      laterOffset: 0,
     });
   });
 
@@ -71,5 +75,56 @@ describe('computeLiveProgressStyle', () => {
     const end = start + 10_000;
     expect(computeLiveProgressStyle(start, end, start - 5_000).elapsedPercent).toBe(0);
     expect(computeLiveProgressStyle(start, end, end + 5_000).elapsedPercent).toBe(100);
+  });
+});
+
+/**
+ * Paginado por fila de "Antes"/"Más tarde" (como DevApps con
+ * epgCardsLaterGlobal=false): cada offset corre esa columna un evento.
+ */
+describe('computeSlots — paginado de Antes / Más tarde', () => {
+  const t0 = Date.parse('2026-07-22T10:00:00Z');
+  const hour = 3600_000;
+  // e0..e6; al aire e3.
+  const items = Array.from({ length: 7 }, (_, i) => ev(t0 + (i - 3) * hour, t0 + (i - 2) * hour, `e${i}`));
+  const nowMs = t0 + hour / 2;
+
+  it('sin offsets: Antes e2, Más tarde e5, y se puede paginar a ambos lados', () => {
+    const s = computeSlots(items, { nowMs, epgPastEnabled: true });
+    expect([s.before.title, s.now.title, s.next.title, s.later.title]).toEqual(['e2', 'e3', 'e4', 'e5']);
+    expect(s.canPageBefore).toBe(true);
+    expect(s.canPageLater).toBe(true);
+  });
+
+  it('laterOffset corre solo Más tarde; en el último evento ya no se puede avanzar', () => {
+    const s = computeSlots(items, { nowMs, epgPastEnabled: true, laterOffset: 1 });
+    expect([s.now.title, s.next.title, s.later.title]).toEqual(['e3', 'e4', 'e6']);
+    expect(s.canPageLater).toBe(false);
+  });
+
+  it('beforeOffset corre solo Antes hacia atrás; en el primer evento ya no se puede retroceder', () => {
+    expect(computeSlots(items, { nowMs, epgPastEnabled: true, beforeOffset: 1 }).before.title).toBe('e1');
+    const s = computeSlots(items, { nowMs, epgPastEnabled: true, beforeOffset: 2 });
+    expect(s.before.title).toBe('e0');
+    expect(s.canPageBefore).toBe(false);
+  });
+
+  it('offsets más allá de los datos se acotan al último evento disponible', () => {
+    const s = computeSlots(items, { nowMs, epgPastEnabled: true, beforeOffset: 9, laterOffset: 9 });
+    expect(s.before.title).toBe('e0');
+    expect(s.later.title).toBe('e6');
+  });
+
+  it('devuelve los offsets efectivos (acotados) para paginar la columna desde ahí', () => {
+    const s = computeSlots(items, { nowMs, epgPastEnabled: true, beforeOffset: 9, laterOffset: 9 });
+    expect([s.beforeOffset, s.laterOffset]).toEqual([2, 1]);
+    const t = computeSlots(items, { nowMs, epgPastEnabled: true, beforeOffset: 1 });
+    expect([t.beforeOffset, t.laterOffset]).toEqual([1, 0]);
+  });
+
+  it('sin epgPast no hay Antes ni paginado hacia atrás', () => {
+    const s = computeSlots(items, { nowMs, beforeOffset: 1 });
+    expect(s.before).toBeNull();
+    expect(s.canPageBefore).toBe(false);
   });
 });

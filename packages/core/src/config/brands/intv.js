@@ -165,7 +165,8 @@ export default {
     "epgCardsHeaderBg": "#0A2135",
     "epgCardsProgramLiveBg": "#415463",
     "epgCardsProgramLiveProgressBg": "#3B9FAC",
-    "epgCardsLaterGlobal": true,
+    "epgCardsPastGlobal": false,
+    "epgCardsLaterGlobal": false,
     "epgCloseModalOnPlayLive": "auto"
   },
   "catchup": {

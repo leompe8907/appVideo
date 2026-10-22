@@ -28,9 +28,18 @@ export function clamp(n, a, b) {
   return Math.min(b, Math.max(a, n));
 }
 
+// La guía calcula los slots de cada fila en cada render (cada 15 s y en cada
+// pulsación): el orden se calcula una vez por lista de eventos. Las listas no
+// se mutan (cada carga asigna un array nuevo), así que sirve de clave.
+const sortedCache = new WeakMap();
+
 function getSortedEvents(epgItems) {
-  const list = Array.isArray(epgItems) ? [...epgItems] : [];
-  list.sort((a, b) => (startOf(a) ?? 0) - (startOf(b) ?? 0));
+  if (!Array.isArray(epgItems)) return [];
+  let list = sortedCache.get(epgItems);
+  if (!list) {
+    list = [...epgItems].sort((a, b) => (startOf(a) ?? 0) - (startOf(b) ?? 0));
+    sortedCache.set(epgItems, list);
+  }
   return list;
 }
 
@@ -48,11 +57,28 @@ export function computeLiveProgressStyle(startMs, endMs, now = Date.now()) {
   return { elapsedPercent: (elapsed / total) * 100, remainingMs: total - elapsed };
 }
 
-export function computeSlots(epgItems, { nowMs, epgPastEnabled = false } = {}) {
+const EMPTY_SLOTS = {
+  before: null,
+  now: null,
+  next: null,
+  later: null,
+  isLive: false,
+  canPageBefore: false,
+  canPageLater: false,
+  beforeOffset: 0,
+  laterOffset: 0,
+};
+
+/**
+ * `beforeOffset` / `laterOffset`: cuántos eventos se corrió el usuario en
+ * "Antes" (hacia atrás) y "Más tarde" (hacia adelante) en esa fila; se acotan
+ * a los datos y se devuelven ya acotados (para paginar una columna global
+ * desde lo que esa fila muestra). `canPageBefore` / `canPageLater`: si hay
+ * otro evento más allá.
+ */
+export function computeSlots(epgItems, { nowMs, epgPastEnabled = false, beforeOffset = 0, laterOffset = 0 } = {}) {
   const events = getSortedEvents(epgItems);
-  if (!events.length)
-    return { before: null, now: null, next: null, later: null, isLive: false };
-  if (nowMs == null) return { before: null, now: null, next: null, later: null, isLive: false };
+  if (!events.length || nowMs == null) return { ...EMPTY_SLOTS };
 
   let idxNow = events.findIndex((ev) => {
     const s = startOf(ev);
@@ -74,9 +100,13 @@ export function computeSlots(epgItems, { nowMs, epgPastEnabled = false } = {}) {
   }
 
   const now = events[idxNow] ?? null;
-  const before = epgPastEnabled ? events[idxNow - 1] ?? null : null;
+  const effBefore = epgPastEnabled ? clamp(beforeOffset, 0, Math.max(0, idxNow - 1)) : 0;
+  const effLater = clamp(laterOffset, 0, Math.max(0, events.length - 1 - (idxNow + 2)));
+  const beforeIdx = idxNow - 1 - effBefore;
+  const laterIdx = idxNow + 2 + effLater;
+  const before = epgPastEnabled ? events[beforeIdx] ?? null : null;
   const next = events[idxNow + 1] ?? null;
-  const later = events[idxNow + 2] ?? null;
+  const later = events[laterIdx] ?? null;
 
   const isLive = (() => {
     if (!now) return false;
@@ -86,5 +116,15 @@ export function computeSlots(epgItems, { nowMs, epgPastEnabled = false } = {}) {
     return nowMs >= s && nowMs <= e;
   })();
 
-  return { before, now, next, later, isLive };
+  return {
+    before,
+    now,
+    next,
+    later,
+    isLive,
+    canPageBefore: epgPastEnabled && beforeIdx > 0,
+    canPageLater: laterIdx < events.length - 1,
+    beforeOffset: effBefore,
+    laterOffset: effLater,
+  };
 }

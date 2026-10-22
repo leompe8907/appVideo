@@ -404,7 +404,13 @@
     "reminderTitle": "Reminder",
     "reminderStartingSoon": "This program is about to start",
     "reminderStartsIn": "Starts in",
-    "goToChannel": "Go to channel"
+    "goToChannel": "Go to channel",
+    "noEpgTitle": "No EPG information",
+    "noEpgMessage": "This channel has no programming available.",
+    "loadErrorTitle": "Connection error",
+    "loadErrorMessage": "Couldn't load the programming. Try again later.",
+    "watchLive": "Watch live channel",
+    "noMorePrograms": "No more programming"
   },
   "player": {
     "player": "Player",

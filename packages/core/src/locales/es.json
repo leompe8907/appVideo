@@ -404,7 +404,13 @@
     "reminderTitle": "Recordatorio",
     "reminderStartingSoon": "Este programa está por comenzar",
     "reminderStartsIn": "Comienza en",
-    "goToChannel": "Ir al canal"
+    "goToChannel": "Ir al canal",
+    "noEpgTitle": "Sin información de EPG",
+    "noEpgMessage": "Este canal no cuenta con programación disponible.",
+    "loadErrorTitle": "Error de conexión",
+    "loadErrorMessage": "No se pudo cargar la programación. Intenta de nuevo más tarde.",
+    "watchLive": "Ver canal en vivo",
+    "noMorePrograms": "No hay más programación"
   },
   "player": {
     "player": "Reproductor",

@@ -58,18 +58,18 @@ export default {
       "assetPath": "backgroundalt.webp"
     },
     "qrRegister": {
-      "enabled": true,
-      "url": "https://shop.fotelka.tv/?c=customer&p=register"
+      "enabled": "",
+      "url": ""
     },
     "forgotPassword": {
-      "enabled": true,
-      "url": "https://shop.fotelka.tv/?c=customer&p=reset_password"
+      "enabled": false,
+      "url": ""
     },
     "udid": {
-      "enabled": true,
-      "baseUrl": "http://127.0.0.1:8001",
-      "requestPath": "/udid/request-udid-manual/",
-      "wsUrl": "ws://127.0.0.1:8001/ws/auth/",
+      "enabled": false,
+      "baseUrl": "",
+      "requestPath": "",
+      "wsUrl": "",
       "appType": "web",
       "appVersion": "1.0",
       "maxReconnectAttempts": 3,
@@ -79,22 +79,22 @@ export default {
         10000
       ],
       "heartbeatMs": 30000,
-      "privateKeyUrl": "/cableatlantico/keys/private_key.pem",
+      "privateKeyUrl": "",
       "tempTokenRequired": true
     },
     "socialLogin": {
-      "backendBaseUrl": "https://backend.wind.do",
+      "backendBaseUrl": "",
       "google": {
-        "enabled": true,
-        "redirectUrl": "/wind/auth/google/",
-        "accessToken": "487078023200-686hite4p619jtaobfa4oksvhoal7qc1.apps.googleusercontent.com",
+        "enabled": false,
+        "redirectUrl": "",
+        "accessToken": "",
         "preferCustomButton": true,
         "backendBaseUrl": ""
       },
       "facebook": {
-        "enabled": true,
-        "redirectUrl": "/wind/auth/facebook/",
-        "accessToken": "823584907447149",
+        "enabled": false,
+        "redirectUrl": "",
+        "accessToken": "",
         "backendBaseUrl": ""
       }
     },
@@ -126,20 +126,20 @@ export default {
     },
     "links": {
       "changePassword": {
-        "enabled": true,
-        "url": "https://shop.fotelka.tv/?c=customer&p=reset_password"
+        "enabled": false,
+        "url": ""
       },
       "linkedDevices": {
-        "enabled": true,
-        "url": "https://shop.fotelka.tv/?c=customer&p=devices"
+        "enabled": false,
+        "url": ""
       },
       "subscription": {
-        "enabled": true,
-        "url": "https://shop.fotelka.tv/?c=customer&p=subscription"
+        "enabled": false,
+        "url": ""
       },
       "deleteAccount": {
-        "enabled": true,
-        "url": "https://shop.fotelka.tv/?c=customer&p=delete_account"
+        "enabled": false,
+        "url": ""
       }
     },
     "sections": {
@@ -167,7 +167,8 @@ export default {
     "epgCardsHeaderBg": "#5880afff",
     "epgCardsProgramLiveBg": "#6C8EB6",
     "epgCardsProgramLiveProgressBg": "#6C8EB6",
-    "epgCardsLaterGlobal": true,
+    "epgCardsPastGlobal": false,
+    "epgCardsLaterGlobal": false,
     "epgCloseModalOnPlayLive": "auto"
   },
   "catchup": {

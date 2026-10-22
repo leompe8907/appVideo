@@ -85,7 +85,7 @@ export default {
     "socialLogin": {
       "backendBaseUrl": "https://backend.wind.do",
       "google": {
-        "enabled": false,
+        "enabled": true,
         "redirectUrl": "/wind/auth/google/",
         "accessToken": "487078023200-686hite4p619jtaobfa4oksvhoal7qc1.apps.googleusercontent.com",
         "preferCustomButton": true,
@@ -166,7 +166,8 @@ export default {
     "epgCardsHeaderBg": "#0A2135",
     "epgCardsProgramLiveBg": "#415463",
     "epgCardsProgramLiveProgressBg": "#3B9FAC",
-    "epgCardsLaterGlobal": true,
+    "epgCardsPastGlobal": false,
+    "epgCardsLaterGlobal": false,
     "epgCloseModalOnPlayLive": "auto"
   },
   "catchup": {
@@ -375,9 +376,7 @@ export default {
     }
   },
   "features": {
-    // Perfiles del backend externo (Wind, `/api/v1/profiles/`), no los de PanAccess. Una cuenta
-    // sin perfiles encendidos en el backend (`profiles_disabled`) sigue como antes.
-    "profiles": true,
+    "profiles": false,
     "profilesSource": "externo",
     "showRating": true,
     "osms": true,

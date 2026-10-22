@@ -255,12 +255,14 @@
  *   @param {number} EPG.reminderLeadSeconds - Segundos antes de start para popup de recordatorio. Default: 60.
  *   @param {boolean} EPG.reminderShowWhilePlaying - Si true, el popup puede mostrarse con playback activo.
  *   @param {boolean} EPG.epgPast
- *   @param {boolean} EPG.epgPagesPastEnabled
+ *   @param {boolean} EPG.epgPagesPastEnabled - Con epgPast: ◄/► en "Antes" pagina eventos anteriores.
  *   @param {string} EPG.epgCardsChannelActiveBg
  *   @param {string} [EPG.epgCardsHeaderBg]
  *   @param {string} EPG.epgCardsProgramLiveBg
  *   @param {string} EPG.epgCardsProgramLiveProgressBg
- *   @param {boolean} EPG.epgCardsLaterGlobal
+ *   @param {boolean} EPG.epgCardsPastGlobal - true: paginar "Antes" mueve la columna entera (todas
+ *     las filas); false: solo la fila con foco. Como en DevApps.
+ *   @param {boolean} EPG.epgCardsLaterGlobal - Igual para "Más tarde".
  *   @param {boolean|'auto'} EPG.epgCloseModalOnPlayLive
  *
  * NOTA (2026-09-14): este archivo antes tenía las 7 marcas como un único
