@@ -82,7 +82,8 @@ function getEpgCacheKey(brandConfig) {
   return `app_epg_cache_${bId}`;
 }
 
-function pruneEpgEvent(ev) {
+/** Exportada para tests: qué campos del evento sobreviven en la caché de EPG. */
+export function pruneEpgEvent(ev) {
   if (!ev) return null;
   const pruned = {};
 
@@ -106,6 +107,12 @@ function pruneEpgEvent(ev) {
   if (ev.posterUrl !== undefined) pruned.posterUrl = ev.posterUrl;
   if (ev.image !== undefined) pruned.image = ev.image;
   if (ev.poster !== undefined) pruned.poster = ev.poster;
+
+  // Control parental por clasificación (parentalGateStore) y catchup del evento.
+  if (ev.parentalRating !== undefined) pruned.parentalRating = ev.parentalRating;
+  if (ev.parental_rating !== undefined) pruned.parental_rating = ev.parental_rating;
+  if (ev.parentalControl !== undefined) pruned.parentalControl = ev.parentalControl;
+  if (ev.catchupId !== undefined) pruned.catchupId = ev.catchupId;
 
   if (ev.description !== undefined) pruned.description = ev.description;
   if (ev.extendedDescription !== undefined) pruned.extendedDescription = ev.extendedDescription;
