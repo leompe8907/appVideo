@@ -84,7 +84,8 @@ function collectJsFiles(dir, out = []) {
     const st = statSync(full);
     if (st.isDirectory()) {
       collectJsFiles(full, out);
-    } else if (extname(entry) === '.js' && !entry.includes('.map')) {
+    } else if (extname(entry) === '.js' && !entry.includes('.map') && !entry.startsWith('._')) {
+      // `._*` = AppleDouble de macOS en discos exFAT (metadatos, no JS).
       out.push(full);
     }
   }

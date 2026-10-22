@@ -37,6 +37,7 @@ function collectLegacyJs(dir, out = []) {
     }
     if (
       extname(entry) === '.js' &&
+      !entry.startsWith('._') && // AppleDouble de macOS en discos exFAT, no es JS
       entry.includes('legacy') &&
       !entry.includes('polyfills-legacy')
     ) {
