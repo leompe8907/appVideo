@@ -36,7 +36,8 @@ function yieldToMain(ms) {
  * Construye la URL de descarga de EPG para un canal (epgStreamId).
  * Equivalente a AppData.getEPGURL en el proyecto EPG.
  * @param {string|number} streamId - epgStreamId del canal.
- * @param {Object} options - epgApiKey, epgApiToken, epgCdnUrl, operatorName, epgDaysOffset.
+ * @param {Object} options - epgApiKey, epgApiToken, epgCdnUrl, operatorName, epgDaysOffset,
+ *   oldMode (true: el servidor incluye los `pastDays` de pasado; sin él empieza en el evento al aire).
  * @returns {string} URL o '' si faltan datos.
  */
 export function getEPGURL(streamId, options = {}) {
@@ -62,7 +63,8 @@ export function getEPGURL(streamId, options = {}) {
     `&operator=${encodeURIComponent(operatorName)}` +
     `&epgStreamId=${streamIdStr}` +
     `&pastDays=${epgDaysOffset}` +
-    `&unzipped=true`
+    `&unzipped=true` +
+    (options.oldMode ? '&oldMode=true' : '')
   );
 }
 
@@ -140,7 +142,8 @@ function toMomentLike(start) {
  * Descarga la EPG desde la URL (fetch). Soporta CORS; si el servidor solo devuelve JSONP,
  * parseEPGResponse intenta extraer el JSON del wrapper.
  * @param {string} url
- * @param {{ timeoutMs?: number, signal?: AbortSignal }} [options]
+ * @param {{ timeoutMs?: number, signal?: AbortSignal, throwOnError?: boolean }} [options]
+ *   throwOnError: relanza el error (red, timeout o HTTP no-2xx) en vez de devolver [].
  * @returns {Promise<Array>} Lista de eventos EPG.
  */
 export async function fetchEPG(url, options = {}) {
@@ -161,6 +164,7 @@ export async function fetchEPG(url, options = {}) {
 
   const fetchPromise = (async () => {
     const res = await fetch(url, { method: 'GET', mode: 'cors', signal: controller.signal });
+    if (!res.ok) throw new Error(`EPG HTTP ${res.status}`);
     const text = await res.text();
     return parseEPGResponse(text);
   })();
@@ -180,6 +184,7 @@ export async function fetchEPG(url, options = {}) {
     if (import.meta.env.DEV) {
       console.warn('[epgService] fetchEPG error:', e?.message ?? e);
     }
+    if (options.throwOnError) throw e;
     return [];
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
@@ -226,6 +231,9 @@ async function loadSingleChannelEpg(channel, opts, { epgHoursLimit, requestTimeo
   if (channel.epgItems != null && channel.epgItems.length > 0) return false;
 
   const epgStreamId = channel.epgStreamId ?? channel.epgStreamid;
+  // epgLoadFailed: la request falló (red, timeout, HTTP) — distinto de un
+  // canal sin EPG, para que la guía pueda decir "error de conexión".
+  channel.epgLoadFailed = false;
   if (epgStreamId === 0 || epgStreamId === null || epgStreamId === '0' || epgStreamId === undefined || epgStreamId === '') {
     channel.epgItems = [];
     return false;
@@ -237,7 +245,14 @@ async function loadSingleChannelEpg(channel, opts, { epgHoursLimit, requestTimeo
     return false;
   }
 
-  const data = await fetchEPG(url, { timeoutMs: requestTimeoutMs });
+  let data;
+  try {
+    data = await fetchEPG(url, { timeoutMs: requestTimeoutMs, throwOnError: true });
+  } catch {
+    channel.epgItems = [];
+    channel.epgLoadFailed = true;
+    return true;
+  }
   if (!data.length && import.meta.env.DEV) {
     console.warn('[epgService] EPG vacía o timeout para epgStreamId:', epgStreamId);
   }
@@ -257,7 +272,7 @@ async function loadSingleChannelEpg(channel, opts, { epgHoursLimit, requestTimeo
  * hay ningún estado compartido que obligue a serializar. Mutación: asigna
  * channel.epgItems a cada canal.
  * @param {Array} channels - Lista de canales (cada uno con id, epgStreamId, ...).
- * @param {Object} options - epgApiKey, epgApiToken, epgDaysOffset, epgHoursLimit,
+ * @param {Object} options - epgApiKey, epgApiToken, epgDaysOffset, epgHoursLimit, epgOldMode,
  *   maxChannels, requestTimeoutMs, batchSize (default 5), onProgress(completedCount, total).
  * @returns {Promise<Array>} La misma lista de canales con epgItems asignados.
  */
@@ -292,6 +307,7 @@ export async function loadEPGForChannels(channels, options = {}) {
     epgCdnUrl,
     operatorName,
     epgDaysOffset,
+    oldMode: options.epgOldMode === true,
   };
 
   // `completedCount` (no el índice del canal) es lo que se reporta: al ser

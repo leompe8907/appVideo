@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { loadEPGForChannels, DEFAULT_EPG_BATCH_SIZE } from '../epgService.js';
+import { loadEPGForChannels, getEPGURL, DEFAULT_EPG_BATCH_SIZE } from '../epgService.js';
 
 /**
  * Regresión del hallazgo de auditoría "carga de EPG 100% secuencial,
@@ -44,7 +44,7 @@ describe('loadEPGForChannels — carga en paralelo por tandas', () => {
         return new Promise((resolve) => {
           resolvers.push(() => {
             inFlight -= 1;
-            resolve({ text: () => Promise.resolve('[]') });
+            resolve({ ok: true, text: () => Promise.resolve('[]') });
           });
         });
       }),
@@ -98,7 +98,7 @@ describe('loadEPGForChannels — carga en paralelo por tandas', () => {
       vi.fn(() => {
         inFlight += 1;
         maxInFlight = Math.max(maxInFlight, inFlight);
-        return Promise.resolve({ text: () => Promise.resolve('[]') }).finally(() => {
+        return Promise.resolve({ ok: true, text: () => Promise.resolve('[]') }).finally(() => {
           inFlight -= 1;
         });
       }),
@@ -114,7 +114,7 @@ describe('loadEPGForChannels — carga en paralelo por tandas', () => {
   it('onProgress llega a toProcess con conteos no decrecientes', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(() => Promise.resolve({ text: () => Promise.resolve('[]') })),
+      vi.fn(() => Promise.resolve({ ok: true, text: () => Promise.resolve('[]') })),
     );
 
     const channels = makeChannels(11);
@@ -133,7 +133,7 @@ describe('loadEPGForChannels — carga en paralelo por tandas', () => {
   });
 
   it('respeta maxChannels: los canales fuera de rango quedan con epgItems=[] sin pegarle a la red', async () => {
-    const fetchMock = vi.fn(() => Promise.resolve({ text: () => Promise.resolve('[]') }));
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, text: () => Promise.resolve('[]') }));
     vi.stubGlobal('fetch', fetchMock);
 
     const channels = makeChannels(10);
@@ -143,5 +143,80 @@ describe('loadEPGForChannels — carga en paralelo por tandas', () => {
     channels.slice(4).forEach((ch) => {
       expect(ch.epgItems).toEqual([]);
     });
+  });
+});
+
+/**
+ * Sin `oldMode=true` Panaccess ignora `pastDays` y devuelve la EPG desde el
+ * evento al aire (sin "Antes"); DevApps lo manda desde siempre.
+ */
+describe('getEPGURL — oldMode', () => {
+  const opts = { epgApiKey: 'key', epgApiToken: 'token', epgCdnUrl: 'https://epg.example.invalid', operatorName: 'op' };
+
+  it('agrega oldMode=true cuando se pide pasado', () => {
+    expect(getEPGURL(1, { ...opts, oldMode: true })).toContain('&oldMode=true');
+  });
+
+  it('no lo agrega por defecto', () => {
+    expect(getEPGURL(1, opts)).not.toContain('oldMode');
+  });
+});
+
+describe('loadEPGForChannels — oldMode y falla de carga', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const baseOpts = {
+    epgApiKey: 'key',
+    epgApiToken: 'token',
+    epgCdnUrl: 'https://epg.example.invalid/guide',
+    operatorName: 'operator',
+  };
+
+  it('epgOldMode pide la EPG con oldMode=true', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, text: () => Promise.resolve('[]') }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await loadEPGForChannels([{ id: 'a', epgStreamId: 1 }], { ...baseOpts, epgOldMode: true });
+
+    expect(fetchMock.mock.calls[0][0]).toContain('&oldMode=true');
+  });
+
+  it('marca epgLoadFailed si la request falla, y no si la EPG llega vacía', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url) =>
+        url.includes('epgStreamId=1&')
+          ? Promise.reject(new Error('network'))
+          : Promise.resolve({ ok: true, text: () => Promise.resolve('[]') }),
+      ),
+    );
+    const failed = { id: 'a', epgStreamId: 1 };
+    const empty = { id: 'b', epgStreamId: 2 };
+
+    await loadEPGForChannels([failed, empty], baseOpts);
+
+    expect(failed).toMatchObject({ epgItems: [], epgLoadFailed: true });
+    expect(empty).toMatchObject({ epgItems: [], epgLoadFailed: false });
+  });
+
+  it('una respuesta HTTP de error cuenta como falla', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('') })));
+    const ch = { id: 'a', epgStreamId: 1 };
+
+    await loadEPGForChannels([ch], baseOpts);
+
+    expect(ch.epgLoadFailed).toBe(true);
+  });
+
+  it('un canal sin epgStreamId no es una falla', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    const ch = { id: 'a', epgStreamId: '0' };
+
+    await loadEPGForChannels([ch], baseOpts);
+
+    expect(ch).toMatchObject({ epgItems: [], epgLoadFailed: false });
   });
 });

@@ -358,6 +358,8 @@ export async function loadEPGForStreams(streams, brandConfig, options = {}) {
     epgApiToken: brandConfig.epgApiToken ?? '',
     epgDaysOffset: epg.daysOffset ?? 2,
     epgHoursLimit: epg.hoursLimit ?? 12,
+    // Solo las marcas que muestran "Antes" piden el pasado (la respuesta pesa más).
+    epgOldMode: epg.epgPast === true,
     maxChannels,
     requestTimeoutMs: options.requestTimeoutMs ?? epg.requestTimeoutMs,
     onProgress: options.onProgress ?? (() => {}),
