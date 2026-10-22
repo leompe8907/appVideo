@@ -17,5 +17,6 @@ import cableatlantico from './cableatlantico.js';
 import wind from './wind.js';
 import multiplustv from './multiplustv.js';
 import sattv from './sattv.js';
+import supercabo from './supercabo.js';
 
-export const BRANDS = [bromteck, intv, gigmax, cableatlantico, wind, multiplustv, sattv];
+export const BRANDS = [bromteck, intv, gigmax, cableatlantico, wind, multiplustv, sattv, supercabo];
