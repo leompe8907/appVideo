@@ -20,6 +20,8 @@ export const TV_ACTION = Object.freeze({
   STOP: 'stop',
   FAST_FORWARD: 'fast_forward',
   REWIND: 'rewind',
+  /** 0–9 (en Samsung requieren registerTvKeys); el valor sale de getDigitFromKeyEvent. */
+  DIGIT: 'digit',
 });
 
 function toInt(v) {
@@ -70,6 +72,19 @@ export function getTvActionFromKeyEvent(e) {
   if (key === 'MediaFastForward' || keyCode === 417) return TV_ACTION.FAST_FORWARD;
   if (key === 'MediaRewind' || keyCode === 412) return TV_ACTION.REWIND;
 
+  if (getDigitFromKeyEvent(e) != null) return TV_ACTION.DIGIT;
+
+  return null;
+}
+
+/** Dígito 0–9 de la tecla (fila superior 48–57, teclado numérico 96–105), o null. */
+export function getDigitFromKeyEvent(e) {
+  if (!e) return null;
+  const key = String(e.key || '');
+  if (/^[0-9]$/.test(key)) return Number(key);
+  const keyCode = toInt(e.keyCode || e.which);
+  if (keyCode >= 48 && keyCode <= 57) return keyCode - 48;
+  if (keyCode >= 96 && keyCode <= 105) return keyCode - 96;
   return null;
 }
 

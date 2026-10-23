@@ -757,7 +757,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     [play, requestPlayChannel, resolveChannelLiveUrl]
   );
 
-  const { zapByDirection } = usePlayerChannelZapping({
+  const { zapByDirection, pendingChannelNumber } = usePlayerChannelZapping({
     // TV: ↑/↓ (sin cambios). PC: ←/→ -- en PC, ↑/↓ ahora controlan volumen
     // (ver el handler de volumen más abajo), así que el zapping por flecha
     // pasa al eje horizontal para no pisarse con eso.
@@ -973,6 +973,11 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   return (
     <>
       {statsPanelEnabled && statsOn ? <PlayerStatsPanel getDiagnostics={getDiagnostics} /> : null}
+      {pendingChannelNumber ? (
+        <div className="player-channel-number" role="status" aria-live="polite">
+          {pendingChannelNumber}
+        </div>
+      ) : null}
       {hasPlaybackError && (
         <div ref={errorRootRef} className="player-error-overlay" role="alert" aria-live="assertive">
           <div className="player-error-overlay__box">

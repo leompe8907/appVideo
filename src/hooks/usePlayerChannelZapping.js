@@ -1,6 +1,7 @@
-import { useCallback, useEffect } from 'react';
-import { findZappingChannelIndex } from '@appvideo/core/utils/channelZappingList';
-import { TV_ACTION } from '../utils/tvRemote';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { findChannelByLcn, findZappingChannelIndex } from '@appvideo/core/utils/channelZappingList';
+import { getDigitFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
+import { createChannelNumberInput } from '../utils/channelNumberInput';
 import { navigationRouter } from '../navigation/NavigationRouter';
 
 /**
@@ -14,6 +15,9 @@ import { navigationRouter } from '../navigation/NavigationRouter';
  *   PlayerHud.jsx), por eso el zapping por flecha en PC usa el eje horizontal
  *   en vez del vertical que sí usa TV.
  * - channelUp / → → +1 en lista; channelDown / ← → −1 (LCN ascendente, lcn 0 al final).
+ * - 0–9: número de canal (LCN). Se confirma tras CHANNEL_NUMBER_TIMEOUT_MS sin
+ *   teclas o al completar las cifras del LCN más alto; `pendingChannelNumber`
+ *   es lo tecleado hasta ahora, para mostrarlo en pantalla.
  *
  * Se registra como handler de zona 'global' en `NavigationRouter` en vez de
  * instalar su propio `window.addEventListener('keydown')` — antes este hook,
@@ -22,10 +26,13 @@ import { navigationRouter } from '../navigation/NavigationRouter';
  * para "ganarle" a los demás. Ahora hay un único listener de `keydown` en toda
  * la app; este hook solo aporta un handler más a la cola de esa zona.
  */
+const CHANNEL_NUMBER_TIMEOUT_MS = 2000;
+
 export function usePlayerChannelZapping({
   arrowKeysEnabled = false,
   horizontalArrowKeysEnabled = false,
   channelKeysEnabled = true,
+  digitKeysEnabled = true,
   isLiveService,
   isPlaybackMaximized,
   overlay,
@@ -63,18 +70,60 @@ export function usePlayerChannelZapping({
     ],
   );
 
+  const [pendingChannelNumber, setPendingChannelNumber] = useState('');
+
+  // El commit llega por timer: lee siempre los canales y callbacks más recientes.
+  const zapToNumberRef = useRef(null);
+  const wakeHudRef = useRef(null);
+  useEffect(() => {
+    wakeHudRef.current = onWakeHud;
+    zapToNumberRef.current = (number) => {
+      if (!isLiveService || !isPlaybackMaximized) return;
+      const target = findChannelByLcn(channels, number);
+      if (!target) return;
+      if (String(target.id) !== String(currentServiceId)) onZapToChannel?.(target);
+      onWakeHud?.();
+    };
+  });
+
+  const maxDigits = useMemo(() => {
+    const list = Array.isArray(channels) ? channels : [];
+    const maxLcn = list.reduce((max, ch) => Math.max(max, Number(ch?.lcn) || 0), 0);
+    return String(maxLcn).length;
+  }, [channels]);
+
+  const numberInputRef = useRef(null);
+  useEffect(() => {
+    const input = createChannelNumberInput({
+      timeoutMs: CHANNEL_NUMBER_TIMEOUT_MS,
+      maxDigits,
+      onChange: setPendingChannelNumber,
+      onCommit: (number) => zapToNumberRef.current?.(number),
+    });
+    numberInputRef.current = input;
+    return () => {
+      input.cancel();
+      if (numberInputRef.current === input) numberInputRef.current = null;
+    };
+  }, [maxDigits]);
+
+  const canTypeNumber = digitKeysEnabled && isLiveService && isPlaybackMaximized && !overlay;
+  useEffect(() => {
+    if (!canTypeNumber) numberInputRef.current?.cancel();
+  }, [canTypeNumber]);
+
   useEffect(() => {
     const canZap =
       isLiveService &&
       isPlaybackMaximized &&
-      (arrowKeysEnabled || horizontalArrowKeysEnabled || channelKeysEnabled);
+      (arrowKeysEnabled || horizontalArrowKeysEnabled || channelKeysEnabled || digitKeysEnabled);
     if (!canZap) return undefined;
 
     // Handler de zona: `NavigationRouter` ya filtró altKey/ctrlKey/metaKey y
     // resolvió `action` antes de invocar esto. Retornar `true` consume la
     // tecla (el router hace preventDefault/stopPropagation por nosotros);
     // `false` la deja pasar sin necesidad de stopImmediatePropagation.
-    const handler = (action) => {
+    const handler = (action, event) => {
       if (overlay) return false;
 
       const active = document.activeElement;
@@ -84,6 +133,14 @@ export function usePlayerChannelZapping({
         active instanceof HTMLSelectElement
       ) {
         return false;
+      }
+
+      if (action === TV_ACTION.DIGIT) {
+        const digit = getDigitFromKeyEvent(event);
+        if (!digitKeysEnabled || digit == null) return false;
+        numberInputRef.current?.push(digit);
+        wakeHudRef.current?.();
+        return true;
       }
 
       let direction = null;
@@ -102,6 +159,7 @@ export function usePlayerChannelZapping({
       }
 
       if (!direction) return false;
+      numberInputRef.current?.cancel();
       zapByDirection(direction);
       return true;
     };
@@ -111,13 +169,14 @@ export function usePlayerChannelZapping({
     arrowKeysEnabled,
     horizontalArrowKeysEnabled,
     channelKeysEnabled,
+    digitKeysEnabled,
     isLiveService,
     isPlaybackMaximized,
     overlay,
     zapByDirection,
   ]);
 
-  return { zapByDirection };
+  return { zapByDirection, pendingChannelNumber };
 }
 
 export default usePlayerChannelZapping;

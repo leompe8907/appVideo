@@ -208,7 +208,7 @@ class NavigationRouter {
       return;
     }
 
-    // --- CHANNEL_UP/CHANNEL_DOWN (CH+/CH-) y teclas de media: sin geometría propia, se delegan
+    // --- CHANNEL_UP/CHANNEL_DOWN (CH+/CH-), teclas de media y dígitos: sin geometría propia, se delegan
     // por completo a handlers de zona registrados (ej. zapping de canal del
     // reproductor). Antes cada consumidor de estas teclas necesitaba su propio
     // listener de `keydown` en `window`; ahora comparten el único listener
@@ -221,7 +221,8 @@ class NavigationRouter {
       action === TV_ACTION.PLAY_PAUSE ||
       action === TV_ACTION.STOP ||
       action === TV_ACTION.FAST_FORWARD ||
-      action === TV_ACTION.REWIND
+      action === TV_ACTION.REWIND ||
+      action === TV_ACTION.DIGIT
     ) {
       const activeZoneId = focusManager.getActiveZoneId();
       if (this.runZoneHandlers(activeZoneId, action, e)) {

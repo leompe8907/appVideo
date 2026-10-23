@@ -41,3 +41,13 @@ export function findZappingChannelIndex(channels, serviceId) {
   const idStr = String(serviceId);
   return channels.findIndex((ch) => ch?.id != null && String(ch.id) === idStr);
 }
+
+/**
+ * Canal con ese LCN (número tecleado en el control). 0 = canal sin número.
+ * @returns {object|null}
+ */
+export function findChannelByLcn(channels, lcn) {
+  const n = Number(lcn);
+  if (!Array.isArray(channels) || !Number.isFinite(n) || n === 0) return null;
+  return channels.find((ch) => Number(ch?.lcn) === n) ?? null;
+}

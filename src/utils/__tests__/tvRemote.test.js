@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getTvActionFromKeyEvent, TV_ACTION } from '../tvRemote';
+import { getDigitFromKeyEvent, getTvActionFromKeyEvent, TV_ACTION } from '../tvRemote';
 
 const ev = (keyCode, key = '') => ({ keyCode, key, code: '' });
 
@@ -40,6 +40,16 @@ describe('getTvActionFromKeyEvent', () => {
     expect(getTvActionFromKeyEvent(ev(412))).toBe(TV_ACTION.REWIND);
     expect(getTvActionFromKeyEvent(ev(0, 'MediaPlayPause'))).toBe(TV_ACTION.PLAY_PAUSE);
     expect(getTvActionFromKeyEvent(ev(0, 'MediaPause'))).toBe(TV_ACTION.PAUSE);
+  });
+
+  it('dígitos: fila superior (48–57) y teclado numérico (96–105)', () => {
+    expect(getTvActionFromKeyEvent(ev(48, '0'))).toBe(TV_ACTION.DIGIT);
+    expect(getTvActionFromKeyEvent(ev(57))).toBe(TV_ACTION.DIGIT);
+    expect(getTvActionFromKeyEvent(ev(101))).toBe(TV_ACTION.DIGIT);
+    expect(getDigitFromKeyEvent(ev(53))).toBe(5);
+    expect(getDigitFromKeyEvent(ev(96))).toBe(0);
+    expect(getDigitFromKeyEvent(ev(0, '7'))).toBe(7);
+    expect(getDigitFromKeyEvent(ev(65, 'a'))).toBeNull();
   });
 
   it('teclas sin acción devuelven null', () => {
