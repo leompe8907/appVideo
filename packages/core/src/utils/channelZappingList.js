@@ -43,11 +43,24 @@ export function findZappingChannelIndex(channels, serviceId) {
 }
 
 /**
- * Canal con ese LCN (número tecleado en el control). 0 = canal sin número.
+ * Canal con ese LCN (número tecleado en el control) o, si no existe, el de LCN
+ * más cercano; a igual distancia, el más bajo. 0 = canal sin número.
  * @returns {object|null}
  */
 export function findChannelByLcn(channels, lcn) {
   const n = Number(lcn);
   if (!Array.isArray(channels) || !Number.isFinite(n) || n === 0) return null;
-  return channels.find((ch) => Number(ch?.lcn) === n) ?? null;
+  let best = null;
+  let bestLcn = 0;
+  for (const ch of channels) {
+    const chLcn = Number(ch?.lcn);
+    if (!Number.isFinite(chLcn) || chLcn === 0) continue;
+    const dist = Math.abs(chLcn - n);
+    const bestDist = Math.abs(bestLcn - n);
+    if (!best || dist < bestDist || (dist === bestDist && chLcn < bestLcn)) {
+      best = ch;
+      bestLcn = chLcn;
+    }
+  }
+  return best;
 }
