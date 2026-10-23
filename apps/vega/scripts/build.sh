@@ -2,6 +2,7 @@
 # Compila la app Vega.
 #   scripts/build.sh            → Debug
 #   scripts/build.sh Release    → Release
+#   scripts/build.sh Release --build-number 2  → opciones extra para build-vega
 # Marca: VEGA_BRAND=intv (por defecto).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -20,4 +21,4 @@ trap 'node scripts/brand-package.js restore >/dev/null' EXIT
 # reutilizaría transformaciones viejas.
 rm -rf "${TMPDIR:-/tmp}"/metro-* "${TMPDIR:-/tmp}"/haste-map-* 2>/dev/null || true
 
-npx react-native build-vega --build-type "$BUILD_TYPE"
+npx react-native build-vega --build-type "$BUILD_TYPE" "${@:2}"

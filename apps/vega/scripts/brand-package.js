@@ -6,9 +6,12 @@
  *
  *   node scripts/brand-package.js apply     → escribe id/título de la marca
  *   node scripts/brand-package.js restore   → vuelve a los valores de intv
+ *   node scripts/brand-package.js id        → imprime el id de la marca
  *
  * intv conserva `com.bromteck.appvideo` (el id con el que ya está instalada);
- * las demás marcas usan `com.bromteck.appvideo.<marca>`. El título sale de
+ * las demás marcas usan `com.bromteck.appvideo.<marca>`, salvo las de
+ * STORE_IDS: la Appstore exige que el .vpkg tenga el mismo id que la app
+ * Android ya publicada en la misma ficha. El título sale de
  * `appName` de packages/core/src/config/brands/<marca>.js.
  */
 const fs = require('fs');
@@ -20,13 +23,17 @@ const appJsonPath = path.join(appRoot, 'app.json');
 
 const BASE_ID = 'com.bromteck.appvideo';
 const DEFAULT_BRAND = 'intv';
+const STORE_IDS = {
+  bromteck: 'com.bromteck.bromtecktv.androidtv.streaming',
+};
 
 function brandInfo(brand) {
   const file = path.resolve(appRoot, '../../packages/core/src/config/brands', `${brand}.js`);
   if (!fs.existsSync(file)) throw new Error(`No existe la marca ${brand} (${file})`);
   const src = fs.readFileSync(file, 'utf8');
   const appName = /"appName":\s*"([^"]+)"/.exec(src)?.[1] || brand;
-  const id = brand === DEFAULT_BRAND ? BASE_ID : `${BASE_ID}.${brand.replace(/[^a-z0-9]/gi, '').toLowerCase()}`;
+  const id = STORE_IDS[brand]
+    || (brand === DEFAULT_BRAND ? BASE_ID : `${BASE_ID}.${brand.replace(/[^a-z0-9]/gi, '').toLowerCase()}`);
   return {id, appName};
 }
 
@@ -49,7 +56,8 @@ function write(brand) {
 const mode = process.argv[2];
 if (mode === 'apply') write(process.env.VEGA_BRAND || DEFAULT_BRAND);
 else if (mode === 'restore') write(DEFAULT_BRAND);
+else if (mode === 'id') console.log(brandInfo(process.env.VEGA_BRAND || DEFAULT_BRAND).id);
 else {
-  console.error('uso: brand-package.js apply|restore');
+  console.error('uso: brand-package.js apply|restore|id');
   process.exit(1);
 }
