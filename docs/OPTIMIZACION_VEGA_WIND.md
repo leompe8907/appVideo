@@ -177,11 +177,101 @@ importar en la próxima key.
 
 Tests: 317 de vitest (incluye `keyUnwrap.test.js`, 4 casos), lint sin errores.
 
+## Segunda tanda (26-10-2026)
+
+### Pendientes resueltos
+
+- **Cambio de canal por número.** `num_0`…`num_9` en el player: muestra lo
+  tecleado y a los 2 s (o al completar las cifras del LCN más alto) zapea; un
+  número inexistente va al más cercano. `channelNumberInput` pasó a
+  `packages/core` (web y Vega). Probado: 2-7 → RNN, 3 → MEGAVISION.
+- **CH±.** El SDK declara `channel_up` / `channel_down`; el player sólo
+  aceptaba `channelUp` / `channelDown`. Ahora acepta ambos (probado con
+  `KEY_CHANNELUP/DOWN`). No se registró qué nombre manda el equipo, así que no
+  está confirmado que antes fallara.
+- **Arranque con un solo `.ts`** (sólo marcas con `ignorePlaylistDateTime`,
+  hoy Wind): `startAtSegmentBoundary` + `inaccurateManifestTolerance` 0.
+  Mismos 15 canales: **mediana 5,0 s → 4,0 s** (6 canales por debajo de
+  3,6 s). Release, TELEMICRO, 201 s: 100 `.ts`, 100 keys, 105 listas (sin
+  descargas dobles), 0 cortes. Costo: el vivo queda ~1 segmento más atrás
+  (4,7 en vez de ~3; máximo de la marca 6).
+
+### Arranque en frío medido
+
+Caché vencida: el EPG quedó listo 0,7 s después de llegar al home (antes
+~5,5 s): la precarga durante el splash funciona.
+
+### Cierres en Debug
+
+Los cuatro cierres de Debug registrados fueron **~8 min después de abrir la
+app**, aunque en uno casi no se reprodujo video (10:28 → 10:36). La
+explicación del README ("7,5 min de reproducir") no encaja. Hipótesis no
+verificada: el runtime de desarrollo retiene cada pedido de red y se agotan
+los descriptores. En Release, el build del 23-10 reprodujo TELEMICRO ~7,5 h
+seguidas; lo terminó el sistema al activarse el protector de pantalla
+(`ReclaimMediaResource`, normal en Fire TV), sin `err=24`.
+
+### Test de navegación del home (Debug)
+
+| Área | Resultado |
+|---|---|
+| Inicio, ▼▲ rápido (150 ms) | El foco sigue fila por fila sin perder teclas, de arriba a abajo y vuelta. |
+| Fila larga, 60 ▶ a 120 ms | Llega al último canal (200) sin perder teclas. |
+| Canales | 0,7–1,0 s para dibujarse (ver 6). |
+| Buscador | Abre en 209 ms con el teclado del sistema; resultados en vivo. |
+| Mi cuenta | Abre en 287 ms, pero **abría el teclado sola** (arreglado). |
+| Volver del player | **Foco perdido o en otra fila** en dos casos (arreglado). |
+
+Arreglado en esta tanda:
+- Volver de un canal lejano en una fila horizontal (columna > 6): el foco
+  caía en la primera tarjeta. Ahora la fila arma columnas hasta ese canal.
+- Volver del player: el primer render enfocaba la primera tarjeta y después
+  saltaba al canal (a veces quedaba en otra fila, fuera de pantalla). Ahora el
+  destino se calcula en el mismo render: un solo evento de foco, directo.
+- Mi cuenta: los campos del primer paso de "Cambiar contraseña" ganaban el
+  foco al menú y abrían el teclado del sistema.
+
+### Lista de cosas optimizables (no hechas)
+
+1. **◀ sobre el banner cambia de slide** y no lleva al menú lateral: desde el
+   banner no hay forma de ir al menú sin bajar primero.
+2. **Buscador:** tras "Listo", el primer ▼ cae en el chip "Canales" con un
+   foco poco visible; los resultados usan fondo resaltado y no el anillo de
+   foco del resto de la app.
+3. **Arranque de canal:** sigue siendo 3–6 s; el primer `.ts` tarda ~2,5 s
+   (1–4 MB a 1080p). Arrancar en el perfil más bajo y que el ABR suba
+   bajaría ~1 s en canales con varios perfiles.
+4. **Debug inestable (~8 min):** confirmar la hipótesis (p. ej. Debug sin
+   `devLog` a la Mac) para poder probar más tiempo con logs.
+5. **Log nativo por pedido** (`Application data root path is not set`, ~120/min):
+   no es nuestro; reportar a Amazon o averiguar qué API lo dispara.
+6. **Splash fijo de 5 s** (`ui.splashDuration` de Wind): con la sesión
+   resuelta en <1 s, bajarlo a 2–3 s ahorra tiempo en cada arranque
+   (decisión de producto).
+7. **Zapping a un canal fuera de los bouquets de Inicio:** al volver el foco
+   va a la primera tarjeta (no hay tarjeta de ese canal).
+8. **Test intermitente:** 1 de 321 falló una vez y pasó en las dos corridas
+   siguientes; no quedó registrado cuál.
+
+### Qué conviene migrar a web / Samsung / LG
+
+Las tres usan video.js + hls.js (`HlsPlaybackController`); los adaptadores
+nativos de Samsung/LG están apagados por defecto (`nativeAdaptersEnabled`).
+
+| Cambio de Vega | Web/TV | Evidencia |
+|---|---|---|
+| Key de envoltura importada una vez | **Aplica**: se importa por cada key | `src/player/engines/web/HlsPlaybackController.js:50` |
+| HUD sin re-render global cada 1 s | **Aplica**: tick arriba del HUD y el listado recibe una función nueva por render (su memo nunca corta) | `PlayerHud.jsx:283`, `:584`, `:1519` |
+| EPG durante el splash | **Aplica**: sólo se pide en `/preload` | `src/pages/PreloadDataPage.jsx:33` |
+| Foco del menú en la sección activa | **Aplica**: ◀ se resuelve por geometría | `src/components/Sidebar.jsx:191-213` |
+| Foco al volver sin saltos / filas largas | Revisar en TV | — |
+| Tiempo de arranque desglosado | **En parte**: sólo uptime | `hlsDiagnostics.js` |
+| Log en producción | Menor: `console.info` por motor | `resolveEnginePlatform.js:81`, `BaseTvEngine.js` |
+| Ventana de vivo de 0 s / un solo `.ts` | No aplica (hls.js) | — |
+| Errores de carga, subtítulos, espera al zapear, grilla | Ya está bien | — |
+
 ## Pendientes
 
-- Arranque alineado a un `.ts` (ver 2): ~1,3 s más por zapping.
-- Teclado numérico (LCN) en el player: la web ya lo tiene (commits `522e13c`,
-  `280159e`); Vega no.
 - Zapeando a un canal que no está en ningún bouquet de Inicio, al volver el foco
   va a la primera tarjeta (no hay tarjeta de ese canal).
 - `console.error: forwardRef render functions accept exactly two parameters`
