@@ -82,6 +82,66 @@ function nowNext(channel) {
   };
 }
 
+/** now/next del canal, re-evaluado cada 1 s mientras el componente está montado. */
+function useNowNext(channel) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick((x) => x + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return nowNext(channel);
+}
+
+/** Barra inferior del HUD: logo, LCN, nombre y programa actual/siguiente. */
+function BottomBar({channel, theme}) {
+  const {now, next} = useNowNext(channel);
+  return (
+    <View style={styles.bottombar} pointerEvents="none">
+      <Image resizeMethod="resize" source={logoOf(channel, theme)} style={styles.logo} resizeMode="contain" />
+      <View style={styles.meta}>
+        <Text style={styles.name} numberOfLines={1}>
+          {channel.lcn != null ? <Text style={styles.lcn}>{`${channel.lcn}   `}</Text> : null}
+          {channel.name}
+        </Text>
+        {now ? (
+          <Text style={styles.program} numberOfLines={1}>
+            <Text style={styles.programLabel}>{`${t('player.now')} `}</Text>
+            {now.title}
+          </Text>
+        ) : null}
+        {next ? (
+          <Text style={styles.program} numberOfLines={1}>
+            <Text style={styles.programLabel}>{`${t('player.next')} `}</Text>
+            {next.title}
+          </Text>
+        ) : null}
+      </View>
+      {now?.range ? <Text style={styles.range}>{now.range}</Text> : null}
+    </View>
+  );
+}
+
+/** Panel de información del programa actual. */
+function InfoPanel({channel, onClose}) {
+  const {now} = useNowNext(channel);
+  return (
+    <View style={styles.center}>
+      <View style={styles.infoBox}>
+        <Text style={styles.infoTitle}>{now?.title || channel.name}</Text>
+        {now?.range ? <Text style={styles.infoRange}>{now.range}</Text> : null}
+        {now?.description ? (
+          <Text style={styles.infoDescription} numberOfLines={8}>
+            {now.description}
+          </Text>
+        ) : null}
+        <View style={styles.infoClose}>
+          <HudButton icon="close" hasTVPreferredFocus onPress={onClose} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function HudButton({icon, onPress, hasTVPreferredFocus, onFocus}) {
   const [focused, setFocused] = useState(false);
   return (
@@ -102,34 +162,38 @@ function HudButton({icon, onPress, hasTVPreferredFocus, onFocus}) {
   );
 }
 
-function ChannelRow({channel, active, onPress, hasTVPreferredFocus, theme}) {
-  const [focused, setFocused] = useState(false);
-  const program = getEpgEventTitle(getCurrentEpgEvent(channel?.epgItems));
-  return (
-    <View style={styles.rowWrap}>
-      <Pressable
-        onPress={onPress}
-        hasTVPreferredFocus={hasTVPreferredFocus}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={[styles.row, active && styles.rowActive]}>
-        <Image resizeMethod="resize" source={logoOf(channel, theme)} style={styles.rowLogo} resizeMode="contain" />
-        <Text style={styles.rowLcn}>{channel?.lcn ?? ''}</Text>
-        <View style={styles.rowMeta}>
-          <Text style={styles.rowName} numberOfLines={1}>
-            {channel?.name}
-          </Text>
-          {program ? (
-            <Text style={styles.rowProgram} numberOfLines={1}>
-              {program}
+// Memo: al abrir el listado o cambiar de canal sólo se redibujan las filas
+// que cambian (theme es fijo por marca; onSelect es estable).
+const ChannelRow = React.memo(
+  function ChannelRow({channel, program, index, active, onSelect, theme}) {
+    const [focused, setFocused] = useState(false);
+    return (
+      <View style={styles.rowWrap}>
+        <Pressable
+          onPress={() => onSelect(index)}
+          hasTVPreferredFocus={active}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={[styles.row, active && styles.rowActive]}>
+          <Image resizeMethod="resize" source={logoOf(channel, theme)} style={styles.rowLogo} resizeMode="contain" />
+          <Text style={styles.rowLcn}>{channel?.lcn ?? ''}</Text>
+          <View style={styles.rowMeta}>
+            <Text style={styles.rowName} numberOfLines={1}>
+              {channel?.name}
             </Text>
-          ) : null}
-        </View>
-      </Pressable>
-      <FocusRing visible={focused} radius={12} />
-    </View>
-  );
-}
+            {program ? (
+              <Text style={styles.rowProgram} numberOfLines={1}>
+                {program}
+              </Text>
+            ) : null}
+          </View>
+        </Pressable>
+        <FocusRing visible={focused} radius={12} />
+      </View>
+    );
+  },
+  (a, b) => a.channel === b.channel && a.program === b.program && a.index === b.index && a.active === b.active && a.onSelect === b.onSelect,
+);
 
 /**
  * Reproductor en vivo con el HUD de appVideo (PlayerHud, spec §4): barra
@@ -169,20 +233,11 @@ export function PlayerScreen({params, navigate}) {
     setStatsVisible(!statsOn);
     setStatsOn(!statsOn);
   };
-  const [, setTick] = useState(0);
   const player = useRef(null);
   // Liberación del reproductor anterior en curso (zapping).
   const releasing = useRef(Promise.resolve());
   const handles = useRef({surface: null, caption: null});
   const hideTimer = useRef(null);
-
-  // now/next se re-evalúan cada segundo, sólo con el HUD visible (con el
-  // HUD oculto no hay nada que actualizar en pantalla).
-  useEffect(() => {
-    if (!hudVisible) return undefined;
-    const timer = setInterval(() => setTick((x) => x + 1), 1000);
-    return () => clearInterval(timer);
-  }, [hudVisible]);
 
   const showHud = useCallback(() => {
     setHudVisible(true);
@@ -244,6 +299,15 @@ export function PlayerScreen({params, navigate}) {
     [channels.length, index, goTo],
   );
 
+  // Listado de canales: datos y callback estables entre renders del HUD.
+  const listChannels = useMemo(() => channels.slice(0, 400), [channels]);
+  const selectFromListRef = useRef(null);
+  selectFromListRef.current = (i) => {
+    goTo(i);
+    if (closeListOnSelect) setPanel(null);
+  };
+  const selectFromList = useCallback((i) => selectFromListRef.current(i), []);
+
   useTVEventHandler((evt) => {
     if (!evt || evt.eventKeyAction === 1 || panel) return; // el panel maneja su propio foco
     const type = evt.eventType;
@@ -269,7 +333,9 @@ export function PlayerScreen({params, navigate}) {
   }, [panel]);
 
   // Una instancia de reproductor por canal; el cambio espera un poco para no
-  // abrir cada canal intermedio al mantener apretada la flecha.
+  // abrir cada canal intermedio al mantener apretada la flecha. El primer
+  // canal (al entrar) y los reintentos arrancan sin esa espera.
+  const zapDelay = useRef(0);
   useEffect(() => {
     if (!channel?.url) {
       setState('error');
@@ -310,7 +376,8 @@ export function PlayerScreen({params, navigate}) {
         devLog('player: load', e?.message);
         if (!cancelled) setState('error');
       });
-    }, ZAP_DELAY_MS);
+    }, zapDelay.current);
+    zapDelay.current = ZAP_DELAY_MS;
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -323,8 +390,6 @@ export function PlayerScreen({params, navigate}) {
 
   // Al salir del reproductor se cierra el registro del canal.
   useEffect(() => () => telemetryService.stopCurrent({finished: false}), []);
-
-  const {now, next} = nowNext(channel);
 
   return (
     <View style={styles.container}>
@@ -343,7 +408,10 @@ export function PlayerScreen({params, navigate}) {
             <Text style={styles.errorText}>{t('player.playbackError')}</Text>
             <Pressable
               hasTVPreferredFocus
-              onPress={() => setRetryToken((x) => x + 1)}
+              onPress={() => {
+                zapDelay.current = 0;
+                setRetryToken((x) => x + 1);
+              }}
               style={[styles.errorBtn, {backgroundColor: theme.primary}]}>
               <Text style={styles.errorBtnText}>{t('player.retry')}</Text>
             </Pressable>
@@ -379,30 +447,7 @@ export function PlayerScreen({params, navigate}) {
             </View>
           </View>
 
-          {channel ? (
-            <View style={styles.bottombar} pointerEvents="none">
-              <Image resizeMethod="resize" source={logoOf(channel, theme)} style={styles.logo} resizeMode="contain" />
-              <View style={styles.meta}>
-                <Text style={styles.name} numberOfLines={1}>
-                  {channel.lcn != null ? <Text style={styles.lcn}>{`${channel.lcn}   `}</Text> : null}
-                  {channel.name}
-                </Text>
-                {now ? (
-                  <Text style={styles.program} numberOfLines={1}>
-                    <Text style={styles.programLabel}>{`${t('player.now')} `}</Text>
-                    {now.title}
-                  </Text>
-                ) : null}
-                {next ? (
-                  <Text style={styles.program} numberOfLines={1}>
-                    <Text style={styles.programLabel}>{`${t('player.next')} `}</Text>
-                    {next.title}
-                  </Text>
-                ) : null}
-              </View>
-              {now?.range ? <Text style={styles.range}>{now.range}</Text> : null}
-            </View>
-          ) : null}
+          {channel ? <BottomBar channel={channel} theme={theme} /> : null}
         </>
       ) : null}
 
@@ -411,21 +456,12 @@ export function PlayerScreen({params, navigate}) {
           <View style={styles.channelPanel}>
             <Text style={styles.panelTitle}>{t('player.channelList')}</Text>
             <FlatList
-              data={channels.slice(0, 400)}
+              data={listChannels}
               keyExtractor={(c, i) => channelId(c) || String(i)}
               initialScrollIndex={Math.min(index, Math.max(0, Math.min(channels.length, 400) - 1))}
               getItemLayout={(_, i) => ({length: px(ROW_HEIGHT + 8), offset: px(ROW_HEIGHT + 8) * i, index: i})}
               renderItem={({item, index: i}) => (
-                <ChannelRow
-                  channel={item}
-                  theme={theme}
-                  active={i === index}
-                  hasTVPreferredFocus={i === index}
-                  onPress={() => {
-                    goTo(i);
-                    if (closeListOnSelect) setPanel(null);
-                  }}
-                />
+                <ChannelRow channel={item} program={getEpgEventTitle(getCurrentEpgEvent(item?.epgItems))} index={i} theme={theme} active={i === index} onSelect={selectFromList} />
               )}
               contentContainerStyle={styles.panelList}
             />
@@ -448,22 +484,7 @@ export function PlayerScreen({params, navigate}) {
         />
       ) : null}
 
-      {panel === 'info' && channel ? (
-        <View style={styles.center}>
-          <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>{now?.title || channel.name}</Text>
-            {now?.range ? <Text style={styles.infoRange}>{now.range}</Text> : null}
-            {now?.description ? (
-              <Text style={styles.infoDescription} numberOfLines={8}>
-                {now.description}
-              </Text>
-            ) : null}
-            <View style={styles.infoClose}>
-              <HudButton icon="close" hasTVPreferredFocus onPress={() => setPanel(null)} />
-            </View>
-          </View>
-        </View>
-      ) : null}
+      {panel === 'info' && channel ? <InfoPanel channel={channel} onClose={() => setPanel(null)} /> : null}
     </View>
   );
 }
