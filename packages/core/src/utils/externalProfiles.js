@@ -62,6 +62,23 @@ export function nextStepAfterEnter(result) {
   return { route: '/smartcard', keepProfileWithoutLicense: true };
 }
 
+/**
+ * En qué dispositivo está la tarjeta del perfil (para "en uso en ..."): con reservas, el de la
+ * propia (`inUse`); si no, el que el backend creía activo con el perfil.
+ */
+export function inUseDeviceModel(selection) {
+  const list = Array.isArray(selection?.inUse) ? selection.inUse : [];
+  const entry = list.find((e) => e.own) || list[0];
+  return entry?.device?.deviceModel || selection?.activeElsewhere?.[0]?.deviceModel || null;
+}
+
+/** Clave del aviso cuando el backend le quita la tarjeta a este dispositivo (`profileLeaseKeeper.js`). */
+export function leaseLostMessageKey(reason) {
+  if (reason === 'taken_over') return 'profile.leaseTakenOver';
+  if (reason === 'profile_deleted') return 'profile.leaseProfileDeleted';
+  return 'profile.leaseLost';
+}
+
 /** Clave del mensaje para un error al entrar a un perfil. */
 export function profileErrorMessageKey(error) {
   return error?.code === 'pin_locked' ? 'profile.pinLocked' : 'profile.errorActivate';

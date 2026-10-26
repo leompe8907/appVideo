@@ -3,14 +3,16 @@ import {
   PROFILE_AVATAR_FILES,
   buildProfilePayload,
   canChangeProfile,
+  inUseDeviceModel,
+  leaseLostMessageKey,
   maxAgeAfterKidsToggle,
-  profileFormErrorKey,
-  validateProfileForm,
   maxAgeLabel,
   nextStepAfterEnter,
   pickAutoEnterProfile,
   profileErrorMessageKey,
+  profileFormErrorKey,
   routeWithoutProfiles,
+  validateProfileForm,
 } from '../externalProfiles';
 
 const t = (key) => key;
@@ -117,5 +119,33 @@ describe('canChangeProfile', () => {
   it('sin perfiles, nunca; con perfiles de PanAccess, siempre', () => {
     expect(canChangeProfile({ features: { profiles: false } }, 5)).toBe(false);
     expect(canChangeProfile({ features: { profiles: true, profilesSource: 'panaccess' } }, null)).toBe(true);
+  });
+});
+
+describe('inUseDeviceModel', () => {
+  it('con reservas, nombra el dispositivo que tiene la tarjeta propia', () => {
+    const selection = {
+      inUse: [
+        { sn: 'SN2', own: false, device: { deviceModel: 'Fire TV' } },
+        { sn: 'SN1', own: true, device: { deviceModel: 'moto g14' } },
+      ],
+      activeElsewhere: [{ deviceModel: 'viejo' }],
+    };
+    expect(inUseDeviceModel(selection)).toBe('moto g14');
+  });
+
+  it('sin reservas, usa el que el backend creía activo; si no sabe, null', () => {
+    expect(inUseDeviceModel({ activeElsewhere: [{ deviceModel: 'Chrome' }] })).toBe('Chrome');
+    expect(inUseDeviceModel({ inUse: [{ sn: 'SN1', own: true, device: null }] })).toBeNull();
+    expect(inUseDeviceModel(null)).toBeNull();
+  });
+});
+
+describe('leaseLostMessageKey', () => {
+  it('explica por qué se perdió la tarjeta', () => {
+    expect(leaseLostMessageKey('taken_over')).toBe('profile.leaseTakenOver');
+    expect(leaseLostMessageKey('profile_deleted')).toBe('profile.leaseProfileDeleted');
+    expect(leaseLostMessageKey('expired')).toBe('profile.leaseLost');
+    expect(leaseLostMessageKey(null)).toBe('profile.leaseLost');
   });
 });

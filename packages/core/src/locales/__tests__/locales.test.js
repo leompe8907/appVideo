@@ -62,6 +62,9 @@ const PROFILE_KEYS = [
   'profile.editError',
   'profile.editCancel',
   'account.changeProfile',
+  'profile.leaseTakenOver',
+  'profile.leaseProfileDeleted',
+  'profile.leaseLost',
 ];
 
 describe('locales', () => {

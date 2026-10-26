@@ -214,6 +214,16 @@ export function setOnDeviceListChanged(fn) {
   onDeviceListChangedGlobal = typeof fn === 'function' ? fn : null;
 }
 
+// Callback global para `profile_lease_lost`: el backend le quitó a ESTE
+// dispositivo la reserva de su tarjeta (otro dispositivo hizo "continuar
+// aquí", se borró el perfil, venció). Lo registra `profileLeaseKeeper.js`,
+// que decide si es la tarjeta que se está usando y avisa a la app.
+let onProfileLeaseLostGlobal = null;
+
+export function setOnProfileLeaseLost(fn) {
+  onProfileLeaseLostGlobal = typeof fn === 'function' ? fn : null;
+}
+
 // Callback global para cuando la conexión ACTIVA (ya registrada con éxito)
 // se cae sola -- blip de red, reinicio/deploy del backend, lo que sea --
 // sin haber pasado por un cierre esperado (`closeActiveDeviceSession()` en
@@ -419,6 +429,15 @@ export function registerDeviceSession(brandConfig, accessToken, callbacks = {}) 
         if (type === 'device_list_changed') {
           try {
             onDeviceListChangedGlobal?.();
+          } catch {
+            // noop -- un listener global roto no debe afectar el resto del socket
+          }
+          return;
+        }
+
+        if (type === 'profile_lease_lost') {
+          try {
+            onProfileLeaseLostGlobal?.({ reason: message.reason || null, licenseSn: message.licenseSn || null });
           } catch {
             // noop -- un listener global roto no debe afectar el resto del socket
           }

@@ -353,7 +353,10 @@
     "kidsLabel": "Kids profile",
     "maxAgeLabel": "Content allowed up to",
     "pinPlaceholder": "4 to 6 digits",
-    "removePin": "Remove PIN"
+    "removePin": "Remove PIN",
+    "leaseTakenOver": "This profile started playing on another device.",
+    "leaseProfileDeleted": "This profile was deleted.",
+    "leaseLost": "Your profile's screen is no longer available on this device. Choose a profile again."
   },
   "smartcard": {
     "loadingLicenses": "Loading licenses...",

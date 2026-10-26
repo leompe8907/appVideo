@@ -8,6 +8,8 @@ import {
   scheduleDeviceSessionReconnect,
 } from '@appvideo/core/services/deviceSessionWatchdog';
 import {clearSessionBeforeNewLogin} from '@appvideo/core/services/loginFlow';
+import {forgetActiveProfile} from '@appvideo/core/services/externalProfileSession';
+import {setOnLeaseLost} from '@appvideo/core/services/profileLeaseKeeper';
 import {resetHomeMemory} from './homeMemory';
 import {devLog} from './devLog';
 
@@ -31,6 +33,8 @@ function connectNow(brand) {
  * - Al arrancar y al volver al frente, asegura la conexión.
  * - Si se cae, la reabre con la espera de `deviceSessionWatchdog.js`.
  * - `device_revoked` cierra la sesión y vuelve al login.
+ * - Si el backend le quita la tarjeta del perfil (otro dispositivo hizo
+ *   "continuar aquí", se borró el perfil), corta y vuelve a "¿Quién está viendo?".
  *
  * @param {import('@amazon-devices/react-navigation__native').NavigationContainerRef} navigationRef
  * @param {boolean} storageIsReady los tokens guardados se leen del almacenamiento: no arrancar antes.
@@ -52,6 +56,15 @@ export function useDeviceSessionLifecycle(navigationRef, storageIsReady) {
       if (navigationRef.isReady()) navigationRef.reset({index: 0, routes: [{name: 'login'}]});
     });
 
+    setOnLeaseLost((reason) => {
+      devLog('perfiles: se perdió la tarjeta', reason);
+      forgetActiveProfile();
+      resetHomeMemory();
+      if (navigationRef.isReady()) {
+        navigationRef.reset({index: 0, routes: [{name: 'profile', params: {switchProfile: true, leaseLost: reason || 'lost'}}]});
+      }
+    });
+
     setOnDeviceSessionUnexpectedClose((info) => {
       devLog('dispositivo vinculado: se cortó', JSON.stringify(info));
       scheduleDeviceSessionReconnect(brand, info);
@@ -69,6 +82,7 @@ export function useDeviceSessionLifecycle(navigationRef, storageIsReady) {
       clearTimeout(startup);
       sub.remove();
       setOnDeviceRevoked(null);
+      setOnLeaseLost(null);
       setOnDeviceSessionUnexpectedClose(null);
       resetDeviceSessionReconnect();
     };

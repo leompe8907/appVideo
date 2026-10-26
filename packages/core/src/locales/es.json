@@ -353,7 +353,10 @@
     "kidsLabel": "Perfil infantil",
     "maxAgeLabel": "Contenido permitido hasta",
     "pinPlaceholder": "4 a 6 dígitos",
-    "removePin": "Quitar el PIN"
+    "removePin": "Quitar el PIN",
+    "leaseTakenOver": "Este perfil empezó a reproducirse en otro dispositivo.",
+    "leaseProfileDeleted": "Este perfil fue borrado.",
+    "leaseLost": "La pantalla de tu perfil ya no está disponible en este dispositivo. Vuelve a elegir un perfil."
   },
   "smartcard": {
     "loadingLicenses": "Cargando licencias...",

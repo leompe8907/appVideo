@@ -20,6 +20,7 @@ import {
   getStoredDeviceId,
   restoreStoredDeviceSession,
 } from './deviceSessionService';
+import { stopProfileLease } from './profileLeaseKeeper';
 
 /**
  * Limpia sesión, storage de marca y caché en memoria antes de un login
@@ -47,6 +48,8 @@ import {
  * reintenta el registro sin él (ver `registerDeviceSession`).
  */
 export function clearSessionBeforeNewLogin() {
+  // La tarjeta del perfil queda libre al instante para los demás dispositivos.
+  stopProfileLease({ release: true });
   try {
     panaccessService.logout?.();
   } catch {

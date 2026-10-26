@@ -13,7 +13,7 @@
  * `pin_incorrect`, `pin_locked`, `no_free_license`, `name_taken`,
  * `profiles_disabled`...), para que la UI decida qué mostrar.
  */
-import { authorizedDeviceRequest } from './deviceAuthService';
+import { authorizedDeviceRequest, resolveDeviceAuthBaseUrl } from './deviceAuthService';
 import { getActiveBrandConfig } from '../config/brandConfig';
 import { resolveBrandId } from '../utils/brandStorage';
 import { getStoredDeviceToken } from './deviceSessionService';
@@ -80,19 +80,25 @@ export function resetProfilePin(id, currentPassword, newPin) {
 }
 
 /**
- * El dispositivo entra al perfil.
+ * El dispositivo entra al perfil. Pide reservas de tarjeta (`leases`): si el backend las tiene
+ * encendidas, `licenses` trae solo las libres y `inUse` las que otro dispositivo está usando.
  * @returns {Promise<{profile: Object, licenseSn: string|null, licenses: Array<{sn: string, loan: boolean}>,
- *   activeElsewhere: Array<{id: number, deviceType: string, deviceModel: string}>, confirmToken: string}>}
+ *   activeElsewhere: Array<{id: number, deviceType: string, deviceModel: string}>, confirmToken: string,
+ *   leases?: boolean, inUse?: Array<{sn: string, own: boolean, profile: Object, device: Object|null}>}>}
  */
 export function selectProfile(id, { pin } = {}) {
   const deviceToken = getStoredDeviceToken();
   return post(`${BASE}${id}/select/`, {
     ...(pin ? { pin } : {}),
     ...(deviceToken ? { deviceToken } : {}),
+    leases: true,
   });
 }
 
-/** Avisa qué licencia se consiguió activar; si no es la del perfil, queda como préstamo. */
+/**
+ * Avisa qué licencia se consiguió activar; si no es la del perfil, queda como préstamo. Con
+ * reservas, devuelve además `leaseToken` y `heartbeatSeconds` (ver `profileLeaseKeeper.js`).
+ */
 export function confirmProfileLicense(id, { licenseSn, confirmToken }) {
   const deviceToken = getStoredDeviceToken();
   return post(`${BASE}${id}/select/confirm/`, {
@@ -100,4 +106,34 @@ export function confirmProfileLicense(id, { licenseSn, confirmToken }) {
     confirmToken,
     ...(deviceToken ? { deviceToken } : {}),
   });
+}
+
+/**
+ * Latido y liberación de la reserva de tarjeta. Sin JWT (al cerrar sesión puede estar vencido):
+ * los autentica el `leaseToken`. Devuelve `{status, data}` sin lanzar por códigos HTTP, para que
+ * `profileLeaseKeeper.js` distinga "la reserva ya no es tuya" (400) de "reintentar" (5xx, sin red).
+ */
+async function leaseCall(path, leaseToken) {
+  const base = resolveDeviceAuthBaseUrl(getActiveBrandConfig());
+  if (!base) throw new Error('Falta configurar la base del backend (login.deviceSession.baseUrl).');
+  const res = await fetch(`${base}${BASE}leases/${path}/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ leaseToken }),
+  });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    // cuerpo vacío o no JSON
+  }
+  return { status: res.status, data };
+}
+
+export function heartbeatProfileLease(leaseToken) {
+  return leaseCall('heartbeat', leaseToken);
+}
+
+export function releaseProfileLease(leaseToken) {
+  return leaseCall('release', leaseToken);
 }

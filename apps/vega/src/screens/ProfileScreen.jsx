@@ -10,6 +10,8 @@ import {enterProfile, forgetActiveProfile, takeOverProfileLicense} from '@appvid
 import {useActiveProfileStore} from '@appvideo/core/store/activeProfileStore';
 import {getActiveLicense, setLoggedOut} from '@appvideo/core/utils/userSession';
 import {
+  inUseDeviceModel,
+  leaseLostMessageKey,
   maxAgeLabel,
   nextStepAfterEnter,
   pickAutoEnterProfile,
@@ -116,6 +118,7 @@ function AddProfileCard({onPress, disabled}) {
  * - Agregar (si quedan lugares), editar / borrar (pide el PIN si tiene) y
  *   "Olvidé el PIN" con la contraseña de la cuenta.
  * - `params.switchProfile` ("Cambiar perfil" de Mi Cuenta): no entra solo.
+ * - `params.leaseLost`: el backend le quitó la tarjeta a este dispositivo; se avisa por qué.
  */
 export function ProfileScreen({navigate, params}) {
   const theme = getTheme();
@@ -128,7 +131,7 @@ export function ProfileScreen({navigate, params}) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [busyId, setBusyId] = useState(null);
-  const [message, setMessage] = useState(null);
+  const [message, setMessage] = useState(() => (params?.leaseLost ? t(leaseLostMessageKey(params.leaseLost)) : null));
   const [pinPrompt, setPinPrompt] = useState(null); // {profile, purpose: 'enter'|'edit'}
   const [inUse, setInUse] = useState(null);
   const autoEnterTried = useRef(false);
@@ -289,7 +292,7 @@ export function ProfileScreen({navigate, params}) {
     navigate('login');
   };
 
-  const elsewhere = inUse?.activeElsewhere?.[0]?.deviceModel || t('profile.otherDevice');
+  const elsewhere = inUseDeviceModel(inUse) || t('profile.otherDevice');
 
   return (
     <View style={[styles.root, {backgroundColor: theme.background}]}>

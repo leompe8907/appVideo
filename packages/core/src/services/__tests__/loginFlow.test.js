@@ -46,10 +46,13 @@ vi.mock('../deviceSessionService', () => ({
   getStoredDeviceId: vi.fn(() => ''),
   restoreStoredDeviceSession: vi.fn(),
 }));
+vi.mock('../profileLeaseKeeper', () => ({ stopProfileLease: vi.fn() }));
 
 import panaccessService from '../panaccessService';
 import * as userSession from '../../utils/userSession';
+import { stopProfileLease } from '../profileLeaseKeeper';
 import {
+  clearSessionBeforeNewLogin,
   reactivateLicense,
   checkSessionAndReactivateIfNeeded,
 } from '../loginFlow';
@@ -220,5 +223,13 @@ describe('loginFlow — checkSessionAndReactivateIfNeeded', () => {
     expect(result).toEqual({ ok: false, reason: 'network' });
     expect(panaccessService.callLoginApi).toHaveBeenCalledTimes(3);
     expect(userSession.setLoggedOut).not.toHaveBeenCalled();
+  });
+});
+
+describe('loginFlow — clearSessionBeforeNewLogin', () => {
+  it('cerrar sesión libera la tarjeta del perfil', () => {
+    vi.clearAllMocks();
+    clearSessionBeforeNewLogin();
+    expect(stopProfileLease).toHaveBeenCalledWith({ release: true });
   });
 });

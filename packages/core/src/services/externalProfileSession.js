@@ -11,6 +11,10 @@
  * recuperación del reproductor y el próximo arranque usen la licencia del
  * perfil y no una vieja. Al volver a abrir la app se vuelve a llamar a
  * `enterProfile`: el perfil pudo borrarse o su licencia pasar a otro.
+ *
+ * Reservas de tarjeta: el backend no ofrece las tarjetas que otro dispositivo
+ * está usando (van en `selection.inUse`) y `confirm` devuelve la reserva que
+ * `profileLeaseKeeper.js` mantiene viva con latidos hasta salir del perfil.
  */
 import * as userSession from '../utils/userSession';
 import { getLicenseKey, getLicensePin } from '../utils/licenseProducts';
@@ -18,6 +22,7 @@ import { useActiveProfileStore } from '../store/activeProfileStore';
 import { activateLicense, getLicensesWithPins } from './loginFlow';
 import { confirmProfileLicense, selectProfile } from './externalProfilesService';
 import { syncPreferencesFromBackend } from './preferencesSyncService';
+import { startProfileLease, stopProfileLease } from './profileLeaseKeeper';
 
 function devWarn(label, error) {
   if (import.meta.env.DEV) {
@@ -26,12 +31,18 @@ function devWarn(label, error) {
 }
 
 async function finishEntering(profile, license, loan, selection) {
+  let confirmed = null;
   try {
-    await confirmProfileLicense(profile.id, { licenseSn: license.key, confirmToken: selection.confirmToken });
+    confirmed = await confirmProfileLicense(profile.id, { licenseSn: license.key, confirmToken: selection.confirmToken });
   } catch (e) {
     // Sin confirmar, el préstamo no queda registrado (la telemetría de esta sesión queda sin
     // perfil), pero la licencia ya está activa: no se le impide ver al usuario.
     devWarn('confirmar la licencia falló', e);
+  }
+  if (confirmed?.leaseToken) {
+    startProfileLease({ token: confirmed.leaseToken, licenseSn: license.key, heartbeatSeconds: confirmed.heartbeatSeconds });
+  } else {
+    stopProfileLease();
   }
   userSession.setActiveLicense({ licenseKey: license.key, pin: license.pin });
   useActiveProfileStore.getState().setActiveProfile({
@@ -67,9 +78,14 @@ async function finishEntering(profile, license, loan, selection) {
 export async function enterProfile(brandConfig, profile, { pin } = {}) {
   const selection = await selectProfile(profile.id, { pin });
   const candidates = Array.isArray(selection?.licenses) ? selection.licenses : [];
-  if (candidates.length === 0) return { status: 'no_licenses' };
+  const inUse = Array.isArray(selection?.inUse) ? selection.inUse : [];
+  // Con reservas, sin libres pero con tarjetas en uso: todas ocupadas, sin probar PanAccess.
+  const allTaken = selection?.leases === true && candidates.length === 0 && inUse.length > 0;
+  if (candidates.length === 0 && !allTaken) return { status: 'no_licenses' };
 
-  const withPins = await getLicensesWithPins(brandConfig, candidates.map((c) => c.sn));
+  // El PIN de la propia también, para "continuar aquí".
+  const sns = [...new Set([...candidates.map((c) => c.sn), ...(selection.licenseSn ? [selection.licenseSn] : [])])];
+  const withPins = await getLicensesWithPins(brandConfig, sns);
   const pinBySn = new Map(withPins.map((l) => [getLicenseKey(l), getLicensePin(l)]));
 
   for (const candidate of candidates) {
@@ -105,7 +121,11 @@ export async function takeOverProfileLicense(brandConfig, selection) {
   return finishEntering(selection.profile, activated, false, selection);
 }
 
-/** Salir del perfil (cambiar de perfil o cerrar sesión): se olvida el perfil guardado. */
+/**
+ * Salir del perfil (cambiar de perfil o cerrar sesión): se olvida el perfil guardado y su
+ * tarjeta queda libre para los demás dispositivos.
+ */
 export function forgetActiveProfile() {
+  stopProfileLease({ release: true });
   useActiveProfileStore.getState().clearActiveProfile();
 }
