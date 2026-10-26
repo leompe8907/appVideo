@@ -70,6 +70,9 @@ const DEVICE_TYPE_LABELS = {web: 'PC / Web', lg: 'LG (webOS)', samsung: 'Samsung
 
 // ---------------------------------------------------------------- piezas
 
+// hasTVPreferredFocus sólo en pasos a los que se llega por una acción del
+// usuario: en un campo del primer paso abría el teclado del sistema apenas se
+// entraba a Mi cuenta (el panel se muestra junto con el menú).
 function Field({label, value, onChangeText, secure, keyboardType, placeholder, maxLength, disabled, hasTVPreferredFocus}) {
   const theme = getTheme();
   const [focused, setFocused] = useState(false);
@@ -262,7 +265,6 @@ function OtpChangePasswordFlow({brandConfig, brand, onLoggedOut}) {
         keyboardType="email-address"
         placeholder={t('account.changeOtpEmailPlaceholder', 'Escribe tu correo')}
         disabled={busy}
-        hasTVPreferredFocus
       />
       <Message kind="error">{error}</Message>
       <Button
@@ -321,7 +323,7 @@ function OldPasswordChangeFlow({brandConfig, brand, onLoggedOut}) {
   return (
     <View style={styles.panel}>
       <Message>{t('account.changePasswordWarning', 'Al cambiar tu contraseña se cerrará el acceso de todos tus dispositivos vinculados, incluido este.')}</Message>
-      <Field label={t('account.changePasswordCurrentLabel', 'Contraseña actual')} value={current} onChangeText={setCurrent} secure={!show} disabled={busy} hasTVPreferredFocus />
+      <Field label={t('account.changePasswordCurrentLabel', 'Contraseña actual')} value={current} onChangeText={setCurrent} secure={!show} disabled={busy} />
       <Field label={t('account.changePasswordNewLabel', 'Nueva contraseña')} value={newPass} onChangeText={setNewPass} secure={!show} maxLength={MAX_LENGTH} disabled={busy} />
       <Field label={t('account.changePasswordConfirmLabel', 'Confirmar nueva contraseña')} value={confirmPass} onChangeText={setConfirmPass} secure={!show} maxLength={MAX_LENGTH} disabled={busy} />
       <ShowPasswordToggle show={show} onToggle={() => setShow((s) => !s)} />
