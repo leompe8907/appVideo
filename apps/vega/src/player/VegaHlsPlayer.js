@@ -25,11 +25,20 @@ const SHAKA_SETTINGS = {secure: false, abrEnabled: true, abrMaxWidth: 1920, abrM
 
 /** Ajustes de Shaka desde el flag de marca `player.liveBuffer` (como hls.js en la web). */
 function shakaSettingsFor(live, brand) {
+  // Flag de marca: alinear la lista por número de segmento y no por
+  // #EXT-X-PROGRAM-DATE-TIME (Wind; ver ShakaPlayer.ts).
+  const bySegmentNumber = brand?.player?.ignorePlaylistDateTime === true;
   return {
     ...SHAKA_SETTINGS,
-    // Flag de marca: alinear la lista por número de segmento y no por
-    // #EXT-X-PROGRAM-DATE-TIME (Wind; ver ShakaPlayer.ts).
-    ignoreProgramDateTime: brand?.player?.ignorePlaylistDateTime === true,
+    ignoreProgramDateTime: bySegmentNumber,
+    // Arranque con un solo .ts: el cabezal va al comienzo del .ts que contiene
+    // el punto de arranque y, sin tolerancia, Shaka pide ése (con 2 s pedía
+    // primero el anterior y después igual necesitaba éste: ~1,3 s más por
+    // zapping). Sólo alineando por número de segmento: ahí los tiempos no se
+    // corren entre recargas de la lista (la tolerancia 2 evitaba descargas
+    // dobles cuando se alineaba por hora).
+    startAtSegmentBoundary: bySegmentNumber,
+    inaccurateManifestTolerance: bySegmentNumber ? 0 : 2,
     bufferingGoal: live.maxBufferLength,
     bufferBehind: live.backBufferLength,
     // Shaka arranca a liveSyncDurationCount segmentos del borde (como hls.js).

@@ -50,6 +50,9 @@ export interface ShakaPlayerSettings {
     liveSegmentsDelay?: number,
     // appVideo: flag de marca `player.ignorePlaylistDateTime` (ver abajo).
     ignoreProgramDateTime?: boolean,
+    // appVideo: arranque en vivo con un solo .ts (ver VegaHlsPlayer.js).
+    startAtSegmentBoundary?: boolean,
+    inaccurateManifestTolerance?: number,
 }
 
 export class ShakaPlayer implements PlayerInterface {
@@ -310,8 +313,10 @@ export class ShakaPlayer implements PlayerInterface {
             // del manifiesto). Wind los corre unas décimas en cada recarga de la
             // lista: con 0, tras cada recarga Shaka volvía a bajar y anexar el
             // último segmento (todo se descargaba dos veces y se pisaba lo que se
-            // estaba viendo). Se vuelve al valor por defecto de Shaka.
-            inaccurateManifestTolerance: 2,
+            // estaba viendo). Se vuelve al valor por defecto de Shaka, salvo que
+            // la marca alinee por número de segmento (VegaHlsPlayer.js).
+            inaccurateManifestTolerance: this.setting_.inaccurateManifestTolerance ?? 2,
+            startAtSegmentBoundary: this.setting_.startAtSegmentBoundary === true,
             // appVideo: con bufferingGoal 5 y rebufferingGoal 0.01 (valores del
             // ejemplo de Amazon) el video quedaba sin buffer con segmentos de ~9 s
             // y se cortaba/saltaba. Ahora sale del flag de marca (como la web).
