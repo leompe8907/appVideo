@@ -55,6 +55,11 @@ const BouquetRow = React.memo(function BouquetRow({bouquet, onPlay, preferredCha
     );
   } else {
     const rows = Math.max(1, mode.rows || 1);
+    // Al volver del reproductor la columna del canal recordado tiene que estar
+    // armada para recibir el foco (antes sólo se armaban 6: un canal más
+    // adelante en la fila perdía el foco y caía en la primera tarjeta).
+    const preferredIndex = preferredChannelId == null ? -1 : items.findIndex((c, i) => channelKey(c, i) === preferredChannelId);
+    const preferredColumn = preferredIndex < 0 ? 0 : Math.floor(preferredIndex / rows);
     body = (
       <FlatList
         horizontal
@@ -64,7 +69,7 @@ const BouquetRow = React.memo(function BouquetRow({bouquet, onPlay, preferredCha
         ItemSeparatorComponent={Separator}
         contentContainerStyle={styles.track}
         showsHorizontalScrollIndicator={false}
-        initialNumToRender={6}
+        initialNumToRender={Math.max(6, preferredColumn + 3)}
         maxToRenderPerBatch={4}
         windowSize={3}
       />

@@ -85,17 +85,22 @@ export function HomeScreen({navigate}) {
     if (epg.status === 'error') devLog('home: EPG error', epg.error);
   }, [epg.status, epg.bouquetsWithChannels, epg.error]);
 
-  // Al volver del reproductor (el home queda montado debajo), foco al canal visto.
-  useEffect(() => {
-    if (!isFocused) {
+  // Al volver del reproductor (el home queda montado debajo), foco al canal
+  // visto. Se calcula en el mismo render en que la pantalla recupera el foco:
+  // con un efecto, el primer render usaba el destino anterior (la primera
+  // tarjeta), el foco iba ahí y después saltaba (a veces a otra fila).
+  const [wasFocused, setWasFocused] = useState(isFocused);
+  if (wasFocused !== isFocused) {
+    setWasFocused(isFocused);
+    if (isFocused) {
+      const m = getHomeMemory();
+      // El reproductor puede pedir otra sección (botón Guía del HUD).
+      if (m.section && m.section !== section) setSection(m.section);
+      setPreferredFocus(m.channelId != null ? {bouquetKey: m.bouquetKey, channelId: m.channelId} : null);
+    } else {
       setPreferredFocus(null);
-      return;
     }
-    const m = getHomeMemory();
-    // El reproductor puede pedir otra sección (botón Guía del HUD).
-    setSection((current) => (m.section && m.section !== current ? m.section : current));
-    setPreferredFocus(m.channelId != null ? {bouquetKey: m.bouquetKey, channelId: m.channelId} : null);
-  }, [isFocused]);
+  }
 
   // Diagnóstico: cuánto tarda en dibujarse la sección elegida en el menú.
   const sectionChangeAt = useRef(0);
