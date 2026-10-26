@@ -179,7 +179,20 @@ Tests: 317 de vitest (incluye `keyUnwrap.test.js`, 4 casos), lint sin errores.
 
 ## Segunda tanda (26-10-2026)
 
-### Pendientes resueltos
+#### Migrado a web / Samsung / LG (commit `35553b8`)
+
+| Cambio | Estado |
+|---|---|
+| Key de envoltura importada una vez | Hecho, con test (falla con el código anterior). |
+| Listado de canales del player | Callback estable: abierto ya no se redibuja con cada `timeupdate`. El tick de 1 s del HUD se dejó: el HUD ya se redibuja ~4 veces por segundo por `currentTime`, así que aislarlo no cambiaría nada medible. |
+| EPG durante el splash | Hecho: se pide al saber que el destino es `/home`; `/preload` espera esa carga. |
+| Menú lateral en TV | Hecho: al entrar desde el contenido va a la sección activa; con puntero (LG) respeta el ítem apuntado. |
+
+Verificado: tests (322), lint y `build:verify-tv`. **Sin verificar en
+navegador ni en TV**: la web pide iniciar sesión y no hay credenciales de
+prueba de Wind en el proyecto.
+
+## Pendientes resueltos
 
 - **Cambio de canal por número.** `num_0`…`num_9` en el player: muestra lo
   tecleado y a los 2 s (o al completar las cifras del LCN más alto) zapea; un
