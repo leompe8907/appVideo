@@ -4,6 +4,7 @@ import {StyleSheet, View} from 'react-native';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import {resolveSplashDestination} from '@appvideo/core/services/splashAuthFlow';
 import * as userSession from '@appvideo/core/utils/userSession';
+import {usePreloadStore} from '@appvideo/core/store/preloadStore';
 import {FullScreenImage} from '../components/FullScreenImage';
 import {getTheme} from '../theme';
 import {screenForWebRoute} from '../routes';
@@ -44,12 +45,16 @@ export function SplashScreen({navigate}) {
       } catch (e) {
         devLog('splash: error', e?.message);
       }
+      const hasActiveLicense = Boolean(userSession.getActiveLicense()?.licenseKey);
+      const externalProfiles = usesExternalProfiles(getActiveBrandConfig());
+      const screen = screenForWebRoute(route, {hasActiveLicense, externalProfiles});
+      // El EPG (bouquets + programación) se baja mientras se muestra el splash:
+      // antes empezaba recién en el home, después de esperar el splash completo.
+      if (screen === 'home' && !cancelled) usePreloadStore.getState().loadEPG(getActiveBrandConfig());
       const remaining = theme.splashDurationMs - (Date.now() - started);
       if (remaining > 0) await wait(remaining);
       devLog('splash: destino', route);
-      const hasActiveLicense = Boolean(userSession.getActiveLicense()?.licenseKey);
-      const externalProfiles = usesExternalProfiles(getActiveBrandConfig());
-      if (!cancelled) navigate(screenForWebRoute(route, {hasActiveLicense, externalProfiles}));
+      if (!cancelled) navigate(screen);
     })();
     return () => {
       cancelled = true;
