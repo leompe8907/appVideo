@@ -81,6 +81,15 @@ export function StatsPanel({playerRef}) {
       />
 
       <Text style={styles.section}>Buffer y cortes</Text>
+      <Row
+        label="Arranque"
+        value={
+          d.startup?.playing != null
+            ? `${d.startup.playing} ms (init ${d.startup.init ?? '—'} · lista ${d.startup.manifest ?? '—'} · key ${d.startup.key ?? '—'} · 1er .ts ${d.startup.segment ?? '—'})`
+            : 'cargando…'
+        }
+        warn={d.startup?.playing > 3000}
+      />
       <Row label="Buffer adelante" value={fmtS(d.bufferAheadS)} warn={lowBuffer} />
       {d.live ? (
         <Row

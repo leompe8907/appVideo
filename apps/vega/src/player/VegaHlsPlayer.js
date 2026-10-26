@@ -39,6 +39,10 @@ function shakaSettingsFor(live, brand) {
   };
 }
 
+// Uno solo para todas las listas (cada instancia de la librería escribe en el log).
+let decoder = null;
+const playlistDecoder = () => (decoder ??= new TextDecoder('utf-8'));
+
 export class VegaHlsPlayer {
   /**
    * @param {{
@@ -58,6 +62,12 @@ export class VegaHlsPlayer {
     // Diagnóstico (panel de estadísticas del reproductor).
     this.net = {manifests: 0, segments: 0, keys: 0, bytes: 0, last: {}, recent: {}, counts: {}, errors: []};
     this.loadStartedAt = 0;
+    // Arranque: ms desde load() hasta cada paso (el primero de cada tipo).
+    this.startup = {};
+  }
+
+  mark(step) {
+    if (this.startup[step] == null && this.loadStartedAt) this.startup[step] = Date.now() - this.loadStartedAt;
   }
 
   setSurfaceHandle(handle) {
@@ -77,6 +87,11 @@ export class VegaHlsPlayer {
 
   emit(state, detail) {
     if (this.destroyed) return;
+    if (state === 'playing' && this.startup.playing == null) {
+      this.mark('playing');
+      const s = this.startup;
+      devLog(`player: arranque ${s.playing} ms (init ${s.init}, lista ${s.manifest}, key ${s.key ?? '—'}, 1er .ts ${s.segment}, metadatos ${s.metadata ?? '—'}, canplay ${s.canplay ?? '—'})`);
+    }
     this.lastState = state;
     this.callbacks.onState?.(state, detail);
   }
@@ -87,14 +102,21 @@ export class VegaHlsPlayer {
     const video = new VideoPlayer();
     this.video = video;
     await video.initialize();
+    this.mark('init');
     if (this.destroyed) {
       await video.deinitialize();
       return;
     }
     video.autoplay = false;
     const play = () => video.play();
-    video.addEventListener('loadedmetadata', play);
-    video.addEventListener('canplay', play);
+    video.addEventListener('loadedmetadata', () => {
+      this.mark('metadata');
+      play();
+    });
+    video.addEventListener('canplay', () => {
+      this.mark('canplay');
+      play();
+    });
     video.addEventListener('playing', () => this.emit('playing'));
     // Tras un `waiting` no siempre llega otro `playing`: si el tiempo avanza, está reproduciendo.
     let lastTime = -1;
@@ -117,7 +139,13 @@ export class VegaHlsPlayer {
     this.liveBuffer = live;
     const shaka = new ShakaPlayer(video, shakaSettingsFor(live, brand));
     this.shaka = shaka;
-    shaka.load({uri: withSessionId(url, sessionId), secure: 'false', drm_scheme: '', drm_license_uri: ''}, true);
+    // Lista caída, 404, key inválida…: sin esto el reproductor queda cargando para siempre.
+    // Al destruir (zapping) Shaka corta la carga con error: eso no se informa.
+    shaka.load({uri: withSessionId(url, sessionId), secure: 'false', drm_scheme: '', drm_license_uri: ''}, true).catch((e) => {
+      if (this.destroyed) return;
+      devLog('Shaka load error', e?.code, e?.category, JSON.stringify(e?.data)?.slice(0, 300));
+      this.emit('error', {source: 'shaka-load', code: e?.code, category: e?.category});
+    });
 
     const net = shaka.player.getNetworkingEngine();
     net.registerRequestFilter((_type, request) => {
@@ -316,11 +344,16 @@ export class VegaHlsPlayer {
     const n = this.net;
     if (type === 0) {
       n.manifests += 1;
+      this.mark('manifest');
       this.recordPlaylist(response);
     }
-    else if (type === 6) n.keys += 1;
+    else if (type === 6) {
+      n.keys += 1;
+      this.mark('key');
+    }
     else if (type === 1) {
       const kind = context?.stream?.type || 'video';
+      if (kind === 'video') this.mark('segment');
       n.segments += 1;
       n.bytes += bytes;
       n.counts[kind] = (n.counts[kind] || 0) + 1;
@@ -345,7 +378,7 @@ export class VegaHlsPlayer {
     try {
       const data = response?.data;
       if (!data || data.byteLength > 512 * 1024) return;
-      const text = new TextDecoder('utf-8').decode(data instanceof ArrayBuffer ? new Uint8Array(data) : data);
+      const text = playlistDecoder().decode(data instanceof ArrayBuffer ? new Uint8Array(data) : data);
       if (!text.includes('#EXTINF')) return; // lista maestra
       const segments = (text.match(/#EXTINF/g) || []).length;
       const target = Number((text.match(/#EXT-X-TARGETDURATION:\s*([\d.]+)/) || [])[1]) || null;
@@ -390,6 +423,7 @@ export class VegaHlsPlayer {
         state: this.lastState,
         live,
         uptimeS: this.loadStartedAt ? Math.round((Date.now() - this.loadStartedAt) / 1000) : 0,
+        startup: {...this.startup},
         profile: active
           ? {
               width: active.width,

@@ -23,9 +23,27 @@ const PANACCESS_KEY_WRAP_IV = new Uint8Array([
 /** Key de prueba 00112233…ff envuelta con la key/IV de arriba (generada con openssl). */
 export const SAMPLE_WRAPPED_KEY_HEX = 'f70ae0a9ccbec7477313a693fb7856eff6d246dc130ce83ab0b574655b95ae08';
 
+// La key de envoltura es fija: se importa una vez (antes, una por .ts: en
+// Wind cada segmento trae su key, cada key creaba un objeto nativo nuevo).
+let wrapKeyPromise: Promise<CryptoKey> | null = null;
+function wrapKey(): Promise<CryptoKey> {
+  if (!wrapKeyPromise) {
+    wrapKeyPromise = WebCrypto.subtle
+      .importKey('raw', PANACCESS_KEY_WRAP_KEY.buffer, {name: 'AES-CBC', length: 128}, true, ['decrypt'])
+      .catch((e) => {
+        wrapKeyPromise = null; // reintentar en la próxima key
+        throw e;
+      });
+  }
+  return wrapKeyPromise;
+}
+
 export async function unwrapPanaccessKey(raw: ArrayBuffer): Promise<ArrayBuffer> {
   if (!raw || raw.byteLength <= 16) return raw;
-  const wrapKey = await WebCrypto.subtle.importKey(
-    'raw', PANACCESS_KEY_WRAP_KEY.buffer, {name: 'AES-CBC', length: 128}, true, ['decrypt']);
-  return WebCrypto.subtle.decrypt({name: 'AES-CBC', iv: PANACCESS_KEY_WRAP_IV.buffer}, wrapKey, raw);
+  try {
+    return await WebCrypto.subtle.decrypt({name: 'AES-CBC', iv: PANACCESS_KEY_WRAP_IV.buffer}, await wrapKey(), raw);
+  } catch (e) {
+    wrapKeyPromise = null; // por si el objeto nativo dejó de valer: se importa de nuevo
+    throw e;
+  }
 }

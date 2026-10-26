@@ -81,10 +81,10 @@ export class ShakaPlayer implements PlayerInterface {
      * @param {shaka.net.NetworkingEngine.RequestType} type
      * @param {shaka.extern.Response} response
      */
+    // appVideo: sin console.log por pedido (en Release van al journal del equipo,
+    // 2-3 líneas por cada .ts, key y lista).
     uplynkResponseFilter(type : shaka.net.NetworkingEngine.RequestType , response : shaka.extern.Response) : void {
-      console.log(`sample:shaka: in the response filter type = ${type}`);
       if (type == shaka.net.NetworkingEngine.RequestType.MANIFEST) {
-        console.log(`sample:shaka: in the response filter MANIFEST`);
         // Parse a custom header that contains a value needed to build a proper
         // license server URL.
         if (response.headers['x-uplynk-prefix']) {
@@ -103,7 +103,6 @@ export class ShakaPlayer implements PlayerInterface {
      * @param {shaka.extern.Request} request
      */
     uplynkRequestFilter(type : shaka.net.NetworkingEngine.RequestType, request : shaka.extern.Request) : void {
-      console.log(`sample:shaka: in the request filter type = ${type}`);
       if (type == shaka.net.NetworkingEngine.RequestType.LICENSE) {
         console.log(`sample:shaka: in the request filter LICENSE`);
         // Modify the license request URL based on our cookie.
@@ -117,7 +116,6 @@ export class ShakaPlayer implements PlayerInterface {
           request.uris[0] = this.lastUplynkPrefix.concat('/pr');
         }
       }
-      console.log(`sample:shaka: in the request filter END`);
     }
 
    /**
@@ -174,7 +172,8 @@ export class ShakaPlayer implements PlayerInterface {
   }
     // End custom callbacks }}}
 
-    load(content: any, autoplay: boolean): void {
+    // appVideo: devuelve la carga para que quien llama vea si falló.
+    load(content: any, autoplay: boolean): Promise<void> {
         if (ShakaPlayer.enableNativeParsing) {
           if (global.registerNativePlayerUtils &&
               shaka.hls.HlsParser.setNativeFunctions) {
@@ -341,6 +340,13 @@ export class ShakaPlayer implements PlayerInterface {
               // Shaka usa esa hora para sincronizarlos.
               ignoreManifestProgramDateTime: this.setting_.ignoreProgramDateTime === true,
               liveSegmentsDelay: this.setting_.liveSegmentsDelay ?? 3,
+              // appVideo: con el valor por defecto (true) la ventana de vivo
+              // (seekRange) mide lo mismo que el retraso, o sea 0 s: mientras se
+              // baja el primer .ts el borde avanza, el cabezal queda fuera de la
+              // ventana, Shaka lo adelanta y hay que bajar otro .ts (y a veces
+              // otro más): 6-9 s para la primera imagen. En false la ventana es
+              // la duración de la lista.
+              useSafariBehaviorForLive: false,
             }
           },
           abr : {
@@ -352,7 +358,7 @@ export class ShakaPlayer implements PlayerInterface {
               maxHeight : this.setting_.abrMaxHeight,
             }
           },
-          autoShowText: shaka.config.AutoShowText.ALWAYS,
+          autoShowText: shaka.config.AutoShowText.NEVER,
         });
 
         // Separating the drm configuration since Shaka seems to call drm operations even if they are not needed when drm configuration is present.
@@ -401,20 +407,15 @@ export class ShakaPlayer implements PlayerInterface {
             });
         }
 
-        this.internalLoad(content);
+        const loading = this.internalLoad(content);
         console.log("shakaplayer: load() OUT");
+        return loading;
     }
-    private async internalLoad(content: any) {
-      try {
-        await this.player.load(content.uri);
-      } catch (e) {
-        // Prueba Vega: sin esto, un fallo de carga queda mudo.
-        global.__probeLog?.(`ERROR shaka load: code=${e?.code} category=${e?.category} data=${JSON.stringify(e?.data)?.slice(0, 300)}`);
-        return;
-      }
-      global.__probeLog?.('shaka load OK');
-      console.log("shakaplayer: setTextTrackVisibility");
-      this.player.setTextTrackVisibility(true);
+    // appVideo: el error de carga se propaga (antes quedaba mudo y el
+    // reproductor cargando para siempre). Los subtítulos no se encienden acá:
+    // arrancan apagados hasta que se elijan (VegaHlsPlayer).
+    private async internalLoad(content: any): Promise<void> {
+      await this.player.load(content.uri);
       console.log("shakaplayer: loaded");
     }
     play(): void {
