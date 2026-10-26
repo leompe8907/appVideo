@@ -27,9 +27,8 @@ const BouquetRow = React.memo(function BouquetRow({bouquet, onPlay, preferredCha
   const layout = resolveBouquetLayoutForDevice(bouquet, TV);
   const items = bouquet.items || [];
   
-  const card = (channel, index, fillWidth = false) => (
+  const card = (channel, index) => (
     <ChannelCard
-      fillWidth={fillWidth}
       key={channelKey(channel, index)}
       channel={channel}
       cardDesign={layout.cardDesign}
@@ -41,50 +40,35 @@ const BouquetRow = React.memo(function BouquetRow({bouquet, onPlay, preferredCha
     />
   );
 
+  const mode = resolveHorizontalGridMode(layout.containerType, layout.cardDesign, layout.gridRows, layout.platformLayoutType, TV);
   let body;
-  if (layout.containerType === 'vertical_grid') {
-    const columns = resolveVerticalGridColumns(layout.gridColumns);
-    // Como la web (`repeat(N, minmax(0, 1fr))`): N columnas iguales que
-    // ocupan todo el ancho, con la tarjeta estirada a su columna.
+  if (!mode.scrollX) {
+    // logo+LCN en TV: grilla que envuelve, sin scroll horizontal.
     body = (
-      <View style={[styles.wrap, styles.gridFill]}>
+      <View style={[styles.track, styles.wrap]}>
         {items.map((c, i) => (
-          <View key={channelKey(c, i)} style={[styles.gridFillCell, {width: `${100 / columns}%`}]}>
-            {card(c, i, true)}
+          <View key={channelKey(c, i)} style={styles.gridCell}>
+            {card(c, i)}
           </View>
         ))}
       </View>
     );
   } else {
-    const mode = resolveHorizontalGridMode(layout.containerType, layout.cardDesign, layout.gridRows, layout.platformLayoutType, TV);
-    if (!mode.scrollX) {
-      // logo+LCN en TV: grilla que envuelve, sin scroll horizontal.
-      body = (
-        <View style={[styles.track, styles.wrap]}>
-          {items.map((c, i) => (
-            <View key={channelKey(c, i)} style={styles.gridCell}>
-              {card(c, i)}
-            </View>
-          ))}
-        </View>
-      );
-    } else {
-      const rows = Math.max(1, mode.rows || 1);
-      body = (
-        <FlatList
-          horizontal
-          data={toColumns(items, rows)}
-          keyExtractor={(col) => channelKey(col[0][0], col[0][1])}
-          renderItem={({item: col}) => <View>{col.map(([c, i]) => card(c, i))}</View>}
-          ItemSeparatorComponent={Separator}
-          contentContainerStyle={styles.track}
-          showsHorizontalScrollIndicator={false}
-          initialNumToRender={6}
-          maxToRenderPerBatch={4}
-          windowSize={3}
-        />
-      );
-    }
+    const rows = Math.max(1, mode.rows || 1);
+    body = (
+      <FlatList
+        horizontal
+        data={toColumns(items, rows)}
+        keyExtractor={(col) => channelKey(col[0][0], col[0][1])}
+        renderItem={({item: col}) => <View>{col.map(([c, i]) => card(c, i))}</View>}
+        ItemSeparatorComponent={Separator}
+        contentContainerStyle={styles.track}
+        showsHorizontalScrollIndicator={false}
+        initialNumToRender={6}
+        maxToRenderPerBatch={4}
+        windowSize={3}
+      />
+    );
   }
 
   return (
@@ -95,6 +79,59 @@ const BouquetRow = React.memo(function BouquetRow({bouquet, onPlay, preferredCha
     </View>
   );
 });
+
+/**
+ * Grilla vertical (`vertical_grid`): como la web (`repeat(N, minmax(0, 1fr))`),
+ * N columnas iguales que ocupan todo el ancho. Cada fila es un ítem de la lista
+ * del muro, así sólo se arman las filas cercanas a la pantalla (Canales de
+ * Wind: un bouquet con más de 100 canales tardaba ~1,8 s en dibujarse).
+ */
+const GridRow = React.memo(function GridRow({bouquet, start, columns, onPlay, preferredChannelId}) {
+  const layout = resolveBouquetLayoutForDevice(bouquet, TV);
+  const cells = (bouquet.items || []).slice(start, start + columns);
+  return (
+    // Como la web: ▶ en la última tarjeta no salta a la fila siguiente.
+    <TVFocusGuideView trapFocusRight style={[styles.wrap, styles.gridFill]}>
+      {cells.map((channel, k) => {
+        const index = start + k;
+        return (
+          <View key={channelKey(channel, index)} style={[styles.gridFillCell, {width: `${100 / columns}%`}]}>
+            <ChannelCard
+              fillWidth
+              channel={channel}
+              cardDesign={layout.cardDesign}
+              logoIndex={layout.logoIndex}
+              backgroundColor={layout.backgroundColor}
+              hasTVPreferredFocus={preferredChannelId != null && preferredChannelId === channelKey(channel, index)}
+              onPress={() => onPlay(bouquet, index)}
+              onFocus={() => setFocusedChannel(channel)}
+            />
+          </View>
+        );
+      })}
+    </TVFocusGuideView>
+  );
+});
+
+/** Ítems de la lista del muro: un bouquet entero, o título + filas si es grilla vertical. */
+function toWallItems(bouquets) {
+  const items = [];
+  for (const bouquet of bouquets) {
+    const key = keyOf(bouquet);
+    const layout = resolveBouquetLayoutForDevice(bouquet, TV);
+    if (layout.containerType !== 'vertical_grid') {
+      items.push({type: 'bouquet', key, bouquet});
+      continue;
+    }
+    const columns = resolveVerticalGridColumns(layout.gridColumns);
+    const channels = bouquet.items || [];
+    items.push({type: 'heading', key: `${key}:h`, bouquet});
+    for (let start = 0; start < channels.length; start += columns) {
+      items.push({type: 'row', key: `${key}:${start}`, bouquet, start, columns, last: start + columns >= channels.length});
+    }
+  }
+  return items;
+}
 
 function Separator() {
   return <View style={styles.separator} />;
@@ -110,24 +147,36 @@ export function BouquetWall({bouquets, onPlay, preferredFocus, header, footer}) 
   // pantalla (con 10+ bouquets el ScrollView armaba cientos de tarjetas y
   // cada movimiento de foco se sentía lento). Se arma al menos hasta el
   // bouquet del canal recordado, para que reciba el foco al volver.
-  const preferredIndex = bouquets.findIndex((b) => keyOf(b) === preferredFocus?.bouquetKey);
+  const items = React.useMemo(() => toWallItems(bouquets), [bouquets]);
+  const preferredChannelOf = (bouquet) => (preferredFocus?.bouquetKey === keyOf(bouquet) ? preferredFocus.channelId : null);
+  // Ítem que tiene el canal recordado (en una grilla, su fila).
+  const preferredIndex = items.findIndex((it) => {
+    const id = preferredChannelOf(it.bouquet);
+    if (id == null || it.type === 'heading') return false;
+    if (it.type === 'bouquet') return true;
+    return (it.bouquet.items || []).slice(it.start, it.start + it.columns).some((c, k) => channelKey(c, it.start + k) === id);
+  });
   return (
     <FlatList
       style={styles.scroll}
       contentContainerStyle={styles.wall}
-      data={bouquets}
-      keyExtractor={keyOf}
-      renderItem={({item}) => (
-        <BouquetRow
-          bouquet={item}
-          onPlay={onPlay}
-          preferredChannelId={preferredFocus?.bouquetKey === keyOf(item) ? preferredFocus.channelId : null}
-        />
-      )}
+      data={items}
+      keyExtractor={(it) => it.key}
+      renderItem={({item: it}) => {
+        if (it.type === 'heading') return <Text style={styles.heading}>{it.bouquet.name || it.bouquet.title || ''}</Text>;
+        if (it.type === 'row') {
+          return (
+            <View style={it.last ? styles.bouquet : null}>
+              <GridRow bouquet={it.bouquet} start={it.start} columns={it.columns} onPlay={onPlay} preferredChannelId={preferredChannelOf(it.bouquet)} />
+            </View>
+          );
+        }
+        return <BouquetRow bouquet={it.bouquet} onPlay={onPlay} preferredChannelId={preferredChannelOf(it.bouquet)} />;
+      }}
       ListHeaderComponent={header}
       ListFooterComponent={footer}
-      initialNumToRender={Math.max(3, preferredIndex + 2)}
-      maxToRenderPerBatch={2}
+      initialNumToRender={Math.max(4, preferredIndex + 2)}
+      maxToRenderPerBatch={3}
       windowSize={3}
       showsVerticalScrollIndicator={false}
     />

@@ -97,7 +97,17 @@ export function HomeScreen({navigate}) {
     setPreferredFocus(m.channelId != null ? {bouquetKey: m.bouquetKey, channelId: m.channelId} : null);
   }, [isFocused]);
 
+  // Diagnóstico: cuánto tarda en dibujarse la sección elegida en el menú.
+  const sectionChangeAt = useRef(0);
+  useEffect(() => {
+    if (!sectionChangeAt.current) return;
+    const started = sectionChangeAt.current;
+    sectionChangeAt.current = 0;
+    requestAnimationFrame(() => devLog(`home: sección ${section} en ${Date.now() - started} ms`));
+  }, [section]);
+
   const selectSection = (key) => {
+    if (key !== section) sectionChangeAt.current = Date.now();
     rememberSection(key);
     setSection(key);
     setPreferredFocus(null);

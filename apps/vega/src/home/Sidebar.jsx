@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {Image, Pressable, TVFocusGuideView, Text, View} from 'react-native';
 import {getTheme} from '../theme';
 import {registerFocusTarget} from '../focusTargets';
@@ -62,6 +62,13 @@ export function Sidebar({account, items, activeKey, onSelect}) {
   const [focusedKey, setFocusedKey] = useState(null);
   const blurTimer = useRef(null);
   const activeRef = useRef(null);
+  // Nodo del ítem activo: al entrar al menú desde el contenido el foco va a
+  // la sección activa (antes iba al ítem más cercano, a menudo la cuenta).
+  const [activeNode, setActiveNode] = useState(null);
+  const setActiveItemRef = useCallback((node) => {
+    activeRef.current = node;
+    setActiveNode(node);
+  }, []);
   const expanded = focusedKey != null;
 
   // Otras pantallas pueden mandar el foco al menú (ítem activo).
@@ -85,7 +92,7 @@ export function Sidebar({account, items, activeKey, onSelect}) {
       key={item.key}
       item={item}
       active={item.key === activeKey}
-      pressRef={item.key === activeKey ? activeRef : undefined}
+      pressRef={item.key === activeKey ? setActiveItemRef : undefined}
       expanded={expanded}
       focused={focusedKey === item.key}
       accent={theme.focusColor}
@@ -100,9 +107,9 @@ export function Sidebar({account, items, activeKey, onSelect}) {
   return (
     <>
       {expanded ? <View pointerEvents="none" style={styles.dim} /> : null}
-      {/* ▲▼ no salen del menú (como Sidebar.jsx); al entrar vuelve al último ítem enfocado. */}
+      {/* ▲▼ no salen del menú (como Sidebar.jsx). */}
       <TVFocusGuideView
-        autoFocus
+        destinations={activeNode ? [activeNode] : undefined}
         trapFocusUp
         trapFocusDown
         style={[styles.sidebar, {width: px(expanded ? PANEL_WIDTH : RAIL_WIDTH), backgroundColor: theme.sidebar.panel}]}>
