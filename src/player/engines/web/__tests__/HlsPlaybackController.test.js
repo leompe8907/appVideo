@@ -418,6 +418,25 @@ describe('PanaccessKeyUnwrapLoader - key Panaccess envuelta (requestMode=mekey)'
     expect(superLoad).toHaveBeenCalledWith(context, {}, callbacks);
   });
 
+  it('importa la key de envoltura una sola vez para todas las keys (no una por segmento)', async () => {
+    // Módulo nuevo: la key importada se guarda a nivel de módulo.
+    vi.resetModules();
+    const { PanaccessKeyUnwrapLoader: FreshLoader } = await import('../HlsPlaybackController.js');
+    const { XhrLoader: FreshXhrLoader } = await import('hls.js');
+    const wrapped32 = await wrapKey(crypto.getRandomValues(new Uint8Array(16)));
+    vi.spyOn(FreshXhrLoader.prototype, 'load').mockImplementation(function stub(context, config, callbacks) {
+      callbacks.onSuccess({ url: context.url, data: wrapped32.slice().buffer }, {}, context, null);
+    });
+    const importKey = vi.spyOn(crypto.subtle, 'importKey');
+
+    const onSuccess = vi.fn();
+    for (let i = 0; i < 3; i += 1) {
+      new FreshLoader({}).load({ keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' }, {}, { onSuccess });
+    }
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(3));
+    expect(importKey).toHaveBeenCalledTimes(1);
+  });
+
   it('si el unwrap falla (operador con wrapper distinto), loguea el error y deja pasar la respuesta original sin colgarse', async () => {
     // Último byte 0xFF: como longitud de padding PKCS7 es inválida (debe
     // estar entre 1 y 16) para CUALQUIER key/IV — garantiza el rechazo de

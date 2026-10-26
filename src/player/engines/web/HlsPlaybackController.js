@@ -43,11 +43,27 @@ const PANACCESS_KEY_WRAP_IV = new Uint8Array([
   0x91, 0x0f, 0x03, 0xa9, 0x67, 0x6d, 0x2b, 0xf4, 0xe8, 0x22, 0x43, 0x37, 0xe7, 0x1a, 0x87, 0xd3,
 ]);
 
+// La key de envoltura es fija: se importa una vez (antes, una por cada key;
+// con keys rotativas eso es una por segmento). Si falla, se reintenta en la
+// próxima key.
+let wrapKeyPromise = null;
+function getWrapKey() {
+  if (!wrapKeyPromise) {
+    wrapKeyPromise = crypto.subtle
+      .importKey('raw', PANACCESS_KEY_WRAP_KEY, { name: 'AES-CBC' }, false, ['decrypt'])
+      .catch((err) => {
+        wrapKeyPromise = null;
+        throw err;
+      });
+  }
+  return wrapKeyPromise;
+}
+
 async function unwrapPanaccessKey(rawKeyBytes) {
   if (!(rawKeyBytes instanceof Uint8Array) || rawKeyBytes.length <= 16) {
     return rawKeyBytes;
   }
-  const wrapKey = await crypto.subtle.importKey('raw', PANACCESS_KEY_WRAP_KEY, { name: 'AES-CBC' }, false, ['decrypt']);
+  const wrapKey = await getWrapKey();
   const plain = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: PANACCESS_KEY_WRAP_IV }, wrapKey, rawKeyBytes);
   return new Uint8Array(plain);
 }

@@ -98,6 +98,7 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
   const blurTimerRef = useRef(null);
   const tvMainFocusCancelRef = useRef(null);
   const pendingTvNavFocusRef = useRef(false);
+  const pointerDownAtRef = useRef(0);
   const sidebarFixed = currentBrand?.ui?.sidebar?.fixed !== false;
 
   const setExpandedSafe = (next) => {
@@ -188,10 +189,29 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
     return undefined;
   }, [expanded]);
 
+  // TV: al entrar al menú desde el contenido (◀) el foco va a la sección
+  // activa, no al ítem más cercano por geometría (a menudo la cuenta, arriba).
+  // Con puntero (control de LG) se respeta el ítem apuntado.
+  const focusActiveOnEnter = (event) => {
+    setExpandedSafe(true);
+    if (!isTV) return;
+    const root = rootRef.current;
+    if (!(root instanceof HTMLElement)) return;
+    const from = event.relatedTarget;
+    if (from instanceof Node && root.contains(from)) return;
+    if (Date.now() - pointerDownAtRef.current < 500) return;
+    const activeLink = root.querySelector('.home-sidebar-link.active');
+    if (activeLink instanceof HTMLElement && activeLink !== event.target) {
+      activeLink.focus({ preventScroll: true });
+      requestTvFocusRingSync();
+    }
+  };
+
   // TV: única excepción NO puramente espacial del sidebar. Todo lo demás —
   // UP/DOWN entre links, RIGHT hacia el contenido, LEFT desde el contenido —
   // lo resuelve el motor genérico de navegación espacial (`NavigationRouter`)
-  // por geometría, sin necesidad de un handler ni de un modelo de índices por pantalla.
+  // por geometría, sin necesidad de un handler ni de un modelo de índices por
+  // pantalla (al entrar, `focusActiveOnEnter` lleva el foco a la sección activa).
   useEffect(() => {
     if (!isTV) return undefined;
     const unregister = navigationRouter.register('global', (action) => {
@@ -228,7 +248,10 @@ export function Sidebar({ expanded = false, onExpandedChange }) {
         sidebarFixed ? 'home-sidebar--fixed' : '',
       ].filter(Boolean).join(' ')}
       aria-label={t('sidebar.menu')}
-      onFocusCapture={() => setExpandedSafe(true)}
+      onFocusCapture={focusActiveOnEnter}
+      onPointerDownCapture={() => {
+        pointerDownAtRef.current = Date.now();
+      }}
       onBlurCapture={scheduleCollapseIfOutside}
       onMouseEnter={() => setExpandedSafe(true)}
       onMouseLeave={() => scheduleCollapseIfOutside()}

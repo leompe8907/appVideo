@@ -1516,7 +1516,10 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
         activeId={state?.id}
         autoCloseOnSelect={currentBrand?.player?.closeChannelSidebarOnSelect === true}
         onClose={closePlayerOverlay}
-        onSelectChannel={(ch) => handleZapToChannel(ch)}
+        // Callback estable: con una función nueva por render el memo nunca
+        // cortaba y la lista abierta (hasta 400 filas) se redibujaba con cada
+        // timeupdate del player (~4 por segundo).
+        onSelectChannel={handleZapToChannel}
       />
 
       {overlay === 'info' && shouldUseEpgInfoModal ? (
