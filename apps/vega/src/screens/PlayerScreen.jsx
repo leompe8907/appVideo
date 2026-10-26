@@ -7,11 +7,13 @@ import {useParentalStore} from '@appvideo/core/store/parentalStore';
 import {getChannelStableId} from '@appvideo/core/utils/channelId';
 import {usePreloadStore} from '@appvideo/core/store/preloadStore';
 import {useParentalGateStore} from '@appvideo/core/store/parentalGateStore';
-import {buildZappingChannelList} from '@appvideo/core/utils/channelZappingList';
+import {buildZappingChannelList, findChannelByLcn} from '@appvideo/core/utils/channelZappingList';
+import {createChannelNumberInput} from '@appvideo/core/utils/channelNumberInput';
 import {buildChannelLogoUrl} from '@appvideo/core/utils/bouquetLayoutConfig';
 import {getCurrentEpgEvent, getEpgEventTimeBoundsMs, getEpgEventTitle} from '@appvideo/core/utils/epgCurrentEvent';
 import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
 import {VideoSurface} from '../player/VideoSurface';
+import {channelStepOfTvEvent, digitOfTvEvent} from '../player/remoteKeys';
 import {StatsPanel, getStatsVisible, setStatsVisible} from '../player/StatsPanel';
 import {TracksPanel, hasTrackOptions} from '../player/TracksPanel';
 import {Clock} from '../components/Clock';
@@ -38,6 +40,8 @@ const trackEngine = (p) => ({
 
 const t = (key, opts) => i18n.t(key, opts);
 const ZAP_DELAY_MS = 600;
+// Número de canal tecleado: se confirma tras esta pausa (como la web).
+const CHANNEL_NUMBER_TIMEOUT_MS = 2000;
 const ROW_HEIGHT = 92;
 
 const ICONS = {
@@ -308,14 +312,51 @@ export function PlayerScreen({params, navigate}) {
   };
   const selectFromList = useCallback((i) => selectFromListRef.current(i), []);
 
+  // Número de canal con el teclado numérico (usePlayerChannelZapping de la
+  // web): junta dígitos y confirma tras una pausa o al completar las cifras del
+  // LCN más alto; un número inexistente va al LCN más cercano.
+  const [pendingNumber, setPendingNumber] = useState('');
+  const zapToNumberRef = useRef(null);
+  zapToNumberRef.current = (number) => {
+    const target = findChannelByLcn(channels, number);
+    const i = target ? channels.indexOf(target) : -1;
+    if (i >= 0 && i !== index) goTo(i);
+    showHud();
+  };
+  const maxDigits = useMemo(
+    () => String(channels.reduce((max, c) => Math.max(max, Number(c?.lcn) || 0), 0)).length,
+    [channels],
+  );
+  const numberInput = useRef(null);
+  useEffect(() => {
+    const input = createChannelNumberInput({
+      timeoutMs: CHANNEL_NUMBER_TIMEOUT_MS,
+      maxDigits,
+      onChange: setPendingNumber,
+      onCommit: (n) => zapToNumberRef.current?.(n),
+    });
+    numberInput.current = input;
+    return () => input.cancel();
+  }, [maxDigits]);
+  useEffect(() => {
+    if (panel) numberInput.current?.cancel();
+  }, [panel]);
+
   useTVEventHandler((evt) => {
     if (!evt || evt.eventKeyAction === 1 || panel) return; // el panel maneja su propio foco
     const type = evt.eventType;
-    if ((type === 'up' || type === 'down') && arrowsZap) {
+    const digit = digitOfTvEvent(type);
+    const channelStep = channelStepOfTvEvent(type);
+    if (digit != null) {
+      numberInput.current?.push(digit);
+      showHud();
+    } else if ((type === 'up' || type === 'down') && arrowsZap) {
+      numberInput.current?.cancel();
       zap(type === 'up' ? 1 : -1); // ▲ siguiente, ▼ anterior (como la web)
       showHud();
-    } else if (type === 'channelUp' || type === 'channelDown') {
-      zap(type === 'channelUp' ? 1 : -1);
+    } else if (channelStep) {
+      numberInput.current?.cancel();
+      zap(channelStep);
       showHud();
     } else if (['up', 'down', 'left', 'right', 'select'].includes(type)) {
       showHud();
@@ -395,6 +436,11 @@ export function PlayerScreen({params, navigate}) {
     <View style={styles.container}>
       <VideoSurface handlesRef={handles} playerRef={player} showCaptions={Boolean(tracks?.textEnabled)} />
       {statsOn ? <StatsPanel playerRef={player} /> : null}
+      {pendingNumber ? (
+        <View style={styles.channelNumber} pointerEvents="none">
+          <Text style={styles.channelNumberText}>{pendingNumber}</Text>
+        </View>
+      ) : null}
 
       {state === 'loading' || state === 'buffering' ? (
         <View style={styles.loading} pointerEvents="none">
@@ -562,6 +608,22 @@ const styles = createScaledStyles({
   rowMeta: {flex: 1},
   rowName: {color: '#fff', fontSize: 24, fontWeight: '600'},
   rowProgram: {color: 'rgba(255,255,255,0.78)', fontSize: 19.2, fontWeight: '600'},
+  // .player-channel-number de la web.
+  channelNumber: {
+    position: 'absolute',
+    top: 120,
+    right: 48,
+    zIndex: 21,
+    minWidth: 120,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(0,0,0,0.72)',
+    alignItems: 'center',
+  },
+  channelNumberText: {color: '#fff', fontSize: 64, fontWeight: '700', fontVariant: ['tabular-nums']},
   infoBox: {width: 900, padding: 32, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.85)'},
   infoTitle: {color: '#fff', fontSize: 36, fontWeight: '700'},
   infoRange: {color: 'rgba(255,255,255,0.85)', fontSize: 24, marginTop: 8, fontVariant: ['tabular-nums']},

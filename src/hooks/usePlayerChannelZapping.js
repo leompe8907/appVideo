@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { findChannelByLcn, findZappingChannelIndex } from '@appvideo/core/utils/channelZappingList';
 import { getDigitFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
-import { createChannelNumberInput } from '../utils/channelNumberInput';
+import { createChannelNumberInput } from '@appvideo/core/utils/channelNumberInput';
 import { navigationRouter } from '../navigation/NavigationRouter';
 
 /**
