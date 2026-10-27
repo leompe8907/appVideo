@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {ActivityIndicator, BackHandler, FlatList, Image, Pressable, Text, View, useTVEventHandler} from 'react-native';
+import {ActivityIndicator, AppState, BackHandler, FlatList, Image, Pressable, Text, View, useTVEventHandler} from 'react-native';
 import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig, isParentalControlEnabledForBrand} from '@appvideo/core/config/brandConfig';
 import {useParentalStore} from '@appvideo/core/store/parentalStore';
@@ -373,6 +373,18 @@ export function PlayerScreen({params, navigate}) {
     return () => sub.remove();
   }, [panel]);
 
+  // En segundo plano se libera el reproductor (decodificador, DRM y buffers):
+  // el sistema mata primero a las apps que más memoria usan. Al volver al
+  // frente el canal arranca de nuevo, sin la espera del zapping.
+  const [inBackground, setInBackground] = useState(false);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'background') setInBackground(true);
+      else if (s === 'active') setInBackground(false);
+    });
+    return () => sub.remove();
+  }, []);
+
   // Una instancia de reproductor por canal; el cambio espera un poco para no
   // abrir cada canal intermedio al mantener apretada la flecha. El primer
   // canal (al entrar) y los reintentos arrancan sin esa espera.
@@ -380,6 +392,12 @@ export function PlayerScreen({params, navigate}) {
   useEffect(() => {
     if (!channel?.url) {
       setState('error');
+      return undefined;
+    }
+    if (inBackground) {
+      devLog('player: liberado en segundo plano');
+      telemetryService.stopCurrent({finished: false});
+      zapDelay.current = 0;
       return undefined;
     }
     let cancelled = false;
@@ -427,7 +445,7 @@ export function PlayerScreen({params, navigate}) {
       if (p) releasing.current = p.destroy().catch(() => {});
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, retryToken]);
+  }, [index, retryToken, inBackground]);
 
   // Al salir del reproductor se cierra el registro del canal.
   useEffect(() => () => telemetryService.stopCurrent({finished: false}), []);
