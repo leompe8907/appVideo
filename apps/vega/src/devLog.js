@@ -37,6 +37,10 @@ export function installDevErrorLogging() {
   }
   const prev = global.ErrorUtils?.getGlobalHandler?.();
   global.ErrorUtils?.setGlobalHandler?.((e, isFatal) => {
+    // En nivel error (no info): Fire TV suprime los info de un proceso que
+    // pasa de 300 líneas/s (el reproductor nativo lo hace al zapear) y un
+    // error fatal, que cierra la app, se perdía.
+    console.error(`[appVideo] ERROR JS${isFatal ? ' fatal' : ''}: ${e?.message}\n${e?.stack}`);
     devLog(`ERROR JS${isFatal ? ' fatal' : ''}:`, e);
     prev?.(e, isFatal);
   });
