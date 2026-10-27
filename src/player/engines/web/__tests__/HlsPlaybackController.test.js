@@ -367,11 +367,9 @@ describe('PanaccessKeyUnwrapLoader - key Panaccess envuelta (requestMode=mekey)'
     loader.load(context, {}, { onSuccess });
 
     // El unwrap usa WebCrypto (async): esperar a que resuelva.
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
 
     expect(superLoad).toHaveBeenCalledTimes(1);
-    expect(onSuccess).toHaveBeenCalledTimes(1);
     const [response] = onSuccess.mock.calls[0];
     expect(Array.from(new Uint8Array(response.data))).toEqual(Array.from(realKey));
   });
@@ -449,10 +447,9 @@ describe('PanaccessKeyUnwrapLoader - key Panaccess envuelta (requestMode=mekey)'
     const onSuccess = vi.fn();
     const context = { keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' };
     loader.load(context, {}, { onSuccess });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(onSuccess).toHaveBeenCalledTimes(1);
+    // crypto.subtle corre fuera del hilo: con la suite completa en paralelo
+    // tarda más que un par de vueltas del event loop.
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
     // Sigue habiendo un log (siempre, no solo DEV) para poder diagnosticar
     // operadores nuevos con un wrapper distinto al conocido.
     expect(errorSpy).toHaveBeenCalled();
