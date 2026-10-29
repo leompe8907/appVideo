@@ -66,7 +66,7 @@ export default {
       "url": "https://backend.wind.do/wind/forgot-password/"
     },
     "udid": {
-      "enabled": false,
+      "enabled": true,
       "baseUrl": "https://backend.wind.do",
       "requestPath": "/wind/request-udid-manual/",
       "wsUrl": "wss://backend.wind.do/ws/auth/",
@@ -92,7 +92,7 @@ export default {
         "backendBaseUrl": ""
       },
       "facebook": {
-        "enabled": false,
+        "enabled": true,
         "redirectUrl": "/wind/auth/facebook/",
         "accessToken": "823584907447149",
         "backendBaseUrl": ""
@@ -376,7 +376,7 @@ export default {
     }
   },
   "features": {
-    "profiles": false,
+    "profiles": true,
     "profilesSource": "externo",
     "showRating": true,
     "osms": true,
