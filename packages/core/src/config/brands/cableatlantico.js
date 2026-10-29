@@ -58,18 +58,18 @@ export default {
       "assetPath": "backgroundalt.webp"
     },
     "qrRegister": {
-      "enabled": false,
-      "url": "https://shop.fotelka.tv/?c=customer&p=register"
+      "enabled": true,
+      "url": ""
     },
     "forgotPassword": {
-      "enabled": false,
+      "enabled": true,
       "url": ""
     },
     "udid": {
       "enabled": true,
-      "baseUrl": "http://127.0.0.1:8000",
-      "requestPath": "/udid/request-udid-manual/",
-      "wsUrl": "ws://127.0.0.1:8000/ws/auth/",
+      "baseUrl": "",
+      "requestPath": "",
+      "wsUrl": "",
       "appType": "web",
       "appVersion": "1.0",
       "maxReconnectAttempts": 3,
@@ -85,14 +85,14 @@ export default {
     "socialLogin": {
       "backendBaseUrl": "",
       "google": {
-        "enabled": false,
+        "enabled": true,
         "redirectUrl": "",
         "accessToken": "",
         "preferCustomButton": true,
         "backendBaseUrl": ""
       },
       "facebook": {
-        "enabled": false,
+        "enabled": true,
         "redirectUrl": "",
         "accessToken": "",
         "backendBaseUrl": ""
@@ -166,8 +166,8 @@ export default {
     "epgCardsHeaderBg": "rgb(0 0 0)",
     "epgCardsProgramLiveBg": "#6C8EB6",
     "epgCardsProgramLiveProgressBg": "#6C8EB6",
-    "epgCardsPastGlobal": false,
-    "epgCardsLaterGlobal": false,
+    "epgCardsPastGlobal": true,
+    "epgCardsLaterGlobal": true,
     "epgCloseModalOnPlayLive": "auto"
   },
   "catchup": {
