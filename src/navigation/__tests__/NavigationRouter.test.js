@@ -101,4 +101,29 @@ describe('NavigationRouter', () => {
     // El motor espacial nunca corrió: el foco sigue en btnA, no saltó a btnB.
     expect(document.activeElement).toBe(btnA);
   });
+
+  /**
+   * Regresión (LG webOS): con el overlay de "Error de reproducción" abierto, el
+   * foco quedó en un botón del HUD, fuera de la zona modal. `moveFocus` no
+   * busca desde un elemento fuera del scope, así que las flechas no hacían
+   * nada y el control "dejaba de responder".
+   */
+  it('con el foco fuera de la zona activa, una flecha lo lleva al primer candidato de la zona', () => {
+    const hudBtn = document.createElement('button');
+    const modal = document.createElement('div');
+    const retryBtn = document.createElement('button');
+    const closeBtn = document.createElement('button');
+    modal.append(retryBtn, closeBtn);
+    document.body.append(hudBtn, modal);
+    for (const [el, left] of [[hudBtn, 0], [retryBtn, 200], [closeBtn, 320]]) {
+      el.getBoundingClientRect = () => ({ top: 0, left, width: 100, height: 40, right: left + 100, bottom: 40 });
+    }
+    focusManager.push('test-modal', { containerEl: modal });
+    hudBtn.focus();
+
+    const e = dispatchKey(39, 'ArrowRight');
+
+    expect(document.activeElement).toBe(retryBtn);
+    expect(e.defaultPrevented).toBe(true);
+  });
 });

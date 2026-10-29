@@ -26,6 +26,7 @@ import {
 } from '../../hooks/usePlayerHudTvNavigation';
 import { usePlayerChannelZapping } from '../../hooks/usePlayerChannelZapping';
 import { usePlayerVolumeKeys } from '../../hooks/usePlayerVolumeKeys';
+import { useFocusZone } from '../../hooks/useFocusZone';
 import {
   FULLSCREEN_CHANGE_EVENTS,
   enterAppFullscreen,
@@ -297,19 +298,14 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   // Navegación del overlay de error (BACK cierra; LEFT/RIGHT entre "Reintentar"
   // y "Cerrar" ya lo resuelve el motor de geometría genérico, escopado a este
   // overlay) delegada a una zona de FocusManager, igual que cualquier otro modal.
-  useEffect(() => {
-    if (!hasPlaybackError) return undefined;
-    const zoneId = errorZoneIdRef.current;
-    focusManager.push(zoneId, {
-      containerEl: errorRootRef.current,
-      onBack: () => {
-        close();
-      },
-    });
-    return () => {
-      focusManager.pop(zoneId);
-    };
-  }, [hasPlaybackError, close]);
+  // `close` cambia en cada render del PlayerContext: useFocusZone no lo usa como
+  // dependencia, así la zona no se re-registra y el foco no se escapa al HUD.
+  useFocusZone({
+    zoneId: errorZoneIdRef.current,
+    active: hasPlaybackError,
+    containerRef: errorRootRef,
+    onBack: close,
+  });
 
   // Foco inicial del overlay de error: sin esto el usuario queda con pantalla
   // negra y ningún elemento enfocable tras un fallo de reproducción.

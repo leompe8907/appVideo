@@ -1,7 +1,7 @@
 import { getTvActionFromKeyEvent, isTextInputElement, TV_ACTION } from '../utils/tvRemote';
 import { isOsdKeyboardOverlayInDom } from '../utils/homeShellOverlays';
 import { focusManager } from './FocusManager';
-import { moveFocus } from './spatialNavigation';
+import { focusElementSafe, getFocusableCandidates, moveFocus } from './spatialNavigation';
 
 /**
  * Router de navegación central para Smart TVs — ÚNICO listener de `keydown`
@@ -200,6 +200,18 @@ class NavigationRouter {
       if (!this.spatialNavEnabled) return;
 
       const scopeEl = focusManager.getActiveScopeEl();
+      // Foco "escapado" de la zona modal activa (p. ej. un pop/restore tardío
+      // lo devolvió a un botón de fondo): `moveFocus` no busca desde fuera del
+      // scope, así que sin esto ninguna flecha respondería. Se vuelve a meter
+      // el foco en el primer candidato de la zona.
+      if (scopeEl && activeEl instanceof HTMLElement && activeEl !== document.body && !scopeEl.contains(activeEl)) {
+        const [first] = getFocusableCandidates(scopeEl);
+        if (first && focusElementSafe(first)) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        return;
+      }
       const handled = moveFocus(action, scopeEl || document.body);
       if (handled) {
         e.preventDefault();
