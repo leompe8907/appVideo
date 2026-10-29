@@ -99,8 +99,8 @@ export default {
     },
     "deviceSession": {
       "enabled": true,
-      "baseUrl": "https://backend.wind.do/",
-      "wsUrl": "wss://backend.wind.do/ws/device/",
+      "baseUrl": "",
+      "wsUrl": "",
       "changePasswordFlow": "otp"
     },
     "telemetry": {
@@ -125,7 +125,7 @@ export default {
     "links": {
       "changePassword": {
         "enabled": true,
-        "url": "https://backend.wind.do/wind/login/"
+        "url": ""
       },
       "linkedDevices": {
         "enabled": true,
@@ -153,7 +153,7 @@ export default {
     "parentalControlMultiTtlMs": 315360000000
   },
   "EPG": {
-    "enabled": false,
+    "enabled": true,
     "daysOffset": 2,
     "hoursLimit": 12,
     "epgLineColorTime": "#3333FF",
@@ -337,10 +337,10 @@ export default {
         "pc": false,
         "tv": true
       },
-      "enabled": false,
+      "enabled": true,
       "areas": {
         "left": {
-          "enabled": false,
+          "enabled": true,
           "showServiceInfo": true,
           "contentAlign": "left"
         },
@@ -376,7 +376,7 @@ export default {
     "profiles": false,
     "profilesSource": "panaccess",
     "showRating": true,
-    "osms": false,
+    "osms": true,
     "osmsInline": true,
     "playerVolumeControls": true,
     "playerChannelArrows": true
