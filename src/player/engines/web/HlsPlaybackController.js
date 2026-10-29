@@ -1,4 +1,5 @@
 import Hls, { XhrLoader } from 'hls.js';
+import CryptoJS from 'crypto-js';
 import { buildHlsPlaybackConfig } from './hlsPlaybackConfig';
 import { LiveLatencyGuard } from './liveLatencyGuard';
 import { attachHlsDiagnostics } from './hlsDiagnostics';
@@ -59,10 +60,34 @@ function getWrapKey() {
   return wrapKeyPromise;
 }
 
+// WebCrypto solo existe en contextos seguros (https/localhost/file://): sirviendo
+// la app por http:// (ej. un TV apuntando a un servidor de la LAN) `crypto.subtle`
+// es undefined y ningún canal reproduce. Fallback en JS puro con crypto-js, que
+// ya va en el bundle; el costo es despreciable para 32 bytes por key.
+function unwrapPanaccessKeySoftware(rawKeyBytes) {
+  const { WordArray } = CryptoJS.lib;
+  const plain = CryptoJS.AES.decrypt(
+    { ciphertext: WordArray.create(rawKeyBytes) },
+    WordArray.create(PANACCESS_KEY_WRAP_KEY),
+    { iv: WordArray.create(PANACCESS_KEY_WRAP_IV), mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 },
+  );
+  // crypto-js no valida el padding (solo lee el último byte): la key real es AES-128,
+  // cualquier otro largo es un wrapper distinto y debe fallar como con WebCrypto.
+  if (plain.sigBytes !== 16) {
+    throw new Error('unwrap por software: padding inválido');
+  }
+  const out = new Uint8Array(plain.sigBytes);
+  for (let i = 0; i < out.length; i += 1) {
+    out[i] = (plain.words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
+  }
+  return out;
+}
+
 async function unwrapPanaccessKey(rawKeyBytes) {
   if (!(rawKeyBytes instanceof Uint8Array) || rawKeyBytes.length <= 16) {
     return rawKeyBytes;
   }
+  if (!globalThis.crypto?.subtle) return unwrapPanaccessKeySoftware(rawKeyBytes);
   const wrapKey = await getWrapKey();
   const plain = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: PANACCESS_KEY_WRAP_IV }, wrapKey, rawKeyBytes);
   return new Uint8Array(plain);

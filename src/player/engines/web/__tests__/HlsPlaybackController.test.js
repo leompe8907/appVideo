@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
 import Hls, { XhrLoader } from 'hls.js';
+import CryptoJS from 'crypto-js';
 import { HlsPlaybackController, PanaccessKeyUnwrapLoader } from '../HlsPlaybackController.js';
 
 /**
@@ -354,6 +355,59 @@ describe('PanaccessKeyUnwrapLoader - key Panaccess envuelta (requestMode=mekey)'
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('sin crypto.subtle (origen no seguro, ej. http:// en un TV) desenvuelve igual con el fallback de software', async () => {
+    const realKey = crypto.getRandomValues(new Uint8Array(16));
+    const wrapped32 = await wrapKey(realKey);
+    stubSuperLoadWith(wrapped32.buffer);
+    vi.stubGlobal('crypto', { getRandomValues: (arr) => arr });
+
+    const loader = new PanaccessKeyUnwrapLoader({});
+    const onSuccess = vi.fn();
+    loader.load({ keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' }, {}, { onSuccess });
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+
+    const [response] = onSuccess.mock.calls[0];
+    expect(Array.from(new Uint8Array(response.data))).toEqual(Array.from(realKey));
+  });
+
+  it('sin crypto.subtle, una key que no se puede desenvolver se loguea y pasa la respuesta original', async () => {
+    const bogus = new Uint8Array(32).fill(0xff);
+    stubSuperLoadWith(bogus.buffer);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('crypto', { getRandomValues: (arr) => arr });
+
+    const onSuccess = vi.fn();
+    new PanaccessKeyUnwrapLoader({}).load({ keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' }, {}, { onSuccess });
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+
+    expect(errorSpy).toHaveBeenCalled();
+    expect(Array.from(new Uint8Array(onSuccess.mock.calls[0][0].data))).toEqual(Array.from(bogus));
+  });
+
+  it('sin crypto.subtle, un wrapper distinto con padding "plausible" (último byte chico) también se rechaza', async () => {
+    // 31 bytes cualesquiera + último byte 5: crypto-js lo leería como una key de 27 bytes.
+    const { WordArray } = CryptoJS.lib;
+    const plaintext = new Uint8Array(32).fill(7);
+    plaintext[31] = 5;
+    const sealed = CryptoJS.AES.encrypt(WordArray.create(plaintext), WordArray.create(WRAP_KEY), {
+      iv: WordArray.create(WRAP_IV),
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.NoPadding,
+    }).ciphertext;
+    const wrapped = Uint8Array.from({ length: 32 }, (_, i) => (sealed.words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff);
+    stubSuperLoadWith(wrapped.buffer);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('crypto', { getRandomValues: (arr) => arr });
+
+    const onSuccess = vi.fn();
+    new PanaccessKeyUnwrapLoader({}).load({ keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' }, {}, { onSuccess });
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+
+    expect(errorSpy).toHaveBeenCalled();
+    expect(Array.from(new Uint8Array(onSuccess.mock.calls[0][0].data))).toEqual(Array.from(wrapped));
   });
 
   it('desenvuelve una key de 32 bytes ANTES de que onSuccess la reciba, sin tocar el IV (responsabilidad de hls.js)', async () => {
