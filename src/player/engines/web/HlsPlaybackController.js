@@ -7,6 +7,7 @@ import { getActiveBrandConfig } from '@appvideo/core/config/brandConfig';
 import { resolveLiveBuffer } from '@appvideo/core/player/liveBufferConfig';
 import { isWindMiddlewareHost, windDirectM3u8FromAny } from './windHlsManifest';
 import { isPanaccessRotatingKeyUri } from './sessionHlsXhrSetup';
+import { evictMaster, getCachedMaster, storeMaster } from './masterManifestCache';
 import {
   describeWindLevels,
   lockWindLevel,
@@ -14,6 +15,28 @@ import {
   pickWindCompatibleLevel,
   tryNextWindLevel,
 } from './windLevelSelect';
+
+/**
+ * Colchón de buffer (s) que tiene que haber por delante antes de dejar que el
+ * ABR de hls.js suba del nivel más bajo. Con un solo fragmento medido subía a
+ * 1080p al instante, volvía a bajar el mismo segmento (6.5 MB en vez de 2.7 MB)
+ * y competía con el demux del primero: cortes de ~3 s en los primeros segundos.
+ */
+const ABR_UPSWITCH_MIN_BUFFER_SEC = 20;
+
+/** Colchón exigido, acotado para que un `maxBufferLength` chico de la marca no deje el canal en baja calidad para siempre. */
+export function upswitchBufferSeconds(maxBufferLength) {
+  return Math.min(ABR_UPSWITCH_MIN_BUFFER_SEC, maxBufferLength / 2);
+}
+
+/** Segundos de buffer contiguos por delante de la posición actual (0 si ninguno la contiene). */
+function bufferAheadSeconds(video) {
+  const t = video.currentTime;
+  for (let i = 0; i < video.buffered.length; i += 1) {
+    if (video.buffered.start(i) <= t + 0.5 && video.buffered.end(i) >= t) return video.buffered.end(i) - t;
+  }
+  return 0;
+}
 
 /** Cada cuánto se reevalúa si conviene subir/bajar de nivel (ver `_startWindAdaptive`). */
 const WIND_ADAPTIVE_CHECK_INTERVAL_MS = 10000;
@@ -150,8 +173,47 @@ export function stripProgramDateTime(text) {
   return text.replace(/^#EXT-X-PROGRAM-DATE-TIME:[^\r\n]*(\r?\n)?/gm, '');
 }
 
+/** Estadísticas de una respuesta servida de la caché (misma forma que `LoadStats` de hls.js). */
+function cachedLoadStats(size) {
+  const now = performance.now();
+  return {
+    aborted: false,
+    loaded: size,
+    total: size,
+    retry: 0,
+    chunkCount: 0,
+    bwEstimate: 0,
+    loading: { start: now, first: now, end: now },
+    parsing: { start: 0, end: 0 },
+    buffering: { start: 0, first: 0, end: 0 },
+  };
+}
+
 export class PanaccessKeyUnwrapLoader extends XhrLoader {
   load(context, config, callbacks) {
+    if (context?.type === 'manifest') {
+      const cached = getCachedMaster(context.url);
+      if (cached) {
+        // Misma contabilidad que XhrLoader.load: destroy() la anula y la respuesta se descarta.
+        this.context = context;
+        this.callbacks = callbacks;
+        this.stats = cachedLoadStats(cached.length);
+        setTimeout(() => {
+          if (this.callbacks !== callbacks) return;
+          callbacks.onSuccess({ url: context.url, data: cached }, this.stats, context, null);
+        }, 0);
+        return;
+      }
+      const onMaster = callbacks.onSuccess;
+      callbacks = {
+        ...callbacks,
+        onSuccess: (response, stats, ctx, networkDetails) => {
+          storeMaster(context.url, response?.data);
+          onMaster(response, stats, ctx, networkDetails);
+        },
+      };
+    }
+
     if (
       PLAYLIST_CONTEXT_TYPES.has(context?.type) &&
       getActiveBrandConfig()?.player?.ignorePlaylistDateTime === true
@@ -406,6 +468,18 @@ export class HlsPlaybackController {
       }
     });
 
+    // Wind ya tiene su propio ABR acotado (`_startWindAdaptive`); para el resto,
+    // se queda en el nivel más bajo hasta tener colchón (ver ABR_UPSWITCH_MIN_BUFFER_SEC).
+    if (!wind) {
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (generation === this._loadGeneration) hls.autoLevelCapping = 0;
+      });
+      hls.on(Hls.Events.FRAG_BUFFERED, () => {
+        if (generation !== this._loadGeneration || hls.autoLevelCapping !== 0) return;
+        if (bufferAheadSeconds(videoEl) >= upswitchBufferSeconds(liveBuffer.maxBufferLength)) hls.autoLevelCapping = -1;
+      });
+    }
+
     hls.on(Hls.Events.FRAG_BUFFERED, () => {
       if (generation !== this._loadGeneration) return;
       // Un fragmento bufferizado con éxito confirma que la conexión se
@@ -574,6 +648,8 @@ export class HlsPlaybackController {
   }
 
   _handleFatalError(hls, src, data, generation) {
+    // Un master viejo podría estar apuntando a un CDN caído: que el reintento lo pida de nuevo.
+    evictMaster(src);
     if (
       data.type === Hls.ErrorTypes.NETWORK_ERROR &&
       data.details === 'manifestParsingError' &&

@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
 import Hls, { XhrLoader } from 'hls.js';
 import CryptoJS from 'crypto-js';
-import { HlsPlaybackController, PanaccessKeyUnwrapLoader } from '../HlsPlaybackController.js';
+import { getActiveBrandConfig } from '@appvideo/core/config/brandConfig';
+import { resolveLiveBuffer } from '@appvideo/core/player/liveBufferConfig';
+import { HlsPlaybackController, PanaccessKeyUnwrapLoader, upswitchBufferSeconds } from '../HlsPlaybackController.js';
+import { clearMasterCache, getCachedMaster, storeMaster } from '../masterManifestCache.js';
 
 /**
  * jsdom no implementa `MediaSource`, así que `Hls.isSupported()` da `false` y
@@ -507,5 +510,148 @@ describe('PanaccessKeyUnwrapLoader - key Panaccess envuelta (requestMode=mekey)'
     // Sigue habiendo un log (siempre, no solo DEV) para poder diagnosticar
     // operadores nuevos con un wrapper distinto al conocido.
     expect(errorSpy).toHaveBeenCalled();
+  });
+});
+
+describe('HlsPlaybackController - ABR de arranque', () => {
+  const URL = 'https://mw.example.com/index.php?requestMode=m3u8&streamId=5&sessionId=abc';
+
+  /** Payload mínimo de FRAG_BUFFERED que los controllers internos de hls.js pueden leer sin lanzar. */
+  const FRAG_DATA = {
+    frag: {
+      type: 'audio',
+      sn: 1,
+      level: 0,
+      stats: {
+        loaded: 0,
+        total: 0,
+        loading: { start: 0, first: 0, end: 0 },
+        buffering: { start: 0, first: 0, end: 0 },
+        parsing: { start: 0, end: 0 },
+      },
+    },
+  };
+
+  function withBuffer(videoEl, { currentTime = 0, end = 0, start = 0 }) {
+    Object.defineProperty(videoEl, 'currentTime', { value: currentTime, configurable: true });
+    Object.defineProperty(videoEl, 'buffered', {
+      value: { length: end > start ? 1 : 0, start: () => start, end: () => end },
+      configurable: true,
+    });
+  }
+
+  it('arranca en el nivel más bajo y no sube hasta tener el colchón de buffer por delante', async () => {
+    // El colchón depende del maxBufferLength de la marca activa en los tests.
+    const need = upswitchBufferSeconds(resolveLiveBuffer(getActiveBrandConfig()).maxBufferLength);
+    const videoEl = makeVideoEl();
+    const controller = new HlsPlaybackController({});
+    await controller.load(videoEl, URL);
+    const hls = controller.instance;
+
+    hls.trigger(Hls.Events.MANIFEST_PARSED, { levels: [] });
+    expect(hls.autoLevelCapping).toBe(0);
+
+    withBuffer(videoEl, { currentTime: 20, start: 20, end: 20 + need - 1 });
+    hls.trigger(Hls.Events.FRAG_BUFFERED, FRAG_DATA);
+    expect(hls.autoLevelCapping).toBe(0);
+
+    withBuffer(videoEl, { currentTime: 20, start: 20, end: 20 + need + 1 });
+    hls.trigger(Hls.Events.FRAG_BUFFERED, FRAG_DATA);
+    expect(hls.autoLevelCapping).toBe(-1);
+
+    controller.destroy();
+  });
+
+  it('un buffer que no contiene la posición actual (arranque en vivo) no cuenta como colchón', async () => {
+    const videoEl = makeVideoEl();
+    const controller = new HlsPlaybackController({});
+    await controller.load(videoEl, URL);
+    const hls = controller.instance;
+    hls.trigger(Hls.Events.MANIFEST_PARSED, { levels: [] });
+
+    // currentTime=0 todavía no saltó a 20: el rango 20–50 no está "por delante".
+    withBuffer(videoEl, { currentTime: 0, start: 20, end: 50 });
+    hls.trigger(Hls.Events.FRAG_BUFFERED, FRAG_DATA);
+    expect(hls.autoLevelCapping).toBe(0);
+
+    controller.destroy();
+  });
+
+  it('el colchón exigido para subir de nivel nunca supera lo que el buffer de la marca puede llegar a tener', () => {
+    expect(upswitchBufferSeconds(30)).toBe(15);
+    expect(upswitchBufferSeconds(60)).toBe(20);
+    expect(upswitchBufferSeconds(10)).toBe(5);
+  });
+
+  it('un MANIFEST_PARSED de una carga anterior (zapping) no limita el canal nuevo', async () => {
+    const videoEl = makeVideoEl();
+    const controller = new HlsPlaybackController({});
+    await controller.load(videoEl, URL);
+    const oldHls = controller.instance;
+
+    await controller.load(videoEl, URL.replace('streamId=5', 'streamId=6'));
+    oldHls.trigger(Hls.Events.MANIFEST_PARSED, { levels: [] });
+    expect(controller.instance.autoLevelCapping).toBe(-1);
+
+    controller.destroy();
+  });
+});
+
+describe('PanaccessKeyUnwrapLoader - caché del master', () => {
+  const MASTER = 'https://mw.example.com/index.php?requestMode=m3u8&streamId=5&sessionId=abc';
+  const BODY = '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nindex.php?requestMode=m3u8&substream=1&file=list1.m3u8\n';
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    clearMasterCache();
+  });
+
+  function stubNetwork(body) {
+    return vi.spyOn(XhrLoader.prototype, 'load').mockImplementation(function stub(context, config, callbacks) {
+      callbacks.onSuccess({ url: context.url, data: body }, { loaded: body.length }, context, null);
+    });
+  }
+
+  it('la segunda carga del mismo canal sale de la caché, sin pedir el master otra vez', async () => {
+    const network = stubNetwork(BODY);
+    const context = { type: 'manifest', url: MASTER, responseType: 'text' };
+
+    const first = vi.fn();
+    new PanaccessKeyUnwrapLoader({}).load(context, {}, { onSuccess: first });
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(network).toHaveBeenCalledTimes(1);
+
+    const second = vi.fn();
+    new PanaccessKeyUnwrapLoader({}).load({ ...context }, {}, { onSuccess: second });
+    await vi.waitFor(() => expect(second).toHaveBeenCalledTimes(1));
+
+    expect(network).toHaveBeenCalledTimes(1);
+    const [response, stats, ctx] = second.mock.calls[0];
+    expect(response).toEqual({ url: MASTER, data: BODY });
+    expect(ctx.url).toBe(MASTER);
+    expect(stats.loading.end).toBeGreaterThan(0);
+  });
+
+  it('no cachea playlists de nivel ni respuestas que no son texto', () => {
+    stubNetwork(BODY);
+    const level = { type: 'level', url: `${MASTER}&substream=1&file=list1.m3u8`, responseType: 'text' };
+    new PanaccessKeyUnwrapLoader({}).load(level, {}, { onSuccess: vi.fn() });
+    expect(getCachedMaster(level.url)).toBeNull();
+
+    stubNetwork(new ArrayBuffer(8));
+    new PanaccessKeyUnwrapLoader({}).load({ type: 'manifest', url: MASTER }, {}, { onSuccess: vi.fn() });
+    expect(getCachedMaster(MASTER)).toBeNull();
+  });
+
+  it('un error fatal borra el master para no fijar un CDN caído', async () => {
+    storeMaster(MASTER, BODY);
+    const videoEl = makeVideoEl();
+    const controller = new HlsPlaybackController({ onError: vi.fn() });
+    await controller.load(videoEl, MASTER);
+
+    controller.instance.trigger(Hls.Events.ERROR, fatalNetworkError('manifestLoadError'));
+    expect(getCachedMaster(MASTER)).toBeNull();
+
+    controller.destroy();
   });
 });

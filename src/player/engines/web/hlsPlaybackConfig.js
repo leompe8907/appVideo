@@ -14,7 +14,9 @@ import { resolveLiveBuffer } from '@appvideo/core/player/liveBufferConfig';
  * corre DENTRO del worker nunca responde y el video se queda "cargando" para
  * siempre sin ningún error visible. Demuxear en el hilo principal es algo
  * más caro de CPU pero muchísimo más confiable en el rango de navegadores/
- * WebViews de 2019 que apunta este proyecto.
+ * WebViews de 2019 que apunta este proyecto. Medido en un LG webOS 5 (2020): con
+ * el worker activo el arranque de un canal no mejora (el cuello es la interfaz,
+ * la descarga del primer segmento y el pipeline de la TV, no el demux).
  */
 export function buildHlsPlaybackConfig(playbackUrl = '', getSessionId, brand = getActiveBrandConfig()) {
   const wind = isWindMiddlewareHost(playbackUrl);

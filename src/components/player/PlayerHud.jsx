@@ -17,7 +17,9 @@ import EpgEventModal from '../epg/EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { useParental } from '@appvideo/core/store/useParental';
 import { getChannelStableId } from '@appvideo/core/utils/channelId';
-import { buildZappingChannelList } from '@appvideo/core/utils/channelZappingList';
+import { buildZappingChannelList, findZappingChannelIndex } from '@appvideo/core/utils/channelZappingList';
+import * as userSession from '@appvideo/core/utils/userSession';
+import { prefetchMaster } from '../../player/engines/web/masterManifestCache';
 import {
   usePlayerHudTvNavigation,
   PLAYER_FOCUS_IDS,
@@ -758,6 +760,22 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     // (ver el handler de volumen más abajo), así que el zapping por flecha
     // pasa al eje horizontal para no pisarse con eso.
     arrowKeysEnabled: isTV && channelChangeWithArrows,
+  // Precarga el master de los canales vecinos (CH+/CH-) un rato después de que el
+  // actual arrancó, para no competir con su descarga: ahorra ~0.5 s al zapear.
+  const currentLiveId = isLiveService ? state?.id ?? state?.item?.id : null;
+  useEffect(() => {
+    if (currentLiveId == null) return undefined;
+    const idx = findZappingChannelIndex(channelList, currentLiveId);
+    if (idx < 0 || channelList.length < 2) return undefined;
+    const timer = setTimeout(() => {
+      [1, -1].forEach((delta) => {
+        const url = resolveChannelLiveUrl(channelList[(idx + delta + channelList.length) % channelList.length]);
+        if (url) void prefetchMaster(url, userSession.getSessionId());
+      });
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [currentLiveId, channelList, resolveChannelLiveUrl]);
+
     horizontalArrowKeysEnabled: !isTV && channelChangeWithArrows,
     channelKeysEnabled: true,
     isLiveService,
