@@ -15,6 +15,8 @@ function isFocusRingTarget(el) {
     if (el.closest('.home-sidebar')) return false;
     // Control parental: el foco es el borde del propio control (_parental.scss).
     if (el.closest('.parental-card')) return false;
+    // HUD del player autooculto (opacidad 0): el foco sigue en su botón pero no se ve.
+    if (el.closest('.player-hud--hidden')) return false;
   } catch {
     // noop
   }

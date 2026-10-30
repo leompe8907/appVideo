@@ -38,6 +38,7 @@ import {
 } from '../../utils/playerFullscreen';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusElementSafe, scrollIntoViewWithinAncestors } from '../../navigation/spatialNavigation';
+import { requestTvFocusRingSync } from '../navigation/tvFocusRingSync';
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
@@ -283,6 +284,10 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     setStatsOn(!statsOn);
   };
   const [visible, setVisible] = useState(true);
+  // El foco no se mueve al ocultar/mostrar el HUD: sin esto el anillo queda flotando sobre el video.
+  useEffect(() => {
+    requestTvFocusRingSync();
+  }, [visible]);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
   const [isFullscreen, setIsFullscreen] = useState(() => isAppFullscreenActive());
@@ -755,11 +760,6 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     [play, requestPlayChannel, resolveChannelLiveUrl]
   );
 
-  const { zapByDirection, pendingChannelNumber } = usePlayerChannelZapping({
-    // TV: ↑/↓ (sin cambios). PC: ←/→ -- en PC, ↑/↓ ahora controlan volumen
-    // (ver el handler de volumen más abajo), así que el zapping por flecha
-    // pasa al eje horizontal para no pisarse con eso.
-    arrowKeysEnabled: isTV && channelChangeWithArrows,
   // Precarga el master de los canales vecinos (CH+/CH-) un rato después de que el
   // actual arrancó, para no competir con su descarga: ahorra ~0.5 s al zapear.
   const currentLiveId = isLiveService ? state?.id ?? state?.item?.id : null;
@@ -776,6 +776,11 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
     return () => clearTimeout(timer);
   }, [currentLiveId, channelList, resolveChannelLiveUrl]);
 
+  const { zapByDirection, pendingChannelNumber } = usePlayerChannelZapping({
+    // TV: ↑/↓ (sin cambios). PC: ←/→ -- en PC, ↑/↓ ahora controlan volumen
+    // (ver el handler de volumen más abajo), así que el zapping por flecha
+    // pasa al eje horizontal para no pisarse con eso.
+    arrowKeysEnabled: isTV && channelChangeWithArrows,
     horizontalArrowKeysEnabled: !isTV && channelChangeWithArrows,
     channelKeysEnabled: true,
     isLiveService,
