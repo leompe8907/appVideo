@@ -21,7 +21,6 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.55);
     z-index: 1;
     pointer-events: none;
   }
@@ -109,9 +108,13 @@
   .vod-header {
     display: flex;
     align-items: center;
-    gap: $spacing-md;
     flex-shrink: 0;
     margin-bottom: $spacing-sm;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-right: $spacing-md;
+    }
   }
 
   .vod-title {
@@ -126,9 +129,13 @@
   .vod-error {
     @include flex-center;
     flex-direction: column;
-    gap: $spacing-md;
     color: #fff;
     padding: $spacing-xl;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: $spacing-md;
+    }
 
     .vod-loading-spinner {
       width: 40px;
@@ -196,16 +203,19 @@
           flex-wrap: nowrap;
           align-items: center;
           gap: $spacing-md;
-          padding-inline-end: 1.75rem;
+          padding-inline: 0.85rem 1.75rem;
         }
 
         .embla-slide {
           flex: 0 0 auto;
           min-width: 0;
+          // Margen interno para que scale(1.05) no se recorte en el viewport.
+          padding: 0.65rem 0.45rem;
+          box-sizing: border-box;
 
           .vod-card {
             flex-shrink: 0;
-            margin-left: 0.5rem;
+            margin-left: 0;
           }
         }
       }
@@ -213,16 +223,20 @@
       &[data-native-horizontal-rail] {
         display: flex;
         align-items: center;
-        gap: $spacing-md;
         overflow-x: auto;
         overflow-y: visible;
         padding: 1.25rem 0;
         padding-inline-end: 1.75rem;
         @include scrollbar-hidden;
 
+        // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV
+        // (esta variante nativa es justamente la que usa TV, ver
+        // EmblaHorizontalRail.jsx). Se absorbe el `gap` original ($spacing-md)
+        // dentro del `margin-left` que ya traía cada tarjeta (0.5rem), para
+        // mantener la misma separación total sin depender de `gap`.
         .vod-card {
           flex-shrink: 0;
-          margin-left: 0.5rem;
+          margin-left: calc(#{$spacing-md} + 0.5rem);
         }
       }
     }
@@ -235,9 +249,24 @@
   }
 }
 
-// VodCard
+// PC + Embla: sin scale en el carril (evita recorte y que las tarjetas tapen las flechas).
+.device-pc .vod-page .vod-row-cards.embla-viewport .vod-card {
+  &:hover,
+  &.focused {
+    transform: none;
+  }
+}
+
+// VodCard — ancho fluido con clamp (carrusel + modal comparten variables).
+$vod-card-width: clamp(9rem, 10.5vw, 12.5em);
+$vod-poster-height: calc(#{$vod-card-width} * 3 / 2);
+
 .vod-card {
-  width: 11.5em;
+  width: $vod-card-width;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  vertical-align: top;
   background: transparent;
   border: none;
   padding: 0;
@@ -250,6 +279,7 @@
   .vod-card-poster {
     width: 100%;
     aspect-ratio: 2/3;
+    flex-shrink: 0;
     border-radius: $border-radius-md;
     overflow: hidden;
     background: rgba(40, 40, 40, 0.8);
@@ -289,8 +319,16 @@
   }
 
   &.focused .vod-card-poster {
-    border-color: #e50914;
-    box-shadow: 0 0 0 2px #e50914;
+    border-color: $secondary-color;
+    box-shadow: 0 0 0 2px $secondary-color;
+  }
+}
+
+// PC: clamp en ancho + min-height del póster (navegadores modernos).
+.device-pc {
+  .vod-page .vod-card .vod-card-poster,
+  .vod-category-overlay .vod-card .vod-card-poster {
+    min-height: $vod-poster-height;
   }
 }
 
@@ -399,7 +437,7 @@
   display: flex;
   flex-direction: row;
   gap: 1.5rem;
-  align-items: flex-end;
+  align-items: stretch;
   flex-shrink: 0;
 
   @media (max-width: 560px) {
@@ -410,7 +448,7 @@
 
 .vod-detail-poster-wrap {
   flex-shrink: 0;
-  width: 10em;
+  width: 15em;
   aspect-ratio: 2/3;
   border-radius: $border-radius-md;
   overflow: hidden;
@@ -422,7 +460,7 @@
 .vod-detail-poster-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: fill;
   display: block;
 }
 
@@ -435,6 +473,10 @@
 .vod-detail-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: stretch;
 }
 
 .vod-detail-title {
@@ -500,17 +542,17 @@
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
 
   &.fill {
-    background: #e50914;
+    background: $secondary-color;
   }
 
   &.half {
-    background: linear-gradient(90deg, #e50914 50%, rgba(255, 255, 255, 0.3) 50%);
+    background: linear-gradient(90deg, $secondary-color 50%, rgba(255, 255, 255, 0.3) 50%);
   }
 }
 
 .vod-detail-description-wrap {
   margin-bottom: 0.75rem;
-  max-width: 60ch;
+  max-width: 90%;
 }
 
 .vod-detail-description {
@@ -550,8 +592,12 @@
 .vod-detail-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
   margin-top: 0.25rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > * {
+    margin: 0 0.375rem 0.75rem;
+  }
 }
 
 .vod-detail-actions-fallback {
@@ -562,19 +608,23 @@
   @include button-base;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
   padding: 0.65rem 1.5rem;
   font-size: 1.05rem;
   font-weight: 600;
-  background: #e50914;
+  background: $primary-color;
   color: #fff;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s;
 
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 0.5rem;
+  }
+
   &:hover {
-    background: #f40612;
+    background: $secondary-color;
   }
 
   &:focus-visible {
@@ -607,11 +657,15 @@
   padding: 0;
   display: flex;
   flex-direction: row;
-  gap: 1rem;
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 0.5rem;
   @include scrollbar-hidden;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 1rem;
+  }
 }
 
 .vod-episode-item {
@@ -640,8 +694,8 @@
   }
 
   &.focused {
-    border-color: #e50914;
-    box-shadow: 0 0 0 1px #e50914;
+    border-color: $secondary-color;
+    box-shadow: 0 0 0 1px $secondary-color;
   }
 }
 
@@ -681,7 +735,11 @@
   padding: 0.5rem 0.6rem;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.2rem;
+  }
 }
 
 .vod-episode-name {
@@ -779,8 +837,8 @@
   @include button-base;
 
   &.focused {
-    border: 2px solid #e50914;
-    box-shadow: 0 0 0 2px #e50914;
+    border: 2px solid $secondary-color;
+    box-shadow: 0 0 0 2px $secondary-color;
   }
 }
 
@@ -812,8 +870,12 @@
 .vod-classic-subtitle {
   display: flex;
   align-items: center;
-  gap: 1rem;
   margin-bottom: 0.75rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 1rem;
+  }
 }
 
 .vod-classic-time {
@@ -823,7 +885,11 @@
 .vod-classic-rating {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  .vod-classic-star + .vod-classic-star {
+    margin-left: 0.2rem;
+  }
 }
 
 .vod-classic-star {
@@ -832,8 +898,8 @@
   height: 1.1em;
   background: rgba(255, 255, 255, 0.3);
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  &.fill { background: #e50914; }
-  &.half { background: linear-gradient(90deg, #e50914 50%, rgba(255, 255, 255, 0.3) 50%); }
+  &.fill { background: $secondary-color; }
+  &.half { background: linear-gradient(90deg, $secondary-color 50%, rgba(255, 255, 255, 0.3) 50%); }
 }
 
 .vod-classic-description {
@@ -934,7 +1000,6 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   padding: 0.6rem 0.75rem;
   text-align: left;
   background: rgba(255, 255, 255, 0.08);
@@ -944,10 +1009,15 @@
   cursor: pointer;
   font-size: 0.9rem;
 
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 0.5rem;
+  }
+
   &:hover,
   &.focused {
     background: rgba(255, 255, 255, 0.15);
-    border-color: #e50914;
+    border-color: $secondary-color;
   }
 }
 
@@ -964,7 +1034,7 @@
 .vod-classic-play-btn-inline {
   @include button-base;
   padding: 0.5rem 1rem;
-  background: #e50914;
+  background: $primary-color;
   color: #fff;
   border: none;
   border-radius: $border-radius-md;
@@ -972,34 +1042,28 @@
   font-size: 0.95rem;
 }
 
-// VodSeeMoreCard (décimo ítem "Ver más") — misma estructura que VodCard: poster + título
+// VodSeeMoreCard — misma lógica que VodCard: el póster (aspect-ratio 2/3) define la altura.
 .vod-see-more-card {
-  margin-left: 1.5rem;
   .vod-see-more-poster {
     @include flex-center;
-    background: rgba(255, 255, 255, 0.08);
-    border: 2px dashed rgba(255, 255, 255, 0.25);
+    width: 100%;
+    flex-shrink: 0;
+    height: 100%;
+    // Borde, fondo, aspect-ratio y min-height: heredados de .vod-card-poster.
   }
 
   .vod-see-more-icon {
-    font-size: 9.75rem;
+    font-size: 3.5em;
+    line-height: 1;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.9);
   }
 
-  .vod-see-more-title {
-    margin-top: 0.35rem;
-  }
-
-  &.focused .vod-see-more-poster {
-    border-color: #e50914;
-    background: rgba(229, 9, 20, 0.15);
-  }
+  // Foco/hover: heredados de .vod-card (borde, sombra, scale).
 
   &.vod-see-more-card--poster-text {
     .vod-see-more-poster {
       padding: 0.5rem 0.6rem;
-      height: 19em;
     }
 
     .vod-see-more-poster-label {
@@ -1038,7 +1102,11 @@
   width: 100%;
   height:100%;
   // Base en em (escala con html font-size) con tope por viewport.
+  // Fallback fijo antes de `min()`: WebKit viejo de Smart TV no lo interpreta
+  // y descarta la línea entera, quedándose con la última declaración válida.
+  max-width: 95vw;
   max-width: min(95vw);
+  max-height: 95vh;
   max-height: min(95vh);
   display: flex;
   flex-direction: column;
@@ -1093,46 +1161,33 @@
   }
 }
 
-// Grid con columnas fijas para navegación espacial predecible en TV (derecha/abajo coherentes)
+// Grid del modal «Ver más» — mismas medidas que el carrusel.
 .vod-category-grid {
   display: grid;
-  // En PC/notebook: columnas fluidas que se adaptan al ancho disponible.
-  // En TV, .device-tv sobreescribe esto con 7 columnas fijas.
-  grid-template-columns: repeat(auto-fill, minmax(clamp(8rem, 12vw, 11.5rem), 1fr));
-  // Sin grid-auto-rows: cada fila toma la altura natural de su contenido.
-  // Fijar la altura de fila con aspect-ratio variable causaba solapamiento.
+  grid-template-columns: repeat(auto-fill, minmax($vod-card-width, $vod-card-width));
+  justify-content: space-evenly;
+  // Fallback fijo antes de `min()`/`clamp()`: WebKit viejo de Smart TV no los
+  // interpreta y descarta la línea entera, quedándose con la última
+  // declaración válida anterior (queda esta grilla sin alto acotado).
+  height: 80vh;
   height: min(80vh);
+  gap: 1rem;
   gap: clamp(0.6rem, 1.2vw, 1.25rem);
+  padding: 1.5rem 2rem 2rem;
   padding: 1.5rem clamp(1rem, 2.5vw, 3rem) 2rem clamp(1rem, 2.5vw, 3rem);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
   align-content: start;
-  // Sin align-items: center — alineaba las cards al centro de la fila y
-  // dejaba espacio vacío arriba/abajo que se superponía con la fila siguiente.
   align-items: start;
-
-  // En TV: mantener las 7 columnas fijas para que la navegación espacial
-  // (arriba/abajo/izq/der) sea predecible y coherente.
-  .device-tv & {
-    grid-template-columns: repeat(7, 1fr);
-    gap: 1.25rem;
-    padding: 1.5rem 3rem 2rem 3rem;
-  }
 
   .vod-card {
     margin: 0;
     min-width: 0;
+    width: $vod-card-width;
     display: flex;
     flex-direction: column;
-    // En PC las cards llenan su celda del grid en lugar de tener ancho fijo.
-    width: 100%;
-  }
-
-  // En TV restaurar el ancho fijo original.
-  .device-tv & .vod-card {
-    width: 11.5em;
   }
 
   .vod-card-poster {
@@ -1144,12 +1199,63 @@
   }
 }
 
+/** TV: tamaños fijos en em (WebKit TV no evalúa bien calc(clamp())). */
+$vod-tv-card-width: 14em; // tamaño de los carruseles de género
+$vod-tv-poster-height: 21em; // tamaño de los posters de los carruseles de género
+$vod-tv-detail-poster-width: 18em; // tamaño del poster del detalle VOD
+$vod-tv-page-title-size: 1.85rem; // tamaño del título de la página VOD
+$vod-tv-row-title-size: 1.45rem; // tamaño de los títulos de las filas de los carruseles de género
+$vod-tv-card-title-size: 1.15rem; // tamaño de los títulos de las cartas de los carruseles de género
+$vod-tv-category-title-size: 1.75rem; // tamaño del título del modal de género
+$vod-tv-category-close-size: 1.15rem; // tamaño del botón de cerrar el modal de género
+$vod-tv-detail-title-size: 2.5rem; // tamaño del título del detalle VOD
+$vod-tv-detail-meta-size: 1.45rem; // tamaño de los metadatos del detalle VOD
+$vod-tv-detail-meta-gap-x: 1.25rem; // separación horizontal entre chips de meta (sin gap en flex)
+$vod-tv-detail-meta-gap-y: 0.75rem; // separación vertical entre chips de meta al hacer wrap
+$vod-tv-detail-category-tag-gap: 0.35rem; // separación entre etiquetas de categoría
+$vod-tv-detail-description-size: 1.2rem; // tamaño de la descripción del detalle VOD
+$vod-tv-detail-read-more-size: 1.1rem; // tamaño del botón de leer más del detalle VOD
+$vod-tv-detail-play-btn-size: 1.3rem; // tamaño del botón de play del detalle VOD
+$vod-tv-detail-episodes-title-size: 1.4rem; // tamaño del título de los episodios del detalle VOD 
+$vod-tv-detail-episode-name-size: 1.05rem; // tamaño del nombre del episodio del detalle VOD
+$vod-tv-detail-episode-duration-size: 0.95rem; // tamaño de la duración del episodio del detalle VOD
+$vod-tv-classic-title-size: 2.1rem; // tamaño del título del detalle VOD
+$vod-tv-classic-body-size: 1.25rem; // tamaño del cuerpo del detalle VOD
+$vod-tv-classic-category-size: 1.2rem; // tamaño de la categoría del detalle VOD
+$vod-tv-classic-episodes-label-size: 1.35rem; // tamaño del título de los episodios del detalle VOD
+$vod-tv-classic-episode-btn-size: 1.15rem; // tamaño del botón de play del episodio del detalle VOD
+
+@mixin vod-tv-poster-box {
+  aspect-ratio: auto;
+  flex: 0 0 $vod-tv-poster-height;
+  height: $vod-tv-poster-height;
+  min-height: $vod-tv-poster-height;
+  max-height: $vod-tv-poster-height;
+
+  img {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
 /* TV: más aire al pie de la página VOD (carriles por género) respecto al borde / banner inferior. */
 .device-tv .vod-page {
   .vod-content {
     padding-bottom: 2.85rem;
     scroll-padding-block-end: 2rem;
     scroll-behavior: auto;
+    @include scrollbar-hidden;
+  }
+
+  .vod-title {
+    font-size: $vod-tv-page-title-size;
+  }
+
+  .vod-row-title {
+    font-size: $vod-tv-row-title-size;
   }
 
   .vod-row {
@@ -1161,7 +1267,214 @@
   }
 
   .vod-card {
+    width: $vod-tv-card-width;
     scroll-margin-inline: 0.75rem 1.25rem;
     scroll-margin-block: 0.35rem;
+
+    .vod-card-poster {
+      @include vod-tv-poster-box;
+    }
+
+    .vod-card-title {
+      font-size: $vod-tv-card-title-size;
+      margin-top: 0.5rem;
+    }
+  }
+
+  .vod-see-more-card {
+    width: $vod-tv-card-width;
+
+    .vod-card-poster,
+    .vod-see-more-poster {
+      @include vod-tv-poster-box;
+    }
+
+    .vod-card-title,
+    .vod-see-more-title {
+      font-size: $vod-tv-card-title-size;
+      margin-top: 0.5rem;
+    }
+  }
+}
+
+.device-tv .vod-category-overlay {
+  .vod-category-title {
+    font-size: $vod-tv-category-title-size;
+  }
+
+  .vod-category-close {
+    font-size: $vod-tv-category-close-size;
+    min-height: 48px;
+    padding-inline: 1.5rem;
+  }
+
+  .vod-category-grid {
+    // auto-fill + em fijos: sin clamp en minmax (compatible con WebKit TV).
+    grid-template-columns: repeat(auto-fill, minmax($vod-tv-card-width, $vod-tv-card-width));
+    justify-content: space-evenly;
+    gap: 1.25rem;
+    padding: 1.5rem 3rem 2rem;
+    @include scrollbar-hidden;
+
+    &::-webkit-scrollbar {
+      width: 0 !important;
+      height: 0 !important;
+      display: none !important;
+    }
+
+    .vod-card {
+      width: $vod-tv-card-width;
+
+      .vod-card-poster {
+        @include vod-tv-poster-box;
+      }
+
+      .vod-card-title {
+        font-size: $vod-tv-card-title-size;
+        margin-top: 0.5rem;
+      }
+    }
+  }
+}
+
+/* TV: poster del detalle VOD (layout hero) más grande.
+   Samsung/LG 2019: sin gap en flex; usar margin. */
+.device-tv .vod-detail-overlay:not(.vod-detail-overlay--classic) {
+  .vod-detail-content-inner {
+    gap: 0;
+  }
+
+  .vod-detail-poster-wrap {
+    width: $vod-tv-detail-poster-width;
+    margin-right: 2rem;
+  }
+
+  .vod-detail-title {
+    font-size: $vod-tv-detail-title-size;
+  }
+
+  // Samsung/LG 2019: gap en flex no aplica; simular con margin en hijos directos.
+  .vod-detail-meta {
+    gap: 0;
+
+    > * {
+      margin-right: $vod-tv-detail-meta-gap-x;
+      margin-bottom: $vod-tv-detail-meta-gap-y;
+    }
+  }
+
+  .vod-detail-meta-categories {
+    gap: 0;
+
+    .vod-detail-category-tag {
+      margin-right: $vod-tv-detail-category-tag-gap;
+      margin-bottom: $vod-tv-detail-category-tag-gap;
+    }
+  }
+
+  .vod-detail-rating {
+    gap: 0;
+
+    .vod-detail-star + .vod-detail-star {
+      margin-left: 0.15rem;
+    }
+  }
+
+  .vod-detail-meta-item,
+  .vod-detail-parental,
+  .vod-detail-category-tag {
+    font-size: $vod-tv-detail-meta-size;
+  }
+
+  .vod-detail-description {
+    font-size: $vod-tv-detail-description-size;
+  }
+
+  .vod-detail-read-more {
+    font-size: $vod-tv-detail-read-more-size;
+  }
+
+  .vod-detail-play-btn {
+    font-size: $vod-tv-detail-play-btn-size;
+  }
+
+  .vod-detail-episodes-title {
+    font-size: $vod-tv-detail-episodes-title-size;
+  }
+
+  .vod-episode-name {
+    font-size: $vod-tv-detail-episode-name-size;
+  }
+
+  .vod-episode-duration {
+    font-size: $vod-tv-detail-episode-duration-size;
+  }
+}
+
+/* TV: layout classic — columna del poster más ancha.
+   Samsung/LG 2019: sin gap en flex; usar margin. */
+.device-tv .vod-detail-overlay--classic {
+  .vod-classic-container-top {
+    flex: 0 0 55%;
+    gap: 0;
+  }
+
+  .vod-classic-top-left {
+    flex: 0 0 40%;
+    margin-right: 1.5rem;
+  }
+
+  .vod-classic-serie-row {
+    gap: 0;
+  }
+
+  .vod-classic-serie-left {
+    margin-right: 1.5rem;
+  }
+
+  .vod-classic-serie-poster-wrap {
+    flex: 0 0 58%;
+
+    img {
+      max-width: 100%;
+    }
+  }
+
+  .vod-classic-serie-picture {
+    max-width: 100%;
+  }
+
+  .vod-classic-top-right {
+    font-size: $vod-tv-classic-body-size;
+  }
+
+  .vod-classic-title {
+    font-size: $vod-tv-classic-title-size;
+  }
+
+  .vod-classic-category {
+    font-size: $vod-tv-classic-category-size;
+  }
+
+  .vod-classic-description {
+    font-size: $vod-tv-classic-body-size;
+  }
+
+  .vod-classic-serie-info {
+    .vod-classic-title {
+      font-size: $vod-tv-classic-title-size;
+    }
+
+    .vod-classic-description {
+      font-size: $vod-tv-classic-body-size;
+    }
+  }
+
+  .vod-classic-episodes-label {
+    font-size: $vod-tv-classic-episodes-label-size;
+  }
+
+  .vod-classic-episode-btn {
+    font-size: $vod-tv-classic-episode-btn-size;
   }
 }

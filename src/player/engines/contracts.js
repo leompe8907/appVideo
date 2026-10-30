@@ -7,6 +7,12 @@ export const PLAYER_ENGINE_EVENTS = Object.freeze({
   SEEK_START: 'seek-start',
   SEEK_END: 'seek-end',
   TRACKS_CHANGE: 'trackschange',
+  // Solo lo emite SamsungEngine (AVPlay): a diferencia de un <video> HTML5 o
+  // de video.js, AVPlay NO dibuja el subtítulo en pantalla por sí solo -- el
+  // texto de cada cue llega por separado (`onsubtitlechange`) y la app tiene
+  // que renderizarlo a mano. Ver SamsungEngine.js y PlayerContext.jsx
+  // (subtitleCueText).
+  SUBTITLE_CUE: 'subtitlecue',
 });
 
 export const PLAYER_ENGINE_STATES = Object.freeze({

@@ -5,7 +5,6 @@
   position: fixed;
   inset: 0;
   z-index: 10000;
-  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -15,7 +14,7 @@
   width: 60vw;
   height: 80vh;
   border-radius: 16px;
-  background: rgba(20, 20, 20, 0.95);
+  background: rgb(20, 20, 20);
   border: 1px solid rgba(255, 255, 255, 0.12);
   overflow: hidden;
   display: flex;
@@ -330,12 +329,13 @@
 .epg-cards-table-header {
   display: grid;
   grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+  border-radius:1rem;
   gap: 14px;
   padding: 0 0 10px;
   position: sticky;
   top: 0;
   z-index: 2;
-  background: rgb(0, 0, 0);
+  background: var(--epg-cards-table-header-bg, rgb(0, 0, 0));
   backdrop-filter: blur(4px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   height: 5em;
@@ -407,7 +407,7 @@
   height: 6em;
   object-fit: contain;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0);
 }
 
 .epg-cards-channel-rating {

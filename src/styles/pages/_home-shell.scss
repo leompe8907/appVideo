@@ -4,11 +4,26 @@
 @property --home-sidebar-width {
   syntax: '<length>';
   inherits: true;
-  initial-value: 240px;
+  initial-value: 72px;
+}
+
+@property --sidebar-rail-width {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 72px;
+}
+
+@property --sidebar-overlay-width {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 228px;
 }
 
 $home-sidebar-ease: cubic-bezier(0.4, 0, 0.2, 1);
 $home-sidebar-duration: 380ms;
+// Anchos sidebar — PC (TV: overrides en pages/_home-shell-tv.scss)
+$home-sidebar-rail-width: 4.2vw;
+$home-sidebar-overlay-width: 15vw;
 
 .home-shell {
   display: block;
@@ -18,34 +33,33 @@ $home-sidebar-duration: 380ms;
 }
 
 .home-shell-ui {
-  // Ancho de la primera columna (sidebar); los overlays fijos (p. ej. detalle VOD) heredan y
-  // usan `left` para alinearse con el área principal sin tapar el rail.
-  --home-sidebar-width: 240px;
+  // El rail reserva espacio vía margin-left en .home-content; el sidebar es fixed encima.
+  --sidebar-rail-width: #{$home-sidebar-rail-width};
+  --sidebar-overlay-width: #{$home-sidebar-overlay-width};
+  --home-sidebar-width: var(--sidebar-rail-width);
   --home-sidebar-transition-duration: #{$home-sidebar-duration};
   --home-sidebar-transition-ease: #{$home-sidebar-ease};
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  display: block;
   min-height: 100vh;
-  transition:
-    grid-template-columns var(--home-sidebar-transition-duration) var(--home-sidebar-transition-ease),
-    --home-sidebar-width var(--home-sidebar-transition-duration) var(--home-sidebar-transition-ease),
-    opacity 200ms ease,
-    transform 220ms ease,
-    visibility 220ms ease;
   position: relative;
+  transition: opacity 200ms ease, transform 220ms ease, visibility 220ms ease;
 }
 
 .home-shell-dim {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.28);
-  z-index: 5;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--sidebar-overlay-width);
+  z-index: 20;
   pointer-events: none;
+  // Velo suave sobre el home visible (no negro sólido bajo el panel del sidebar).
+  background: rgba(12, 14, 20, 0.18);
+  backdrop-filter: blur(3px);
 }
 
 .home-shell-ui--sidebar-collapsed {
-  --home-sidebar-width: 84px;
-  grid-template-columns: 84px minmax(0, 1fr);
+  --home-sidebar-width: var(--sidebar-rail-width);
 }
 
 .home-shell-ui--hidden {
@@ -64,17 +78,20 @@ $home-sidebar-duration: 380ms;
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  gap: 0.5rem;
   min-height: 7.25rem;
   padding: 0.5rem 0.75rem;
   box-sizing: border-box;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > .inicio-header__col:not(:last-child) {
+    margin-right: 0.5rem;
+  }
 }
 
 .inicio-subheader {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  gap: 0.5rem;
   // Altura fija para evitar "saltos" cuando cambia el contenido (p. ej. canales sin EPG).
   // Debe ser suficientemente alta para el bloque de "Ahora/Siguiente" en TVs.
   height: 10.25rem;
@@ -84,6 +101,10 @@ $home-sidebar-duration: 380ms;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-sizing: border-box;
   overflow: hidden;
+
+  > .inicio-subheader__col:not(:last-child) {
+    margin-right: 0.5rem;
+  }
 }
 
 .inicio-header__col {
@@ -137,19 +158,26 @@ $home-sidebar-duration: 380ms;
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
   min-width: 0;
   max-height: 100%;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.6rem;
+  }
 }
 
 .inicio-service-info__channel {
   display: flex;
-  gap: 0.6rem;
   align-items: baseline;
   font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.1;
   min-width: 0;
+
+  > *:not(:last-child) {
+    margin-right: 0.6rem;
+  }
 }
 
 .inicio-service-info__channel-lcn {
@@ -174,15 +202,21 @@ $home-sidebar-duration: 380ms;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+
+  > *:not(:last-child) {
+    margin-bottom: 0.25rem;
+  }
 }
 
 .inicio-service-info__label {
   display: flex;
-  gap: 0.5rem;
   align-items: baseline;
   font-size: 1.2rem;
   opacity: 0.9;
+
+  > *:not(:last-child) {
+    margin-right: 0.5rem;
+  }
 }
 
 .inicio-service-info__time {
@@ -227,12 +261,12 @@ $home-sidebar-duration: 380ms;
   inset: 0;
   width: 100vw;
   height: 100vh;
-  overflow: visible;
+  overflow: hidden;
   z-index: 1000;
   opacity: 0;
   visibility: hidden;
-  transform: scale(0.995);
-  transition: opacity 220ms ease, transform 220ms ease, visibility 220ms ease;
+  // Sin transform: rompe requestFullscreen() en Chrome/Edge/Firefox.
+  transition: opacity 220ms ease, visibility 220ms ease;
   pointer-events: none;
   background: #000;
 }
@@ -240,7 +274,6 @@ $home-sidebar-duration: 380ms;
 .home-global-player--active {
   opacity: 1;
   visibility: visible;
-  transform: scale(1);
   pointer-events: auto;
 }
 
@@ -255,14 +288,114 @@ $home-sidebar-duration: 380ms;
 }
 
 .home-global-player video,
-.home-global-player .video-js {
+.home-global-player .video-js,
+.home-global-player .vjs-tech {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  // En ventana: evitar recortes. En fullscreen: llenar pantalla.
+  // Siempre contain: evita recortar logos cuando el stream trae letterbox embebido.
   object-fit: var(--player-video-object-fit, contain);
   pointer-events: none;
+}
+
+// PC — pantalla completa nativa: vídeo contain (sin crop por letterbox del operador).
+@mixin home-global-player-fullscreen-fill {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  transform: none;
+  transition: none;
+  overflow: hidden;
+  background: #000;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 2147483646;
+
+  .home-global-player__media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .video-js {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    padding: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  video,
+  .vjs-tech {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: contain !important;
+  }
+}
+
+// Contenedor del player en fullscreen nativo (Chrome, Edge, Firefox, Safari).
+.home-global-player:fullscreen,
+.home-global-player:-webkit-full-screen,
+.home-global-player:-moz-full-screen,
+// Fallback CSS cuando la API nativa no está disponible (http://IP sin HTTPS).
+.home-global-player--browser-fullscreen {
+  @include home-global-player-fullscreen-fill;
+}
+
+html.app-player-fullscreen {
+  overflow: hidden;
+  background: #000;
+
+  body,
+  #root,
+  .App,
+  .home-shell {
+    overflow: hidden;
+    background: #000;
+  }
+}
+
+// Fallback si el fullscreen queda en <html> (F11 u otros atajos).
+html:fullscreen,
+html:-webkit-full-screen,
+html:-moz-full-screen {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+
+  body,
+  #root,
+  .App,
+  .home-shell {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+  }
+
+  .home-global-player {
+    @include home-global-player-fullscreen-fill;
+  }
 }
 
 // Video.js (paridad 10foot): sin controles nativos del skin; HUD propio.
@@ -315,18 +448,29 @@ $home-sidebar-duration: 380ms;
 }
 
 .home-sidebar {
-  background: var(--sidebar-bg, rgba(0, 0, 0, 0.45));
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(6px);
-  padding: 1rem 0.75rem;
-  position: relative;
-  z-index: 10; // asegurar que flyouts queden sobre el contenido
+  --sidebar-accent: var(--focus-color, var(--secondary-color, #5b9cf5));
+  // Fondo opaco del rail (ignora --sidebar-bg translúcido de marca en el panel fijo).
+  --sidebar-panel-bg: var(--sidebar-panel-bg-theme, #0a0a0a);
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: var(--sidebar-rail-width);
+  height: 100vh;
+  z-index: 30;
+  background: var(--sidebar-panel-bg);
+  border-right: none;
+  backdrop-filter: none;
+  padding: 0.65rem 0 1rem;
   display: flex;
   flex-direction: column;
-  transition: padding $home-sidebar-duration $home-sidebar-ease;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: width var(--home-sidebar-transition-duration) var(--home-sidebar-transition-ease);
 }
 
 .home-sidebar-body {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -334,17 +478,63 @@ $home-sidebar-duration: 380ms;
   gap: 0;
 }
 
+.home-sidebar-toggle {
+  display: grid;
+  grid-template-columns: var(--sidebar-rail-width) minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
+  width: 100%;
+  height: 2.25rem;
+  margin-bottom: 0.35rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  flex-shrink: 0;
+
+  .home-sidebar-toggle-icon {
+    grid-column: 1;
+  }
+
+  &:hover,
+  &:focus-visible {
+    color: #fff;
+    outline: none;
+  }
+}
+
+.home-sidebar-toggle-icon {
+  display: block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.home-sidebar--overlay .home-sidebar-toggle-icon {
+  transform: rotate(-135deg);
+}
+
 .home-sidebar-group {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.15rem;
+  }
 }
 
 .home-sidebar-group--brand {
+  display: none;
+}
+
+.home-sidebar-group--account {
   flex-shrink: 0;
-  padding-bottom: 0.35rem;
   margin-bottom: 0.35rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .home-sidebar-group--nav {
@@ -362,63 +552,16 @@ $home-sidebar-duration: 380ms;
 .home-sidebar-group--settings {
   flex-shrink: 0;
   margin-top: auto;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1.25rem;
+  border-top: none;
 }
 
 .home-sidebar--fixed {
-  position: sticky;
-  top: 0;
   height: 100vh;
 }
 
 .home-sidebar--collapsed {
-  padding-inline: 0.5rem;
-}
-
-.home-sidebar--collapsed .home-sidebar-link {
-  justify-content: center;
-  padding-inline: 0.5rem;
-}
-
-.home-sidebar--collapsed .home-sidebar-submenu--right {
-  left: calc(100% + 12px);
-}
-
-.home-sidebar-header {
-  color: #fff;
-  font-size: 1.1rem;
-  font-weight: 700;
-  padding: 0.75rem 0.9rem 1rem;
-  letter-spacing: 0.02em;
-  transition:
-    opacity $home-sidebar-duration $home-sidebar-ease,
-    max-height $home-sidebar-duration $home-sidebar-ease,
-    margin $home-sidebar-duration $home-sidebar-ease,
-    padding $home-sidebar-duration $home-sidebar-ease;
-  overflow: hidden;
-  max-height: 5rem;
-}
-
-.home-sidebar--collapsed .home-sidebar-header {
-  max-height: 0;
-  opacity: 0;
-  margin: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  pointer-events: none;
-  visibility: hidden;
-}
-
-.home-sidebar--collapsed .home-sidebar-group--brand {
-  max-height: 0;
-  opacity: 0;
-  margin: 0;
-  padding: 0;
-  border: none;
-  overflow: hidden;
-  pointer-events: none;
-  visibility: hidden;
+  width: var(--sidebar-rail-width);
 }
 
 .home-sidebar-nav,
@@ -426,55 +569,112 @@ $home-sidebar-duration: 380ms;
   display: flex;
   justify-content: center;
   flex-direction: column;
-  gap: 0.45rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  // El override TV (media min-height:1080px) ajusta este margin en
+  // pages/_home-shell-tv.scss, no un `gap` propio.
+  > *:not(:last-child) {
+    margin-bottom: 0.15rem;
+  }
 }
 
 .home-sidebar-settings {
   position: relative;
 }
 
-.home-sidebar-link {
-  display: flex;
+.home-sidebar-link,
+.home-sidebar-settings-btn {
+  display: grid;
+  grid-template-columns: var(--sidebar-rail-width) minmax(0, 1fr);
   align-items: center;
-  gap: 0.55rem;
+  gap: 0;
+  width: 100%;
   text-decoration: none;
-  color: var(--sidebar-text, rgba(255, 255, 255, 0.82));
-  font-size: 0.95rem;
-  border-radius: 10px;
-  padding: 0.68rem 0.8rem;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 1.25rem;
+  font-weight: 400;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.72rem 0;
   position: relative;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    padding $home-sidebar-duration $home-sidebar-ease;
+  box-sizing: border-box;
+  transition: color 0.15s ease;
+
+  .home-sidebar-icon {
+    justify-self: center;
+    grid-column: 1;
+    opacity: 5;
+  }
+
+  .home-sidebar-label {
+    grid-column: 2;
+  }
+
+  &:hover,
+  &:focus-visible {
+    color: rgba(255, 255, 255, 0.78);
+    background: transparent;
+    outline: none;
+
+    .home-sidebar-icon {
+      opacity: 0.85;
+    }
+  }
+
+  &:focus {
+    outline: none;
+  }
 }
 
 .home-sidebar-icon {
   flex: 0 0 auto;
-  opacity: 0.92;
-  height: 2em;
-  width: 2em;
+  height: 2.25rem;
+  width: 2.25rem;
+}
+
+// Avatar del perfil activo en el link "Mi cuenta" (ver Sidebar.jsx): mismo
+// tamaño que el ícono genérico que reemplaza, pero recortado a círculo con
+// borde sutil para diferenciarse de un ícono plano.
+.home-sidebar-account-avatar {
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
 }
 
 .home-sidebar-label {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
-  transition: opacity 0.28s ease, max-width $home-sidebar-duration $home-sidebar-ease;
+  transition: opacity 0.2s ease, max-width $home-sidebar-duration $home-sidebar-ease;
   overflow: hidden;
   white-space: nowrap;
   max-width: 14rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
 }
 
 .home-sidebar-badge {
   flex: 0 0 auto;
-  min-width: 22px;
-  height: 20px;
-  padding: 0 7px;
+  // clamp() en vmin en vez de px fijos: en un monitor grande con el
+  // escalado de Windows subido (125-200%) el viewport CSS efectivo se
+  // achica igual que en una pantalla más chica sin escalar — con px fijos
+  // esta insignia quedaba desproporcionadamente chica frente al resto del
+  // sidebar (que ya escala con `--sidebar-rail-width: 4.2vw`).
+  // Fallback fijo antes de `clamp()`: WebKit viejo de Smart TV no lo
+  // interpreta y descarta la línea entera, quedándose con la última
+  // declaración válida anterior para la misma propiedad.
+  min-width: 20px;
+  min-width: clamp(18px, 2vmin, 26px);
+  height: 18px;
+  height: clamp(16px, 1.8vmin, 24px);
+  padding: 0 6px;
+  padding: 0 clamp(5px, 0.7vmin, 9px);
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
+  font-size: clamp(10px, 1.1vmin, 14px);
   font-weight: 700;
   line-height: 1;
   color: #fff;
@@ -484,50 +684,136 @@ $home-sidebar-duration: 380ms;
 
 .home-sidebar--collapsed .home-sidebar-badge {
   position: absolute;
-  top: 8px;
-  right: 10px;
+  top: 5px;
+  top: clamp(4px, 0.6vmin, 8px);
+  right: 7px;
+  right: clamp(6px, 0.8vmin, 10px);
 }
 
 .home-sidebar--collapsed .home-sidebar-label {
   opacity: 0;
   max-width: 0;
   pointer-events: none;
+  text-align: center;
+}
+
+// Activo / foco: texto blanco + subrayado azul (referencia UI).
+.home-sidebar-link.active,
+.home-sidebar-settings-btn.active,
+.home-sidebar-link:focus,
+.home-sidebar-settings-btn:focus {
+  color: #fff;
+
+  .home-sidebar-icon {
+    opacity: 1;
+  }
+}
+
+.home-sidebar--collapsed .home-sidebar-link.active::after,
+.home-sidebar--collapsed .home-sidebar-settings-btn.active::after,
+.home-sidebar--collapsed .home-sidebar-link:focus::after,
+.home-sidebar--collapsed .home-sidebar-settings-btn:focus::after,
+.home-sidebar--collapsed .home-sidebar-link.focused::after,
+.home-sidebar--collapsed .home-sidebar-settings-btn.focused::after {
+  content: '';
+  position: absolute;
+  bottom: 0.35rem;
+  left: calc(var(--sidebar-rail-width) / 2);
+  transform: translateX(-50%);
+  width: 1.6rem;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--sidebar-accent);
+}
+
+.home-sidebar-link.active,
+.home-sidebar-settings-btn.active {
+  background: transparent;
+  border: none;
+}
+
+// Panel expandido: columna de labels con el mismo fondo opaco que el rail cerrado.
+.home-sidebar.home-sidebar--overlay {
+  width: var(--sidebar-overlay-width);
+  max-width: 46vw;
+  max-width: min(var(--sidebar-overlay-width), 46vw);
+  overflow: visible;
+  box-shadow: none;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--sidebar-rail-width);
+    right: 0;
+    background: var(--sidebar-panel-bg);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .home-sidebar-link,
+  .home-sidebar-settings-btn {
+    padding-right: 1rem;
+  }
+
+  .home-sidebar-label {
+    opacity: 1;
+    max-width: calc(var(--sidebar-overlay-width) - var(--sidebar-rail-width));
+    pointer-events: auto;
+    display: inline-block;
+    width: fit-content;
+    justify-self: start;
+    color: #fff;
+    text-align: left;
+  }
+
+  .home-sidebar-link.active .home-sidebar-label::after,
+  .home-sidebar-settings-btn.active .home-sidebar-label::after,
+  .home-sidebar-link:focus .home-sidebar-label::after,
+  .home-sidebar-settings-btn:focus .home-sidebar-label::after,
+  .home-sidebar-link.focused .home-sidebar-label::after,
+  .home-sidebar-settings-btn.focused .home-sidebar-label::after {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 2px;
+    margin-top: 0.35rem;
+    border-radius: 1px;
+    background: var(--sidebar-accent);
+  }
+
+  .home-sidebar-badge {
+    position: static;
+    grid-column: 2;
+    justify-self: start;
+  }
 }
 
 .home-sidebar-settings-btn {
   width: 100%;
   text-align: left;
-  background: transparent;
-  border: none;
   cursor: pointer;
-}
-
-.home-sidebar-link:hover,
-.home-sidebar-link:focus-visible {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.12);
-  outline: none;
-}
-
-.home-sidebar-link.active {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .home-sidebar-submenu {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
   padding-left: 0.4rem;
   margin-top: 0.2rem;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.35rem;
+  }
 }
 
 .home-sidebar-submenu--right {
-  position: absolute;
-  left: calc(100% + 10px);
-  top: 0;
+  position: fixed;
+  top: var(--home-sidebar-submenu-top, 0);
+  left: var(--home-sidebar-submenu-left, 0);
+  transform: translateY(-100%);
   margin-top: 0;
   padding-left: 0;
   border-left: none;
@@ -537,12 +823,16 @@ $home-sidebar-duration: 380ms;
   border: 1px solid rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(6px);
   min-width: 220px;
+  max-height: calc(var(--home-sidebar-submenu-top, 100vh) - 1rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   z-index: 50;
 }
 
-.home-content {
-  position: relative;
-  z-index: 1;
+// Submenú anclado bajo el botón de cuenta (crece hacia abajo).
+.home-sidebar-submenu--below {
+  transform: none;
+  max-height: calc(100vh - var(--home-sidebar-submenu-top, 0px) - 1rem);
 }
 
 .home-sidebar-sublink {
@@ -559,8 +849,12 @@ $home-sidebar-duration: 380ms;
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
   box-sizing: border-box;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 0.45rem;
+  }
 }
 
 .home-sidebar-sublink-label {
@@ -580,14 +874,43 @@ $home-sidebar-duration: 380ms;
   background: rgba(255, 255, 255, 0.1);
 }
 
-.home-sidebar-badge--sub {
-  position: static;
-  min-width: 20px;
-  height: 18px;
-  font-size: 11px;
+.home-sidebar-settings-btn {
+  position: relative;
 }
 
+.home-sidebar-badge--settings {
+  margin-left: auto;
+}
+
+.home-sidebar--collapsed .home-sidebar-badge--settings {
+  position: absolute;
+  top: 5px;
+  top: clamp(4px, 0.6vmin, 8px);
+  right: 7px;
+  right: clamp(6px, 0.8vmin, 10px);
+  margin-left: 0;
+}
+
+.home-sidebar-badge--sub {
+  position: static;
+  min-width: 18px;
+  min-width: clamp(16px, 1.8vmin, 24px);
+  height: 17px;
+  height: clamp(15px, 1.6vmin, 22px);
+  // Piso en 10px (no 9px): con escalado de Windows alto en un monitor chico
+  // (ej. 1366x768 @125%) un clamp con piso de 9px queda por debajo del
+  // mínimo legible; 10px es el mismo piso que usa el badge principal.
+  font-size: 11px;
+  font-size: clamp(10px, 1vmin, 13px);
+}
+
+// Nota: usamos `:focus` (no solo `:focus-visible`) porque el foco se coloca
+// programáticamente (`el.focus()`) al navegar con el control remoto, y varios
+// WebViews de TV (Tizen/webOS 2019) no aplican el heurístico de `:focus-visible`
+// a foco puesto por script — sin `:focus` el anillo/resaltado nunca aparecía
+// dentro del submenú de configuración/cuenta.
 .home-sidebar-sublink:hover,
+.home-sidebar-sublink:focus,
 .home-sidebar-sublink:focus-visible {
   color: #fff;
   background: rgba(255, 255, 255, 0.14);
@@ -600,11 +923,13 @@ $home-sidebar-duration: 380ms;
 }
 
 .home-sidebar-sublink--danger:hover,
+.home-sidebar-sublink--danger:focus,
 .home-sidebar-sublink--danger:focus-visible {
   background: rgba(229, 9, 20, 0.32);
 }
 
 .home-content {
+  margin-left: var(--sidebar-rail-width);
   min-width: 0;
   min-height: 100vh;
   height: 100vh;
@@ -617,6 +942,7 @@ $home-sidebar-duration: 380ms;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  z-index: 1;
 }
 
 .home-content-stack {
@@ -633,117 +959,6 @@ $home-sidebar-duration: 380ms;
   min-width: 0;
   overflow: auto;
   position: relative;
-}
-
-/* TV: separa el contenido del outlet del banner inferior del shell (evita sensación de solapamiento). */
-.device-tv .home-content-outlet {
-  padding-bottom: 0.9rem;
-  box-sizing: border-box;
-}
-
-/*
- * TV — sidebar: el foco global (scale + sombras en `a.focused`) rompe el rail estrecho.
- * Mismo criterio que bouquets: borde de marca, sin transform; targets un poco más altos.
- */
-[data-focus='on'].device-tv .home-sidebar {
-  --home-sidebar-tv-item-min-height: 2.75rem;
-
-  .home-sidebar-nav,
-  .home-sidebar-group--nav {
-    gap: 0.55rem;
-  }
-
-  .home-sidebar-link,
-  .home-sidebar-settings-btn {
-    min-height: var(--home-sidebar-tv-item-min-height);
-    font-size: 1rem;
-    box-sizing: border-box;
-    border: 3px solid transparent;
-    transition:
-      background-color 0.15s ease,
-      color 0.15s ease,
-      border-color 0.12s ease-out,
-      padding $home-sidebar-duration $home-sidebar-ease;
-  }
-
-  .home-sidebar-link.active {
-    border-color: rgba(255, 255, 255, 0.22);
-  }
-
-  .home-sidebar-icon {
-    height: 2.2em;
-    width: 2.2em;
-  }
-
-  .home-sidebar-link.focused,
-  .home-sidebar-settings-btn.focused,
-  .home-sidebar-sublink.focused {
-    transform: none !important;
-    box-shadow: none !important;
-    -webkit-box-shadow: none !important;
-    -moz-box-shadow: none !important;
-    outline: none;
-    color: #fff;
-    background: rgba(255, 255, 255, 0.14);
-    border-color: var(--focus-color, var(--primary-color, #667eea)) !important;
-    border-width: 3px !important;
-    z-index: 2;
-    transition: border-color 0.12s ease-out, background-color 0.12s ease !important;
-  }
-
-  .home-sidebar-link.active.focused {
-    background: rgba(255, 255, 255, 0.22);
-    border-color: var(--focus-color, var(--primary-color, #667eea)) !important;
-  }
-
-  .home-sidebar-sublink {
-    min-height: 2.6rem;
-    font-size: 0.98rem;
-    box-sizing: border-box;
-    border: 3px solid transparent;
-    transition:
-      background-color 0.15s ease,
-      color 0.15s ease,
-      border-color 0.12s ease-out;
-  }
-}
-
-@media (min-height: 900px) {
-  [data-focus='on'].device-tv .home-sidebar {
-    --home-sidebar-tv-item-min-height: 3rem;
-
-    .home-sidebar-link,
-    .home-sidebar-settings-btn {
-      font-size: 1.05rem;
-    }
-
-    .home-sidebar-sublink {
-      min-height: 2.85rem;
-      font-size: 1rem;
-    }
-  }
-}
-
-@media (min-height: 1080px) {
-  [data-focus='on'].device-tv .home-sidebar {
-    --home-sidebar-tv-item-min-height: 3.25rem;
-
-    .home-sidebar-nav,
-    .home-sidebar-group--nav {
-      gap: 0.65rem;
-    }
-
-    .home-sidebar-link,
-    .home-sidebar-settings-btn {
-      font-size: 1.1rem;
-      padding-block: 0.78rem;
-    }
-
-    .home-sidebar-icon {
-      height: 2.35em;
-      width: 2.35em;
-    }
-  }
 }
 
 .home-placeholder {
@@ -784,24 +999,177 @@ $home-sidebar-duration: 380ms;
   }
 }
 
-@media (max-width: 1024px) {
-  .home-shell-ui {
-    grid-template-columns: 76px minmax(0, 1fr);
+/*
+ * Se eliminó acá un @media (max-width: 1024px) que quedó como código muerto:
+ * tanto `margin-left: var(--sidebar-rail-width)` como
+ * `.home-sidebar-link { font-size: 1.25rem }` eran idénticos a los valores
+ * base (línea ~862 y ~564 respectivamente) — no cambiaban nada por debajo de
+ * 1024px de viewport. Un viewport angosto por escalado de Windows en un
+ * monitor grande (no un dispositivo chico real) disparaba esta regla igual,
+ * dando la falsa impresión de que existía un modo "compacto" cuando en
+ * realidad no hacía nada. `--sidebar-rail-width` ya es fluido (`4.2vw`, ver
+ * línea 25), así que no hace falta ningún ajuste adicional acá.
+ */
+
+// ---------------------------------------------------------------------------
+// Topbar — alternativa horizontal al Sidebar vertical, activable por marca vía
+// `brand.layout.shell.{pc,tv}`. Reemplaza el rail: el shell reserva espacio
+// arriba (margin-top) en vez de a la izquierda (margin-left). Ver Topbar.jsx.
+// ---------------------------------------------------------------------------
+.home-shell-ui--topbar {
+  --topbar-height: 4.5rem;
+
+  .home-content {
+    margin-left: 0;
+    margin-top: var(--topbar-height);
+  }
+}
+
+.home-topbar {
+  --sidebar-accent: var(--focus-color, var(--secondary-color, #5b9cf5));
+  --sidebar-panel-bg: var(--sidebar-panel-bg-theme, #0a0a0a);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-height, 4.5rem);
+  z-index: 30;
+  background: var(--sidebar-panel-bg);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  // `gap` en Grid sí es compatible en WebKit de Smart TV (a diferencia de
+  // flexbox, donde llegó tarde) — se deja sin fallback.
+  gap: 1rem;
+  padding: 0 1.5rem;
+  padding: 0 clamp(1rem, 2vw, 2.5rem);
+  box-sizing: border-box;
+}
+
+.home-topbar-zone {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.home-topbar-zone--left {
+  justify-content: flex-start;
+}
+
+.home-topbar-zone--center {
+  justify-content: center;
+}
+
+.home-topbar-zone--right {
+  justify-content: flex-end;
+}
+
+.home-topbar-zone-logo {
+  display: flex;
+  align-items: center;
+}
+
+.home-topbar-logo-img {
+  // `max-height` en % dependía de que el padre tuviera una altura definida
+  // (no la tenía: `.home-topbar-zone` mide "auto" porque `align-items: center`
+  // en `.home-topbar` le quita el stretch por defecto). El % se ignoraba y el
+  // logo se renderizaba a tamaño nativo (algunos assets de marca son ~400px
+  // de alto), reventando la barra. Se ancla directo a `--topbar-height`, que
+  // sí es un valor definido, para que siempre tenga una referencia real.
+  display: block;
+  height: auto;
+  max-height: calc(var(--topbar-height, 4.5rem) * 0.58);
+  max-width: 100%;
+  width: auto;
+  object-fit: contain;
+}
+
+.home-topbar-nav {
+  display: flex;
+  align-items: center;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 1rem;
+    margin-right: clamp(0.5rem, 1.5vw, 2rem);
+  }
+}
+
+.home-topbar-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 1.05rem;
+  font-weight: 400;
+  white-space: nowrap;
+  padding: 0.5rem 0.25rem;
+  position: relative;
+  transition: color 0.15s ease;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 0.5rem;
   }
 
-  .home-sidebar-header {
-    font-size: 0.75rem;
-    text-align: center;
-    padding-inline: 0.4rem;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+  &:hover,
+  &:focus-visible {
+    color: rgba(255, 255, 255, 0.92);
+    outline: none;
   }
 
-  .home-sidebar-link {
-    font-size: 0.78rem;
-    text-align: center;
-    padding-inline: 0.4rem;
+  &:focus {
+    outline: none;
   }
+
+  &.active {
+    color: #fff;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -0.5rem;
+      height: 2px;
+      background: var(--sidebar-accent, #5b9cf5);
+      border-radius: 999px;
+    }
+  }
+}
+
+.home-topbar-icon {
+  flex: 0 0 auto;
+  height: 1.35rem;
+  width: 1.35rem;
+}
+
+.home-topbar-account-avatar {
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+.home-topbar-account {
+  position: relative;
+}
+
+.home-topbar-badge {
+  min-width: 17px;
+  min-width: clamp(16px, 1.6vmin, 22px);
+  height: 17px;
+  height: clamp(16px, 1.6vmin, 22px);
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-size: clamp(10px, 1vmin, 12px);
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: rgba(255, 68, 68, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 

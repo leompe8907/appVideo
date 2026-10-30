@@ -1,18 +1,36 @@
-const Img = [
-  { id: 1699, img: 'https://pmdw-1.in.tv.br/cv_data_pub/images/1699/v/thumb.png' },
-  { id: 1700, img: 'https://pmdw-1.in.tv.br/cv_data_pub/images/1700/v/thumb.png' },
-  { id: 1724, img: 'https://pmdw-1.in.tv.br/cv_data_pub/images/1724/v/thumb.png' },
-  { id: 1725, img: 'https://pmdw-1.in.tv.br/cv_data_pub/images/1725/v/thumb.png' },
-  { id: 1701, img: 'https://pmdw-1.in.tv.br/cv_data_pub/images/1701/v/thumb.png' },
-  { id: 1702, img: 'https://pmdw-1.in.tv.br/cv_data_pub/images/1702/v/thumb.png' },
-  { id: 1703, img: 'https://pmdw-1.in.tv.br/cv_data_pub/images/1703/v/thumb.png' },
-  { id: 1704, img: 'https://pmdw-1.in.tv.br/cv_data_pub/images/1704/v/thumb.png' },
-  { id: 1705, img: 'https://pmdw-1.in.tv.br/cv_data_pub/images/1705/v/thumb.png' },
-  { id: 1706, img: 'https://pmdw-1.in.tv.br/cv_data_pub/images/1706/v/thumb.png' },
-  { id: 1709, img: 'https://pmdw-1.in.tv.br/cv_data_pub/images/1709/v/thumb.png' },
-  { id: 1710, img: 'https://pmdw-1.in.tv.br/cv_data_pub/images/1710/v/thumb.png' },
-];
+import { getBrandAsset } from '@appvideo/core/utils/assetLoader';
+import { PROFILE_AVATAR_FILES } from '@appvideo/core/utils/externalProfiles';
 
-export default Img;
+/**
+ * Avatares de perfil (pantalla "¿Quién está mirando?" / modal de creación).
+ *
+ * Antes este archivo era un array estático apuntando a un CDN remoto
+ * compartido por las 6 marcas (`middleware.wind.do/public/images/<id>/...`).
+ * Ahora son imágenes LOCALES POR MARCA, en `public/<marca>/avatars/1.png` a
+ * `9.png`, resueltas con `getBrandAsset` (mismo mecanismo que logo.png /
+ * background.png por marca) — cada marca puede tener su propio set de
+ * avatares sin tocar código, solo reemplazando los archivos de su carpeta.
+ *
+ * Los `id` numéricos (87-95) se mantienen IGUALES a los de antes a propósito:
+ * ese valor viaja a Panaccess vía `createProfile`/`setActiveProfile` y vuelve
+ * en `getClientConfig().profiles[].imageId` — cambiarlos rompería la
+ * asociación con cualquier perfil que ya se haya creado en el backend con el
+ * esquema viejo.
+ */
+// Mapeo id → archivo compartido con Vega (`PROFILE_AVATAR_FILES` de core).
 
+/**
+ * Devuelve la lista de avatares disponibles para perfiles, resueltos con los
+ * assets de la marca indicada.
+ * @param {string} [brand] - `currentBrand.brand` (ver `useBrand()`). Si no se
+ *   pasa, `getBrandAsset` cae a `getSharedAsset` (carpeta `public/shared/`).
+ * @returns {Array<{ id: number, img: string }>}
+ */
+export function getProfileAvatars(brand) {
+  return Object.entries(PROFILE_AVATAR_FILES).map(([id, filename]) => ({
+    id: Number(id),
+    img: getBrandAsset(brand, filename),
+  }));
+}
 
+export default getProfileAvatars;

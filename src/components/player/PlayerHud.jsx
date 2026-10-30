@@ -5,20 +5,40 @@ import { useNavigate } from 'react-router-dom';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { resolveLiveWindowFromEpgItems } from '../../utils/epgCurrentEvent';
-import { usePreload } from '../../store/usePreload';
-import panaccessService from '../../services/panaccessService';
+import { resolveLiveWindowFromEpgItems } from '@appvideo/core/utils/epgCurrentEvent';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import panaccessService from '@appvideo/core/services/panaccessService';
 import { useBrand } from '../../contexts/BrandContext';
+import { isParentalControlEnabledForBrand } from '@appvideo/core/config/brandConfig';
 import AppIcon from '../AppIcon';
+import { PlayerStatsPanel } from './PlayerStatsPanel';
+import { getStatsVisible, setStatsVisible } from './playerStatsVisibility';
 import EpgEventModal from '../epg/EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
-import { useParental } from '../../store/useParental';
-import { getChannelStableId } from '../../utils/channelId';
+import { useParental } from '@appvideo/core/store/useParental';
+import { getChannelStableId } from '@appvideo/core/utils/channelId';
+import { buildZappingChannelList, findZappingChannelIndex } from '@appvideo/core/utils/channelZappingList';
+import * as userSession from '@appvideo/core/utils/userSession';
+import { prefetchMaster } from '../../player/engines/web/masterManifestCache';
 import {
   usePlayerHudTvNavigation,
   PLAYER_FOCUS_IDS,
+  PLAYER_CHANNEL_SELECTOR,
+  PLAYER_TRACK_SELECTOR,
 } from '../../hooks/usePlayerHudTvNavigation';
 import { usePlayerChannelZapping } from '../../hooks/usePlayerChannelZapping';
+import { usePlayerVolumeKeys } from '../../hooks/usePlayerVolumeKeys';
+import { useFocusZone } from '../../hooks/useFocusZone';
+import {
+  FULLSCREEN_CHANGE_EVENTS,
+  enterAppFullscreen,
+  exitAppFullscreenSync,
+  getNativeFullscreenElement,
+  isAppFullscreenActive,
+} from '../../utils/playerFullscreen';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe, scrollIntoViewWithinAncestors } from '../../navigation/spatialNavigation';
+import { requestTvFocusRingSync } from '../navigation/tvFocusRingSync';
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
@@ -112,16 +132,67 @@ function ChannelSidebar({
   onClose,
   onSelectChannel,
 }) {
+  const rootRef = useRef(null);
+  const listRef = useRef(null);
+  const zoneIdRef = useRef(null);
+  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('player-channel-sidebar');
+
+  // Navegación (UP/DOWN por geometría escopada a este panel, BACK cierra)
+  // delegada a una zona de FocusManager, igual que cualquier otro modal.
+  useEffect(() => {
+    if (!open) return undefined;
+    const zoneId = zoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
+        onClose?.();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const timer = setTimeout(() => {
+      const list = listRef.current;
+      // Foco inicial: priorizar el canal que se está reproduciendo (fila con
+      // --active, ver isActive más abajo), no el primero de la lista a
+      // secas. Antes, cada vez que se reabría el panel el foco arrancaba
+      // siempre desde cero en el primer canal, sin importar cuál se hubiera
+      // elegido la vez anterior. Si por algo el canal activo no está en esta
+      // lista (ej. todavía cargando), cae al primero como antes.
+      const active = list?.querySelector(`${PLAYER_CHANNEL_SELECTOR}.player-channel-sidebar__row--active`);
+      const target = active || list?.querySelector(PLAYER_CHANNEL_SELECTOR);
+      focusElementSafe(target);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [open]);
+
+  // Scroll-into-view defensivo (cubre foco por click; por teclado ya lo hace `moveFocus`).
+  useEffect(() => {
+    if (!open) return undefined;
+    const onFocusIn = (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement) || !t.matches(PLAYER_CHANNEL_SELECTOR)) return;
+      const list = listRef.current;
+      if (list instanceof HTMLElement) scrollIntoViewWithinAncestors(t, list);
+    };
+    document.addEventListener('focusin', onFocusIn, true);
+    return () => document.removeEventListener('focusin', onFocusIn, true);
+  }, [open]);
+
   if (!open) return null;
 
   return createPortal(
-    <div className="player-channel-sidebar-overlay" role="dialog" aria-modal="true" onClick={() => onClose?.()}>
+    <div ref={rootRef} className="player-channel-sidebar-overlay" role="dialog" aria-modal="true" onClick={() => onClose?.()}>
       <div className="player-channel-sidebar" onClick={(e) => e.stopPropagation()}>
         <div className="player-channel-sidebar__header">
           <div className="player-channel-sidebar__title">{title}</div>
         </div>
 
-        <div className="player-channel-sidebar__list" role="list">
+        <div className="player-channel-sidebar__list" role="list" ref={listRef}>
           {(channels || []).slice(0, 400).map((ch) => {
             const chLogo = ch?.img || ch?.imageUrl || ch?.logoUrl || ch?.logo || ch?.icon || null;
             const id = ch?.id ?? ch?.lcn ?? ch?.name;
@@ -161,7 +232,11 @@ function ChannelSidebar({
   );
 }
 
-export function PlayerHud({ className = '' }) {
+/**
+ * @param {object} props
+ * @param {boolean} [props.isPlaybackMaximized] Reproductor a pantalla completa (sin mini preview).
+ */
+export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isTV } = useDevice();
@@ -176,21 +251,78 @@ export function PlayerHud({ className = '' }) {
     setSubtitlesEnabled,
     pause,
     play,
+    retry,
     close,
     forward,
     backward,
     skipLiveBy,
     goLive,
+    containerRef,
+    toggleMute,
+    setVolume,
+    getDiagnostics,
   } = usePlayer();
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
+  // Si la marca no vendió/activó Control Parental (`account.sections.parentalControl`),
+  // el candado de bloqueo de canal tampoco debe aparecer en el player -- ver
+  // `isParentalControlEnabledForBrand` para el resto de los puntos gateados.
+  const parentalControlEnabledForBrand = isParentalControlEnabledForBrand(currentBrand);
+  // Bandera de marca: botón de mute + slider de volumen (solo web/PC, ver
+  // brands.js -- features.playerVolumeControls). Default false: sin cambios.
+  const volumeControlsEnabled = currentBrand?.features?.playerVolumeControls === true;
+  // Bandera de marca: oculta accesos a la guía completa (EPG.enabled en
+  // brands.js). Default true: sin cambios. El botón de "info" del evento
+  // actual (que no navega a la guía) queda fuera de este flag a propósito.
+  const epgEnabledForBrand = currentBrand?.EPG?.enabled !== false;
+  // Bandera de marca: botón de estadísticas del reproductor (diagnóstico de
+  // cortes/saltos, igual que Fire TV). `player.statsPanel: false` lo oculta.
+  const statsPanelEnabled = currentBrand?.player?.statsPanel !== false;
+  const [statsOn, setStatsOn] = useState(getStatsVisible);
+  const toggleStats = () => {
+    setStatsVisible(!statsOn);
+    setStatsOn(!statsOn);
+  };
   const [visible, setVisible] = useState(true);
+  // El foco no se mueve al ocultar/mostrar el HUD: sin esto el anillo queda flotando sobre el video.
+  useEffect(() => {
+    requestTvFocusRingSync();
+  }, [visible]);
   const [liveNowTickMs, setLiveNowTickMs] = useState(Date.now());
   const [overlay, setOverlay] = useState(''); // '' | 'channels' | 'info' | 'tracks'
-  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement));
+  const [isFullscreen, setIsFullscreen] = useState(() => isAppFullscreenActive());
   const [tracksPopoverPos, setTracksPopoverPos] = useState(null); // { top, left, width } | null
   const hideTimeoutRef = useRef(null);
   const hudRootRef = useRef(null);
+  const errorRetryBtnRef = useRef(null);
+  const errorCloseBtnRef = useRef(null);
+  const errorRootRef = useRef(null);
+  const errorZoneIdRef = useRef(null);
+  if (!errorZoneIdRef.current) errorZoneIdRef.current = createZoneId('player-error');
+
+  const hasPlaybackError = Boolean(state?.error);
+
+  // Navegación del overlay de error (BACK cierra; LEFT/RIGHT entre "Reintentar"
+  // y "Cerrar" ya lo resuelve el motor de geometría genérico, escopado a este
+  // overlay) delegada a una zona de FocusManager, igual que cualquier otro modal.
+  // `close` cambia en cada render del PlayerContext: useFocusZone no lo usa como
+  // dependencia, así la zona no se re-registra y el foco no se escapa al HUD.
+  useFocusZone({
+    zoneId: errorZoneIdRef.current,
+    active: hasPlaybackError,
+    containerRef: errorRootRef,
+    onBack: close,
+  });
+
+  // Foco inicial del overlay de error: sin esto el usuario queda con pantalla
+  // negra y ningún elemento enfocable tras un fallo de reproducción.
+  useEffect(() => {
+    if (!hasPlaybackError) return undefined;
+    const timer = setTimeout(() => {
+      focusElementSafe(errorRetryBtnRef.current);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [hasPlaybackError]);
 
   const debugEnabled = useMemo(() => {
     if (import.meta.env.DEV) return true;
@@ -209,10 +341,13 @@ export function PlayerHud({ className = '' }) {
     }
   }, []);
 
-  const log = (...args) => {
-    if (!debugEnabled) return;
-    console.log('[PlayerHud]', ...args);
-  };
+  const log = useCallback(
+    (...args) => {
+      if (!debugEnabled) return;
+      console.log('[PlayerHud]', ...args);
+    },
+    [debugEnabled],
+  );
 
   const forceHudVisible = useMemo(() => {
     try {
@@ -244,6 +379,7 @@ export function PlayerHud({ className = '' }) {
     if (!state?.item?.epgItems) return { now: null, next: null };
     return resolveNowNextFromEpgItems(state.item.epgItems, liveNowTickMs);
   }, [state?.item, liveNowTickMs]);
+  const shouldUseEpgInfoModal = state?.type === 'service' && !!state?.item && !!nowNext?.now;
   const channelMeta = useMemo(() => {
     const item = state?.item || null;
     if (!item) return null;
@@ -260,11 +396,9 @@ export function PlayerHud({ className = '' }) {
   }, [state?.item, nowNext]);
 
   const channelList = useMemo(() => {
-    const streams = epg?.streams || [];
-    const list = Array.isArray(streams) ? [...streams] : [];
-    list.sort((a, b) => Number(a?.lcn ?? 0) - Number(b?.lcn ?? 0));
-    return list;
+    return buildZappingChannelList(epg?.streams);
   }, [epg?.streams]);
+
 
   const progressModel = useMemo(() => {
     // Paridad legacy: para LIVE, usar la ventana temporal del evento.
@@ -417,18 +551,36 @@ export function PlayerHud({ className = '' }) {
     const onMouseMove = () => wakeHud();
     const onKeyDown = () => wakeHud();
     const onPointerDown = () => wakeHud();
+    // wheel/scroll cuentan como actividad (p. ej. scrolleando el listado de
+    // canales con la rueda del mouse, que no dispara mousemove/pointerdown).
+    // capture:true porque 'scroll' no burbujea desde el div interno con su
+    // propio scroll -- la fase de captura sí lo intercepta igual desde window.
+    const onWheel = () => wakeHud();
+    const onScroll = () => wakeHud();
     window.addEventListener('mousemove', onMouseMove, { passive: true });
     // capture:true para TVs/WebViews que interceptan keydown en bubbling
     window.addEventListener('keydown', onKeyDown, { capture: true });
     window.addEventListener('pointerdown', onPointerDown, { passive: true });
+    window.addEventListener('wheel', onWheel, { passive: true });
+    window.addEventListener('scroll', onScroll, { capture: true, passive: true });
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('keydown', onKeyDown, { capture: true });
       window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('scroll', onScroll, { capture: true });
       clearHideTimeout();
     };
+    // `overlay` a propósito en las deps: sin esto, los listeners quedaban con
+    // una copia vieja de `wakeHud`/`armAutoHide` de antes de abrir la lista
+    // de canales -- esa copia no sabía que había un overlay abierto (chequeo
+    // `if (overlay) return` en armAutoHide con un valor "congelado"), así que
+    // el temporizador de auto-hide se re-armaba igual y, al cumplirse,
+    // cerraba TODO (HUD + lista de canales) aunque el overlay siguiera
+    // abierto. Con `overlay` en las deps, el efecto se vuelve a suscribir
+    // con una copia fresca apenas se abre/cierra un overlay.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasContent, shouldAutoHide, forceHudVisible, hudAutoHideMs]);
+  }, [hasContent, shouldAutoHide, forceHudVisible, hudAutoHideMs, overlay]);
 
   useEffect(() => {
     if (!(state?.type === 'service' && liveWindow && hasContent)) return undefined;
@@ -436,17 +588,99 @@ export function PlayerHud({ className = '' }) {
     return () => clearInterval(timer);
   }, [state?.type, liveWindow, hasContent]);
 
+  const getPlayerFullscreenEl = useCallback(() => {
+    const container = containerRef?.current;
+    if (!container) return null;
+    return container.closest('.home-global-player');
+  }, [containerRef]);
+
+  const syncPlayerFullscreenLayout = useCallback(() => {
+    const container = containerRef?.current;
+    const playerRoot = getPlayerFullscreenEl();
+    if (!container) return;
+
+    const fsEl = getNativeFullscreenElement();
+    const fs = isAppFullscreenActive();
+    const w = fs
+      ? (fsEl?.clientWidth || window.innerWidth || document.documentElement.clientWidth)
+      : container.clientWidth;
+    const h = fs
+      ? (fsEl?.clientHeight || window.innerHeight || document.documentElement.clientHeight)
+      : container.clientHeight;
+    const objectFit = 'contain';
+
+    const applyVideoLayout = () => {
+      if (playerRoot instanceof HTMLElement) {
+        playerRoot.style.width = fs ? `${w}px` : '';
+        playerRoot.style.height = fs ? `${h}px` : '';
+      }
+
+      if (!fs) {
+        container.querySelectorAll('.video-js, video.vjs-tech, video').forEach((el) => {
+          if (!(el instanceof HTMLElement)) return;
+          el.style.width = '';
+          el.style.height = '';
+          el.style.maxWidth = '';
+          el.style.maxHeight = '';
+          el.style.objectFit = '';
+          el.style.paddingTop = '';
+          el.style.left = '';
+          el.style.top = '';
+          el.style.right = '';
+          el.style.bottom = '';
+        });
+        return;
+      }
+
+      container.querySelectorAll('.video-js').forEach((el) => {
+        if (!(el instanceof HTMLElement)) return;
+        el.classList.add('vjs-fill');
+        el.style.position = 'absolute';
+        el.style.left = '0';
+        el.style.top = '0';
+        el.style.right = '0';
+        el.style.bottom = '0';
+        el.style.width = `${w}px`;
+        el.style.height = `${h}px`;
+        el.style.paddingTop = '0';
+        el.style.maxWidth = 'none';
+        el.style.maxHeight = 'none';
+      });
+
+      container.querySelectorAll('video.vjs-tech, video').forEach((el) => {
+        if (!(el instanceof HTMLVideoElement)) return;
+        el.style.width = '100%';
+        el.style.height = '100%';
+        el.style.objectFit = objectFit;
+        el.style.maxWidth = 'none';
+        el.style.maxHeight = 'none';
+      });
+    };
+
+    applyVideoLayout();
+
+    window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('resize'));
+      requestAnimationFrame(applyVideoLayout);
+    });
+  }, [containerRef, getPlayerFullscreenEl]);
+
   useEffect(() => {
     const onFsChange = () => {
-      const fs = Boolean(document.fullscreenElement);
+      const fs = isAppFullscreenActive();
       setIsFullscreen(fs);
       try {
-        document.documentElement.style.setProperty('--player-video-object-fit', fs ? 'cover' : 'contain');
+        document.documentElement.style.setProperty('--player-video-object-fit', 'contain');
       } catch {
         // noop
       }
+      syncPlayerFullscreenLayout();
     };
-    document.addEventListener('fullscreenchange', onFsChange);
+    const onResize = () => {
+      if (isAppFullscreenActive()) syncPlayerFullscreenLayout();
+    };
+    FULLSCREEN_CHANGE_EVENTS.forEach((ev) => document.addEventListener(ev, onFsChange));
+    window.addEventListener('resize', onResize);
     // Inicializar en montaje (por si el HUD aparece ya en fullscreen)
     onFsChange();
     if (debugEnabled) {
@@ -457,15 +691,18 @@ export function PlayerHud({ className = '' }) {
       window.addEventListener('blur', onBlur);
       window.addEventListener('focus', onFocus);
       return () => {
-        document.removeEventListener('fullscreenchange', onFsChange);
+        FULLSCREEN_CHANGE_EVENTS.forEach((ev) => document.removeEventListener(ev, onFsChange));
+        window.removeEventListener('resize', onResize);
         document.removeEventListener('visibilitychange', onVisibility);
         window.removeEventListener('blur', onBlur);
         window.removeEventListener('focus', onFocus);
       };
     }
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debugEnabled]);
+    return () => {
+      FULLSCREEN_CHANGE_EVENTS.forEach((ev) => document.removeEventListener(ev, onFsChange));
+      window.removeEventListener('resize', onResize);
+    };
+  }, [debugEnabled, log, syncPlayerFullscreenLayout]);
 
   const showPlaybackButtons =
     hasContent &&
@@ -513,7 +750,7 @@ export function PlayerHud({ className = '' }) {
         playFn: () =>
           play({
             type: 'service',
-            id: channel.id ?? channel.lcn ?? undefined,
+            id: channel.id,
             url,
             item: channel,
             autoPlay: true,
@@ -523,31 +760,181 @@ export function PlayerHud({ className = '' }) {
     [play, requestPlayChannel, resolveChannelLiveUrl]
   );
 
-  usePlayerChannelZapping({
-    enabled: channelChangeWithArrows,
+  // Precarga el master de los canales vecinos (CH+/CH-) un rato después de que el
+  // actual arrancó, para no competir con su descarga: ahorra ~0.5 s al zapear.
+  const currentLiveId = isLiveService ? state?.id ?? state?.item?.id : null;
+  useEffect(() => {
+    if (currentLiveId == null) return undefined;
+    const idx = findZappingChannelIndex(channelList, currentLiveId);
+    if (idx < 0 || channelList.length < 2) return undefined;
+    const timer = setTimeout(() => {
+      [1, -1].forEach((delta) => {
+        const url = resolveChannelLiveUrl(channelList[(idx + delta + channelList.length) % channelList.length]);
+        if (url) void prefetchMaster(url, userSession.getSessionId());
+      });
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [currentLiveId, channelList, resolveChannelLiveUrl]);
+
+  const { zapByDirection, pendingChannelNumber } = usePlayerChannelZapping({
+    // TV: ↑/↓ (sin cambios). PC: ←/→ -- en PC, ↑/↓ ahora controlan volumen
+    // (ver el handler de volumen más abajo), así que el zapping por flecha
+    // pasa al eje horizontal para no pisarse con eso.
+    arrowKeysEnabled: isTV && channelChangeWithArrows,
+    horizontalArrowKeysEnabled: !isTV && channelChangeWithArrows,
+    channelKeysEnabled: true,
     isLiveService,
-    hasContent,
+    isPlaybackMaximized: isPlaybackMaximized && hasContent,
     overlay,
     channels: channelList,
-    currentChannelId: state?.id ?? state?.item?.id,
-    currentChannelLcn: state?.item?.lcn,
+    currentServiceId: state?.type === 'service' ? state?.id ?? state?.item?.id : null,
     onZapToChannel: handleZapToChannel,
     onWakeHud: wakeHud,
   });
+
+  // ↑/↓ del teclado = volumen, solo PC -- mismo flag que el botón de mute +
+  // slider del HUD (ver `volumeControlsEnabled` más arriba). Sin restringir a
+  // "en vivo": a diferencia del zapping (que no aplica a VOD/catchup), el
+  // volumen tiene sentido para cualquier tipo de contenido reproduciéndose.
+  // En TV este hook ni se activa: no hay volumen de app que subir/bajar (ver
+  // comentario en usePlayerVolumeKeys.js).
+  usePlayerVolumeKeys({
+    enabled: !isTV && volumeControlsEnabled && hasContent,
+    overlay,
+    volume: state?.volume,
+    muted: state?.muted,
+    setVolume,
+    onWakeHud: wakeHud,
+  });
+
+  // Bandera de marca: flechas de canal anterior/siguiente flotando sobre el
+  // video (solo web/PC -- ver brands.js, features.playerChannelArrows).
+  // Reutiliza `zapByDirection` de usePlayerChannelZapping, la misma lógica
+  // que ya usa el teclado/control remoto (CH+/CH-, flechas arriba/abajo).
+  const channelArrowsEnabled =
+    !isTV && isLiveService && currentBrand?.features?.playerChannelArrows === true;
+
+  const handlePlayPause = () => {
+    if (state?.isPlaying) {
+      pause();
+      return;
+    }
+    play({
+      type: state?.type,
+      id: state?.id,
+      url: state?.url,
+      item: state?.item,
+      autoPlay: true,
+    });
+  };
+
+  const isLiveWithWindow = state?.type === 'service' && !!liveWindow;
+  // ±10 s: los botones del HUD y las teclas FF/RW del control usan lo mismo.
+  const seekBy = (seconds) => {
+    if (isLiveWithWindow) skipLiveBy(seconds);
+    else if (seconds < 0) backward(-seconds);
+    else forward(seconds);
+  };
 
   usePlayerHudTvNavigation({
     isTV,
     hasContent,
     visible,
-    overlay,
     hudRootRef,
     onWakeHud: wakeHud,
-    onClosePlayerOverlay: closePlayerOverlay,
     onClosePlayer: close,
     showPlaybackButtons,
     channelChangeWithArrows,
     isLiveService,
+    isPlaybackMaximized: isPlaybackMaximized && hasContent,
+    isPlaying: !!state?.isPlaying,
+    onPlayPause: handlePlayPause,
+    onSeekBy: seekBy,
   });
+
+  // Overlay de "info" sin modal EPG/VOD (VOD/catchup, o vivo sin evento actual):
+  // solo el placeholder + botón "Cerrar" — zona de FocusManager propia.
+  const infoBoxRootRef = useRef(null);
+  const infoBoxZoneIdRef = useRef(null);
+  if (!infoBoxZoneIdRef.current) infoBoxZoneIdRef.current = createZoneId('player-info-box');
+  const showInfoBox = overlay === 'info' && !shouldUseEpgInfoModal;
+
+  useEffect(() => {
+    if (!showInfoBox) return undefined;
+    const zoneId = infoBoxZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: infoBoxRootRef.current,
+      onBack: () => {
+        closePlayerOverlay();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [showInfoBox, closePlayerOverlay]);
+
+  useEffect(() => {
+    if (!showInfoBox) return undefined;
+    const timer = setTimeout(() => {
+      focusElementSafe(document.getElementById(PLAYER_FOCUS_IDS.OVERLAY_CLOSE));
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [showInfoBox]);
+
+  // Overlay de pistas (audio/subtítulos): zona de FocusManager escopada al popover.
+  const tracksPopoverRef = useRef(null);
+  const tracksZoneIdRef = useRef(null);
+  if (!tracksZoneIdRef.current) tracksZoneIdRef.current = createZoneId('player-tracks');
+  const showTracksPopover = overlay === 'tracks' && !!tracksPopoverPos;
+
+  useEffect(() => {
+    if (!showTracksPopover) return undefined;
+    const zoneId = tracksZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: tracksPopoverRef.current,
+      onBack: () => {
+        closePlayerOverlay();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [showTracksPopover, closePlayerOverlay]);
+
+  useEffect(() => {
+    if (!showTracksPopover) return undefined;
+    const timer = setTimeout(() => {
+      const root = tracksPopoverRef.current;
+      const firstAudio = root?.querySelector(PLAYER_TRACK_SELECTOR);
+      focusElementSafe(firstAudio || document.getElementById(PLAYER_FOCUS_IDS.TRACKS_CLOSE));
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [showTracksPopover]);
+
+  // Debe ir antes del `return` condicional: un hook después de él rompe el orden
+  // de hooks cuando `hasContent` cambia sin desmontar el HUD.
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (isAppFullscreenActive()) {
+        log('fullscreen:exit requested');
+        exitAppFullscreenSync();
+        setIsFullscreen(false);
+        // Dar un frame para que el browser procese el exit antes de recalcular
+        requestAnimationFrame(() => syncPlayerFullscreenLayout());
+        return;
+      }
+
+      // enterAppFullscreen() es async: espera a que el browser confirme el cambio
+      // de viewport antes de sincronizar el layout. Sin el await, clientWidth/Height
+      // todavía reflejan el tamaño pre-fullscreen y el video queda mal dimensionado.
+      const mode = await enterAppFullscreen();
+      log('fullscreen:enter requested', { mode });
+      setIsFullscreen(true);
+      syncPlayerFullscreenLayout();
+    } catch (e) {
+      log('fullscreen:error', e);
+    }
+  }, [log, syncPlayerFullscreenLayout]);
 
   if (!hasContent) return null;
 
@@ -596,55 +983,74 @@ export function PlayerHud({ className = '' }) {
     doToggle();
   };
 
-  const handlePlayPause = () => {
-    if (state?.isPlaying) {
-      pause();
-      return;
-    }
-    play({
-      type: state?.type,
-      id: state?.id,
-      url: state?.url,
-      item: state?.item,
-      autoPlay: true,
-    });
-  };
-
-  const isLiveWithWindow = state?.type === 'service' && !!liveWindow;
   const clockText = formatHHmm(Date.now());
   const showSeekbar =
     state?.type === 'vod' ||
     state?.type === 'catchup' ||
     (state?.type === 'service' && currentBrand?.player?.showSeekbarOnLive === true);
 
-  const shouldUseEpgInfoModal = state?.type === 'service' && !!state?.item && !!nowNext?.now;
-
-  const toggleFullscreen = async () => {
-    try {
-      if (document.fullscreenElement) {
-        log('fullscreen:exit requested');
-        await document.exitFullscreen?.();
-        return;
-      }
-
-      // Modo "F11-like": fullscreen de toda la app (documento).
-      // Es el enfoque más estable y evita que el engine pierda el <video>
-      // o que el browser entre/salga inmediatamente del fullscreen.
-      const el = document.documentElement;
-      if (!el || typeof el.requestFullscreen !== 'function') return;
-      log('fullscreen:enter requested', { target: 'documentElement' });
-      await el.requestFullscreen();
-    } catch (e) {
-      log('fullscreen:error', e);
-      // noop (browsers/TVs pueden bloquear si no hay gesto del usuario)
-    }
-  };
-
   return (
-    <div
-      ref={hudRootRef}
-      className={`player-hud ${visible ? 'player-hud--visible' : 'player-hud--hidden'} ${className}`.trim()}
-    >
+    <>
+      {statsPanelEnabled && statsOn ? <PlayerStatsPanel getDiagnostics={getDiagnostics} /> : null}
+      {pendingChannelNumber ? (
+        <div className="player-channel-number" role="status" aria-live="polite">
+          {pendingChannelNumber}
+        </div>
+      ) : null}
+      {hasPlaybackError && (
+        <div ref={errorRootRef} className="player-error-overlay" role="alert" aria-live="assertive">
+          <div className="player-error-overlay__box">
+            <AppIcon name="warning" size="2em" />
+            <p className="player-error-overlay__message">
+              {t('player.playbackError')}
+            </p>
+            <div className="player-error-overlay__actions">
+              <FocusableButton
+                type="button"
+                ref={errorRetryBtnRef}
+                className="player-error-overlay__btn player-error-overlay__btn--primary"
+                onClick={() => retry()}
+              >
+                {t('player.retry')}
+              </FocusableButton>
+              <FocusableButton
+                type="button"
+                ref={errorCloseBtnRef}
+                className="player-error-overlay__btn"
+                onClick={() => close()}
+              >
+                {t('common.close', { defaultValue: 'Cerrar' })}
+              </FocusableButton>
+            </div>
+          </div>
+        </div>
+      )}
+      <div
+        ref={hudRootRef}
+        className={`player-hud ${visible ? 'player-hud--visible' : 'player-hud--hidden'} ${className}`.trim()}
+      >
+      {channelArrowsEnabled ? (
+        <>
+          <FocusableButton
+            type="button"
+            className="player-hud__channel-arrow player-hud__channel-arrow--prev"
+            onClick={() => zapByDirection('down')}
+            aria-label={t('player.previousChannel', { defaultValue: 'Canal anterior' })}
+            title={t('player.previousChannel', { defaultValue: 'Canal anterior' })}
+          >
+            <AppIcon name="chevronLeft" size="8em" />
+          </FocusableButton>
+          <FocusableButton
+            type="button"
+            className="player-hud__channel-arrow player-hud__channel-arrow--next"
+            onClick={() => zapByDirection('up')}
+            aria-label={t('player.nextChannel', { defaultValue: 'Canal siguiente' })}
+            title={t('player.nextChannel', { defaultValue: 'Canal siguiente' })}
+          >
+            <AppIcon name="chevronRight" size="8em" />
+          </FocusableButton>
+        </>
+      ) : null}
       <div className="player-hud__topbar">
         <div className="player-hud__topbar-left" data-tv-nav-zone="player-top-left">
           <FocusableButton
@@ -658,23 +1064,25 @@ export function PlayerHud({ className = '' }) {
           >
             <AppIcon name="back" size="1em" />
           </FocusableButton>
-          <FocusableButton
-            type="button"
-            className="player-hud__iconbtn"
-            id={PLAYER_FOCUS_IDS.EPG}
-            data-tv-nav="player-hud"
-            tabIndex={hudTvTabIndex}
-            onClick={() => {
-              closePlayerOverlay();
-              close();
-              navigate('/home/epg');
-            }}
-            aria-label={t('epg.title', { defaultValue: 'EPG' })}
-            title={t('epg.title', { defaultValue: 'EPG' })}
-          >
-            <AppIcon name="list" size="1em" />
-          </FocusableButton>
-          {isLiveService && (
+          {epgEnabledForBrand && (
+            <FocusableButton
+              type="button"
+              className="player-hud__iconbtn"
+              id={PLAYER_FOCUS_IDS.EPG}
+              data-tv-nav="player-hud"
+              tabIndex={hudTvTabIndex}
+              onClick={() => {
+                closePlayerOverlay();
+                close();
+                navigate('/home/epg');
+              }}
+              aria-label={t('epg.title', { defaultValue: 'EPG' })}
+              title={t('epg.title', { defaultValue: 'EPG' })}
+            >
+              <AppIcon name="list" size="1em" />
+            </FocusableButton>
+          )}
+          {isLiveService && parentalControlEnabledForBrand && (
             <FocusableButton
               type="button"
               className="player-hud__iconbtn"
@@ -731,6 +1139,20 @@ export function PlayerHud({ className = '' }) {
               <AppIcon name="subtitles" size="1em" />
             </FocusableButton>
           ) : null}
+          {statsPanelEnabled ? (
+            <FocusableButton
+              type="button"
+              className={`player-hud__iconbtn${statsOn ? ' player-hud__iconbtn--active' : ''}`}
+              id={PLAYER_FOCUS_IDS.STATS}
+              data-tv-nav="player-hud"
+              tabIndex={hudTvTabIndex}
+              onClick={toggleStats}
+              aria-pressed={statsOn}
+              aria-label={t('player.stats', { defaultValue: 'Estadísticas' })}
+            >
+              <AppIcon name="stats" size="1em" />
+            </FocusableButton>
+          ) : null}
         </div>
 
         {showPlaybackButtons ? (
@@ -741,7 +1163,7 @@ export function PlayerHud({ className = '' }) {
               id={PLAYER_FOCUS_IDS.REWIND}
               data-tv-nav="player-hud"
               tabIndex={hudTvTabIndex}
-              onClick={() => (isLiveWithWindow ? skipLiveBy(-10) : backward(10))}
+              onClick={() => seekBy(-10)}
               aria-label={t('player.rewind10', { defaultValue: 'Retroceder 10s' })}
             >
               <AppIcon name="rewind" size="1em" />
@@ -763,7 +1185,7 @@ export function PlayerHud({ className = '' }) {
               id={PLAYER_FOCUS_IDS.FORWARD}
               data-tv-nav="player-hud"
               tabIndex={hudTvTabIndex}
-              onClick={() => (isLiveWithWindow ? skipLiveBy(10) : forward(10))}
+              onClick={() => seekBy(10)}
               aria-label={t('player.forward10', { defaultValue: 'Adelantar 10s' })}
             >
               <AppIcon name="forward" size="1em" />
@@ -774,6 +1196,43 @@ export function PlayerHud({ className = '' }) {
         )}
 
         <div className="player-hud__topbar-right">
+          {!isTV && volumeControlsEnabled ? (
+            <>
+              <div className="player-hud__volume">
+                <FocusableButton
+                  type="button"
+                  className="player-hud__iconbtn"
+                  onClick={toggleMute}
+                  aria-label={
+                    state.muted
+                      ? t('player.unmute', { defaultValue: 'Activar sonido' })
+                      : t('player.mute', { defaultValue: 'Silenciar' })
+                  }
+                  title={
+                    state.muted
+                      ? t('player.unmute', { defaultValue: 'Activar sonido' })
+                      : t('player.mute', { defaultValue: 'Silenciar' })
+                  }
+                >
+                  <AppIcon
+                    name={state.muted || state.volume === 0 ? 'volumeMute' : 'volumeUp'}
+                    size="1em"
+                  />
+                </FocusableButton>
+                <input
+                  type="range"
+                  className="player-hud__volume-slider"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={state.muted ? 0 : Math.round(state.volume * 100)}
+                  onChange={(e) => setVolume(Number(e.target.value) / 100)}
+                  aria-label={t('player.volume', { defaultValue: 'Volumen' })}
+                />
+              </div>
+              <div className="player-hud__topbar-divider" aria-hidden="true" />
+            </>
+          ) : null}
           {!isTV ? (
             <FocusableButton
               type="button"
@@ -866,7 +1325,7 @@ export function PlayerHud({ className = '' }) {
 
       {overlay ? (
         overlay === 'tracks' ? null : overlay === 'info' && shouldUseEpgInfoModal ? null : (
-        <div className="player-hud__overlay">
+        <div ref={infoBoxRootRef} className="player-hud__overlay">
           <div className="player-hud__overlay-title">
             {overlay === 'channels'
               ? t('player.channelList', { defaultValue: 'Listado de canales' })
@@ -971,6 +1430,7 @@ export function PlayerHud({ className = '' }) {
         createPortal(
           <div className="player-hud__tracks-popover-overlay" onClick={closePlayerOverlay}>
             <div
+              ref={tracksPopoverRef}
               className="player-hud__tracks-popover"
               style={{ top: `${tracksPopoverPos.top}px`, left: `${tracksPopoverPos.left}px`, width: `${tracksPopoverPos.width}px` }}
               onClick={(e) => e.stopPropagation()}
@@ -1075,7 +1535,10 @@ export function PlayerHud({ className = '' }) {
         activeId={state?.id}
         autoCloseOnSelect={currentBrand?.player?.closeChannelSidebarOnSelect === true}
         onClose={closePlayerOverlay}
-        onSelectChannel={(ch) => handleZapToChannel(ch)}
+        // Callback estable: con una función nueva por render el memo nunca
+        // cortaba y la lista abierta (hasta 400 filas) se redibujaba con cada
+        // timeupdate del player (~4 por segundo).
+        onSelectChannel={handleZapToChannel}
       />
 
       {overlay === 'info' && shouldUseEpgInfoModal ? (
@@ -1099,6 +1562,7 @@ export function PlayerHud({ className = '' }) {
         />
       ) : null}
     </div>
+    </>
   );
 }
 

@@ -9,6 +9,19 @@ export const TV_ACTION = Object.freeze({
   RIGHT: 'right',
   ENTER: 'enter',
   BACK: 'back',
+  /** CH+ / Channel Up (10foot: PUP → channelUp) */
+  CHANNEL_UP: 'channel_up',
+  /** CH− / Channel Down (10foot: PDOWN → channelDown) */
+  CHANNEL_DOWN: 'channel_down',
+  // Teclas de media del control (LG/Samsung; en Samsung requieren registerTvKeys).
+  PLAY: 'play',
+  PAUSE: 'pause',
+  PLAY_PAUSE: 'play_pause',
+  STOP: 'stop',
+  FAST_FORWARD: 'fast_forward',
+  REWIND: 'rewind',
+  /** 0–9 (en Samsung requieren registerTvKeys); el valor sale de getDigitFromKeyEvent. */
+  DIGIT: 'digit',
 });
 
 function toInt(v) {
@@ -43,6 +56,35 @@ export function getTvActionFromKeyEvent(e) {
   if (isReturnLike) return TV_ACTION.BACK;
   if (keyCode === 10009 || keyCode === 461) return TV_ACTION.BACK;
 
+  // CH+ / CH− (Tizen 427/428; también nombres estándar en otros TV)
+  if (key === 'ChannelUp' || code === 'ChannelUp' || keyCode === 427) return TV_ACTION.CHANNEL_UP;
+  if (key === 'ChannelDown' || code === 'ChannelDown' || keyCode === 428) return TV_ACTION.CHANNEL_DOWN;
+  // LG webOS manda CH± como PageUp/PageDown (33/34). Si ningún handler de zona
+  // la consume, NavigationRouter la deja pasar (en PC la página sigue desplazándose).
+  if (key === 'PageUp' || code === 'PageUp' || keyCode === 33) return TV_ACTION.CHANNEL_UP;
+  if (key === 'PageDown' || code === 'PageDown' || keyCode === 34) return TV_ACTION.CHANNEL_DOWN;
+
+  // Media: mismos keyCodes en LG y Samsung (10252 = PlayPause, sólo Samsung).
+  if (key === 'MediaPlayPause' || keyCode === 10252) return TV_ACTION.PLAY_PAUSE;
+  if (key === 'MediaPlay' || keyCode === 415) return TV_ACTION.PLAY;
+  if (key === 'MediaPause' || key === 'Pause' || keyCode === 19) return TV_ACTION.PAUSE;
+  if (key === 'MediaStop' || keyCode === 413) return TV_ACTION.STOP;
+  if (key === 'MediaFastForward' || keyCode === 417) return TV_ACTION.FAST_FORWARD;
+  if (key === 'MediaRewind' || keyCode === 412) return TV_ACTION.REWIND;
+
+  if (getDigitFromKeyEvent(e) != null) return TV_ACTION.DIGIT;
+
+  return null;
+}
+
+/** Dígito 0–9 de la tecla (fila superior 48–57, teclado numérico 96–105), o null. */
+export function getDigitFromKeyEvent(e) {
+  if (!e) return null;
+  const key = String(e.key || '');
+  if (/^[0-9]$/.test(key)) return Number(key);
+  const keyCode = toInt(e.keyCode || e.which);
+  if (keyCode >= 48 && keyCode <= 57) return keyCode - 48;
+  if (keyCode >= 96 && keyCode <= 105) return keyCode - 96;
   return null;
 }
 
@@ -54,6 +96,13 @@ export function isTextInputElement(el) {
   const type = String(el.type || '').toLowerCase();
   // Inputs típicos de login
   return type === 'text' || type === 'password' || type === 'email' || type === 'number' || type === '';
+}
+
+/** Input de texto en edición real (no readOnly/disabled). En TV los FocusableInput son readOnly. */
+export function isEditableTextInputElement(el) {
+  if (!isTextInputElement(el)) return false;
+  if (el.readOnly || el.disabled) return false;
+  return true;
 }
 
 export function getCaretInfo(inputEl) {

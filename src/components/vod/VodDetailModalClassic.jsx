@@ -4,15 +4,17 @@
  * Series: columna izquierda poster+info, derecha lista de episodios.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDevice } from '../../contexts/DeviceContext';
-import panaccessService from '../../services/panaccessService';
-import { getVodImageUrl } from '../../services/vodService';
+import panaccessService from '@appvideo/core/services/panaccessService';
+import { getVodImageUrl } from '@appvideo/core/services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
 import { FocusableButton } from '../navigation/FocusableButton';
 import AppIcon from '../AppIcon';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe } from '../../navigation/spatialNavigation';
 
 export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }) {
   const { t } = useTranslation();
@@ -23,12 +25,26 @@ export function VodDetailModalClassic({ item, categories = [], onClose, onPlay }
   const [loading, setLoading] = useState(!!item?.isSeries);
   const [error, setError] = useState(null);
   const [extraMeta, setExtraMeta] = useState(null);
+  const rootRef = useRef(null);
+  const [zoneId] = useState(() => createZoneId('vod-detail-classic-modal'));
+  // Navegación (LEFT/RIGHT/UP/DOWN por geometría, BACK) delegada al motor central.
+  useEffect(() => {
+    if (!item) return undefined;
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
+        onClose?.();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [item, onClose, zoneId]);
 
   useEffect(() => {
     if (isTV && !loading) {
       const t = setTimeout(() => {
-        const btn = document.getElementById('vod-classic-play');
-        if (btn) btn.focus();
+        focusElementSafe(document.getElementById('vod-classic-play'));
       }, 400);
       return () => clearTimeout(t);
     }

@@ -2,13 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useBrand } from '../../contexts/BrandContext';
-import { usePreload } from '../../store/usePreload';
-import { useInactivityStore } from '../../store/inactivityStore';
-import * as userSession from '../../utils/userSession';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { useInactivityStore } from '@appvideo/core/store/inactivityStore';
+import * as userSession from '@appvideo/core/utils/userSession';
 import {
+  formatInactivityCountdown,
   resolveInactivityGraceSec,
   resolveInactivityTimeoutSec,
-} from '../../utils/inactivityConfig';
+} from '@appvideo/core/utils/inactivityConfig';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe } from '../../navigation/spatialNavigation';
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -79,13 +82,6 @@ function preloadImage(src) {
   });
 }
 
-function formatCountdown(sec) {
-  const s = Math.max(0, Math.floor(sec));
-  const mm = Math.floor(s / 60);
-  const ss = s % 60;
-  return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
-}
-
 export function InactivityHost() {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
@@ -103,6 +99,9 @@ export function InactivityHost() {
   const timerRef = useRef(null);
   const intervalRef = useRef(null);
   const ssIntervalRef = useRef(null);
+  const inactivityRootRef = useRef(null);
+  const inactivityZoneIdRef = useRef(null);
+  if (!inactivityZoneIdRef.current) inactivityZoneIdRef.current = createZoneId('inactivity');
 
   const [inactivitySec, setInactivitySec] = useState(0);
   const [graceSec, setGraceSec] = useState(60);
@@ -145,6 +144,32 @@ export function InactivityHost() {
     setSecondsLeft(graceSec);
     touch(Date.now());
   };
+
+  // Navegación: el diálogo de "¿Sigues ahí?" atrapa el foco (zona de FocusManager)
+  // y coloca el foco inicial en "Seguir viendo" — sin esto, el control remoto no
+  // podía activar el botón porque nada tenía foco dentro del overlay.
+  useEffect(() => {
+    if (!open) return undefined;
+    const zoneId = inactivityZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: inactivityRootRef.current,
+      onBack: () => {
+        closeAll();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const timer = setTimeout(() => {
+      focusElementSafe(inactivityRootRef.current?.querySelector('.inactivity-btn'));
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [open]);
 
   // Captura de actividad global (remote/teclas + pointer).
   useEffect(() => {
@@ -258,7 +283,7 @@ export function InactivityHost() {
   const title = t('inactivity.title', { defaultValue: '¿Sigues ahí?' });
   const message = t('inactivity.message', {
     defaultValue: 'El contenido se detendrá por inactividad en {{time}}.',
-    time: formatCountdown(secondsLeft),
+    time: formatInactivityCountdown(secondsLeft),
   });
 
   const bg = screensaverUrls[screensaverIdx] || '';
@@ -266,7 +291,7 @@ export function InactivityHost() {
   return (
     <>
       {open && (
-        <div className="inactivity-overlay" role="dialog" aria-modal="true" aria-label={title}>
+        <div ref={inactivityRootRef} className="inactivity-overlay" role="dialog" aria-modal="true" aria-label={title}>
           <div className="inactivity-card">
             <div className="inactivity-title">{title}</div>
             <div className="inactivity-message">{message}</div>

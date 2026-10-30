@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
-import { getChannelStableId } from '../../utils/channelId';
+import { getChannelStableId } from '@appvideo/core/utils/channelId';
+import { usableImageUrl, markImageFailed } from '@appvideo/core/utils/remoteImage';
 
 function buildLogoUrlFromLogo2Id(channel) {
   if (!channel) return null;
@@ -14,6 +16,7 @@ export function ParentalChannelCard({
   blocked = false,
   onSelect,
 }) {
+  const { t } = useTranslation();
   const { currentBrand, getImage } = useBrand();
   const id = getChannelStableId(channel);
 
@@ -21,14 +24,15 @@ export function ParentalChannelCard({
     currentBrand?.assets?.placeholder || getImage?.('placeholder_220x160.png') || '';
 
   const initialLogoUrl = useMemo(() => {
-    const logo =
+    const logo = usableImageUrl(
       buildLogoUrlFromLogo2Id(channel) ||
       channel?.img ||
       channel?.imageUrl ||
       channel?.logoUrl ||
       channel?.logo ||
-      channel?.icon ||
-      '';
+      channel?.icon,
+      { allowRelative: true },
+    );
     return logo || placeholderImageUrl || '';
   }, [channel, placeholderImageUrl]);
 
@@ -53,6 +57,7 @@ export function ParentalChannelCard({
             src={logoSrc}
             alt={channel?.name ?? ''}
             onError={() => {
+              if (logoSrc !== placeholderImageUrl) markImageFailed(logoSrc);
               if (placeholderImageUrl && logoSrc !== placeholderImageUrl) {
                 setLogoSrc(placeholderImageUrl);
               } else if (logoSrc) {
@@ -63,14 +68,16 @@ export function ParentalChannelCard({
         ) : (
           <div className="parental-channel-card__img parental-channel-card__img--placeholder" />
         )}
-        {blocked ? <div className="parental-channel-card__lock" aria-hidden="true">🔒</div> : null}
       </div>
 
-      <div className="parental-channel-card__meta">
-        <div className="parental-channel-card__lcn">{channel?.lcn ?? ''}</div>
-        <div className="parental-channel-card__name" title={channel?.name ?? ''}>
-          {channel?.name ?? ''}
-        </div>
+      <div className="parental-channel-card__name" title={channel?.name ?? ''}>
+        {channel?.lcn != null && channel?.lcn !== '' ? `${channel.lcn} ` : ''}
+        {channel?.name ?? ''}
+      </div>
+      <div className="parental-channel-card__state">
+        {blocked
+          ? `🔒 ${t('parental.blocked', { defaultValue: 'Bloqueado' })}`
+          : t('parental.block', { defaultValue: 'Bloquear canal' })}
       </div>
     </button>
   );

@@ -1,0 +1,259 @@
+/**
+ * Cambio de contraseña, solicitud de recuperación y cierre de cuenta,
+ * contra el mismo backend externo de "dispositivos vinculados" (ver
+ * `deviceAuthService.js`). Paneles nativos solo en PC/web cuando
+ * `login.deviceSession.enabled`; en TV se sigue usando el QR existente
+ * (`brand.account.links.*` / `brand.login.forgotPassword`), sin cambios.
+ *
+ * IMPORTANTE -- efectos secundarios reales del backend (Wind, ver
+ * wind/services/password_reset.py::sync_password_locally):
+ *   - Cambiar contraseña invalida TODOS los JWT emitidos antes del cambio
+ *     y revoca en bloque todos los `DeviceSession` (dispositivos
+ *     vinculados) de este suscriptor. La contraseña PanAccess vieja que
+ *     esta app guarda localmente (para reactivar sesión sin pedirla de
+ *     nuevo, ver `userSession.js`) deja de servir de inmediato. Por eso
+ *     `ChangePasswordPanel.jsx` fuerza un logout completo tras un éxito --
+ *     no hay forma de "actualizar" la sesión local, hay que iniciar sesión
+ *     de nuevo con la contraseña nueva.
+ *   - Cerrar cuenta desaprovisiona el suscriptor en PanAccess -- es
+ *     irreversible.
+ *
+ * reCAPTCHA: `requestPasswordReset`, `closeAccount` y (desde 2026-09-01,
+ * extensión de Alto #7 -- ver docs/RECAPTCHA_LOGIN_Y_CAMBIO_PASSWORD_2026-09-01.md
+ * en Back-Wind-V2) `changePassword` mandan `recaptcha_token` (reCAPTCHA v3,
+ * generado por acción vía `recaptchaService.js`, con site key por marca --
+ * ver `resolveRecaptchaSiteKey()`). El backend solo lo exige si tiene
+ * `RECAPTCHA_SECRET_KEY` configurado (ver `wind/utils/recaptcha.py`) --
+ * opt-in de los dos lados: sin site key configurada para esta marca (ni
+ * fallback `VITE_RECAPTCHA_SITE_KEY`), `getRecaptchaToken()` devuelve `null`
+ * y simplemente no se manda el campo; sin `RECAPTCHA_SECRET_KEY` allá, el
+ * backend no lo pide.
+ */
+import {
+  authorizedDeviceRequest,
+  getDeviceSessionSubscriberCode,
+  resolveDeviceAuthBaseUrl,
+} from './deviceAuthService';
+import { getRecaptchaToken } from './recaptchaService';
+
+async function parseJsonResponse(res, fallbackMessage) {
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    const err = new Error('Respuesta del servidor no es JSON válido.');
+    err.status = res.status;
+    throw err;
+  }
+
+  if (!res.ok) {
+    // `data.errors` con forma DRF (p. ej. { newPass: ["mensaje legible"] },
+    // ver ProfilePasswordSerializer/ResetPasswordConfirmSerializer en el
+    // backend) -- antes esto caía siempre al JSON.stringify de más abajo,
+    // mostrando algo como `{"newPass":["..."]}` en vez del mensaje real
+    // (p. ej. la explicación de la política de contraseña).
+    let fieldErrorMessage;
+    if (data.errors && typeof data.errors === 'object' && !Array.isArray(data.errors)) {
+      const firstField = Object.values(data.errors)[0];
+      if (Array.isArray(firstField) && typeof firstField[0] === 'string') {
+        fieldErrorMessage = firstField[0];
+      }
+    }
+
+    const detail =
+      (typeof data.detail === 'string' && data.detail) ||
+      (Array.isArray(data.non_field_errors) && data.non_field_errors[0]) ||
+      (typeof data.message === 'string' && data.message) ||
+      fieldErrorMessage ||
+      (data.errors && JSON.stringify(data.errors)) ||
+      res.statusText ||
+      fallbackMessage;
+    const err = new Error(detail);
+    err.status = res.status;
+    err.code = data.code;
+    err.data = data;
+    throw err;
+  }
+
+  return data;
+}
+
+/**
+ * Solicita el email de recuperación de contraseña. Usuario NO autenticado
+ * (se llama desde LoginPage, antes de tener ningún JWT) -- por eso usa
+ * `fetch` directo, no `authorizedDeviceRequest`. Respuesta siempre
+ * genérica del lado del backend (no revela si el email existe).
+ */
+export async function requestPasswordReset(brandConfig, email) {
+  const base = resolveDeviceAuthBaseUrl(brandConfig);
+  if (!base) {
+    throw new Error('Falta configurar la base del backend (login.deviceSession.baseUrl).');
+  }
+  const recaptchaToken = await getRecaptchaToken('forgot_password', brandConfig?.brand);
+  const res = await fetch(`${base}/api/auth/password/forgot/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: String(email || '').trim(),
+      // origin=app (2026-09-09, ver docs/REDIRECT_OLVIDAR_CONTRASENA_2026-09-09.md
+      // en Back-Wind-V2): este modal es 100% nativo (nunca abre la página del
+      // backend para pedir el enlace), pero el link de confirmación por
+      // correo sí abre esa página -- esta banderita le llega hasta ahí para
+      // que, al terminar, redirija de vuelta a la app/windtv en vez de
+      // quedarse en el login de prueba del backend.
+      origin: 'app',
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
+    }),
+  });
+  return parseJsonResponse(res, 'No se pudo solicitar la recuperación de contraseña.');
+}
+
+/**
+ * Cambia la contraseña PanAccess del suscriptor autenticado. `code`
+ * (subscriber_code) se resuelve del storage local -- ya lo persiste el
+ * login (ver `deviceAuthService.persistDeviceSessionAuth`), el usuario
+ * nunca tiene que escribirlo para esto.
+ *
+ * `oldPass` es obligatorio desde 2026-08-28 (ver
+ * docs/GUIA_INTEGRACION_UNIFICADA.md sección 5.1, backend Wind) -- el
+ * backend la verifica contra PanAccess antes de aplicar el cambio; si no
+ * coincide responde 400 con `code: "old_password_incorrect"`, y tras 5
+ * intentos fallidos, 429 con `code: "old_password_locked"`. `err.code`
+ * (ver `parseJsonResponse` de más arriba) ya expone ese código tal cual
+ * para que el caller (`ChangePasswordPanel.jsx`) pueda distinguirlo si
+ * hace falta, aunque `err.message` ya trae el texto legible que manda el
+ * backend.
+ */
+export async function changePassword(brandConfig, brand, oldPass, newPass) {
+  const code = getDeviceSessionSubscriberCode(brand);
+  if (!code) {
+    throw new Error('No se encontró el código de suscriptor de esta sesión.');
+  }
+  const recaptchaToken = await getRecaptchaToken('change_password', brand);
+  return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/password/', {
+    method: 'POST',
+    body: JSON.stringify({
+      code,
+      oldPass,
+      newPass,
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
+    }),
+  });
+}
+
+/**
+ * Cambiar contraseña con código OTP (2026-09-14) -- flujo nuevo, alternativo
+ * a `changePassword()` (oldPass) de más arriba. NO lo reemplaza: el backend
+ * mantiene los dos endpoints activos a propósito (ver
+ * docs/CAMBIO_CONTRASENA_OTP_2026-09-14.md en Back-Wind-V2) -- este archivo
+ * ahora solo llama al nuevo desde `ChangePasswordPanel.jsx`, pero
+ * `changePassword()` se deja sin tocar por si hace falta en el futuro
+ * (rollback rápido sin depender de un redeploy del backend).
+ *
+ * Paso 1: pide que se mande el código de 6 dígitos por correo.
+ */
+export async function requestPasswordChangeOtp(brandConfig, brand, email) {
+  const code = getDeviceSessionSubscriberCode(brand);
+  if (!code) {
+    throw new Error('No se encontró el código de suscriptor de esta sesión.');
+  }
+  const recaptchaToken = await getRecaptchaToken('change_password_otp_request', brand);
+  return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/password/otp/request-code/', {
+    method: 'POST',
+    body: JSON.stringify({
+      code,
+      email,
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
+    }),
+  });
+}
+
+/**
+ * Paso 2: confirma el código de 6 dígitos + la nueva contraseña. Mismos
+ * efectos secundarios que `changePassword()` (invalida JWT, revoca todos
+ * los dispositivos vinculados) -- ver `sync_password_locally` en el
+ * backend, que comparten los dos flujos.
+ */
+export async function confirmPasswordChangeOtp(brandConfig, brand, otpCode, newPass) {
+  const code = getDeviceSessionSubscriberCode(brand);
+  if (!code) {
+    throw new Error('No se encontró el código de suscriptor de esta sesión.');
+  }
+  const recaptchaToken = await getRecaptchaToken('change_password_otp_confirm', brand);
+  return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/password/otp/confirm/', {
+    method: 'POST',
+    body: JSON.stringify({
+      code,
+      otpCode,
+      newPass,
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
+    }),
+  });
+}
+
+/**
+ * Cierra la cuenta del suscriptor autenticado. Irreversible.
+ *
+ * @param {Object} brandConfig
+ * @param {string} brand
+ * @param {{confirm?: string, reason?: string}} [opts] - `confirm` se manda
+ *   tal cual al backend (que exige que sea igual al `code` real, y lo
+ *   revalida server-side); si se omite se usa el propio `code`. La UI
+ *   (`CloseAccountPanel.jsx`) es la que decide qué fricción pedirle al
+ *   usuario antes de llamar a esto (no este servicio).
+ */
+export async function closeAccount(brandConfig, brand, { confirm, reason } = {}) {
+  const code = getDeviceSessionSubscriberCode(brand);
+  if (!code) {
+    throw new Error('No se encontró el código de suscriptor de esta sesión.');
+  }
+  const recaptchaToken = await getRecaptchaToken('close_account', brand);
+  return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/account/close/', {
+    method: 'POST',
+    body: JSON.stringify({
+      code,
+      confirm: confirm ?? code,
+      reason: reason || 'user_app_close',
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
+    }),
+  });
+}
+
+/**
+ * Nuevo flujo de eliminación de cuenta con confirmación por correo
+ * (2026-09-08/09, ver docs/NUEVO_FLUJO_ELIMINACION_CUENTA_2026-09-08.md en
+ * Back-Wind-V2) -- reemplaza a `closeAccount()` en la UI (`CloseAccountPanel.jsx`).
+ * No cierra nada de inmediato: solo manda un correo con un enlace de
+ * confirmación (24h de vigencia); el corte real de acceso queda diferido a
+ * la fecha de corte de la suscripción, que ya viene en la respuesta
+ * (`scheduled_for`) para mostrarla en la pantalla "revisa tu correo" sin
+ * pedirla aparte. `closeAccount()` (cierre inmediato) se deja intacta, sin
+ * usar desde acá, por si hace falta revertir rápido.
+ *
+ * `email` (2026-09-17, a pedido del cliente -- casos de usuarios "curiosos"
+ * que eliminaban su cuenta sin querer): paso adicional de confirmación,
+ * mismo patrón que `requestPasswordChangeOtp()`. El backend valida que
+ * coincida con el correo real de la cuenta -- si no coincide, responde
+ * `code: "email_mismatch"` sin mandar ningún correo.
+ *
+ * Llamar de nuevo con el mismo `code`/`email` mientras la solicitud siga sin
+ * confirmar reenvía el correo (botón "Reenviar correo" del mockup) -- el
+ * backend no duplica la solicitud.
+ */
+export async function requestAccountDeletion(brandConfig, brand, { email, reason } = {}) {
+  const code = getDeviceSessionSubscriberCode(brand);
+  if (!code) {
+    throw new Error('No se encontró el código de suscriptor de esta sesión.');
+  }
+  const recaptchaToken = await getRecaptchaToken('request_account_deletion', brand);
+  return authorizedDeviceRequest(brandConfig, brand, '/api/v1/profile/account/close/request/', {
+    method: 'POST',
+    body: JSON.stringify({
+      code,
+      email,
+      reason: reason || 'user_app_delete_request',
+      ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
+    }),
+  });
+}

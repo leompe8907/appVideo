@@ -6,23 +6,28 @@ import { Navigate } from 'react-router-dom';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useParentalGate } from '../hooks/useParentalGate';
 import BouquetWall from '../components/bouquet/BouquetWall';
-import { usePreload } from '../store/usePreload';
-import { hasTvRadioServiceBouquets } from '../services/tvDataService';
-import panaccessService from '../services/panaccessService';
-import { useHomeHeader } from '../contexts/homeHeaderContext';
-import { useBouquetMuroTvNav } from '../hooks/useBouquetMuroTvNav';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { hasTvRadioServiceBouquets } from '@appvideo/core/services/tvDataService';
+import panaccessService from '@appvideo/core/services/panaccessService';
+import { useCallback } from 'react';
+import { useHomeHeaderDispatch } from '../contexts/homeHeaderContext';
+import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import '../styles/pages/_bouquet.scss';
 
 export function TvRadioServicesPage() {
   const { play } = usePlayer();
   const { requestPlayChannel } = useParentalGate();
   const { epg } = usePreload();
-  const { setFocusedChannel } = useHomeHeader();
+  const { setFocusedChannel } = useHomeHeaderDispatch();
+  const handleChannelFocus = useCallback(
+    (channel) => setFocusedChannel(channel),
+    [setFocusedChannel]
+  );
 
-  useBouquetMuroTvNav({ route: 'serviciosTvRadio' });
+  useTvInitialFocus('.bouquet-inicio-scroll', [epg.status, (epg.bouquetsWithChannels || []).length]);
 
   const handleChannelSelect = (channel) => {
-    if (import.meta.env?.DEV) {
+    if (import.meta.env.DEV) {
       console.log('[TvRadioServicesPage] handleChannelSelect', channel?.id ?? channel?.lcn, channel);
     }
     if (!channel) return;
@@ -40,7 +45,7 @@ export function TvRadioServicesPage() {
         try {
           url = panaccessService.getStreamM3u8Url({ streamId });
         } catch (e) {
-          if (import.meta.env?.DEV) {
+          if (import.meta.env.DEV) {
             console.warn('[TvRadioServicesPage] getStreamM3u8Url fallback:', e?.message || e);
           }
         }
@@ -55,7 +60,7 @@ export function TvRadioServicesPage() {
     try {
       url = panaccessService.normalizePlaybackUrl(url);
     } catch (e) {
-      if (import.meta.env?.DEV) {
+      if (import.meta.env.DEV) {
         console.warn('[TvRadioServicesPage] normalizePlaybackUrl:', e?.message || e);
       }
     }
@@ -89,7 +94,7 @@ export function TvRadioServicesPage() {
             <BouquetWall
               variant="servicios"
               onChannelSelect={handleChannelSelect}
-              onChannelFocus={(channel) => setFocusedChannel(channel)}
+              onChannelFocus={handleChannelFocus}
             />
           </div>
         </div>

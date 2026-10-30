@@ -1,5 +1,5 @@
 import { WebEngine } from './web/WebEngine';
-import { ENGINE_PLATFORM, resolveEnginePlatform } from './resolveEnginePlatform';
+import { ENGINE_PLATFORM, resolveEnginePlatformDetailed } from './resolveEnginePlatform';
 
 /**
  * Fábrica de engines de reproducción.
@@ -10,11 +10,12 @@ import { ENGINE_PLATFORM, resolveEnginePlatform } from './resolveEnginePlatform'
  * @param {{ nativeAdaptersEnabled?: boolean, brandPlayerPolicy?: string }} [playerPolicy]
  */
 export async function createEngine(deviceInfo, playerPolicy = {}) {
-  const platform = resolveEnginePlatform({
+  const resolution = resolveEnginePlatformDetailed({
     ...deviceInfo,
     nativeAdaptersEnabled: playerPolicy.nativeAdaptersEnabled === true,
     brandPlayerPolicy: playerPolicy.brandPlayerPolicy || 'auto',
   });
+  const platform = resolution.platform;
 
   if (platform === ENGINE_PLATFORM.LG) {
     const { LgEngine } = await import('./lg/LgEngine.js');

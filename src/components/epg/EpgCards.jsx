@@ -1,103 +1,76 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlayer } from '../../contexts/PlayerContext';
-import { useDevice } from '../../contexts/DeviceContext';
-import { usePreload } from '../../store/usePreload';
+import { usePreload } from '@appvideo/core/store/usePreload';
 import { useBrand } from '../../contexts/BrandContext';
 import { useNavigate } from 'react-router-dom';
-import panaccessService from '../../services/panaccessService';
+import panaccessService from '@appvideo/core/services/panaccessService';
 import EpgEventModal from './EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
-import { useEpgReminderStore } from '../../store/epgReminderStore';
-import { getChannelStableId, dedupeStreams } from '../../utils/channelId';
+import { useEpgReminderStore } from '@appvideo/core/store/epgReminderStore';
+import { getChannelStableId, dedupeStreams } from '@appvideo/core/utils/channelId';
+import { usableImageUrl, markImageFailed } from '@appvideo/core/utils/remoteImage';
+import { useTvInitialFocus } from '../../hooks/useTvInitialFocus';
+import { asMs, clamp, computeLiveProgressStyle, computeSlots, formatHHmm } from '@appvideo/core/utils/epgSlots';
 import '../epg/epg-common.scss';
 
-function asMs(dateLike) {
-  if (dateLike == null) return null;
-  if (typeof dateLike?.valueOf === 'function') {
-    const v = dateLike.valueOf();
-    return typeof v === 'number' && !Number.isNaN(v) ? v : null;
-  }
-  if (typeof dateLike === 'number') return dateLike;
-  const d = new Date(dateLike);
-  const t = d.getTime();
-  return Number.isNaN(t) ? null : t;
-}
+/**
+ * Barra de progreso del evento "en vivo" animada por CSS en vez de por React.
+ *
+ * Antes el % de avance se recalculaba en cada render del padre (disparado por
+ * el `setInterval(1000ms)` de `EpgCards`) y se aplicaba como `width` inline —
+ * es decir, un re-render de TODA la grilla cada segundo solo para mover esta
+ * barra. Acá el efecto corre una única vez por evento (cuando cambian
+ * `startMs`/`endMs`, no en cada tick de reloj): fija el % actual sin
+ * transición, fuerza reflow, y dispara una transición CSS lineal hasta 100%
+ * con una duración igual al tiempo restante real del evento. El navegador se
+ * encarga de animarla fotograma a fotograma sin JS de por medio.
+ */
+const EpgLiveProgress = memo(function EpgLiveProgress({ startMs, endMs }) {
+  const fillRef = useRef(null);
 
-function formatHHmm(ms) {
-  if (!ms || Number.isNaN(ms)) return '';
-  const d = new Date(ms);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
+  useEffect(() => {
+    const el = fillRef.current;
+    const progress = computeLiveProgressStyle(startMs, endMs);
+    if (!el || !progress) return undefined;
+    const { elapsedPercent, remainingMs } = progress;
 
-function clamp(n, a, b) {
-  return Math.min(b, Math.max(a, n));
-}
+    el.style.transition = 'none';
+    el.style.width = `${clamp(elapsedPercent, 0, 100)}%`;
 
-function getSortedEvents(epgItems) {
-  const list = Array.isArray(epgItems) ? [...epgItems] : [];
-  list.sort((a, b) => (asMs(a?.startDate) ?? 0) - (asMs(b?.startDate) ?? 0));
-  return list;
-}
+    if (remainingMs <= 0) return undefined;
 
-function computeSlots(epgItems, { nowMs, epgPastEnabled = false } = {}) {
-  const events = getSortedEvents(epgItems);
-  if (!events.length)
-    return { before: null, now: null, next: null, later: null, isLive: false };
-  if (nowMs == null) return { before: null, now: null, next: null, later: null, isLive: false };
+    // Forzar reflow: sin esto el navegador puede "coalescer" el cambio de
+    // `width` de arriba con la transición de abajo y saltar directo a 100%.
+    void el.offsetWidth;
+    el.style.transition = `width ${remainingMs}ms linear`;
+    el.style.width = '100%';
+    return undefined;
+  }, [startMs, endMs]);
 
-  let idxNow = events.findIndex((ev) => {
-    const s = asMs(ev?.startDate);
-    const e = asMs(ev?.endDate);
-    if (s == null || e == null) return false;
-    return nowMs >= s && nowMs <= e;
-  });
+  return (
+    <div className="epg-card-live-progress">
+      <div ref={fillRef} className="epg-card-live-progress-fill" />
+    </div>
+  );
+});
 
-  // Si no hay evento live, usamos:
-  // - primer evento futuro como "now"
-  // - si no hay futuro, el último evento como "now"
-  if (idxNow < 0) {
-    idxNow = events.findIndex((ev) => {
-      const s = asMs(ev?.startDate);
-      if (s == null) return false;
-      return s > nowMs;
-    });
-    if (idxNow < 0) idxNow = events.length - 1;
-  }
-
-  const now = events[idxNow] ?? null;
-  const before = epgPastEnabled ? events[idxNow - 1] ?? null : null;
-  const next = events[idxNow + 1] ?? null;
-  const later = events[idxNow + 2] ?? null;
-
-  const isLive = (() => {
-    if (!now) return false;
-    const s = asMs(now?.startDate);
-    const e = asMs(now?.endDate);
-    if (s == null || e == null) return false;
-    return nowMs >= s && nowMs <= e;
-  })();
-
-  return { before, now, next, later, isLive };
-}
-
-function Card({
+const Card = memo(function Card({
+  id,
   onEnter,
   title,
   timeText,
   isLive,
-  progressPercent,
+  progressStartMs,
+  progressEndMs,
   disabled,
 }) {
-  const { isTV } = useDevice();
-
   return (
     <div
+      id={id}
       className={`epg-card ${disabled ? 'disabled' : ''} ${isLive ? 'epg-card--live-now' : ''}`}
       role="button"
-      tabIndex={isTV ? -1 : (disabled ? -1 : 0)}
+      tabIndex={disabled ? -1 : 0}
       onClick={() => {
         if (disabled) return;
         onEnter?.();
@@ -111,14 +84,12 @@ function Card({
     >
       <div className="epg-card-slot-title">{title || '—'}</div>
       <div className="epg-card-slot-time">{timeText || ''}</div>
-      {isLive && progressPercent != null && (
-        <div className="epg-card-live-progress">
-          <div className="epg-card-live-progress-fill" style={{ width: `${clamp(progressPercent, 0, 100)}%` }} />
-        </div>
+      {isLive && progressStartMs != null && progressEndMs != null && (
+        <EpgLiveProgress startMs={progressStartMs} endMs={progressEndMs} />
       )}
     </div>
   );
-}
+});
 
 export function EpgCards({ onSelect }) {
   const { t } = useTranslation();
@@ -137,10 +108,20 @@ export function EpgCards({ onSelect }) {
 
   const showRating = !!currentBrand?.features?.showRating;
 
-  // Reloj para calcular "Ahora" / progreso live sin usar Date.now durante render.
+  // Reloj para calcular qué evento es "Antes/Ahora/Siguiente/Más tarde".
+  // Antes corría a 1000ms y forzaba un re-render de TODA la tabla (todos los
+  // canales, todas las tarjetas) cada segundo — el único motivo para esa
+  // cadencia era la barra de progreso del evento en vivo, que ahora se anima
+  // por CSS (ver `EpgLiveProgress`) y no depende de este estado. Lo que sí
+  // sigue necesitando este reloj es detectar cuándo el evento "ahora" termina
+  // y hay que correr la fila (antes/ahora/siguiente/más tarde) — algo que no
+  // requiere precisión de 1 segundo, así que 15s es un compromiso razonable
+  // entre "se nota rápido el cambio de programa" y "no recalcula la grilla
+  // entera 60 veces por minuto".
+  const NOW_TICK_MS = 15000;
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    const id = window.setInterval(() => setNowMs(Date.now()), NOW_TICK_MS);
     return () => window.clearInterval(id);
   }, []);
 
@@ -148,6 +129,12 @@ export function EpgCards({ onSelect }) {
     const streams = dedupeStreams(epg?.streams || []);
     return [...streams].sort((a, b) => Number(a.lcn ?? 0) - Number(b.lcn ?? 0));
   }, [epg?.streams]);
+
+  // Navegación LEFT/RIGHT/UP/DOWN por geometría (motor central); las tarjetas
+  // deshabilitadas (tabIndex=-1) quedan fuera de los candidatos automáticamente.
+  // El modal de detalle, al abrirse, se registra como su propia zona en
+  // FocusManager y escopa el foco dentro de sí mismo.
+  useTvInitialFocus('.epg-cards-page .epg-cards-grid', [channels.length]);
 
   const resolveChannelLiveUrl = (channel) => {
     if (!channel) return null;
@@ -163,7 +150,7 @@ export function EpgCards({ onSelect }) {
         try {
           url = panaccessService.getStreamM3u8Url({ streamId });
         } catch (e) {
-          if (import.meta.env?.DEV) {
+          if (import.meta.env.DEV) {
             console.warn('[EpgCards] getStreamM3u8Url error:', e?.message || e);
           }
         }
@@ -172,7 +159,7 @@ export function EpgCards({ onSelect }) {
     try {
       url = panaccessService.normalizePlaybackUrl(url);
     } catch (e) {
-      if (import.meta.env?.DEV) {
+      if (import.meta.env.DEV) {
         console.warn('[EpgCards] normalizePlaybackUrl error:', e?.message || e);
       }
     }
@@ -227,29 +214,40 @@ export function EpgCards({ onSelect }) {
           </div>
         </div>
 
-        {channels.map((channel) => {
+        {channels.map((channel, rowIdx) => {
           const { before, now, next, later, isLive } = computeSlots(channel.epgItems, {
             nowMs,
             epgPastEnabled,
           });
 
-          const channelImg =
+          // Canal sin datos de EPG (`now` es null: backend caído, canal nuevo
+          // sin programación cargada, etc.): antes esto dejaba las 4 tarjetas
+          // (antes/ahora/siguiente/más tarde) deshabilitadas y el canal
+          // quedaba completamente inaccesible — ni un clic en PC ni el mando
+          // de TV podían hacer nada, porque ambos dependen del mismo
+          // `disabled`/`tabIndex` de la tarjeta. Un canal en vivo no necesita
+          // metadata de programación para poder reproducirse, así que la
+          // tarjeta "Ahora" se habilita igual si el canal resuelve una URL de
+          // stream, mostrando el detalle sin información de programa (el
+          // modal ya soporta `event=null`) en vez de dejar la fila muerta.
+          const channelPlayable = !now && !!resolveChannelLiveUrl(channel);
+          const nowIsLive = isLive || channelPlayable;
+
+          const channelImg = usableImageUrl(
             channel?.img ||
             channel?.imageUrl ||
             channel?.logoUrl ||
             channel?.logo ||
             channel?.icon ||
-            null;
+            null,
+            { allowRelative: true },
+          );
 
-          const nowStart = asMs(now?.startDate);
-          const nowEnd = asMs(now?.endDate);
-          const nowProgress =
-            now && isLive && nowStart != null && nowEnd != null
-              ? ((nowMs - nowStart) / (nowEnd - nowStart)) * 100
-              : null;
+          const nowStart = (asMs(now?.startDate) ?? asMs(now?.start));
+          const nowEnd = (asMs(now?.endDate) ?? asMs(now?.end));
 
-          const beforeStart = asMs(before?.startDate);
-          const beforeEnd = asMs(before?.endDate);
+          const beforeStart = (asMs(before?.startDate) ?? asMs(before?.start));
+          const beforeEnd = (asMs(before?.endDate) ?? asMs(before?.end));
           const nowTitle = now?.languages?.[0]?.title || now?.title || '';
           const beforeTitle = before?.languages?.[0]?.title || before?.title || '';
           const nextTitle = next?.languages?.[0]?.title || next?.title || '';
@@ -262,13 +260,13 @@ export function EpgCards({ onSelect }) {
           const nowTime =
             nowStart != null ? `${formatHHmm(nowStart)} - ${formatHHmm(nowEnd)}` : '';
           const nextTime = (() => {
-            const s = asMs(next?.startDate);
-            const e = asMs(next?.endDate);
+            const s = (asMs(next?.startDate) ?? asMs(next?.start));
+            const e = (asMs(next?.endDate) ?? asMs(next?.end));
             return s != null && e != null ? `${formatHHmm(s)} - ${formatHHmm(e)}` : '';
           })();
           const laterTime = (() => {
-            const s = asMs(later?.startDate);
-            const e = asMs(later?.endDate);
+            const s = (asMs(later?.startDate) ?? asMs(later?.start));
+            const e = (asMs(later?.endDate) ?? asMs(later?.end));
             return s != null && e != null ? `${formatHHmm(s)} - ${formatHHmm(e)}` : '';
           })();
 
@@ -277,7 +275,7 @@ export function EpgCards({ onSelect }) {
               <div
                 className="epg-cards-channel"
                 style={
-                  isLive
+                  nowIsLive
                     ? {
                         backgroundColor:
                           epgCardsCfg.epgCardsChannelActiveBg || 'rgba(10, 67, 133, 0.3)',
@@ -295,6 +293,7 @@ export function EpgCards({ onSelect }) {
                     alt={channel.name ?? ''}
                     onError={(e) => {
                       // Ocultar si falla la carga (misma idea de legacy onerror).
+                      markImageFailed(channelImg);
                       e.currentTarget.style.display = 'none';
                     }}
                   />
@@ -308,6 +307,7 @@ export function EpgCards({ onSelect }) {
               <div className="epg-cards-row-cards" style={{ ['--epg-cards-cols']: epgPastEnabled ? 4 : 3 }}>
                 {epgPastEnabled && (
                   <Card
+                    id={`epg-card-${rowIdx}-0`}
                     disabled={!before}
                     onEnter={() => {
                       setDetail({ channel, event: before, isLive: false });
@@ -319,17 +319,25 @@ export function EpgCards({ onSelect }) {
                   />
                 )}
                 <Card
-                  disabled={!now}
+                  id={`epg-card-${rowIdx}-${epgPastEnabled ? 1 : 0}`}
+                  disabled={!now && !channelPlayable}
                   onEnter={() => {
-                    setDetail({ channel, event: now, isLive });
-                    onSelect?.({ channel, event: now, isLive });
+                    setDetail({ channel, event: now || null, isLive: nowIsLive });
+                    onSelect?.({ channel, event: now || null, isLive: nowIsLive });
                   }}
-                  title={nowTitle}
+                  title={
+                    nowTitle ||
+                    (channelPlayable
+                      ? channel.name || t('epg.playLiveChannel', { defaultValue: 'Reproducir canal (en vivo)' })
+                      : '')
+                  }
                   timeText={nowTime}
-                  isLive={isLive}
-                  progressPercent={nowProgress}
+                  isLive={nowIsLive}
+                  progressStartMs={nowStart}
+                  progressEndMs={nowEnd}
                 />
                 <Card
+                  id={`epg-card-${rowIdx}-${epgPastEnabled ? 2 : 1}`}
                   disabled={!next}
                   onEnter={() => {
                     setDetail({ channel, event: next, isLive: false });
@@ -340,6 +348,7 @@ export function EpgCards({ onSelect }) {
                   isLive={false}
                 />
                 <Card
+                  id={`epg-card-${rowIdx}-${epgPastEnabled ? 3 : 2}`}
                   disabled={!later}
                   onEnter={() => {
                     setDetail({ channel, event: later, isLive: false });
@@ -375,9 +384,18 @@ export function EpgCards({ onSelect }) {
             setDetail(null);
             handlePlayLive(detail.channel);
           }}
-          onWatchCatchup={(catchupId) => {
-            if (catchupId == null || Number(catchupId) < 0) return;
-            navigate('/home/catchup', { state: { catchupId, from: 'epg' }, replace: false });
+          onWatchCatchup={(catchupStreamId, event) => {
+            if (catchupStreamId == null) return;
+            const epgStreamId =
+              detail?.channel?.epgStreamId ??
+              detail?.channel?.epg_stream_id ??
+              event?.epgStreamId ??
+              event?.epg_stream_id ??
+              null;
+            navigate('/home/catchup', {
+              state: { catchupId: catchupStreamId, epgStreamId, from: 'epg' },
+              replace: false,
+            });
           }}
           onRemind={({ channel, event, startMs }) => {
             const eventId = event?.event_id ?? event?.eventId ?? event?.id ?? null;

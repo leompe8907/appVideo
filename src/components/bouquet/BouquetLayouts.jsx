@@ -1,19 +1,27 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../../contexts/BrandContext';
-import { getCurrentEpgEvent } from '../../utils/epgCurrentEvent';
-import { parseEpgDateToMs, formatHHmmFromMs } from '../../utils/epgTime';
-import { useParental } from '../../store/useParental';
-import { getChannelStableId } from '../../utils/channelId';
+import { useDevice } from '../../contexts/DeviceContext';
+import { getCurrentEpgEvent, getEpgEventTitle } from '@appvideo/core/utils/epgCurrentEvent';
+import { parseEpgDateToMs, formatHHmmFromMs } from '@appvideo/core/utils/epgTime';
+import { useParental } from '@appvideo/core/store/useParental';
+import { getChannelStableId } from '@appvideo/core/utils/channelId';
 import { proxyImageUrl } from '../../utils/imageProxy';
+import { usableImageUrl, markImageFailed } from '@appvideo/core/utils/remoteImage';
 import { getTvActionFromKeyEvent, TV_ACTION } from '../../utils/tvRemote';
 import {
-  getBouquetGridHorizontalClasses,
+  getBouquetHorizontalGridClasses,
   getBouquetGridVerticalClasses,
-  getBouquetRowCarouselClasses,
 } from '../../utils/bouquetLayoutClasses';
-import { buildChannelLogoUrl, getChannelLayoutVariant } from '../../utils/bouquetLayoutConfig';
+import {
+  buildChannelLogoUrl,
+  getChannelLayoutVariant,
+  resolveHorizontalGridMode,
+  resolveVerticalGridColumns,
+} from '@appvideo/core/utils/bouquetLayoutConfig';
+import { useChunkedList } from '../../hooks/useChunkedList';
 import { EmblaHorizontalRail } from '../navigation/EmblaHorizontalRail';
+import { groupItemsIntoColumnMajorColumns } from '../../utils/horizontalBouquetGrid';
 
 // --- Helpers EPG para layout event_and_logo ---
 /** Parsea "YYYY-MM-DD HH:mm:ss" a "HH:mm" para mostrar en UI */
@@ -33,13 +41,6 @@ function getEpgEventProgressPercent(event) {
   return Math.min(100, Math.max(0, p));
 }
 
-/** Título del evento desde languages[0].title o campo directo */
-function getEpgEventTitle(event) {
-  if (!event) return '';
-  if (event.languages?.[0]?.title) return event.languages[0].title;
-  return event.title ?? '';
-}
-
 // Helper local para normalizar colores (copia ligera del usado en Bouquet.jsx)
 function normalizeColor(color) {
   if (!color || typeof color !== 'string') return null;
@@ -53,21 +54,33 @@ function normalizeColor(color) {
 }
 
 /**
- * Diseño tipo 10foot: fila horizontal de canales por bouquet.
- * Espera un objeto bouquet con:
- * - bouquet.bouquetId
- * - bouquet.name / description
- * - bouquet.items: array de canales { id, name, img, lcn, backgroundColor, ... }
+ * Límite de montaje de `useChunkedList` para las grillas de bouquet (2026-08-24):
+ * probado sin límite en PC y TV — en PC anda perfecto, en TV se nota lento con
+ * bouquets largos (~54 canales montados de una, cada uno con su imagen). Por
+ * eso queda activo solo en TV, y solo con la ventana ya alineada a filas
+ * completas (`columns` en `useChunkedList`) — antes de ese fix, el buffer sin
+ * alinear producía filas cortadas a mitad + saltos de foco/scroll al
+ * recentrarse. En PC se deja siempre todo montado (no hace falta ahí).
  */
-export function BouquetRowCarousel({
+
+/**
+ * Bouquet horizontal unificado: CSS Grid según customData (horizontal_grid / carrusel).
+ * - flow column + scroll X: multi-fila (rows > 1) o carrusel nowrap
+ * - flow row: logo_with_number con wrap alineado a la izquierda
+ */
+export function BouquetHorizontalGrid({
   bouquet,
   onChannelSelect,
   onChannelFocus,
   layoutType,
   logoIndex = '1',
+  gridRows = 1,
   containerType = 'horizontal_carousel',
+  platformLayoutType = null,
+  backgroundColor = null,
 }) {
   const { t } = useTranslation();
+  const { isPC, isTV } = useDevice();
   const title =
     bouquet?.name ??
     bouquet?.title ??
@@ -75,34 +88,96 @@ export function BouquetRowCarousel({
     bouquet?.Title ??
     t('bouquet.unknown');
 
-  const items = Array.isArray(bouquet?.items) ? bouquet.items : [];
-  if (items.length === 0) return null;
+  const rawItems = Array.isArray(bouquet?.items) ? bouquet.items : [];
 
-  const { carousel: carouselClass, track: trackClass } = getBouquetRowCarouselClasses(layoutType);
+  const gridMode = resolveHorizontalGridMode(
+    containerType,
+    layoutType,
+    gridRows,
+    platformLayoutType,
+    { isPC }
+  );
+  const useEmbla = isPC && gridMode.scrollX;
+  // useChunkedList debe llamarse siempre, sin importar rawItems.length: el
+  // early-return de abajo estaba ANTES de este hook, violando Rules of Hooks
+  // (si rawItems pasa de vacío a no-vacío entre renders, el orden de hooks
+  // cambiaba). Ahora el hook corre incondicionalmente y el bail-out va
+  // después de todos los hooks.
+  const { entries, reportFocusIndex } = useChunkedList(rawItems, {
+    enabled: isTV && !useEmbla,
+  });
+  const { root: rootClass, track: trackClass } = getBouquetHorizontalGridClasses(layoutType);
+  const trackStyle = { '--bouquet-grid-rows': gridMode.rows };
+
+  if (rawItems.length === 0) return null;
+
+  const renderChannelCard = (channel, index) => (
+    <ChannelCard
+      key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
+      channel={channel}
+      layoutType={layoutType}
+      logoIndex={logoIndex}
+      backgroundColor={backgroundColor}
+      onSelect={() => onChannelSelect?.(channel, bouquet)}
+      onFocus={() => {
+        reportFocusIndex(index);
+        onChannelFocus?.(channel, bouquet);
+      }}
+    />
+  );
+
+  const trackDataProps = {
+    'data-grid-flow': gridMode.flow,
+    'data-grid-rows': gridMode.rows,
+    style: trackStyle,
+    ...(gridMode.scrollX && !useEmbla ? { 'data-native-horizontal-rail': true } : {}),
+  };
+
+  const renderTrackContent = () => {
+    if (useEmbla && gridMode.rows > 1) {
+      // Path Embla (PC con scroll horizontal): sin virtualización — `enabled:
+      // false` en el hook de arriba ya deja `entries` con la lista completa,
+      // pero acá usamos `rawItems` directo para no depender de esa ventana.
+      const columns = groupItemsIntoColumnMajorColumns(rawItems, gridMode.rows);
+      return columns.map((column, colIndex) => (
+        <div key={`col-${colIndex}`} className="bouquet-horizontal-grid-column">
+          {column.map(({ item, index }) => renderChannelCard(item, index))}
+        </div>
+      ));
+    }
+
+    return entries.map(({ item, index }) => renderChannelCard(item, index));
+  };
 
   return (
     <div
-      className={carouselClass}
+      className={rootClass}
       data-bouquet-id={bouquet.bouquetId ?? bouquet.id ?? ''}
       data-layout={layoutType ?? ''}
       data-container-type={containerType}
+      data-grid-rows={gridMode.rows}
+      data-grid-flow={gridMode.flow}
+      data-platform-layout-type={platformLayoutType ?? ''}
     >
       <h4 className="bouquet-heading">{title}</h4>
-      <EmblaHorizontalRail className={trackClass}>
-        {items.map((channel, index) => (
-          <ChannelCard
-            key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
-            channel={channel}
-            layoutType={layoutType}
-            logoIndex={logoIndex}
-            onSelect={() => onChannelSelect?.(channel, bouquet)}
-            onFocus={() => onChannelFocus?.(channel, bouquet)}
-          />
-        ))}
-      </EmblaHorizontalRail>
+      {useEmbla ? (
+        <EmblaHorizontalRail className="bouquet-horizontal-embla-viewport">
+          {renderTrackContent()}
+        </EmblaHorizontalRail>
+      ) : (
+        <div className={trackClass} {...trackDataProps}>
+          {renderTrackContent()}
+        </div>
+      )}
     </div>
   );
 }
+
+/** @deprecated Alias de BouquetHorizontalGrid */
+export const BouquetRowCarousel = BouquetHorizontalGrid;
+
+/** @deprecated Alias de BouquetHorizontalGrid */
+export const BouquetGridHorizontal = BouquetHorizontalGrid;
 
 /**
  * Tarjeta de canal. Su diseño concreto depende de la variante:
@@ -112,9 +187,10 @@ export function BouquetRowCarousel({
  * - event_line: igual que event pero con tamaño mayor
  * - logo_with_number: logo centrado en tarjeta + LCN abajo a la derecha + nombre debajo
  */
-function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }) {
+export function ChannelCard({ channel, layoutType, logoIndex = '1', backgroundColor = null, onSelect, onFocus }) {
+  const { isTV } = useDevice();
   const parental = useParental();
-  const [focused, setFocused] = useState(false);
+  const focusedRef = useRef(false);
 
   const bgColor = normalizeColor(channel.backgroundColor ?? channel.bgColor);
   const variant = getChannelLayoutVariant(layoutType);
@@ -125,6 +201,12 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
         ? { backgroundColor: bgColor }
         : {};
   const logoWithNumberFrameStyle = bgColor ? { backgroundColor: bgColor } : undefined;
+  // Color de fondo por BOUQUET (customData.layouts.<device>.background_color, ej.
+  // "Más vistos") para el rectángulo del logo en event_and_logo -- independiente
+  // del `bgColor` por canal de arriba, que ese variant no usa. Si no viene,
+  // se deja sin inline style y manda el `#0a0a0a` fijo del CSS de siempre.
+  const bouquetLogoBgColor = variant === 'event_and_logo' ? normalizeColor(backgroundColor) : null;
+  const logoTopStyle = bouquetLogoBgColor ? { backgroundColor: bouquetLogoBgColor } : undefined;
   const channelLcn =
     channel.lcn ?? channel.LCN ?? channel.logicalChannelNumber ?? channel.logical_channel_number;
   const showLcn = channelLcn != null && String(channelLcn).trim() !== '';
@@ -154,13 +236,14 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
   useEffect(() => {
     if (variant !== 'event_and_logo' && variant !== 'event_and_logo_overlay') return;
     const tick = () => {
+      if (isTV && !focusedRef.current) return;
       const event = getCurrentEpgEvent(epgItemsRef.current);
       setTimeshipPercent(getEpgEventProgressPercent(event));
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [variant]);
+  }, [variant, isTV]);
 
   // Placeholder cuando ni evento ni logo cargan (imagen de canal dañada o ausente)
   const { currentBrand, getImage } = useBrand();
@@ -169,10 +252,17 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
   const brandBaseUrl = currentBrand?.drm || currentBrand?.baseUrl || '';
 
   // Imagen de evento: EPG primero, luego fallbacks. Cadena: evento → logo → placeholder
-  const eventImage = eventImageFromEpg || channel.eventImage || channel.currentEvent?.image || null;
-  const fallbackLogoImage = channel.img || null;
+  // URLs rotas del operador (vacías, sin id, o que ya fallaron antes) ni se
+  // piden: ver @appvideo/core/utils/remoteImage.
+  const imgOpts = { allowRelative: true };
+  const eventImage = usableImageUrl(
+    eventImageFromEpg || channel.eventImage || channel.currentEvent?.image,
+    imgOpts,
+  );
+  const fallbackLogoImage = usableImageUrl(channel.img, imgOpts);
   // Preferimos URLs absolutas (drm baseUrl) para evitar 404 en deploy (Vercel) con rutas relativas /cdn/...
-  const initialLogoUrl = buildChannelLogoUrl(channel, brandBaseUrl, logoIndex) || fallbackLogoImage;
+  const initialLogoUrl =
+    usableImageUrl(buildChannelLogoUrl(channel, brandBaseUrl, logoIndex), imgOpts) || fallbackLogoImage;
   const [logoImage, setLogoImage] = useState(() => initialLogoUrl);
   const currentEventKey = currentEpgEvent?.event_id ?? `${channel.id ?? ''}-${channel.lcn ?? ''}`;
   const [failedEventKey, setFailedEventKey] = useState(null);
@@ -195,6 +285,7 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
   }, [initialLogoUrl, placeholderImageUrl, fallbackLogoImage, brandBaseUrl]);
 
   const handleLogoError = () => {
+    if (logoImage && logoImage !== placeholderImageUrl) markImageFailed(logoImage);
     if (fallbackLogoImage && logoImage !== fallbackLogoImage) {
       setLogoImage(fallbackLogoImage);
     } else if (placeholderImageUrl) {
@@ -203,6 +294,7 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
   };
 
   const handleEventImageError = () => {
+    markImageFailed(eventImage);
     setFailedEventKey(currentEventKey);
   };
 
@@ -214,7 +306,7 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
   const handleClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (import.meta.env?.DEV) {
+    if (import.meta.env.DEV) {
       console.log('[ChannelCard] click', channel?.id ?? channel?.lcn);
     }
     onFocus?.();
@@ -235,16 +327,17 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
       className={[
         'channel-card',
         `channel-card--${variant}`,
-        focused ? 'focused' : '',
         isBlocked ? 'channel-card--blocked' : '',
       ].filter(Boolean).join(' ')}
       style={style}
       onMouseEnter={() => onFocus?.()}
       onFocus={() => {
-        setFocused(true);
+        focusedRef.current = true;
         onFocus?.();
       }}
-      onBlur={() => setFocused(false)}
+      onBlur={() => {
+        focusedRef.current = false;
+      }}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       tabIndex={0}
@@ -257,7 +350,7 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
         <>
           <div className="channel-card-frame">
             {(logoImage || placeholderImageUrl) && (
-              <div className="channel-card-logo-top">
+              <div className="channel-card-logo-top" style={logoTopStyle}>
                 <img
                   src={logoImage || placeholderImageUrl}
                   alt={channel.name || ''}
@@ -302,7 +395,7 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
           )}
         </>
       ) : variant === 'event_and_logo_overlay' ? (
-        <>
+        <div className="channel-card-frame">
           {(logoImage || placeholderImageUrl) && (
             <div className="channel-card-logo-top">
               <img
@@ -346,7 +439,7 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
               </div>
             </div>
           </div>
-        </>
+        </div>
       ) : variant === 'logo_with_number' ? (
         <>
           <div className="channel-card-lwn-frame" style={logoWithNumberFrameStyle}>
@@ -389,69 +482,6 @@ function ChannelCard({ channel, layoutType, logoIndex = '1', onSelect, onFocus }
     </div>
   );
 }
-
-/**
- * Layout de tipo grid horizontal: 3 filas de canales que se desplazan en horizontal
- * de izquierda a derecha para un mismo bouquet.
- */
-export function BouquetGridHorizontal({
-  bouquet,
-  onChannelSelect,
-  onChannelFocus,
-  layoutType,
-  logoIndex = '1',
-  gridRows = 3,
-  containerType = 'horizontal_multi_row',
-}) {
-  const { t } = useTranslation();
-  const title =
-    bouquet?.name ??
-    bouquet?.title ??
-    bouquet?.Name ??
-    bouquet?.Title ??
-    t('bouquet.unknown');
-
-  const items = Array.isArray(bouquet?.items) ? bouquet.items : [];
-  if (items.length === 0) return null;
-
-  const rowCount = Math.max(1, Math.min(Number(gridRows) || 3, 6));
-  const rows = Array.from({ length: rowCount }, () => []);
-  items.forEach((channel, index) => {
-    const rowIndex = index % rowCount;
-    rows[rowIndex].push({ channel, index });
-  });
-
-  const { root: gridClass, track: trackClass } = getBouquetGridHorizontalClasses(layoutType);
-
-  return (
-    <div
-      className={gridClass}
-      data-bouquet-id={bouquet.bouquetId ?? bouquet.id ?? ''}
-      data-layout={layoutType ?? ''}
-      data-container-type={containerType}
-      data-grid-rows={rowCount}
-    >
-      <h4 className="bouquet-heading">{title}</h4>
-      <div className="bouquet-grid-horizontal-rows">
-        {rows.map((row, rowIndex) => (
-          <EmblaHorizontalRail key={`row-${rowIndex}`} className={trackClass}>
-            {row.map(({ channel, index }) => (
-              <ChannelCard
-                key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
-                channel={channel}
-                layoutType={layoutType}
-                logoIndex={logoIndex}
-                onSelect={() => onChannelSelect?.(channel, bouquet)}
-                onFocus={() => onChannelFocus?.(channel, bouquet)}
-              />
-            ))}
-          </EmblaHorizontalRail>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /**
  * Layout de tipo grid vertical: N columnas de canales que se desplazan
  * de arriba hacia abajo.
@@ -462,10 +492,13 @@ export function BouquetGridVertical({
   onChannelFocus,
   layoutType,
   logoIndex = '1',
-  gridColumns = null,
+  gridColumns = 1,
   containerType = 'vertical_grid',
+  platformLayoutType = null,
+  backgroundColor = null,
 }) {
   const { t } = useTranslation();
+  const { isTV } = useDevice();
   const title =
     bouquet?.name ??
     bouquet?.title ??
@@ -473,14 +506,19 @@ export function BouquetGridVertical({
     bouquet?.Title ??
     t('bouquet.unknown');
 
-  const items = Array.isArray(bouquet?.items) ? bouquet.items : [];
-  if (items.length === 0) return null;
+  const rawItems = Array.isArray(bouquet?.items) ? bouquet.items : [];
+  const columnCount = resolveVerticalGridColumns(gridColumns);
+  const { entries, reportFocusIndex } = useChunkedList(rawItems, {
+    enabled: isTV,
+    columns: columnCount,
+  });
+  if (rawItems.length === 0) return null;
 
   const { root: gridClass, track: trackClass } = getBouquetGridVerticalClasses(layoutType);
-  const trackStyle =
-    gridColumns != null && Number(gridColumns) > 0
-      ? { gridTemplateColumns: `repeat(${Number(gridColumns)}, minmax(0, 1fr))` }
-      : undefined;
+  const trackStyle = {
+    '--bouquet-grid-columns': columnCount,
+    gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+  };
 
   return (
     <div
@@ -488,17 +526,23 @@ export function BouquetGridVertical({
       data-bouquet-id={bouquet.bouquetId ?? bouquet.id ?? ''}
       data-layout={layoutType ?? ''}
       data-container-type={containerType}
+      data-grid-columns={columnCount}
+      data-platform-layout-type={platformLayoutType ?? ''}
     >
       <h4 className="bouquet-heading">{title}</h4>
-      <div className={trackClass} style={trackStyle}>
-        {items.map((channel, index) => (
+      <div className={trackClass} style={trackStyle} data-grid-columns={columnCount}>
+        {entries.map(({ item: channel, index }) => (
           <ChannelCard
             key={channel.id ?? `${index}-${channel.lcn ?? ''}`}
             channel={channel}
             layoutType={layoutType}
             logoIndex={logoIndex}
+            backgroundColor={backgroundColor}
             onSelect={() => onChannelSelect?.(channel, bouquet)}
-            onFocus={() => onChannelFocus?.(channel, bouquet)}
+            onFocus={() => {
+              reportFocusIndex(index);
+              onChannelFocus?.(channel, bouquet);
+            }}
           />
         ))}
       </div>

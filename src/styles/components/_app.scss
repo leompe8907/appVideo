@@ -38,7 +38,11 @@ header {
 .header-actions {
   margin-top: $spacing-lg;
   @include flex(row, center, center);
-  gap: $spacing-md;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: $spacing-md;
+  }
 }
 
 .toggle-btn,
@@ -146,8 +150,12 @@ header {
 .features-grid {
   @include flex(row, flex-start, center);
   flex-wrap: wrap;
-  gap: 0.75rem;
   margin-bottom: $spacing-md;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > * {
+    margin: 0 0.375rem 0.75rem;
+  }
 }
 
 .feature-badge {

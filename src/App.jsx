@@ -1,32 +1,42 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { HomeEpgRoutesLayout } from './components/preload/HomeEpgRoutesLayout';
 import { useAuthValidator } from './hooks/useAuthValidator';
+import { useAppLifecycle } from './hooks/useAppLifecycle';
+import { useMediaSession } from './hooks/useMediaSession';
 import { useBrand } from './contexts/BrandContext';
-import { isAuthenticated } from './utils/userSession';
+import { isAuthenticated } from '@appvideo/core/utils/userSession';
 import { PlayerProvider } from './contexts/PlayerContext';
-import { PreloadGate } from './components/preload/PreloadGate';
+import { TvFocusRing } from './components/navigation/TvFocusRing';
+import { OsdKeyboardProvider } from './contexts/OsdKeyboardContext';
+import { navigationRouter } from './navigation/NavigationRouter';
+import { useDevice } from './contexts/DeviceContext';
+import HomePage from './pages/HomePage';
+import BouquetPage from './pages/BouquetPage';
 import {
   startSessionValidator,
   stopSessionValidator,
   setOnSessionInvalid,
 } from './utils/sessionValidator';
+import { setOnDeviceRevoked } from '@appvideo/core/services/deviceSessionService';
+import { clearSessionBeforeNewLogin } from '@appvideo/core/services/loginFlow';
+import { usesExternalProfiles } from '@appvideo/core/utils/navigation';
 
 // Lazy loading de páginas
 const SplashPage = lazy(() => import('./pages/SplashPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const ExternalProfilePage = lazy(() => import('./pages/ExternalProfilePage'));
 const SmartCardPage = lazy(() => import('./pages/SmartCardPage'));
-const BouquetPage = lazy(() => import('./pages/BouquetPage'));
 const TvRadioServicesPage = lazy(() => import('./pages/TvRadioServicesPage'));
 const VodPage = lazy(() => import('./pages/VodPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
 const PreloadDataPage = lazy(() => import('./pages/PreloadDataPage'));
-const HomePage = lazy(() => import('./pages/HomePage'));
 const EpgCardsPage = lazy(() => import('./pages/EpgCardsPage'));
 const CatchupPage = lazy(() => import('./pages/CatchupPage'));
-const ParentalSettingsPage = lazy(() => import('./pages/ParentalSettingsPage'));
 const OsmsPage = lazy(() => import('./pages/OsmsPage'));
+const MiCuentaPage = lazy(() => import('./pages/MiCuentaPage'));
 const HomePlaceholderPage = lazy(() =>
   import('./pages/HomePage').then((m) => ({ default: m.HomePlaceholderPage }))
 );
@@ -63,16 +73,74 @@ function ProtectedRoute({ children }) {
   );
 }
 
+/**
+ * Bloquea el acceso directo por URL a la guía (EPG) cuando la marca la tiene
+ * deshabilitada (`EPG.enabled === false` en brands.js) -- mismo flag que
+ * oculta el link del menú, el botón del player y el tab de búsqueda.
+ */
+function EpgGuardRoute({ children }) {
+  const { currentBrand } = useBrand();
+  const epgEnabled = currentBrand?.EPG?.enabled !== false;
+  if (!epgEnabled) {
+    return <Navigate to="/home/inicio" replace />;
+  }
+  return children;
+}
+
+function AppLifecycleHost() {
+  useAppLifecycle();
+  useMediaSession();
+  return null;
+}
+
 function App() {
   useTranslation();
   const navigate = useNavigate();
   const { currentBrand } = useBrand();
+  const { isTV } = useDevice();
+
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem('app_reloaded_from_error');
+    } catch {
+      // noop
+    }
+  }, []);
+
+  useEffect(() => {
+    // El router siempre corre (BACK/Escape de modales debe funcionar en cualquier
+    // dispositivo). El movimiento de foco por geometría (LRUD) solo se habilita en TV.
+    navigationRouter.setSpatialNavEnabled(isTV);
+    navigationRouter.start();
+    return () => navigationRouter.stop();
+  }, [isTV]);
 
   useEffect(() => {
     setOnSessionInvalid(() => {
       navigate('/', { replace: true });
     });
     return () => setOnSessionInvalid(null);
+  }, [navigate]);
+
+  useEffect(() => {
+    // "Dispositivos vinculados" (Fase 3 del backend externo) -- si este
+    // mismo dispositivo recibe `device_revoked` en vivo (lo revocó el
+    // propio usuario desde el panel, otro dispositivo, o un cambio de
+    // contraseña/cierre de cuenta), fuerza un logout real y vuelve a
+    // splash. Antes este evento llegaba (`deviceSessionService.js` ya lo
+    // procesaba bien) pero no tenía ningún efecto visible: el callback
+    // que lo recibía (`loginFlow.js`) es un servicio plano sin acceso al
+    // router, así que solo lo logueaba en desarrollo -- la app se quedaba
+    // logueada con un device_token muerto hasta el próximo reinicio.
+    setOnDeviceRevoked(() => {
+      try {
+        clearSessionBeforeNewLogin();
+      } catch {
+        // noop -- igual navegamos a splash aunque la limpieza falle parcialmente
+      }
+      navigate('/', { replace: true });
+    });
+    return () => setOnDeviceRevoked(null);
   }, [navigate]);
 
   useEffect(() => {
@@ -89,33 +157,41 @@ function App() {
   return (
     <>
       <PlayerProvider>
-        <div className="App">
-          <Routes>
-              {/* Rutas públicas */}
-              <Route path="/" element={<Suspense fallback={<Loading />}><SplashPage /></Suspense>}/>
-              <Route path="/login" element={<Suspense fallback={<Loading />}><LoginPage /></Suspense>}/>
-              {/* Rutas protegidas */}
-              <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<Loading />}><ProfilePage /></Suspense></ProtectedRoute>}/>
-              <Route path="/smartcard" element={<ProtectedRoute><Suspense fallback={<Loading />}><SmartCardPage /></Suspense></ProtectedRoute>}/>
-              <Route path="/preload" element={<ProtectedRoute><Suspense fallback={<Loading />}><PreloadDataPage /></Suspense></ProtectedRoute>}/>
-              <Route path="/inicio" element={<Navigate to="/home/inicio" replace />}/>
-              <Route path="/vod" element={<Navigate to="/home/vod" replace />}/>
-              <Route path="/epg" element={<Navigate to="/home/epg" replace />}/>
-              <Route path="/home" element={<ProtectedRoute><Suspense fallback={<Loading />}><HomePage /></Suspense></ProtectedRoute>}>
-                <Route path="inicio" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><BouquetPage /></Suspense></PreloadGate>}/>
-                <Route path="buscador" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><SearchPage /></Suspense></PreloadGate>}/>
-                <Route path="servicios-tv-radio"element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><TvRadioServicesPage /></Suspense></PreloadGate>}/>
-                <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>}/>
-                <Route path="epg" element={<PreloadGate required="epg"> <Suspense fallback={<Loading />}> <EpgCardsPage /></Suspense></PreloadGate>}/>
-                <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>}/>
-                <Route path="control-parental" element={<PreloadGate required="epg"><Suspense fallback={<Loading />}><ParentalSettingsPage /></Suspense></PreloadGate>}/>
-                <Route path="osms" element={<Suspense fallback={<Loading />}><OsmsPage /></Suspense>}/>
-                <Route path="*" element={<Navigate to="/home/inicio" replace />} />
-              </Route>
-              {/* Fallback */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
+        <AppLifecycleHost />
+        <OsdKeyboardProvider>
+          <TvFocusRing />
+          <div className="App">
+            <Routes>
+                {/* Rutas públicas */}
+                <Route path="/" element={<Suspense fallback={<Loading />}><SplashPage /></Suspense>}/>
+                <Route path="/login" element={<Suspense fallback={<Loading />}><LoginPage /></Suspense>}/>
+                {/* Rutas protegidas */}
+                <Route path="/profile" element={<ProtectedRoute><Suspense fallback={<Loading />}>{usesExternalProfiles(currentBrand) ? <ExternalProfilePage /> : <ProfilePage />}</Suspense></ProtectedRoute>}/>
+                <Route path="/smartcard" element={<ProtectedRoute><Suspense fallback={<Loading />}><SmartCardPage /></Suspense></ProtectedRoute>}/>
+                <Route path="/preload" element={<ProtectedRoute><Suspense fallback={<Loading />}><PreloadDataPage /></Suspense></ProtectedRoute>}/>
+                <Route path="/inicio" element={<Navigate to="/home/inicio" replace />}/>
+                <Route path="/vod" element={<Navigate to="/home/vod" replace />}/>
+                <Route path="/epg" element={<EpgGuardRoute><Navigate to="/home/epg" replace /></EpgGuardRoute>}/>
+                <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>}>
+                  <Route element={<HomeEpgRoutesLayout />}>
+                    <Route path="inicio" element={<BouquetPage />} />
+                    <Route path="buscador" element={<Suspense fallback={<Loading />}><SearchPage /></Suspense>} />
+                    <Route path="servicios-tv-radio" element={<Suspense fallback={<Loading />}><TvRadioServicesPage /></Suspense>} />
+                    <Route path="epg" element={<EpgGuardRoute><Suspense fallback={<Loading />}><EpgCardsPage /></Suspense></EpgGuardRoute>} />
+                  </Route>
+                  <Route path="vod" element={<Suspense fallback={<Loading />}><VodPage /></Suspense>} />
+                  <Route path="catchup" element={<Suspense fallback={<Loading />}><CatchupPage /></Suspense>} />
+                  <Route path="osms" element={<Suspense fallback={<Loading />}><OsmsPage /></Suspense>} />
+                  <Route path="mi-cuenta" element={<Suspense fallback={<Loading />}><MiCuentaPage /></Suspense>} />
+                  {/* El control parental vive dentro de Mi Cuenta (como en Vega). */}
+                  <Route path="control-parental" element={<Navigate to="/home/mi-cuenta?section=parental" replace />} />
+                  <Route path="*" element={<Navigate to="/home/inicio" replace />} />
+                </Route>
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+        </OsdKeyboardProvider>
       </PlayerProvider>
     </>
   );

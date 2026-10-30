@@ -19,8 +19,6 @@
 .epg-page-overlay {
   position: absolute;
   inset: 0;
-  // Similar al overlay del login para que no "tape" la imagen con un tono gris.
-  background: rgba(0, 0, 0, 0.6);
   pointer-events: none;
   z-index: 1;
 }

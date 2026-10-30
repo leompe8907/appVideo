@@ -4,13 +4,20 @@
  */
 
 
-import { getVodImageUrl } from '../../services/vodService';
+import { useState } from 'react';
+import { getVodImageUrl } from '@appvideo/core/services/vodService';
+import { usableImageUrl, markImageFailed } from '@appvideo/core/utils/remoteImage';
 
 export function VodCard({ item, onSelect, baseUrl }) {
-  const posterUrl =
+  const [failedUrl, setFailedUrl] = useState(null);
+  const candidate = usableImageUrl(
     item.posterListURL ||
-    item.posterInfoURL ||
-    (item.image1Id != null && baseUrl ? getVodImageUrl(baseUrl, item.image1Id, 'posterList') : null);
+      item.posterInfoURL ||
+      (item.image1Id != null && baseUrl ? getVodImageUrl(baseUrl, item.image1Id, 'posterList') : null),
+    { allowRelative: true },
+  );
+  // Poster roto: se recuerda (no se vuelve a pedir) y se muestra el placeholder.
+  const posterUrl = candidate && candidate !== failedUrl ? candidate : null;
   const title = item.name || item.title || '';
 
   const handleClick = () => onSelect?.(item);
@@ -32,7 +39,15 @@ export function VodCard({ item, onSelect, baseUrl }) {
     >
       <div className="vod-card-poster">
         {posterUrl ? (
-          <img src={posterUrl} alt="" loading="lazy" />
+          <img
+            src={posterUrl}
+            alt=""
+            loading="lazy"
+            onError={() => {
+              markImageFailed(posterUrl);
+              setFailedUrl(posterUrl);
+            }}
+          />
         ) : (
           <div className="vod-card-poster-placeholder" aria-hidden="true" />
         )}

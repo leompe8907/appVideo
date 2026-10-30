@@ -1,0 +1,657 @@
+import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
+import Hls, { XhrLoader } from 'hls.js';
+import CryptoJS from 'crypto-js';
+import { getActiveBrandConfig } from '@appvideo/core/config/brandConfig';
+import { resolveLiveBuffer } from '@appvideo/core/player/liveBufferConfig';
+import { HlsPlaybackController, PanaccessKeyUnwrapLoader, upswitchBufferSeconds } from '../HlsPlaybackController.js';
+import { clearMasterCache, getCachedMaster, storeMaster } from '../masterManifestCache.js';
+
+/**
+ * jsdom no implementa `MediaSource`, así que `Hls.isSupported()` da `false` y
+ * el controller cae siempre a modo nativo (`_loadNative`), donde no existe
+ * ninguna lógica de reintento (esa vive en `_loadWithHlsJs`/hls.js). Para
+ * poder probar el backoff real hace falta un stub mínimo de `MediaSource` que
+ * satisfaga el chequeo de soporte de hls.js — no necesita reproducir video de
+ * verdad, solo existir con la forma correcta.
+ */
+class FakeMediaSource {
+  static isTypeSupported() {
+    return true;
+  }
+
+  constructor() {
+    this.readyState = 'open';
+    this.sourceBuffers = [];
+  }
+
+  addSourceBuffer() {
+    const sb = {
+      updating: false,
+      appendBuffer() {},
+      remove() {},
+      addEventListener() {},
+      removeEventListener() {},
+    };
+    this.sourceBuffers.push(sb);
+    return sb;
+  }
+
+  addEventListener() {}
+
+  removeEventListener() {}
+}
+
+beforeAll(() => {
+  window.MediaSource = FakeMediaSource;
+  globalThis.MediaSource = FakeMediaSource;
+});
+
+/**
+ * Regresión del audit finding "sin reintento/backoff a nivel de aplicación
+ * ante errores fatales de streaming": antes, cualquier NETWORK_ERROR fatal
+ * que no fuera específicamente `manifestParsingError` escalaba directo a
+ * `onError` sin que el motor intentara reconectar — un corte de red
+ * transitorio (wifi que parpadea, fragmento que no cargó a tiempo) dejaba la
+ * pantalla congelada de inmediato. Estos tests verifican el backoff agregado
+ * en `_scheduleNetworkRetry`/`_handleFatalError`: reintentos via
+ * `hls.startLoad()` antes de rendirse, y reseteo del presupuesto de
+ * reintentos tras un fragmento bufferizado con éxito.
+ */
+
+function makeVideoEl() {
+  const el = document.createElement('video');
+  document.body.appendChild(el);
+  return el;
+}
+
+function fatalNetworkError(details = 'fragLoadError') {
+  return { type: Hls.ErrorTypes.NETWORK_ERROR, details, fatal: true };
+}
+
+describe('HlsPlaybackController - backoff de red', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('ante un NETWORK_ERROR fatal reintenta con hls.startLoad() en vez de escalar a onError de inmediato', async () => {
+    const videoEl = makeVideoEl();
+    const onError = vi.fn();
+    const controller = new HlsPlaybackController({ onError });
+
+    await controller.load(videoEl, 'https://example.invalid/master.m3u8');
+    const hls = controller.instance;
+    expect(hls).toBeTruthy();
+
+    const startLoadSpy = vi.spyOn(hls, 'startLoad').mockImplementation(() => {});
+
+    vi.useFakeTimers();
+    hls.trigger(Hls.Events.ERROR, fatalNetworkError());
+    expect(onError).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(startLoadSpy).toHaveBeenCalledTimes(1);
+    expect(onError).not.toHaveBeenCalled();
+
+    controller.destroy();
+  });
+
+  it('agota el presupuesto de reintentos (3) y recién ahí escala a onError', async () => {
+    const videoEl = makeVideoEl();
+    const onError = vi.fn();
+    const controller = new HlsPlaybackController({ onError });
+
+    await controller.load(videoEl, 'https://example.invalid/master.m3u8');
+    const hls = controller.instance;
+    vi.spyOn(hls, 'startLoad').mockImplementation(() => {});
+
+    vi.useFakeTimers();
+
+    // Intento 1 (delay 1s), 2 (delay 2s), 3 (delay 4s): reintenta.
+    hls.trigger(Hls.Events.ERROR, fatalNetworkError());
+    await vi.advanceTimersByTimeAsync(1000);
+    hls.trigger(Hls.Events.ERROR, fatalNetworkError());
+    await vi.advanceTimersByTimeAsync(2000);
+    hls.trigger(Hls.Events.ERROR, fatalNetworkError());
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(onError).not.toHaveBeenCalled();
+
+    // 4º error fatal seguido: sin presupuesto, se rinde y notifica.
+    hls.trigger(Hls.Events.ERROR, fatalNetworkError());
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+  });
+
+  it('un FRAG_BUFFERED exitoso resetea el presupuesto de reintentos para el próximo corte', async () => {
+    const videoEl = makeVideoEl();
+    const onError = vi.fn();
+    const controller = new HlsPlaybackController({ onError });
+
+    await controller.load(videoEl, 'https://example.invalid/master.m3u8');
+    const hls = controller.instance;
+    const startLoadSpy = vi.spyOn(hls, 'startLoad').mockImplementation(() => {});
+
+    vi.useFakeTimers();
+
+    // Agota los 3 reintentos.
+    hls.trigger(Hls.Events.ERROR, fatalNetworkError());
+    await vi.advanceTimersByTimeAsync(1000);
+    hls.trigger(Hls.Events.ERROR, fatalNetworkError());
+    await vi.advanceTimersByTimeAsync(2000);
+    hls.trigger(Hls.Events.ERROR, fatalNetworkError());
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(startLoadSpy).toHaveBeenCalledTimes(3);
+
+    // Se recupera: un fragmento carga bien. Se invoca directamente el
+    // listener propio del controller (el último registrado en la zona 'main'
+    // para este evento) en vez de `hls.trigger(FRAG_BUFFERED, {})`: ese
+    // evento real trae un payload profundo (`frag.stats.loading...`, etc.)
+    // que consumen otros controllers internos de hls.js (StreamController y
+    // similares) y con un objeto vacío tiran una excepción interna que
+    // `hls.trigger` atrapa silenciosamente — abortando el resto de listeners
+    // de esa emisión, incluido el nuestro, antes de que corra. Llamar
+    // directamente al listener que registramos evita depender de la forma
+    // exacta (y frágil ante actualizaciones de hls.js) de ese payload.
+    const fragBufferedListeners = hls.listeners(Hls.Events.FRAG_BUFFERED);
+    fragBufferedListeners[fragBufferedListeners.length - 1]();
+
+    // Nuevo corte: vuelve a tener presupuesto completo (no escala a onError).
+    hls.trigger(Hls.Events.ERROR, fatalNetworkError());
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(startLoadSpy).toHaveBeenCalledTimes(4);
+    expect(onError).not.toHaveBeenCalled();
+
+    controller.destroy();
+  });
+
+  it('destroy() durante la espera del backoff cancela el reintento pendiente', async () => {
+    const videoEl = makeVideoEl();
+    const onError = vi.fn();
+    const controller = new HlsPlaybackController({ onError });
+
+    await controller.load(videoEl, 'https://example.invalid/master.m3u8');
+    const hls = controller.instance;
+    const startLoadSpy = vi.spyOn(hls, 'startLoad').mockImplementation(() => {});
+
+    vi.useFakeTimers();
+    hls.trigger(Hls.Events.ERROR, fatalNetworkError());
+    controller.destroy();
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(startLoadSpy).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Regresión: un 401 (sesión/licencia revocada por el middleware, no un
+   * corte de red transitorio) escalaba a onError igual que cualquier otro
+   * NETWORK_ERROR, pero solo después de agotar los 3 reintentos locales
+   * (1s+2s+4s) — todos condenados a fallar, porque reintentan la MISMA
+   * petición con la MISMA sesión inválida. Ahora un 401 salta directo a
+   * onError (que dispara `tryRecoverAfterError` en PlayerContext) sin pasar
+   * por ese backoff inútil.
+   */
+  it('ante un 401 (sesión/licencia revocada) escala a onError de inmediato, sin backoff', async () => {
+    const videoEl = makeVideoEl();
+    const onError = vi.fn();
+    const controller = new HlsPlaybackController({ onError });
+
+    await controller.load(videoEl, 'https://example.invalid/master.m3u8');
+    const hls = controller.instance;
+    const startLoadSpy = vi.spyOn(hls, 'startLoad').mockImplementation(() => {});
+
+    hls.trigger(Hls.Events.ERROR, {
+      type: Hls.ErrorTypes.NETWORK_ERROR,
+      details: 'levelLoadError',
+      fatal: true,
+      response: { code: 401 },
+    });
+
+    expect(startLoadSpy).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0][0].message).toMatch(/401/);
+
+    controller.destroy();
+  });
+
+  /**
+   * Regresión: "segmentos .ts bajando en 200 OK durante minutos, sin ningún
+   * error en consola, pantalla de carga sin salir nunca" — visto en
+   * producción (Samsung Tizen). Causa: en un canal en vivo, cada fragmento
+   * nuevo es "virgen" para el contador de reintentos interno de hls.js, así
+   * que un fallo de demux/append que se repite fragmento tras fragmento
+   * nunca cruza EL PROPIO umbral de hls.js para marcarse fatal — queda
+   * como no-fatal para siempre, y los no-fatales no generan ningún reintento
+   * ni recuperación de nuestro lado. Este test verifica el watchdog: tras
+   * varios `fragParsingError`/`bufferAppendError` no-fatales seguidos sin un
+   * `FRAG_BUFFERED` de por medio, el controller lo trata como fatal.
+   */
+  it('escala a fatal tras varios fragParsingError no-fatales seguidos sin FRAG_BUFFERED (atasco silencioso)', async () => {
+    const videoEl = makeVideoEl();
+    const onError = vi.fn();
+    const controller = new HlsPlaybackController({ onError });
+
+    await controller.load(videoEl, 'https://example.invalid/master.m3u8');
+    const hls = controller.instance;
+    vi.spyOn(hls, 'recoverMediaError').mockImplementation(() => {});
+
+    // Se invoca directamente el listener propio del controller (el último
+    // registrado para este evento), igual que el test de FRAG_BUFFERED de
+    // arriba: `hls.trigger` propaga el evento a los controllers internos de
+    // hls.js también (ContentSteeringController, etc.), que esperan un
+    // payload de error "real" (con `errorAction`, contexto de red, etc.) y
+    // tiran su propia excepción interna con un objeto sintético mínimo como
+    // este — ruido ajeno a lo que este test verifica.
+    const errorListeners = hls.listeners(Hls.Events.ERROR);
+    const emitError = errorListeners[errorListeners.length - 1];
+
+    const nonFatalMediaError = () => ({
+      type: Hls.ErrorTypes.MEDIA_ERROR,
+      details: 'fragParsingError',
+      fatal: false,
+    });
+
+    for (let i = 0; i < 5; i += 1) {
+      emitError(Hls.Events.ERROR, nonFatalMediaError());
+    }
+    expect(onError).not.toHaveBeenCalled();
+
+    // 6º fallo seguido sin FRAG_BUFFERED de por medio: se trata como fatal.
+    // La primera vez, `_handleFatalError` intenta `recoverMediaError()` antes
+    // de escalar a `onError` (mismo camino que un fragParsingError fatal
+    // real) — no debería tirar la toalla de inmediato.
+    emitError(Hls.Events.ERROR, nonFatalMediaError());
+    expect(hls.recoverMediaError).toHaveBeenCalledTimes(1);
+    expect(onError).not.toHaveBeenCalled();
+
+    // Si sigue fallando tras el intento de recuperación, ahí sí escala.
+    for (let i = 0; i < 6; i += 1) {
+      emitError(Hls.Events.ERROR, nonFatalMediaError());
+    }
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+  });
+
+  it('un FRAG_BUFFERED exitoso resetea el contador de fallos no-fatales de media', async () => {
+    const videoEl = makeVideoEl();
+    const onError = vi.fn();
+    const controller = new HlsPlaybackController({ onError });
+
+    await controller.load(videoEl, 'https://example.invalid/master.m3u8');
+    const hls = controller.instance;
+    vi.spyOn(hls, 'recoverMediaError').mockImplementation(() => {});
+
+    const errorListeners = hls.listeners(Hls.Events.ERROR);
+    const emitError = errorListeners[errorListeners.length - 1];
+
+    const nonFatalMediaError = () => ({
+      type: Hls.ErrorTypes.MEDIA_ERROR,
+      details: 'fragParsingError',
+      fatal: false,
+    });
+
+    for (let i = 0; i < 5; i += 1) {
+      emitError(Hls.Events.ERROR, nonFatalMediaError());
+    }
+
+    const fragBufferedListeners = hls.listeners(Hls.Events.FRAG_BUFFERED);
+    fragBufferedListeners[fragBufferedListeners.length - 1]();
+
+    // Presupuesto reseteado: 5 fallos más NO deberían alcanzar el umbral (6).
+    for (let i = 0; i < 5; i += 1) {
+      emitError(Hls.Events.ERROR, nonFatalMediaError());
+    }
+    expect(onError).not.toHaveBeenCalled();
+    expect(hls.recoverMediaError).not.toHaveBeenCalled();
+
+    controller.destroy();
+  });
+});
+
+/**
+ * Regresión del bug reportado en vivo: el middleware Panaccess
+ * (`requestMode=mekey`, key nueva por cada segmento vía `chunk=N`) NO
+ * declara `IV=` en el `#EXT-X-KEY` del manifiesto, Y ADEMÁS manda una "key
+ * AES-128" que en realidad tiene 32 bytes, no 16. Se probaron primero varias
+ * hipótesis de "partir los 32 bytes a la mitad" (key+iv concatenados en
+ * distintos órdenes) y NINGUNA funcionó contra el CDN real — comparando con
+ * un player de referencia del mismo operador (`brand: "multiplustv"`) se
+ * confirmó el esquema real: esos 32 bytes son la key AES-128 real de 16
+ * bytes, cifrada con AES-128-CBC + PKCS7 usando una key/IV "wrapper" fijas
+ * hardcodeadas en el cliente (un plaintext de 16 bytes con PKCS7 siempre
+ * agrega un bloque completo de padding → exactamente 32 bytes). El IV del
+ * segmento en sí NO se toca: se deja el default estándar de hls.js (spec
+ * HLS: IV = número de secuencia del fragmento cuando el manifiesto no
+ * declara `IV=`).
+ *
+ * NOTA (2026-07): el unwrap se movió de un handler de `KEY_LOADED`
+ * (fire-and-forget, con condición de carrera real confirmada contra un bug
+ * en vivo: hls.js sigue usando `decryptdata.key` en el mismo tick, sin
+ * esperar la promesa) a `PanaccessKeyUnwrapLoader`, que intercepta la
+ * respuesta HTTP de la key ANTES de que hls.js la reciba. Estos tests ahora
+ * ejercitan el Loader directamente, mockeando `XhrLoader.prototype.load`
+ * (la clase de la que hereda) para no depender de una petición de red real.
+ */
+describe('PanaccessKeyUnwrapLoader - key Panaccess envuelta (requestMode=mekey)', () => {
+  const MEKEY_URI =
+    'https://mw.cabledelancer.com/index.php?requestMode=mekey&streamId=29&substream=1&chunk=1246338';
+
+  const WRAP_KEY = new Uint8Array([
+    0xb2, 0xc2, 0x3a, 0x00, 0xff, 0xfe, 0x86, 0x90, 0x17, 0x87, 0x05, 0xae, 0x19, 0xed, 0x08, 0xb8,
+  ]);
+  const WRAP_IV = new Uint8Array([
+    0x91, 0x0f, 0x03, 0xa9, 0x67, 0x6d, 0x2b, 0xf4, 0xe8, 0x22, 0x43, 0x37, 0xe7, 0x1a, 0x87, 0xd3,
+  ]);
+
+  async function wrapKey(realKey16) {
+    const cryptoKey = await crypto.subtle.importKey('raw', WRAP_KEY, { name: 'AES-CBC' }, false, ['encrypt']);
+    const wrapped = await crypto.subtle.encrypt({ name: 'AES-CBC', iv: WRAP_IV }, cryptoKey, realKey16);
+    return new Uint8Array(wrapped);
+  }
+
+  /** Simula lo que haría la XHR real: invoca onSuccess con la respuesta dada. */
+  function stubSuperLoadWith(responseData) {
+    return vi.spyOn(XhrLoader.prototype, 'load').mockImplementation(function stub(context, config, callbacks) {
+      callbacks.onSuccess({ url: context.url, data: responseData }, {}, context, null);
+    });
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('sin crypto.subtle (origen no seguro, ej. http:// en un TV) desenvuelve igual con el fallback de software', async () => {
+    const realKey = crypto.getRandomValues(new Uint8Array(16));
+    const wrapped32 = await wrapKey(realKey);
+    stubSuperLoadWith(wrapped32.buffer);
+    vi.stubGlobal('crypto', { getRandomValues: (arr) => arr });
+
+    const loader = new PanaccessKeyUnwrapLoader({});
+    const onSuccess = vi.fn();
+    loader.load({ keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' }, {}, { onSuccess });
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+
+    const [response] = onSuccess.mock.calls[0];
+    expect(Array.from(new Uint8Array(response.data))).toEqual(Array.from(realKey));
+  });
+
+  it('sin crypto.subtle, una key que no se puede desenvolver se loguea y pasa la respuesta original', async () => {
+    const bogus = new Uint8Array(32).fill(0xff);
+    stubSuperLoadWith(bogus.buffer);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('crypto', { getRandomValues: (arr) => arr });
+
+    const onSuccess = vi.fn();
+    new PanaccessKeyUnwrapLoader({}).load({ keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' }, {}, { onSuccess });
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+
+    expect(errorSpy).toHaveBeenCalled();
+    expect(Array.from(new Uint8Array(onSuccess.mock.calls[0][0].data))).toEqual(Array.from(bogus));
+  });
+
+  it('sin crypto.subtle, un wrapper distinto con padding "plausible" (último byte chico) también se rechaza', async () => {
+    // 31 bytes cualesquiera + último byte 5: crypto-js lo leería como una key de 27 bytes.
+    const { WordArray } = CryptoJS.lib;
+    const plaintext = new Uint8Array(32).fill(7);
+    plaintext[31] = 5;
+    const sealed = CryptoJS.AES.encrypt(WordArray.create(plaintext), WordArray.create(WRAP_KEY), {
+      iv: WordArray.create(WRAP_IV),
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.NoPadding,
+    }).ciphertext;
+    const wrapped = Uint8Array.from({ length: 32 }, (_, i) => (sealed.words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff);
+    stubSuperLoadWith(wrapped.buffer);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('crypto', { getRandomValues: (arr) => arr });
+
+    const onSuccess = vi.fn();
+    new PanaccessKeyUnwrapLoader({}).load({ keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' }, {}, { onSuccess });
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+
+    expect(errorSpy).toHaveBeenCalled();
+    expect(Array.from(new Uint8Array(onSuccess.mock.calls[0][0].data))).toEqual(Array.from(wrapped));
+  });
+
+  it('desenvuelve una key de 32 bytes ANTES de que onSuccess la reciba, sin tocar el IV (responsabilidad de hls.js)', async () => {
+    const realKey = crypto.getRandomValues(new Uint8Array(16));
+    const wrapped32 = await wrapKey(realKey);
+    const superLoad = stubSuperLoadWith(wrapped32.buffer);
+
+    const loader = new PanaccessKeyUnwrapLoader({});
+    const onSuccess = vi.fn();
+    const context = { keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' };
+    loader.load(context, {}, { onSuccess });
+
+    // El unwrap usa WebCrypto (async): esperar a que resuelva.
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+
+    expect(superLoad).toHaveBeenCalledTimes(1);
+    const [response] = onSuccess.mock.calls[0];
+    expect(Array.from(new Uint8Array(response.data))).toEqual(Array.from(realKey));
+  });
+
+  it('no toca una key que ya viene de 16 bytes (no hace falta desenvolver)', async () => {
+    const key16 = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+    stubSuperLoadWith(key16.buffer);
+
+    const loader = new PanaccessKeyUnwrapLoader({});
+    const onSuccess = vi.fn();
+    const context = { keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' };
+    loader.load(context, {}, { onSuccess });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    const [response] = onSuccess.mock.calls[0];
+    expect(new Uint8Array(response.data)).toEqual(key16);
+  });
+
+  it('no intercepta requests que no son de key (sin campo keyInfo)', () => {
+    const superLoad = stubSuperLoadWith(new ArrayBuffer(32));
+
+    const loader = new PanaccessKeyUnwrapLoader({});
+    const onSuccess = vi.fn();
+    const context = { url: 'https://mw.cabledelancer.com/index.php?requestMode=m3u8&streamId=29' };
+    const callbacks = { onSuccess };
+    loader.load(context, {}, callbacks);
+
+    // Sin 'keyInfo' en el contexto, debe delegar directo a super.load con
+    // los callbacks originales, sin envolver onSuccess.
+    expect(superLoad).toHaveBeenCalledWith(context, {}, callbacks);
+  });
+
+  it('no intercepta keys de otros middlewares (URL sin requestMode=mekey)', () => {
+    const originalKey = crypto.getRandomValues(new Uint8Array(32));
+    const superLoad = stubSuperLoadWith(originalKey.buffer);
+
+    const loader = new PanaccessKeyUnwrapLoader({});
+    const onSuccess = vi.fn();
+    const context = { keyInfo: {}, url: 'https://example.invalid/key/5.key', responseType: 'arraybuffer' };
+    const callbacks = { onSuccess };
+    loader.load(context, {}, callbacks);
+
+    expect(superLoad).toHaveBeenCalledWith(context, {}, callbacks);
+  });
+
+  it('importa la key de envoltura una sola vez para todas las keys (no una por segmento)', async () => {
+    // Módulo nuevo: la key importada se guarda a nivel de módulo.
+    vi.resetModules();
+    const { PanaccessKeyUnwrapLoader: FreshLoader } = await import('../HlsPlaybackController.js');
+    const { XhrLoader: FreshXhrLoader } = await import('hls.js');
+    const wrapped32 = await wrapKey(crypto.getRandomValues(new Uint8Array(16)));
+    vi.spyOn(FreshXhrLoader.prototype, 'load').mockImplementation(function stub(context, config, callbacks) {
+      callbacks.onSuccess({ url: context.url, data: wrapped32.slice().buffer }, {}, context, null);
+    });
+    const importKey = vi.spyOn(crypto.subtle, 'importKey');
+
+    const onSuccess = vi.fn();
+    for (let i = 0; i < 3; i += 1) {
+      new FreshLoader({}).load({ keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' }, {}, { onSuccess });
+    }
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(3));
+    expect(importKey).toHaveBeenCalledTimes(1);
+  });
+
+  it('si el unwrap falla (operador con wrapper distinto), loguea el error y deja pasar la respuesta original sin colgarse', async () => {
+    // Último byte 0xFF: como longitud de padding PKCS7 es inválida (debe
+    // estar entre 1 y 16) para CUALQUIER key/IV — garantiza el rechazo de
+    // crypto.subtle.decrypt de forma determinística (no depende de azar).
+    const bogus = new Uint8Array(32).fill(0xff);
+    stubSuperLoadWith(bogus.buffer);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const loader = new PanaccessKeyUnwrapLoader({});
+    const onSuccess = vi.fn();
+    const context = { keyInfo: {}, url: MEKEY_URI, responseType: 'arraybuffer' };
+    loader.load(context, {}, { onSuccess });
+    // crypto.subtle corre fuera del hilo: con la suite completa en paralelo
+    // tarda más que un par de vueltas del event loop.
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+    // Sigue habiendo un log (siempre, no solo DEV) para poder diagnosticar
+    // operadores nuevos con un wrapper distinto al conocido.
+    expect(errorSpy).toHaveBeenCalled();
+  });
+});
+
+describe('HlsPlaybackController - ABR de arranque', () => {
+  const URL = 'https://mw.example.com/index.php?requestMode=m3u8&streamId=5&sessionId=abc';
+
+  /** Payload mínimo de FRAG_BUFFERED que los controllers internos de hls.js pueden leer sin lanzar. */
+  const FRAG_DATA = {
+    frag: {
+      type: 'audio',
+      sn: 1,
+      level: 0,
+      stats: {
+        loaded: 0,
+        total: 0,
+        loading: { start: 0, first: 0, end: 0 },
+        buffering: { start: 0, first: 0, end: 0 },
+        parsing: { start: 0, end: 0 },
+      },
+    },
+  };
+
+  function withBuffer(videoEl, { currentTime = 0, end = 0, start = 0 }) {
+    Object.defineProperty(videoEl, 'currentTime', { value: currentTime, configurable: true });
+    Object.defineProperty(videoEl, 'buffered', {
+      value: { length: end > start ? 1 : 0, start: () => start, end: () => end },
+      configurable: true,
+    });
+  }
+
+  it('arranca en el nivel más bajo y no sube hasta tener el colchón de buffer por delante', async () => {
+    // El colchón depende del maxBufferLength de la marca activa en los tests.
+    const need = upswitchBufferSeconds(resolveLiveBuffer(getActiveBrandConfig()).maxBufferLength);
+    const videoEl = makeVideoEl();
+    const controller = new HlsPlaybackController({});
+    await controller.load(videoEl, URL);
+    const hls = controller.instance;
+
+    hls.trigger(Hls.Events.MANIFEST_PARSED, { levels: [] });
+    expect(hls.autoLevelCapping).toBe(0);
+
+    withBuffer(videoEl, { currentTime: 20, start: 20, end: 20 + need - 1 });
+    hls.trigger(Hls.Events.FRAG_BUFFERED, FRAG_DATA);
+    expect(hls.autoLevelCapping).toBe(0);
+
+    withBuffer(videoEl, { currentTime: 20, start: 20, end: 20 + need + 1 });
+    hls.trigger(Hls.Events.FRAG_BUFFERED, FRAG_DATA);
+    expect(hls.autoLevelCapping).toBe(-1);
+
+    controller.destroy();
+  });
+
+  it('un buffer que no contiene la posición actual (arranque en vivo) no cuenta como colchón', async () => {
+    const videoEl = makeVideoEl();
+    const controller = new HlsPlaybackController({});
+    await controller.load(videoEl, URL);
+    const hls = controller.instance;
+    hls.trigger(Hls.Events.MANIFEST_PARSED, { levels: [] });
+
+    // currentTime=0 todavía no saltó a 20: el rango 20–50 no está "por delante".
+    withBuffer(videoEl, { currentTime: 0, start: 20, end: 50 });
+    hls.trigger(Hls.Events.FRAG_BUFFERED, FRAG_DATA);
+    expect(hls.autoLevelCapping).toBe(0);
+
+    controller.destroy();
+  });
+
+  it('el colchón exigido para subir de nivel nunca supera lo que el buffer de la marca puede llegar a tener', () => {
+    expect(upswitchBufferSeconds(30)).toBe(15);
+    expect(upswitchBufferSeconds(60)).toBe(20);
+    expect(upswitchBufferSeconds(10)).toBe(5);
+  });
+
+  it('un MANIFEST_PARSED de una carga anterior (zapping) no limita el canal nuevo', async () => {
+    const videoEl = makeVideoEl();
+    const controller = new HlsPlaybackController({});
+    await controller.load(videoEl, URL);
+    const oldHls = controller.instance;
+
+    await controller.load(videoEl, URL.replace('streamId=5', 'streamId=6'));
+    oldHls.trigger(Hls.Events.MANIFEST_PARSED, { levels: [] });
+    expect(controller.instance.autoLevelCapping).toBe(-1);
+
+    controller.destroy();
+  });
+});
+
+describe('PanaccessKeyUnwrapLoader - caché del master', () => {
+  const MASTER = 'https://mw.example.com/index.php?requestMode=m3u8&streamId=5&sessionId=abc';
+  const BODY = '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nindex.php?requestMode=m3u8&substream=1&file=list1.m3u8\n';
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    clearMasterCache();
+  });
+
+  function stubNetwork(body) {
+    return vi.spyOn(XhrLoader.prototype, 'load').mockImplementation(function stub(context, config, callbacks) {
+      callbacks.onSuccess({ url: context.url, data: body }, { loaded: body.length }, context, null);
+    });
+  }
+
+  it('la segunda carga del mismo canal sale de la caché, sin pedir el master otra vez', async () => {
+    const network = stubNetwork(BODY);
+    const context = { type: 'manifest', url: MASTER, responseType: 'text' };
+
+    const first = vi.fn();
+    new PanaccessKeyUnwrapLoader({}).load(context, {}, { onSuccess: first });
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(network).toHaveBeenCalledTimes(1);
+
+    const second = vi.fn();
+    new PanaccessKeyUnwrapLoader({}).load({ ...context }, {}, { onSuccess: second });
+    await vi.waitFor(() => expect(second).toHaveBeenCalledTimes(1));
+
+    expect(network).toHaveBeenCalledTimes(1);
+    const [response, stats, ctx] = second.mock.calls[0];
+    expect(response).toEqual({ url: MASTER, data: BODY });
+    expect(ctx.url).toBe(MASTER);
+    expect(stats.loading.end).toBeGreaterThan(0);
+  });
+
+  it('no cachea playlists de nivel ni respuestas que no son texto', () => {
+    stubNetwork(BODY);
+    const level = { type: 'level', url: `${MASTER}&substream=1&file=list1.m3u8`, responseType: 'text' };
+    new PanaccessKeyUnwrapLoader({}).load(level, {}, { onSuccess: vi.fn() });
+    expect(getCachedMaster(level.url)).toBeNull();
+
+    stubNetwork(new ArrayBuffer(8));
+    new PanaccessKeyUnwrapLoader({}).load({ type: 'manifest', url: MASTER }, {}, { onSuccess: vi.fn() });
+    expect(getCachedMaster(MASTER)).toBeNull();
+  });
+
+  it('un error fatal borra el master para no fijar un CDN caído', async () => {
+    storeMaster(MASTER, BODY);
+    const videoEl = makeVideoEl();
+    const controller = new HlsPlaybackController({ onError: vi.fn() });
+    await controller.load(videoEl, MASTER);
+
+    controller.instance.trigger(Hls.Events.ERROR, fatalNetworkError('manifestLoadError'));
+    expect(getCachedMaster(MASTER)).toBeNull();
+
+    controller.destroy();
+  });
+});

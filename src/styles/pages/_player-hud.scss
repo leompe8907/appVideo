@@ -20,18 +20,117 @@
   pointer-events: none;
 }
 
+// Overlay de error de reproducción: independiente del auto-hide del HUD
+// (`.player-hud--hidden`), debe permanecer visible aunque el usuario no
+// interactúe, porque el video está detenido/roto detrás de él.
+.player-channel-number {
+  position: absolute;
+  top: 2.5rem;
+  right: 3rem;
+  z-index: 21;
+  min-width: 3ch;
+  padding: 0.5rem 1.25rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  pointer-events: none;
+}
+
+.player-error-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.72);
+  pointer-events: auto;
+}
+
+.player-error-overlay__box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 420px;
+  padding: 1.75rem 2rem;
+  border-radius: 12px;
+  background: rgba(30, 30, 30, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  text-align: center;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.85rem;
+  }
+}
+
+.player-error-overlay__message {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.player-error-overlay__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > * {
+    margin: 0 0.375rem 0.375rem;
+  }
+}
+
+.player-error-overlay__btn {
+  padding: 0.6rem 1.4rem;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.45);
+  }
+}
+
+.player-error-overlay__btn--primary {
+  background: rgba(var(--primary-color-rgb, 102, 126, 234), 0.85);
+  border-color: var(--primary-color, #667eea);
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(var(--secondary-color-rgb, 118, 75, 162), 0.9);
+  }
+}
+
 .player-hud__topbar {
   pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
   padding: 0.25rem 0.2rem;
   position: fixed;
   top: 0.75rem;
   left: 1.1rem;
   right: 1.1rem;
   z-index: 15;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 0.75rem;
+  }
 }
 
 .player-hud__topbar-left,
@@ -39,7 +138,10 @@
 .player-hud__topbar-right {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+
+  > *:not(:last-child) {
+    margin-right: 1.45rem;
+  }
 }
 
 .player-hud__clock {
@@ -85,6 +187,111 @@
   border-color: rgba(0, 123, 255, 0.9);
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.35);
   transform: scale(1.04);
+}
+
+// Bandera features.playerVolumeControls (ver brands.js) -- mute + slider, solo web/PC.
+.player-hud__volume {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.player-hud__volume-slider {
+  width: 6.5em;
+  height: 3px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 0.85em;
+    height: 0.85em;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  &::-moz-range-thumb {
+    width: 0.85em;
+    height: 0.85em;
+    border: none;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  &::-moz-range-track {
+    background: transparent;
+  }
+}
+
+.player-hud__topbar-divider {
+  width: 1px;
+  height: 1.1em;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+// Flechas de canal anterior/siguiente (solo web/PC, features.playerChannelArrows).
+// `position: fixed` a propósito, igual que `.player-hud__topbar` -- `.player-hud`
+// (el padre) no tiene altura propia (solo `bottom: 0`), así que un `top: 50%`
+// relativo a él no tendría de qué mitad calcularse.
+.player-hud__channel-arrow {
+  // Sin esto, el estilo nativo del navegador ("pressed"/inset) desplaza el
+  // contenido del botón 1px hacia abajo al hacer click -- por eso "brincaba".
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  pointer-events: auto;
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  padding: 0.5rem;
+  margin: 0;
+  background: transparent;
+  border: none;
+  outline-offset: 4px;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: #fff;
+  }
+
+  &:active {
+    transform: translateY(-50%);
+  }
+
+  // El click nativo deja el <button> con foco -> `main.jsx` le agrega la
+  // clase global `.focused`, y `global.scss` define `button.focused {
+  // transform: scale(1.05) }` con más especificidad (elemento + clase) que
+  // esta regla (una sola clase) -- pisaba por completo nuestro
+  // `translateY(-50%)` y el botón "caía" a la mitad de su propia altura.
+  // Se combinan ambos transforms acá, con doble clase para ganar siempre.
+  &.focused {
+    transform: translateY(-50%) scale(1.05);
+  }
+}
+
+// Separación desde el centro del video (no desde los bordes de la pantalla)
+// -- ajustar este valor acerca/aleja el par de flechas entre sí.
+.player-hud__channel-arrow--prev {
+  left: calc(50% - 20rem);
+}
+
+.player-hud__channel-arrow--next {
+  right: calc(50% - 20rem);
 }
 
 .player-hud__seek {
@@ -151,10 +358,14 @@
 .player-hud__tracks-list {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
   max-height: 22rem;
   overflow: auto;
   padding-right: 0.15rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.4rem;
+  }
 }
 
 .player-hud__tracks-empty {
@@ -173,9 +384,13 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.6rem;
   font-size: 1.55rem;
   min-width: 0;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 0.6rem;
+  }
 }
 
 .player-hud__trackbtn--active {
@@ -229,14 +444,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 0.75rem;
+  }
 }
 
 .player-hud__channel {
   display: flex;
   align-items: flex-start;
-  gap: 0.7rem;
   min-width: 0;
+
+  > *:not(:last-child) {
+    margin-right: 0.7rem;
+  }
 }
 
 .player-hud__channel-logo {
@@ -261,12 +483,17 @@
   font-size: 2.25rem;
   line-height: 1.1;
   display: flex;
-  gap: 0.55rem;
   align-items: baseline;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 0.55rem;
+  }
 }
 
 .player-hud__channel-lcn {
   opacity: 0.9;
+  margin-right: 1rem;
 }
 
 .player-hud__program {
@@ -277,8 +504,12 @@
 
 .player-hud__program-row {
   display: flex;
-  gap: 0.35rem;
   min-width: 0;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 0.35rem;
+  }
 }
 
 .player-hud__program-label {
@@ -297,8 +528,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
   flex: 0 0 auto;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.35rem;
+  }
 }
 
 .player-hud__event-range {
@@ -310,7 +545,11 @@
 .player-hud__actions {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 0.45rem;
+  }
 }
 
 .player-hud__pillbtn {
@@ -351,7 +590,11 @@
   z-index: 16;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.75rem;
+  }
 }
 
 .player-hud__overlay-title {
@@ -372,10 +615,14 @@
 .player-hud__channel-list {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
   overflow: auto;
   max-height: 100%;
   padding-right: 0.25rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.35rem;
+  }
 }
 
 .player-hud__channel-row {
@@ -429,7 +676,11 @@
 .player-hud__info {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.45rem;
+  }
 }
 
 .player-hud__info-row {
@@ -463,7 +714,10 @@
 
 .player-hud__tracks-popover {
   position: fixed;
-  // Base en em (escala con html font-size) + tope por viewport para pantallas bajas
+  // Base en em (escala con html font-size) + tope por viewport para pantallas bajas.
+  // Fallback fijo antes de `min()`: WebKit viejo de Smart TV no lo interpreta
+  // y descarta la línea entera, quedándose con la última declaración válida.
+  max-height: 35em;
   max-height: min(35em, calc(100vh - 7.5rem));
   overflow: hidden;
   border-radius: 14px;
@@ -475,7 +729,11 @@
   padding: 0.9rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 0.75rem;
+  }
 }
 
 .player-hud__tracks-popover-title {
@@ -516,6 +774,12 @@
   justify-content: flex-end;
 }
 
+// VOD info desde el player (portal, encima del HUD y del video)
+.player-vod-info-portal .vod-detail-overlay {
+  left: 0;
+  z-index: 10000;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Sidebar de canales (modal izquierdo)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -533,6 +797,9 @@
   left: 0;
   top: 0;
   bottom: 0;
+  // Fallback fijo antes de `min()`: WebKit viejo de Smart TV no lo interpreta
+  // y descarta la línea entera, quedándose con la última declaración válida.
+  width: 32em;
   width: min(32em, 44vw);
   background:linear-gradient(180deg, rgba(10, 10, 12, 0.72) 0%, rgba(10, 10, 12, 0.9) 100%);
   color: #ffffff;
@@ -545,9 +812,13 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 12px;
   padding: 14px 14px 10px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 12px;
+  }
 }
 
 .player-channel-sidebar__title {
@@ -561,10 +832,14 @@
   padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
   // Ocultar scrollbar sin perder scroll
   scrollbar-width: none; // Firefox
   -ms-overflow-style: none; // IE/Edge legacy
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-bottom: 8px;
+  }
 }
 
 .player-channel-sidebar__list::-webkit-scrollbar {
@@ -575,7 +850,7 @@
 
 .player-channel-sidebar__row {
   display: grid;
-  grid-template-columns: 11rem 2rem 1fr;
+  grid-template-columns: 11rem auto 1fr;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
@@ -639,4 +914,102 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 600;
+}
+
+.player-hud__error {
+  pointer-events: auto;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  // Fallback fijo antes de `min()`: WebKit viejo de Smart TV no lo interpreta
+  // y descarta la línea entera, quedándose con la última declaración válida.
+  max-width: 90vw;
+  max-width: min(90vw, 42rem);
+  padding: 1.25rem 1.5rem;
+  border-radius: 12px;
+  background: rgba(12, 12, 16, 0.94);
+  border: 1px solid rgba(255, 80, 80, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+
+.player-hud__error-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #ff8a8a;
+}
+
+.player-hud__error-detail {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.82);
+  word-break: break-word;
+}
+
+.player-hud__error-close {
+  margin: 0 auto;
+}
+
+// Botón de estadísticas encendido.
+.player-hud__iconbtn--active {
+  background: rgba(127, 211, 255, 0.28);
+}
+
+// Panel de estadísticas del reproductor (PlayerStatsPanel.jsx): queda visible
+// aunque el HUD se oculte, y no recibe foco ni clics.
+.player-stats {
+  position: absolute;
+  top: 5.5em;
+  right: 1.25em;
+  z-index: 40;
+  width: min(43em, calc(100% - 2.5em));
+  max-height: calc(100% - 7em);
+  overflow: hidden;
+  padding: 1em;
+  border-radius: 0.75em;
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.player-stats__title {
+  font-size: 1.2em;
+  font-weight: 700;
+  margin-bottom: 0.3em;
+}
+
+.player-stats__section {
+  color: #7fd3ff;
+  font-weight: 700;
+  margin: 0.6em 0 0.2em;
+}
+
+.player-stats__row {
+  display: flex;
+  gap: 0.75em;
+  padding: 0.1em 0;
+}
+
+.player-stats__label {
+  flex: 0 0 12em;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.player-stats__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-stats__value--warn {
+  color: #ffb35c;
 }

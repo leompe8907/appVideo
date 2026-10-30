@@ -1,4 +1,4 @@
-import { videojs } from '../../vendor/videojsAssign.js';
+﻿import { videojs } from '../../vendor/videojsAssign.js';
 import { ensureVideojsHlsPlugin } from '../../vendor/ensureVideojsHlsPlugin.js';
 import 'video.js/dist/video-js.css';
 import BaseEngine from '../base/BaseEngine';
@@ -9,10 +9,7 @@ import {
   PLAYER_ENGINE_STATES,
 } from '../contracts';
 import { isHlsUrl } from './hlsSupport';
-import {
-  applyStreamrootHlsSessionConfig,
-  buildStreamrootHlsPluginOptions,
-} from './sessionHlsXhr';
+import { applyStreamrootHlsSessionConfig } from './sessionHlsXhr';
 
 let videoElementIdSeq = 0;
 
@@ -33,9 +30,14 @@ export class WebEngine extends BaseEngine {
     this._lastTracksSnapshotKey = '';
     this._suppressPlayerErrors = false;
     this._suppressErrorsTimer = null;
+    // Última preferencia de volumen/mute conocida (la setea PlayerContext vía
+    // setVolume()/mute()/unmute()). Se guarda acá porque video.js pisa estos
+    // valores en cada load() -- ver nota en load()/_reapplyVolumePreference().
+    this._volume = 1;
+    this._muted = false;
   }
 
-  /** CODE:4 al vaciar src tras close/reset; no es fallo de reproducción. */
+  /** CODE:4 al vaciar src tras close/reset; no es fallo de reproducci├│n. */
   _isBenignPlayerError(err) {
     if (!err) return false;
     const code = err.code ?? err?.status;
@@ -120,7 +122,7 @@ export class WebEngine extends BaseEngine {
         // noop
       }
     }
-    // Evitar player.src(''): Video.js dispara MEDIA_ERR_SRC_NOT_SUPPORTED de forma asíncrona.
+    // Evitar player.src(''): Video.js dispara MEDIA_ERR_SRC_NOT_SUPPORTED de forma as├¡ncrona.
     try {
       if (typeof this.player.reset === 'function') {
         this.player.reset();
@@ -161,7 +163,7 @@ export class WebEngine extends BaseEngine {
     const id = `app-main-video-${++videoElementIdSeq}`;
     const videoEl = document.createElement('video');
     videoEl.id = id;
-    videoEl.className = 'video-js vjs-default-skin';
+    videoEl.className = 'video-js vjs-default-skin vjs-fill';
     videoEl.setAttribute('playsinline', 'true');
     videoEl.setAttribute('webkit-playsinline', 'true');
     videoEl.setAttribute('preload', 'auto');
@@ -179,7 +181,6 @@ export class WebEngine extends BaseEngine {
       preload: 'auto',
       fluid: false,
       inactivityTimeout: 0,
-      ...buildStreamrootHlsPluginOptions(),
     });
     applyStreamrootHlsSessionConfig(this.player);
 
@@ -215,6 +216,12 @@ export class WebEngine extends BaseEngine {
       onPlay: () => {
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
       },
+      onPlaying: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
+      },
+      onCanPlay: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADED });
+      },
       onPause: () => {
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
       },
@@ -237,7 +244,7 @@ export class WebEngine extends BaseEngine {
           return;
         }
         this._log('player:error', err);
-        this.emit(PLAYER_ENGINE_EVENTS.ERROR, err || new Error('Error de reproducción Video.js'));
+        this.emit(PLAYER_ENGINE_EVENTS.ERROR, err || new Error('Error de reproducci├│n Video.js'));
       },
       onLoadedData: () => {
         this._log('player:loadeddata');
@@ -248,6 +255,8 @@ export class WebEngine extends BaseEngine {
     player.on('durationchange', this._handlers.onDurationChange);
     player.on('ended', this._handlers.onEnded);
     player.on('play', this._handlers.onPlay);
+    player.on('playing', this._handlers.onPlaying);
+    player.on('canplay', this._handlers.onCanPlay);
     player.on('pause', this._handlers.onPause);
     player.on('seeking', this._handlers.onSeeking);
     player.on('seeked', this._handlers.onSeeked);
@@ -262,6 +271,8 @@ export class WebEngine extends BaseEngine {
     player.off('durationchange', this._handlers.onDurationChange);
     player.off('ended', this._handlers.onEnded);
     player.off('play', this._handlers.onPlay);
+    player.off('playing', this._handlers.onPlaying);
+    player.off('canplay', this._handlers.onCanPlay);
     player.off('pause', this._handlers.onPause);
     player.off('seeking', this._handlers.onSeeking);
     player.off('seeked', this._handlers.onSeeked);
@@ -283,6 +294,15 @@ export class WebEngine extends BaseEngine {
     const useHls = isHlsUrl(url);
 
     const emitLoadedAndMaybePlay = () => {
+      // FIX volumen/mute al cambiar de canal: _teardownMedia() (arriba) llama
+      // a player.reset(), y video.js internamente fuerza volume(1.0) y
+      // reconstruye el tech con el `muted` de la config original de
+      // construcción (no el que el usuario haya seteado en runtime) -- ver
+      // resetVolumeBar_()/loadTech_() en video.js. Sin esto, cada cambio de
+      // canal "olvidaba" el volumen/mute que el usuario había elegido. Se
+      // reaplica ACÁ (antes de play()) para que no haya ni un instante de
+      // audio a volumen completo/desmuteado antes de corregirse.
+      this._reapplyVolumePreference();
       this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADED, type });
       this._emitTracksChange();
       if (autoPlay) this.play();
@@ -385,13 +405,46 @@ export class WebEngine extends BaseEngine {
   }
 
   mute() {
+    this._muted = true;
     if (!this.player) return;
     this.player.muted(true);
   }
 
   unmute() {
+    this._muted = false;
     if (!this.player) return;
     this.player.muted(false);
+  }
+
+  /** @param {number} volume 0..1 */
+  setVolume(volume) {
+    const v = Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : 1;
+    this._volume = v;
+    if (!this.player) return;
+    this.player.volume(v);
+  }
+
+  /**
+   * Reaplica el último volumen/mute conocido (seteado por PlayerContext vía
+   * setVolume()/mute()/unmute()) sobre el player real. Necesario después de
+   * cada load() porque player.reset() (dentro de _teardownMedia()) resetea
+   * volumen/mute a sus valores por defecto -- ver comentario en load().
+   */
+  _reapplyVolumePreference() {
+    if (!this.player) return;
+    try {
+      this.player.volume(this._volume);
+      this.player.muted(this._muted);
+    } catch {
+      // noop -- mismo criterio defensivo que el resto de los métodos de este engine.
+    }
+  }
+
+  /** @returns {number} 0..1 */
+  getVolume() {
+    if (!this.player) return 1;
+    const v = this.player.volume();
+    return Number.isFinite(v) ? v : 1;
   }
 
   destroy() {
@@ -423,6 +476,18 @@ export class WebEngine extends BaseEngine {
       return Array.isArray(tracks) ? tracks : [];
     } catch {
       return [];
+    }
+  }
+
+  /**
+   * Estadísticas del reproductor (panel del HUD). Solo con hls.js; `null` si
+   * no hay HLS activo (MP4, HLS nativo, o adapter nativo LG/Samsung).
+   */
+  getDiagnostics() {
+    try {
+      return this.player?.tech?.(true)?.hlsProvider?.getDiagnostics?.() ?? null;
+    } catch {
+      return null;
     }
   }
 

@@ -1,10 +1,14 @@
-import { defineConfig } from 'vite'
+import { fileURLToPath } from 'node:url'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import legacy from '@vitejs/plugin-legacy'
 import { brandPublicAssetsPlugin } from './vite/brandPublicAssets.js'
-import { BRANDS } from './src/config/brands.js'
+import { BRANDS } from './packages/core/src/config/brands.js'
+import { resolveBrandTokenFromProcessEnv, resolveBrandDrmFromProcessEnv } from './packages/core/src/config/resolveBrandToken.js'
+import { applyBrandRuntimePolicyFromEnv } from './packages/core/src/config/applyBrandRuntimePolicy.js'
+import { ensureLegacyEs5Plugin } from './vite/ensureLegacyEs5Plugin.js'
 
-function singleBrandConfigPlugin(brand) {
+function singleBrandConfigPlugin(brand, env) {
   const selectedBrand = brand ? BRANDS.find((entry) => entry.brand === brand) : null;
 
   return {
@@ -14,16 +18,46 @@ function singleBrandConfigPlugin(brand) {
       if (!brand) return null;
 
       const normalizedId = id.replaceAll('\\', '/');
-      if (!normalizedId.endsWith('/src/config/brands.js')) return null;
+      if (!normalizedId.endsWith('/packages/core/src/config/brands.js')) return null;
 
       if (!selectedBrand) {
         this.warn(`[single-brand-config] No existe configuración para "${brand}".`);
         return null;
       }
 
+      const token =
+        resolveBrandTokenFromProcessEnv(selectedBrand.brand) ||
+        env[`VITE_BRAND_TOKEN_${String(selectedBrand.brand).toUpperCase()}`] ||
+        env.VITE_BRAND_TOKEN ||
+        selectedBrand.token ||
+        '';
+
+      if (!token) {
+        this.warn(
+          `[single-brand-config] Token vacío para "${selectedBrand.brand}". ` +
+            `Define VITE_BRAND_TOKEN_${String(selectedBrand.brand).toUpperCase()} en .env.local`,
+        );
+      }
+
+      const drm =
+        resolveBrandDrmFromProcessEnv(selectedBrand.brand) ||
+        env[`VITE_BRAND_DRM_${String(selectedBrand.brand).toUpperCase()}`] ||
+        env.VITE_BRAND_DRM ||
+        selectedBrand.drm ||
+        '';
+
+      if (!drm) {
+        this.warn(
+          `[single-brand-config] drm (URL base de middleware) vacío para "${selectedBrand.brand}". ` +
+            `Define VITE_BRAND_DRM_${String(selectedBrand.brand).toUpperCase()} en .env.local`,
+        );
+      }
+
+      const brandWithToken = applyBrandRuntimePolicyFromEnv(selectedBrand, env);
+
       return {
         code: [
-          `export const BRANDS = ${JSON.stringify([selectedBrand], null, 2)};`,
+          `export const BRANDS = ${JSON.stringify([brandWithToken], null, 2)};`,
           '',
           'export function getBrandConfig(brandName) {',
           '  const brand = BRANDS.find((entry) => entry.brand === brandName);',
@@ -40,23 +74,35 @@ function singleBrandConfigPlugin(brand) {
 export default defineConfig(({ mode }) => {
   const brand = process.env.VITE_BRAND || '';
   const isDev = mode === 'development';
+  const env = loadEnv(mode, process.cwd(), '');
 
   return {
     plugins: [
-      singleBrandConfigPlugin(brand),
+      singleBrandConfigPlugin(brand, env),
       brandPublicAssetsPlugin(brand),
       react(),
-      // Smart TV compatibility:
-      // webOS 4 (2019) usa Chrome 61; Tizen 4 (2019) usa Chrome 69.
-      // NINGUNO soporta optional chaining (?.) ni nullish coalescing (??).
-      // FIX #3: targets cubre ambas plataformas. modernTargets fuerza la
-      // transpilación del chunk "moderno" también (no solo el legacy).
+      // Smart TV compatibility (Etapa 1):
+      // LG webOS 4.5 (2019) → Chromium 53 | Samsung Tizen 5 (2019) → Chromium 63
+      // Ninguno soporta ?. ni ?? nativos; legacy transpila ambos chunks.
       legacy({
-        targets: ['chrome 61'],              // webOS 4 — el más restrictivo
-        modernTargets: ['chrome 69'],        // Tizen 2019 — fuerza transpilación del chunk moderno
+        targets: ['chrome 53'],
+        modernTargets: ['chrome 53'],
         additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
         renderLegacyChunks: true,
+        // Producción TV: un solo bundle legacy (sin chunk moderno con ?. de dependencias)
+        renderModernChunks: isDev,
       }),
+      {
+        name: 'inject-tv-platform-env',
+        transformIndexHtml(html) {
+          const tvPlatform = env.VITE_TV_PLATFORM || '';
+          return html.replace(
+            '<!-- TV_PLATFORM_ENV -->',
+            `<script>window.__VITE_TV_PLATFORM__=${JSON.stringify(tvPlatform)};</script>`,
+          );
+        },
+      },
+      ensureLegacyEs5Plugin(),
     ],
 
     css: {
@@ -71,12 +117,10 @@ export default defineConfig(({ mode }) => {
 
     build: {
       outDir: brand ? `dist/${brand}` : 'dist',
-      // FIX #3: bajar de es2017 a es2015 para que Terser transpile optional chaining (?.)
-      // y nullish coalescing (??) — ninguno de los dos está soportado en Chrome 61/69.
-      // es2015 cubre: arrow functions, const/let, template literals, destructuring,
-      // spread, clases, Promises, Symbol — todo soportado en Chrome 61+.
+      // es2015 + Terser ecma:5 → sin ?. / ?? en salida (Chrome 53+)
       target: 'es2015',
-      cssTarget: 'chrome61', // webOS 4 usa Chrome 61 internamente
+      cssTarget: 'chrome53',
+      cssCodeSplit: false,
       minify: 'terser',
       terserOptions: {
         compress: {
@@ -86,6 +130,12 @@ export default defineConfig(({ mode }) => {
         // Asegurar que el output sea ES5-compatible para el chunk legacy
         ecma: 5,
         safari10: true,
+      },
+    },
+
+    resolve: {
+      alias: {
+        '@appvideo/core': fileURLToPath(new URL('./packages/core/src', import.meta.url)),
       },
     },
 

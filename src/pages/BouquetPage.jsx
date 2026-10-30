@@ -10,24 +10,33 @@ import { useBrand } from '../contexts/BrandContext';
 import { useParentalGate } from '../hooks/useParentalGate';
 import BouquetWall from '../components/bouquet/BouquetWall';
 import VodRecommendedHomeRail from '../components/vod/VodRecommendedHomeRail';
-import panaccessService from '../services/panaccessService';
-import { useHomeHeader } from '../contexts/homeHeaderContext';
-import { usePreload } from '../store/usePreload';
+import panaccessService from '@appvideo/core/services/panaccessService';
+import { useCallback } from 'react';
+import { useHomeHeaderDispatch } from '../contexts/homeHeaderContext';
+import { usePreload } from '@appvideo/core/store/usePreload';
 import { AdZone } from '../components/ads/AdZone';
 import { createAdActivateHandler } from '../utils/adActivate';
-import { useInicioBouquetTvNav } from '../hooks/useInicioBouquetTvNav';
+import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import '../styles/pages/_bouquet.scss';
 
 export function BouquetPage() {
   // El background común lo maneja Home (.home-content)
   const { play } = usePlayer();
   const { requestPlayChannel } = useParentalGate();
-  const { setFocusedChannel } = useHomeHeader();
+  const { setFocusedChannel } = useHomeHeaderDispatch();
+  const handleChannelFocus = useCallback(
+    (channel) => setFocusedChannel(channel),
+    [setFocusedChannel]
+  );
   const navigate = useNavigate();
   const { currentBrand } = useBrand();
   const { epg, ads } = usePreload();
 
-  useInicioBouquetTvNav();
+  // Navegación TV: el motor genérico (NavigationRouter + spatialNavigation) ya
+  // mueve el foco por geometría entre tarjetas de canal, rieles de ads y VOD
+  // recomendado sin ningún puente manual — solo hace falta colocar el foco
+  // inicial cuando el muro ya tiene canales.
+  useTvInitialFocus('.bouquet-inicio-scroll', [epg.status, (epg.bouquetsWithChannels || []).length]);
 
   const topInBouquets = Boolean(currentBrand?.homeShell?.ads?.topInBouquets ?? false);
   const shouldRenderTopInside = topInBouquets === false;
@@ -41,7 +50,7 @@ export function BouquetPage() {
   });
 
   const handleChannelSelect = (channel) => {
-    if (import.meta.env?.DEV) {
+    if (import.meta.env.DEV) {
       console.log('[BouquetPage] handleChannelSelect', channel?.id ?? channel?.lcn, channel);
     }
     if (!channel) return;
@@ -59,7 +68,7 @@ export function BouquetPage() {
         try {
           url = panaccessService.getStreamM3u8Url({ streamId });
         } catch (e) {
-          if (import.meta.env?.DEV) {
+          if (import.meta.env.DEV) {
             console.warn('[BouquetPage] getStreamM3u8Url fallback:', e?.message || e);
           }
         }
@@ -74,7 +83,7 @@ export function BouquetPage() {
     try {
       url = panaccessService.normalizePlaybackUrl(url);
     } catch (e) {
-      if (import.meta.env?.DEV) {
+      if (import.meta.env.DEV) {
         console.warn('[BouquetPage] normalizePlaybackUrl:', e?.message || e);
       }
     }
@@ -109,7 +118,7 @@ export function BouquetPage() {
             <BouquetWall
               variant="inicio"
               onChannelSelect={handleChannelSelect}
-              onChannelFocus={(channel) => setFocusedChannel(channel)}
+              onChannelFocus={handleChannelFocus}
             />
             <VodRecommendedHomeRail />
           </div>

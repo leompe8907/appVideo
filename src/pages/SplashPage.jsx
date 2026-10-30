@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
-import { resolveSplashDestination } from '../services/splashAuthFlow';
-import '../styles/components/_splash.scss';
+import { resolveSplashDestination } from '@appvideo/core/services/splashAuthFlow';
+import { usePreloadStore } from '@appvideo/core/store/preloadStore';
 
 /** Máximo tiempo en fase vídeo antes de forzar navegación (TV puede no disparar ended). */
 const SPLASH_VIDEO_MAX_MS = 45000;
@@ -77,6 +77,11 @@ export function SplashPage() {
         window.clearTimeout(authTimeoutId);
         if (cancelled) return;
         destinationRef.current = path;
+        // El EPG se pide mientras se muestra el splash (antes empezaba recién
+        // en /preload, después de esperar el splash completo). /preload ve la
+        // carga en curso y la espera. Con /profile u otros destinos no: ahí la
+        // licencia todavía no está elegida.
+        if (String(path).startsWith('/home')) usePreloadStore.getState().loadEPG(currentBrand);
 
         if (videoEnabled) {
           setPhase('video');

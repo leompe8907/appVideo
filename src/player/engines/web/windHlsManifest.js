@@ -1,4 +1,4 @@
-import * as userSession from '../../../utils/userSession';
+import * as userSession from '@appvideo/core/utils/userSession';
 
 export function isWindMiddlewareHost(url) {
   return typeof url === 'string' && /middleware\.wind\.do/i.test(url);

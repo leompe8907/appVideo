@@ -1,26 +1,29 @@
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
+import { Topbar } from '../components/Topbar';
+import { useBrand } from '../contexts/BrandContext';
+import { useDevice } from '../contexts/DeviceContext';
+import { resolveShellMode } from '@appvideo/core/config/brandConfig';
 import { HomeShellContent } from '../components/ads/HomeShellContent';
 import { usePlayer } from '../contexts/PlayerContext';
 import PlayerHud from '../components/player/PlayerHud';
 import ConfirmModal from '../components/ConfirmModal';
 import ParentalGateHost from '../components/parental/ParentalGateHost';
 import EpgReminderHost from '../components/epg/EpgReminderHost';
+import OsmsNotificationHost from '../components/osms/OsmsNotificationHost';
 import InactivityHost from '../components/inactivity/InactivityHost';
 import { useTranslation } from 'react-i18next';
 import '../styles/pages/_home-shell.scss';
 import { useOsmsPolling } from '../hooks/useOsmsPolling';
 import { HomeInputDispatcher } from '../components/home/HomeInputDispatcher';
 import {
-  getRestoredMainFocusTargetIfValid,
   rememberMainShellFocus,
+  scheduleRestoreMainShellFocus,
 } from '../utils/homeShellLastContentFocus';
-import {
-  focusElementSafe,
-  getVisibleFocusablesInContainer,
-  scrollElementIntoVisibleScrollAncestors,
-} from '../utils/homeShellNavigation';
+import { shouldDeferHomeShellNavigation } from '../utils/homeShellOverlays';
+import { usePlayerLoadingVisible } from '../hooks/usePlayerLoadingVisible';
+import { exitAppFullscreenSync } from '../utils/playerFullscreen';
 
 export function HomePlaceholderPage({ title, description }) {
   return (
@@ -34,9 +37,58 @@ export function HomePlaceholderPage({ title, description }) {
 export function HomePage() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
-  const { containerRef, state: playerState, licenseInUsePrompt, confirmLicenseInUse, close } = usePlayer();
+  const { containerRef, state: playerState, licenseInUsePrompt, confirmLicenseInUse, close, subtitleCueText } =
+    usePlayer();
   const isPlayerActive = Boolean(playerState?.url);
+  const showPlayerLoading = usePlayerLoadingVisible(isPlayerActive, containerRef, playerState);
+  const wasPlayerActiveRef = useRef(false);
+  // Último canal EN VIVO reproducido (se actualiza en cada zap, mientras el
+  // player está activo). close() limpia playerState.id/type a null, así que
+  // para saber a qué tarjeta volver hace falta este ref -- leído recién al
+  // restaurar el foco, cuando playerState.id ya no sirve.
+  // lastContentWasServiceRef distingue "la última reproducción real fue un
+  // canal en vivo" de "fue VOD/catchup" -- sin esto, un id de canal viejo
+  // (de una sesión de TV anterior) podría reusarse por error al cerrar un
+  // VOD, pisando el comportamiento correcto de ese caso (foco recordado).
+  const lastServiceIdRef = useRef(null);
+  const lastContentWasServiceRef = useRef(false);
+  useEffect(() => {
+    // Ignorar la transición a null que hace close() -- interesa el último
+    // contenido REAL, no el estado ya limpiado.
+    if (!playerState?.type) return;
+    if (playerState.type === 'service' && playerState.id != null) {
+      lastServiceIdRef.current = playerState.id;
+      lastContentWasServiceRef.current = true;
+    } else {
+      lastContentWasServiceRef.current = false;
+    }
+  }, [playerState?.type, playerState?.id]);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const { currentBrand } = useBrand();
+  const { isTV } = useDevice();
+  const shellMode = resolveShellMode(currentBrand, isTV);
+  const isTopbarMode = shellMode === 'topbar';
+
+  useEffect(() => {
+    if (!isPlayerActive) exitAppFullscreenSync();
+  }, [isPlayerActive]);
+
+  // TV / teclado: recordar cada foco dentro del contenido principal mientras no hay player.
+  useEffect(() => {
+    if (isPlayerActive) return undefined;
+
+    const onFocusIn = (e) => {
+      if (shouldDeferHomeShellNavigation()) return;
+      const t = e.target;
+      const main = document.querySelector('main.home-content[data-home-scope="content"]');
+      if (!(t instanceof HTMLElement) || !(main instanceof HTMLElement)) return;
+      if (!main.contains(t)) return;
+      rememberMainShellFocus(t);
+    };
+
+    document.addEventListener('focusin', onFocusIn, true);
+    return () => document.removeEventListener('focusin', onFocusIn, true);
+  }, [isPlayerActive]);
 
   // OSMS: refresco periódico y al volver a foreground (solo si la feature está habilitada por brand)
   useOsmsPolling({ intervalMs: 2 * 60 * 1000, days: 30 });
@@ -68,41 +120,15 @@ export function HomePage() {
     }
   }, [isPlayerActive, containerRef]);
 
-  // Al cerrar el player (botón volver / BACK): restaurar el último foco del contenido principal.
+  // Al cerrar el player: restaurar foco del main salvo detalle VOD abierto (el modal lo restaura en TV).
   useLayoutEffect(() => {
-    if (isPlayerActive) return undefined;
-    let cancelled = false;
-
-    const tryRestore = () => {
-      if (cancelled) return;
-      const main = document.querySelector('main.home-content[data-home-scope="content"]');
-      if (!(main instanceof HTMLElement)) return;
-
-      const restored = getRestoredMainFocusTargetIfValid(main);
-      if (restored && focusElementSafe(restored)) {
-        const bouquetScroll = restored.closest('.bouquet-inicio-scroll');
-        if (bouquetScroll instanceof HTMLElement) {
-          scrollElementIntoVisibleScrollAncestors(restored, bouquetScroll);
-        } else {
-          const stack = main.querySelector('.home-content-stack');
-          if (stack instanceof HTMLElement) {
-            scrollElementIntoVisibleScrollAncestors(restored, stack);
-          }
-        }
-        return;
-      }
-
-      const list = getVisibleFocusablesInContainer(main);
-      if (list[0]) focusElementSafe(list[0]);
-    };
-
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(tryRestore);
+    const wasActive = wasPlayerActiveRef.current;
+    wasPlayerActiveRef.current = isPlayerActive;
+    if (isPlayerActive || !wasActive) return undefined;
+    if (document.querySelector('.vod-detail-overlay[role="dialog"]')) return undefined;
+    return scheduleRestoreMainShellFocus({
+      channelId: lastContentWasServiceRef.current ? lastServiceIdRef.current : null,
     });
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(id);
-    };
   }, [isPlayerActive]);
 
   useLayoutEffect(() => {
@@ -140,6 +166,7 @@ export function HomePage() {
       />
       <ParentalGateHost />
       <EpgReminderHost />
+      <OsmsNotificationHost />
       <InactivityHost />
       <div className={`home-global-player${isPlayerActive ? ' home-global-player--active' : ''}`}>
         {/*
@@ -154,25 +181,40 @@ export function HomePage() {
           role={isPlayerActive ? 'application' : undefined}
           aria-label={isPlayerActive ? t('player.player', { defaultValue: 'Reproductor' }) : undefined}
         />
-        {isPlayerActive &&
-          !playerState?.isPlaying &&
-          (playerState?.isLoading || playerState?.isSeeking) && (
+        {showPlayerLoading && (
           <div className="home-global-player-loading">
             <div className="home-global-player-loading-spinner" />
           </div>
         )}
-        {isPlayerActive && <PlayerHud />}
+        {/*
+          Solo tiene contenido en Samsung/AVPlay (ver PlayerContext.jsx
+          subtitleCueText y SamsungEngine.js) -- WebEngine (PC) y LG (native
+          <video>) ya dibujan el subtítulo solos vía el navegador, así que acá
+          `subtitleCueText` queda siempre '' y este div no se nota. Va afuera
+          de PlayerHud a propósito: el HUD se auto-oculta a los pocos
+          segundos de inactividad, pero el subtítulo tiene que seguir viéndose.
+        */}
+        {isPlayerActive && subtitleCueText && (
+          <div className="home-global-player-subtitle" aria-live="polite">
+            {subtitleCueText}
+          </div>
+        )}
+        {isPlayerActive && <PlayerHud isPlaybackMaximized />}
       </div>
 
       <div
         className={[
           'home-shell-ui',
           isPlayerActive ? 'home-shell-ui--hidden' : '',
-          sidebarExpanded ? '' : 'home-shell-ui--sidebar-collapsed',
+          isTopbarMode ? 'home-shell-ui--topbar' : 'home-shell-ui--sidebar-collapsed',
         ].filter(Boolean).join(' ')}
       >
-        {!isPlayerActive && sidebarExpanded && <div className="home-shell-dim" aria-hidden="true" />}
-        <Sidebar expanded={sidebarExpanded} onExpandedChange={setSidebarExpanded} />
+        {!isPlayerActive && !isTopbarMode && sidebarExpanded && <div className="home-shell-dim" aria-hidden="true" />}
+        {isTopbarMode ? (
+          <Topbar />
+        ) : (
+          <Sidebar expanded={sidebarExpanded} onExpandedChange={setSidebarExpanded} />
+        )}
         <main className="home-content" data-home-scope="content">
           <HomeShellContent />
         </main>

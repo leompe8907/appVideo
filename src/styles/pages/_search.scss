@@ -1,4 +1,5 @@
 @use '../variables' as *;
+@use '../mixins' as *;
 
 // ─── Contenedor raíz ────────────────────────────────────────────────────────
 
@@ -13,7 +14,7 @@
 .search-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--search-overlay-bg, rgba(0, 0, 0, 0.55));
   pointer-events: none;
 }
 
@@ -21,14 +22,26 @@
 
 .search-container {
   position: absolute;
+  // vmin en vez de px fijos: un margen de 10px es una fracción muy distinta
+  // de la pantalla según el viewport CSS efectivo (que cambia tanto en TVs
+  // de otra resolución como en un monitor de PC grande con el escalado de
+  // Windows subido).
+  // Fallback fijo antes de `clamp()`: WebKit viejo de Smart TV no lo
+  // interpreta y descarta la línea entera, quedándose con la última
+  // declaración válida.
   top: 10px;
+  top: clamp(8px, 1.2vmin, 18px);
   left: 10px;
+  left: clamp(8px, 1.2vmin, 18px);
   right: 10px;
+  right: clamp(8px, 1.2vmin, 18px);
   bottom: 10px;
+  bottom: clamp(8px, 1.2vmin, 18px);
   max-width: 100%;
-  background-color: rgba(0, 0, 0, 0.92);
+  background-color: var(--search-panel-bg, rgba(0, 0, 0, 0.92));
   border-radius: 10px;
-  padding: 20px;
+  padding: 15px;
+  padding: clamp(12px, 1.8vmin, 24px);
   display: flex;
   flex-direction: column;
   z-index: 1;
@@ -42,8 +55,8 @@
 .search-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background-color: #333;
+  background-color: var(--search-header-bg, #333);
+  color: var(--search-header-text, #fff);
   border-radius: 5px;
   padding: 10px;
   width: 100%;
@@ -54,81 +67,217 @@
   flex-shrink: 0;
   // Si el input recibe estilos de foco (sombras/bordes), no recortar placeholder/efectos.
   overflow: visible;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  > *:not(:last-child) {
+    margin-right: 10px;
+  }
 }
 
 .search-input {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 16px;
-  color: #fff;
-  background: transparent;
-  border: 0;
+  font-size: 1.5rem;
+  color: var(--search-input-text, #fff);
+  background: var(--search-input-bg, transparent);
+  border: 2px solid transparent;
   outline: none;
-  padding: 0 6px;
-  height: 2.3em;
+  padding: 0 10px;
+  height: 2.6em;
   border-radius: 8px;
+  box-sizing: border-box;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 
   &::placeholder {
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--search-input-placeholder, rgba(255, 255, 255, 0.45));
+  }
+
+  &:focus,
+  &.focused {
+    background: var(--search-input-focused-bg, rgba(255, 255, 255, 0.08));
+    border-color: var(--search-input-focused-border, var(--focus-color, #007bff));
+    box-shadow: var(
+      --search-input-focused-shadow,
+      0 0 0 2px rgba(var(--focus-color-rgb, 0, 123, 255), 0.35)
+    );
   }
 }
 
 .search-clear {
   flex-shrink: 0;
-  background-color: #ff4c4c;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  padding: 8px 14px;
+  background-color: var(--search-clear-bg, rgba(255, 255, 255, 0.08));
+  color: var(--search-clear-text, rgba(255, 255, 255, 0.85));
+  border: 2px solid var(--search-clear-border, rgba(255, 255, 255, 0.18));
+  border-radius: 8px;
+  padding: 10px 20px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 1.1rem;
+  font-weight: 600;
   line-height: 1;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
 
+  // Botón "fantasma" en reposo -- limpiar el texto de búsqueda no es una
+  // acción destructiva (no borra nada guardado), así que no debe competir
+  // visualmente con el rojo de alerta ni parecer más importante que el
+  // propio campo de búsqueda.
   &:hover {
-    background-color: #ff1a1a;
+    background-color: var(--search-clear-hover-bg, rgba(255, 255, 255, 0.14));
+    border-color: var(--search-clear-hover-border, rgba(255, 255, 255, 0.3));
+    color: var(--search-clear-hover-text, #fff);
+  }
+
+  // Foco de control remoto: mismo lenguaje visual que `.search-input:focus`
+  // (borde + halo con el color de foco de la marca) en vez de un rojo más
+  // intenso -- consistente con el resto de los controles enfocables de TV.
+  &:focus,
+  &.focused {
+    background-color: var(--search-clear-focus-bg, rgba(255, 255, 255, 0.14));
+    border-color: var(--search-clear-focus-border, var(--focus-color, #007bff));
+    box-shadow: var(
+      --search-clear-focus-shadow,
+      0 0 0 2px rgba(var(--focus-color-rgb, 0, 123, 255), 0.35)
+    );
+    color: var(--search-clear-hover-text, #fff);
+    outline: none;
   }
 }
 
 // ─── Tabs ───────────────────────────────────────────────────────────────────
 
+/** Separación entre pestañas; en TV se aplica vía márgenes (ver .device-tv). */
+$search-tabs-gap-x: 1.5rem;
+$search-tabs-gap-y: 0.85rem;
+$search-tabs-height-tv: 4.5rem;
+
+/** Tipografía de resultados solo en TV (lectura a ~1,5 m). */
+$search-tv-count-size: 1.5rem;
+$search-tv-section-title-size: 1.75rem;
+$search-tv-result-title-size: 1.5rem;
+$search-tv-result-meta-size: 1.3rem;
+
 .search-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem 1.25rem;
+  gap: $search-tabs-gap-y $search-tabs-gap-x;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   overflow-x: hidden;
-  height: 2.5rem;
+  height: 3.5rem;
 }
 
 .search-tab {
-  padding: 8px 16px;
+  padding: 10px 22px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 14px;
+  background: var(--search-tab-bg, rgba(255, 255, 255, 0.08));
+  color: var(--search-tab-text, rgba(255, 255, 255, 0.9));
+  font-size: 1.25rem;
   cursor: pointer;
   border: none;
   user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
 
   &.active {
-    background: rgba(0, 123, 255, 0.9);
-    color: #fff;
+    background: var(--search-tab-active-bg, var(--primary-color, rgba(0, 123, 255, 0.9)));
+    color: var(--search-tab-active-text, #fff);
   }
 
   &:focus,
-  &:hover {
-    background: rgba(255, 255, 255, 0.18);
+  &:hover,
+  &.focused {
+    background: var(--search-tab-hover-bg, rgba(255, 255, 255, 0.18));
+    outline: none;
   }
 
   &.active:focus,
-  &.active:hover {
-    background: rgba(0, 123, 255, 1);
+  &.active:hover,
+  &.active.focused {
+    background: var(
+      --search-tab-active-hover-bg,
+      var(--search-tab-active-bg, var(--primary-color, rgba(0, 123, 255, 1)))
+    );
+  }
+}
+
+// Chromium antiguo en TV (2019+) no aplica flex `gap`; mismo patrón que bouquet/login.
+.device-tv {
+  .search-tabs {
+    gap: 0;
+    height: auto;
+    min-height: $search-tabs-height-tv;
+    // overflow-x: hidden + overflow-y visible fuerza scroll en WebKit viejo de TV.
+    overflow: hidden;
+    @include scrollbar-hidden;
+
+    > .search-tab {
+      margin-inline-end: $search-tabs-gap-x;
+      margin-block-end: $search-tabs-gap-y;
+
+      &:last-child {
+        margin-inline-end: 0;
+      }
+    }
+  }
+
+  .search-tab {
+    font-size: 1.45rem;
+    padding: 12px 26px;
+  }
+
+  .search-results {
+    padding: 14px 16px;
+    @include scrollbar-hidden;
+
+    &::-webkit-scrollbar {
+      width: 0 !important;
+      height: 0 !important;
+      display: none !important;
+    }
+  }
+
+  .search-count {
+    font-size: $search-tv-count-size;
+    font-weight: 600;
+    color: var(--search-empty-count-text, rgba(255, 255, 255, 0.88));
+    margin-bottom: 12px;
+    padding: 0 6px;
+  }
+
+  .search-empty {
+    font-size: 1.4rem;
+  }
+
+  .search-section__title {
+    font-size: $search-tv-section-title-size;
+    padding: 10px 16px;
+  }
+
+  .search-result {
+    height: auto;
+    min-height: 24rem;
+    padding: 12px 14px;
+  }
+
+  .search-result__name,
+  .search-result__event-title {
+    font-size: $search-tv-result-title-size;
+    line-height: 1.35;
+  }
+
+  .search-result__vod-meta,
+  .search-result__channel,
+  .search-result__time {
+    font-size: $search-tv-result-meta-size;
+    line-height: 1.3;
+  }
+
+  .search-result__vod-meta,
+  .search-result__time {
+    color: var(--search-results-meta-text, rgba(255, 255, 255, 0.82));
   }
 }
 
@@ -144,49 +293,23 @@
   overflow-y: auto;
   overscroll-behavior-x: none;
   overscroll-behavior-y: contain;
-  background-color: #222;
+  background-color: var(--search-results-area-bg, #222);
   border-radius: 10px;
   padding: 10px;
   box-sizing: border-box;
-
-  // Firefox
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.35) rgba(0, 0, 0, 0.4);
-
-  // WebKit (Chrome, Edge, Safari)
-  &::-webkit-scrollbar {
-    width: 10px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.35);
-    border-radius: 8px;
-    margin: 4px 0;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.22);
-    border-radius: 8px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-
-    &:hover {
-      background: rgba(0, 123, 255, 0.55);
-      background-clip: padding-box;
-    }
-  }
+  @include scrollbar-hidden;
 }
 
 .search-empty {
-  color: rgba(255, 255, 255, 0.75);
-  font-size: 15px;
+  color: var(--search-empty-text, rgba(255, 255, 255, 0.75));
+  font-size: clamp(13px, 1.5vmin, 17px);
   padding: 1rem 0.5rem;
   text-align: center;
 }
 
 .search-count {
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 13px;
+  color: var(--search-empty-count-text, rgba(255, 255, 255, 0.65));
+  font-size: clamp(11px, 1.2vmin, 14px);
   margin-bottom: 8px;
   padding: 0 4px;
 }
@@ -205,12 +328,12 @@
 }
 
 .search-section__title {
-  color: #fff;
+  color: var(--search-results-title-text, #fff);
   font-weight: 700;
-  font-size: 15px;
-  padding: 5px 10px;
+  font-size: 1.4rem;
+  padding: 8px 14px;
   margin-bottom: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--search-results-section-title-bg, rgba(255, 255, 255, 0.06));
   border-radius: 8px;
   display: block;
 }
@@ -239,23 +362,23 @@
   max-width: 100%;
   min-width: 0;
   padding: 10px;
-  background-color: #333;
-  border: 1px solid #444;
+  background-color: var(--search-results-card-bg, #333);
+  border: 1px solid var(--search-results-card-border, #444);
   border-radius: 10px;
   cursor: pointer;
   text-align: center;
   overflow: hidden;
-  min-height: 14em;
-  height: 17rem;
-  color: #fff;
+  min-height: 17em;
+  height: 22.5rem;
+  color: var(--search-results-title-text, #fff);
   box-sizing: border-box;
   transition: background-color 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 
   &:hover,
   &:focus,
   &.focused {
-    background-color: #555;
-    border-color: #007bff;
+    background-color: var(--search-results-card-hover-bg, #555);
+    border-color: var(--search-results-card-focus-border, var(--focus-color, #007bff));
     transform: scale(1.04);
     outline: none;
   }
@@ -263,11 +386,11 @@
 
 .search-result__img {
   width: 100%;
-  height: 11em;
+  height: 13.5em;
   flex-shrink: 0;
   border-radius: 5px;
   object-fit: contain;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--search-results-thumb-bg, rgba(255, 255, 255, 0.06));
 }
 
 // EPG: menos alto en imagen para dejar sitio a canal + título del evento + hora
@@ -281,7 +404,7 @@
   height: 9em;
   flex-shrink: 0;
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--search-results-thumb-bg, rgba(255, 255, 255, 0.06));
 
   &.search-result__img--epg {
     height: 7.5em;
@@ -290,8 +413,8 @@
 
 .search-result__name {
   margin-top: 8px;
-  font-size: 0.9em;
-  color: #fff;
+  font-size: 1.15rem;
+  color: var(--search-results-title-text, #fff);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -305,8 +428,8 @@
 
 .search-result__vod-meta {
   margin-top: 4px;
-  font-size: 0.75em;
-  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.95rem;
+  color: var(--search-results-meta-text, rgba(255, 255, 255, 0.65));
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -317,9 +440,9 @@
 // Título del programa (EPG): siempre visible junto a canal y horario
 .search-result__event-title {
   margin-top: 6px;
-  font-size: 0.9em;
+  font-size: 1.15rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--search-results-title-text, #fff);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -345,11 +468,17 @@
   align-items: baseline;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 0 6px;
-  font-size: 0.82em;
-  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.05rem;
+  color: var(--search-results-meta-text, rgba(255, 255, 255, 0.88));
   line-height: 1.25;
   text-align: center;
+
+  // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+  // `.search-result__lcn` ya trae su propio margin-right (4px); esto solo
+  // agrega el resto del espaciado que antes daba `gap: 0 6px`.
+  > *:not(:last-child) {
+    margin-right: 6px;
+  }
 }
 
 .search-result__channel-name {
@@ -365,8 +494,8 @@
 
 .search-result__time {
   margin-top: 6px;
-  font-size: 0.82em;
-  color: rgba(255, 255, 255, 0.75);
+  font-size: 1.05rem;
+  color: var(--search-results-meta-text, rgba(255, 255, 255, 0.75));
   text-align: center;
   line-height: 1.2;
 }

@@ -1,0 +1,222 @@
+// Anillo de foco único en TV (TvFocusRing.jsx)
+// Ver docs/PLAN_NAVEGACION_TV.md — paso 6
+
+.tv-focus-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 3px solid var(--focus-color, var(--secondary-color, var(--primary-color, #667eea)));
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 1px rgba(var(--focus-color-rgb, 102, 126, 234), 0.35),
+    0 0 18px rgba(var(--focus-color-rgb, 102, 126, 234), 0.45);
+  opacity: 0;
+  visibility: hidden;
+  will-change: transform, width, height;
+  transition: none;
+}
+
+.tv-focus-ring--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+// Con anillo activo: TvFocusRing es la ÚNICA señal visual de foco (sin borde/sombra duplicados).
+// html + atributos para ganar especificidad frente a _login.scss, _bouquet.scss, etc.
+html[data-focus='on'].device-tv[data-tv-focus-ring='on'] {
+  [data-focusable='true'],
+  .focused {
+    transition: none !important;
+  }
+
+  .focused,
+  button.focused,
+  a.focused,
+  input.focused,
+  textarea.focused,
+  select.focused,
+  .nav-card.focused,
+  .focusable-card.focused,
+  .search-result.focused,
+  .channel-card.focused,
+  .home-sidebar-link.focused,
+  .home-sidebar-settings-btn.focused,
+  .home-sidebar-sublink.focused,
+  .player-hud__iconbtn.focused,
+  .player-hud__trackbtn.focused,
+  .player-hud__pillbtn.focused,
+  .player-hud__channel-row.focused,
+  .player-channel-sidebar__row.focused {
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    -moz-box-shadow: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+
+  // Importante: muchos componentes pintan "foco" en hijos cuando el padre tiene `.focused`
+  // (p. ej. `.vod-card.focused .vod-card-poster { box-shadow... }`).
+  // Con TvFocusRing activo, anulamos esos efectos para evitar remanentes visuales.
+  .focused * {
+    transition: none !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    -moz-box-shadow: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+
+  // Login: quitar anillos/bordes de foco (mantener aspecto base del control).
+  .login-card {
+    input.focused,
+    button.focused,
+    .password-toggle.focused,
+    .login-button.focused,
+    .register-button.focused,
+    .udid-button.focused {
+      border-width: 1px !important;
+      border-color: rgba(255, 255, 255, 0.2) !important;
+      box-shadow: none !important;
+      transform: none !important;
+      filter: none !important;
+    }
+
+    input.focused {
+      background: var(--login-input-bg, rgba(255, 255, 255, 0.1)) !important;
+    }
+
+    .password-toggle.focused {
+      background: var(--login-toggle-bg, rgba(255, 255, 255, 0.1)) !important;
+      color: var(--login-toggle-text, rgba(255, 255, 255, 0.7)) !important;
+    }
+
+    .login-button.focused,
+    .register-button.focused,
+    .udid-button.focused {
+      border: none !important;
+      transform: none !important;
+    }
+  }
+
+  // Bouquet / tarjetas: sin borde de foco duplicado.
+  .channel-card.focused {
+    z-index: 1;
+    border-color: transparent !important;
+
+    .channel-card-lwn-frame,
+    .channel-card-frame {
+      transform: none !important;
+      box-shadow: none !important;
+      -webkit-box-shadow: none !important;
+      border-color: transparent !important;
+    }
+  }
+
+  .channel-card.channel-card--logo_with_number.focused .channel-card-lwn-frame,
+  .channel-card.channel-card--event_and_logo.focused .channel-card-frame,
+  .channel-card.channel-card--event_and_logo_overlay.focused .channel-card-frame {
+    border-color: transparent !important;
+  }
+
+  // Sidebar: foco vía subrayado (sin anillo TvFocusRing ni bordes gruesos).
+  .home-sidebar-link.focused,
+  .home-sidebar-settings-btn.focused,
+  .home-sidebar-sublink.focused {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .home-sidebar-link.active.focused {
+    background: transparent !important;
+  }
+
+  .search-result.focused {
+    background-color: #333 !important;
+    border-color: #444 !important;
+  }
+}
+
+// Login con modal abierto: sin recuadro de foco en controles del formulario detrás del backdrop.
+html.device-tv .panaccess-login.login-modal-open .login-card {
+  input:focus,
+  input:focus-visible,
+  button:focus,
+  button:focus-visible,
+  .password-toggle:focus,
+  .password-toggle:focus-visible,
+  .login-button:focus,
+  .login-button:focus-visible,
+  .register-button:focus,
+  .register-button:focus-visible,
+  .udid-button:focus,
+  .udid-button:focus-visible {
+    box-shadow: none !important;
+    filter: none !important;
+    transform: none !important;
+  }
+
+  input:focus,
+  input:focus-visible {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .password-toggle:focus,
+  .password-toggle:focus-visible {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .login-button:focus,
+  .login-button:focus-visible,
+  .register-button:focus,
+  .register-button:focus-visible,
+  .udid-button:focus,
+  .udid-button:focus-visible {
+    border-color: rgba(255, 255, 255, 0.25) !important;
+  }
+}
+
+// TV login: altura estable y sin transiciones (el anillo marca el foco).
+html.device-tv .login-card {
+  input,
+  button,
+  .password-toggle {
+    transition: none !important;
+  }
+
+  input,
+  .password-toggle {
+    box-sizing: border-box;
+    border-width: 1px !important;
+    min-height: 3.25rem;
+  }
+
+  .password-toggle {
+    width: 3.25rem;
+    height: 3.25rem;
+    min-height: 3.25rem;
+    padding: 0;
+  }
+}
+
+// Teclado OSD en TV: el anillo único ya marca la tecla enfocada (sigue a
+// document.activeElement, ver TvFocusRing.jsx). Sin esta anulación, cada
+// pulsación pagaba DOS efectos de foco a la vez — el anillo global (mueve un
+// div fixed con translate3d) y el propio `transform: scale + box-shadow` del
+// teclado — lo que hacía sentir la escritura lenta/trabada en TVs con GPU
+// débil. Igual que con `.login-card`: en TV el teclado no dibuja su propio
+// efecto de foco, solo lo hace en PC (fuera de este selector `.device-tv`).
+html.device-tv .osd-keyboard-key {
+  transition: none !important;
+
+  &:focus,
+  &:focus-visible {
+    transform: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+}

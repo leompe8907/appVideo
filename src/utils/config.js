@@ -2,6 +2,8 @@
  * Helpers para acceder a configuraciones organizadas por secciones
  */
 
+import { onBrandCacheInvalidated } from '@appvideo/core/config/brandConfig';
+
 /**
  * Obtiene una propiedad de UI
  * @param {Object} brandConfig - Configuración de la marca
@@ -75,6 +77,8 @@ export function invalidateHomeBackgroundCache() {
   homeBackgroundResolvedUrlByBrand.clear();
 }
 
+onBrandCacheInvalidated(invalidateHomeBackgroundCache);
+
 /**
  * Prueba `background.{ext}` en orden y fija una sola `--home-background-image`.
  * Cancela sondas previas si cambia la marca antes de terminar.
@@ -133,6 +137,83 @@ export function scheduleHomeBackgroundResolution(brandConfig) {
 }
 
 /**
+ * Variables CSS del buscador desde `ui.search` (solo setea claves definidas en marca).
+ * @param {HTMLElement} root
+ * @param {Object} ui
+ * @param {(name: string, value: unknown) => void} setOptional
+ */
+function applySearchTheme(root, ui, setOptional) {
+  const search = ui.search || {};
+  const header = search.header || {};
+  const input = search.input || {};
+  const clearBtn = search.clearButton || {};
+  const tabs = search.tabs || {};
+  const results = search.results || {};
+  const empty = search.empty || {};
+
+  setOptional('--search-overlay-bg', search.overlayBg);
+  setOptional('--search-panel-bg', search.panelBg);
+
+  setOptional('--search-header-bg', header.bg);
+  setOptional('--search-header-text', header.text);
+
+  setOptional('--search-input-bg', input.bg);
+  setOptional('--search-input-text', input.text);
+  setOptional('--search-input-placeholder', input.placeholder);
+  setOptional('--search-input-focused-bg', input.focusedBg);
+  setOptional('--search-input-focused-border', input.focusedBorder);
+  setOptional('--search-input-focused-shadow', input.focusedShadow);
+
+  setOptional('--search-clear-bg', clearBtn.bg);
+  setOptional('--search-clear-text', clearBtn.text);
+  setOptional('--search-clear-hover-bg', clearBtn.hoverBg);
+
+  setOptional('--search-tab-bg', tabs.bg);
+  setOptional('--search-tab-text', tabs.text);
+  setOptional('--search-tab-hover-bg', tabs.hoverBg);
+  setOptional('--search-tab-active-bg', tabs.activeBg);
+  setOptional('--search-tab-active-text', tabs.activeText);
+  setOptional('--search-tab-active-hover-bg', tabs.activeHoverBg);
+
+  setOptional('--search-results-area-bg', results.areaBg);
+  setOptional('--search-results-card-bg', results.cardBg);
+  setOptional('--search-results-card-border', results.cardBorder);
+  setOptional('--search-results-card-hover-bg', results.cardHoverBg);
+  setOptional('--search-results-card-focus-border', results.cardFocusBorder);
+  setOptional('--search-results-title-text', results.titleText);
+  setOptional('--search-results-meta-text', results.metaText);
+  setOptional('--search-results-section-title-bg', results.sectionTitleBg);
+  setOptional('--search-results-thumb-bg', results.thumbBg);
+
+  setOptional('--search-empty-text', empty.text);
+  setOptional('--search-empty-count-text', empty.countText);
+}
+
+/**
+ * Variables CSS de "Mi cuenta" (/home/mi-cuenta) desde `account.theme`.
+ * Todas opcionales: si la marca no define un valor, el SCSS trae un fallback
+ * fiel al diseño de referencia (fondo claro + panel oscuro + acento celeste).
+ * @param {HTMLElement} root
+ * @param {Object} brandConfig
+ * @param {(name: string, value: unknown) => void} setOptional
+ */
+function applyAccountTheme(root, brandConfig, setOptional) {
+  const theme = brandConfig?.account?.theme || {};
+  setOptional('--account-sidebar-bg', theme.sidebarBg);
+  setOptional('--account-content-bg', theme.contentBg);
+  setOptional('--account-panel-bg', theme.panelBg);
+  setOptional('--account-panel-text', theme.panelText);
+  setOptional('--account-active-bg', theme.activeItemBg);
+  setOptional('--account-active-text', theme.activeItemText);
+  setOptional('--account-divider', theme.dividerColor);
+  setOptional('--account-content-title', theme.contentTitleColor);
+  setOptional('--account-qr-bg', theme.qrBackground);
+  setOptional('--account-step-number-bg', theme.stepNumberBg);
+  setOptional('--account-step-number-text', theme.stepNumberText);
+  setOptional('--account-danger-text', theme.dangerText);
+}
+
+/**
  * Aplica tema dinámicamente al documento
  * @param {Object} brandConfig - Configuración de la marca
  */
@@ -169,7 +250,14 @@ export function applyTheme(brandConfig) {
       if ([r, g, b].some((n) => Number.isNaN(n))) return null;
       return `${r}, ${g}, ${b}`;
     }
-    if (hex.length === 6) {
+    // 6 dígitos (#RRGGBB) u 8 (#RRGGBBAA, ej. secondaryColor de wind:
+    // "#00107bd9") -- en ambos casos solo nos interesa el RGB, el canal
+    // alpha del 8vo caso se descarta porque la opacidad ya se controla
+    // aparte en cada uso (`rgba(var(--x-color-rgb), 0.45)`, etc.). Antes
+    // solo se aceptaba length 6, así que un secondaryColor de 8 dígitos
+    // devolvía `null` acá y `--secondary-color-rgb` nunca se sobreescribía
+    // (quedaba pegado en el default morado de global.scss).
+    if (hex.length === 6 || hex.length === 8) {
       const r = parseInt(hex.slice(0, 2), 16);
       const g = parseInt(hex.slice(2, 4), 16);
       const b = parseInt(hex.slice(4, 6), 16);
@@ -184,10 +272,18 @@ export function applyTheme(brandConfig) {
   if (primaryRgb) {
     root.style.setProperty('--primary-color-rgb', primaryRgb);
   }
+  const secondaryRgb = toRgbTuple(ui.secondaryColor);
+  if (secondaryRgb) {
+    root.style.setProperty('--secondary-color-rgb', secondaryRgb);
+  }
   // EPG (cards)
   root.style.setProperty(
     '--epg-cards-channel-active-bg',
     epgCards.epgCardsChannelActiveBg || '#0A4385'
+  );
+  root.style.setProperty(
+    '--epg-cards-table-header-bg',
+    epgCards.epgCardsHeaderBg || 'rgb(0, 0, 0)'
   );
   root.style.setProperty(
     '--epg-cards-program-live-bg',
@@ -223,11 +319,11 @@ export function applyTheme(brandConfig) {
   // Mantener compatibilidad con builds previos (si algún CSS/QA lo usa).
   root.setAttribute('data-tv-focus', focusEnabled ? 'on' : 'off');
 
-  // Color de foco (por marca). Si no se setea, cae al primaryColor.
+  // Color de foco: override explícito → secondaryColor → primaryColor.
   const focusColor =
     typeof focusCfg.color === 'string' && focusCfg.color.trim() !== ''
       ? focusCfg.color.trim()
-      : ui.primaryColor;
+      : ui.secondaryColor || ui.primaryColor;
   if (focusColor) {
     root.style.setProperty('--focus-color', focusColor);
     const focusRgb = toRgbTuple(focusColor);
@@ -251,9 +347,21 @@ export function applyTheme(brandConfig) {
 
   // Sidebar (Home)
   root.style.setProperty('--sidebar-bg', sidebar.backgroundColor || 'rgba(0, 0, 0, 0.45)');
+  // Panel rail/overlay: opaco, mismo tono que el sidebar cerrado (#0a0a0a o color sólido de marca).
+  const panelBg = sidebar.panelBackgroundColor || sidebar.backgroundColor;
+  root.style.setProperty(
+    '--sidebar-panel-bg-theme',
+    panelBg && !String(panelBg).includes('rgba') ? String(panelBg) : '#0a0a0a'
+  );
   root.style.setProperty('--sidebar-text', sidebar.textColor || 'rgba(255, 255, 255, 0.82)');
   root.style.setProperty('--sidebar-submenu-bg', sidebar.submenuBackgroundColor || 'rgba(0, 0, 0, 0.55)');
   root.style.setProperty('--sidebar-submenu-text', sidebar.submenuTextColor || 'rgba(255, 255, 255, 0.85)');
+
+  // Buscador (/home/buscador): `ui.search`
+  applySearchTheme(root, ui, setOptional);
+
+  // Mi cuenta (/home/mi-cuenta): `account.theme`
+  applyAccountTheme(root, brandConfig, setOptional);
 
   // Fondo home: una sola imagen (ver `scheduleHomeBackgroundResolution`).
   scheduleHomeBackgroundResolution(brandConfig);
@@ -275,6 +383,8 @@ export function applyTheme(brandConfig) {
   setLoginVar('--login-toggle-text', loginTheme.toggleText);
   setLoginVar('--login-modal-close-bg', loginTheme.modalCloseBg);
   setLoginVar('--login-modal-close-text', loginTheme.modalCloseText);
+  setLoginVar('--login-link-color', loginTheme.linkColor);
+  setLoginVar('--login-divider-color', loginTheme.dividerColor);
 
   // Login Inputs (colores por marca): `login.theme.inputs`
   const loginInputs = loginTheme.inputs || {};
@@ -291,7 +401,19 @@ export function applyTheme(brandConfig) {
   setLoginVar('--login-social-bg', loginSocial.bg);
   setLoginVar('--login-social-text', loginSocial.text);
   setLoginVar('--login-social-border', loginSocial.border);
-  
+
+  // Modal "Recuperar contraseña" nativo (PC/web, sin QR): `login.theme.forgotPasswordModal`
+  const forgotModalTheme = loginTheme.forgotPasswordModal || {};
+  setLoginVar('--login-forgot-modal-bg', forgotModalTheme.background);
+  setLoginVar('--login-forgot-modal-border', forgotModalTheme.borderColor);
+  setLoginVar('--login-forgot-title-color', forgotModalTheme.titleColor);
+  setLoginVar('--login-forgot-text-color', forgotModalTheme.textColor);
+  setLoginVar('--login-forgot-icon-bg', forgotModalTheme.iconBg);
+  setLoginVar('--login-forgot-icon-color', forgotModalTheme.iconColor);
+  setLoginVar('--login-forgot-success-icon-bg', forgotModalTheme.successIconBg);
+  setLoginVar('--login-forgot-success-icon-color', forgotModalTheme.successIconColor);
+  setLoginVar('--login-forgot-input-icon-color', forgotModalTheme.inputIconColor);
+
   // Aplicar clase de tema
   root.setAttribute('data-theme', ui.theme);
 

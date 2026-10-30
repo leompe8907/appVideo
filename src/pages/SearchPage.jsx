@@ -1,14 +1,24 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
+import { useDevice } from '../contexts/DeviceContext';
 import { usePlayer } from '../contexts/PlayerContext';
-import { usePreload } from '../store/usePreload';
-import panaccessService from '../services/panaccessService';
-import { getSearchDebounceMs, searchAll } from '../services/searchService';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { usableImageUrl, markImageFailed } from '@appvideo/core/utils/remoteImage';
+
+const IMG_OPTS = { allowRelative: true };
+import panaccessService from '@appvideo/core/services/panaccessService';
+import { getSearchDebounceMs, searchAll } from '@appvideo/core/services/searchService';
 import { useParentalGate } from '../hooks/useParentalGate';
+import { useSearchPageTvNav } from '../hooks/useSearchPageTvNav';
+import { FocusableInput } from '../components/navigation/FocusableInput';
+import { buildSearchResultKey, useSearchSessionStore } from '@appvideo/core/store/searchSessionStore';
 import EpgEventModal from '../components/epg/EpgEventModal';
 import VodDetailModal from '../components/vod/VodDetailModal';
 import VodDetailModalClassic from '../components/vod/VodDetailModalClassic';
+import { useBrandPlaceholderUrl } from '../hooks/useBrandPlaceholderUrl';
+import { catchupGroupToChannel, catchupEventToChannel, findCatchupGroupForEvent } from '@appvideo/core/utils/catchupEvent';
 import '../styles/pages/_search.scss';
 
 function SearchTab({ id, label, active, hidden, onSelect }) {
@@ -16,6 +26,7 @@ function SearchTab({ id, label, active, hidden, onSelect }) {
   return (
     <button
       type="button"
+      id={`search-tab-${id}`}
       className={`search-tab${active ? ' active' : ''}`}
       onClick={() => onSelect?.(id)}
     >
@@ -26,11 +37,13 @@ function SearchTab({ id, label, active, hidden, onSelect }) {
 
 function ResultItem({ item, onSelect }) {
   const { t } = useTranslation();
+  const placeholderUrl = useBrandPlaceholderUrl();
+  const resultKey = buildSearchResultKey(item);
 
-  const [imgSrc, setImgSrc] = useState(item.logo || '');
+  const [imgSrc, setImgSrc] = useState(usableImageUrl(item.logo, IMG_OPTS) || '');
   useEffect(() => {
-    setImgSrc(item.logo || '');
-  }, [item.logo, item.vodPosterFallback]);
+    setImgSrc(usableImageUrl(item.logo, IMG_OPTS) || '');
+  }, [item.logo, item.vodPosterFallback, item.type]);
 
   const timeText = (() => {
     if (item.type !== 'epg') return '';
@@ -52,26 +65,29 @@ function ResultItem({ item, onSelect }) {
     <button
       type="button"
       className={`search-result${isEpg ? ' search-result--epg' : ''}`}
+      data-search-result-key={resultKey || undefined}
       onClick={() => onSelect?.(item)}
     >
-      {imgSrc ? (
+      {(imgSrc || placeholderUrl) ? (
         <img
           className={`search-result__img${isEpg ? ' search-result__img--epg' : ''}`}
-          src={imgSrc}
+          src={imgSrc || placeholderUrl}
           alt={item.name}
           onError={() => {
-            // Fallback: si la imagen del evento falla, mostrar la del canal
+            if (imgSrc) markImageFailed(imgSrc);
             if (item.type === 'epg' && item.channelLogo && imgSrc !== item.channelLogo) {
               setImgSrc(item.channelLogo);
               return;
             }
-            // Series VOD: background → posterInfo si la URL principal falla
             if (item.type === 'vod' && item.vodPosterFallback && imgSrc !== item.vodPosterFallback) {
               setImgSrc(item.vodPosterFallback);
               return;
             }
-            // Último recurso: placeholder
-            if (imgSrc) setImgSrc('');
+            if (placeholderUrl && imgSrc !== placeholderUrl) {
+              setImgSrc(placeholderUrl);
+              return;
+            }
+            setImgSrc('');
           }}
         />
       ) : (
@@ -133,42 +149,74 @@ function SearchSection({ title, items, baseIndex, onSelect }) {
 
 export function SearchPage() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const { isTV } = useDevice();
   const { currentBrand } = useBrand();
   const { play } = usePlayer();
   const { requestPlayChannel, requestPlayMedia } = useParentalGate();
   const { epg, vod, catchup, loadVOD, loadCatchup } = usePreload();
+  // Bandera de marca: oculta accesos a la guía completa (EPG.enabled en
+  // brands.js). Default true: sin cambios. Afecta también los resultados
+  // de búsqueda de tipo "epg" (programación), no solo la navegación a /home/epg.
+  const epgEnabledByBrand = currentBrand?.EPG?.enabled !== false;
 
-  const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('all'); // all | service | vod | catchup | epg
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const query = useSearchSessionStore((s) => s.query);
+  const activeTab = useSearchSessionStore((s) => s.activeTab);
+  const setSessionQuery = useSearchSessionStore((s) => s.setQuery);
+  const setSessionActiveTab = useSearchSessionStore((s) => s.setActiveTab);
+  const bindBrand = useSearchSessionStore((s) => s.bindBrand);
+  const touchCatalogSnapshot = useSearchSessionStore((s) => s.touchCatalogSnapshot);
+
+  const [debouncedQuery, setDebouncedQuery] = useState(() => useSearchSessionStore.getState().query);
   const [selectedEpgItem, setSelectedEpgItem] = useState(null);
   const [selectedVodItem, setSelectedVodItem] = useState(null);
+  const [selectedCatchupDetail, setSelectedCatchupDetail] = useState(null);
   const inputRef = useRef(null);
   const tRef = useRef(t);
   useEffect(() => { tRef.current = t; });
 
+  const searchModalOpen = Boolean(selectedEpgItem || selectedVodItem || selectedCatchupDetail);
+
   useEffect(() => {
+    if (location.pathname !== '/home/buscador') return;
+    const store = useSearchSessionStore.getState();
+    if (store.isExpired()) {
+      store.reset();
+      setDebouncedQuery('');
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!currentBrand?.brand) return;
+    bindBrand(currentBrand.brand);
+  }, [currentBrand?.brand, bindBrand]);
+
+  useEffect(() => {
+    touchCatalogSnapshot({
+      epgLastLoadedAt: epg.lastLoadedAt ?? null,
+      vodLastLoadedAt: vod.lastLoadedAt ?? null,
+      catchupLastLoadedAt: catchup.lastLoadedAt ?? null,
+    });
+  }, [epg.lastLoadedAt, vod.lastLoadedAt, catchup.lastLoadedAt, touchCatalogSnapshot]);
+
+  useEffect(() => {
+    if (query === debouncedQuery) return undefined;
     const id = setTimeout(() => setDebouncedQuery(query), getSearchDebounceMs());
     return () => clearTimeout(id);
-  }, [query]);
+  }, [query, debouncedQuery]);
 
-  // Best-effort: enfocar input al entrar y abrir teclado en TVs
+  // PC: foco en input al entrar. TV: foco sin abrir IME (Opción B — useSearchPageTvNav).
   useEffect(() => {
+    if (isTV) return undefined;
     const el = inputRef.current;
-    if (!el) return;
-    try { el.focus(); } catch { /* noop */ }
+    if (!el) return undefined;
     try {
-      const len = (el.value || '').length;
-      if (typeof el.setSelectionRange === 'function') el.setSelectionRange(len, len);
-    } catch { /* noop */ }
-    const timer = setTimeout(() => {
-      try {
-        el.focus();
-        if (typeof el.click === 'function') el.click();
-      } catch { /* noop */ }
-    }, 60);
-    return () => clearTimeout(timer);
-  }, []);
+      el.focus();
+    } catch {
+      /* noop */
+    }
+    return undefined;
+  }, [isTV]);
 
   // Cargar VOD/Catchup al entrar al buscador.
   // tRef.current se pasa como snapshot al momento de la carga para evitar
@@ -185,9 +233,11 @@ export function SearchPage() {
       services: epg.streams || [],
       vods: vod.allVods || [],
       catchupGroups: catchup.groups || [],
+      bouquets: epg.bouquetsWithChannels || [],
+      vodCategories: vod.categories || [],
       vodDrmBaseUrl: currentBrand?.drm ?? '',
     });
-  }, [debouncedQuery, epg.streams, vod.allVods, catchup.groups, currentBrand?.drm]);
+  }, [debouncedQuery, epg.streams, epg.bouquetsWithChannels, vod.allVods, vod.categories, catchup.groups, currentBrand?.drm]);
 
   const grouped = useMemo(() => {
     const services = [];
@@ -198,10 +248,10 @@ export function SearchPage() {
       if (r.type === 'service') services.push(r);
       else if (r.type === 'vod') vods.push(r);
       else if (r.type === 'catchup') catchups.push(r);
-      else if (r.type === 'epg') epgEvents.push(r);
+      else if (r.type === 'epg' && epgEnabledByBrand) epgEvents.push(r);
     });
     return { services, vods, catchups, epgEvents };
-  }, [resultsAll]);
+  }, [resultsAll, epgEnabledByBrand]);
 
   const isEmptyQuery = !debouncedQuery || debouncedQuery.trim().length === 0;
   const hideServiceTab = isEmptyQuery || grouped.services.length === 0;
@@ -229,6 +279,13 @@ export function SearchPage() {
     return 0;
   }, [effectiveTab, grouped]);
 
+  useSearchPageTvNav({
+    modalOpen: searchModalOpen,
+    restoreSignal: debouncedQuery,
+    resultCount: visibleCount,
+  });
+
+
   const handleSelect = (item) => {
     if (!item) return;
 
@@ -238,24 +295,12 @@ export function SearchPage() {
     }
 
     if (item.type === 'catchup') {
-      const catchupId = item.catchupId ?? item.id;
-      if (!catchupId) return;
-      try {
-        const url = panaccessService.getCatchupM3u8Url({ catchupId });
-        const normalized = panaccessService.normalizePlaybackUrl(url);
-        if (normalized) {
-          requestPlayMedia({
-            item: item.raw || { catchupId },
-            ratingRaw: item?.raw?.parentalRating ?? item?.parentalRating ?? null,
-            title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
-            message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
-            playFn: () =>
-              play({ type: 'catchup', id: catchupId, url: normalized, item: item.raw || { catchupId }, autoPlay: true }),
-          });
-        }
-      } catch {
-        // noop
-      }
+      const event = item.raw || item;
+      const group = findCatchupGroupForEvent(event, catchup.groups);
+      setSelectedCatchupDetail({
+        event,
+        channel: catchupGroupToChannel(group) || catchupEventToChannel(event),
+      });
       return;
     }
 
@@ -303,6 +348,45 @@ export function SearchPage() {
     setSelectedEpgItem(null);
   }, []);
 
+  const handleCatchupModalClose = useCallback(() => {
+    setSelectedCatchupDetail(null);
+  }, []);
+
+  const handleCatchupWatch = useCallback(
+    (_catchupLookupId, event) => {
+      const ev = event ?? selectedCatchupDetail?.event;
+      const streamId = ev?.id ?? ev?.catchupId ?? _catchupLookupId;
+      if (streamId == null) return;
+      setSelectedCatchupDetail(null);
+      try {
+        const url = panaccessService.normalizePlaybackUrl(
+          panaccessService.getCatchupM3u8Url({ catchupId: streamId }),
+        );
+        if (url) {
+          requestPlayMedia({
+            item: ev || { catchupId: streamId, id: streamId },
+            ratingRaw: ev?.parentalRating ?? null,
+            title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+            message: t('parental.restrictedMessage', {
+              defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.',
+            }),
+            playFn: () =>
+              play({
+                type: 'catchup',
+                id: streamId,
+                url,
+                item: ev || { catchupId: streamId, id: streamId },
+                autoPlay: true,
+              }),
+          });
+        }
+      } catch {
+        // noop
+      }
+    },
+    [selectedCatchupDetail, play, requestPlayMedia, t],
+  );
+
   const handleEpgPlayLive = useCallback(() => {
     if (!selectedEpgItem) return;
     const channel = selectedEpgItem?.raw?.channel;
@@ -342,26 +426,41 @@ export function SearchPage() {
     });
   }, [selectedEpgItem, play, requestPlayChannel]);
 
-  const handleEpgWatchCatchup = useCallback((catchupId) => {
-    if (!catchupId) return;
-    setSelectedEpgItem(null);
-    try {
-      const url = panaccessService.getCatchupM3u8Url({ catchupId });
-      const normalized = panaccessService.normalizePlaybackUrl(url);
-      if (normalized) {
-        requestPlayMedia({
-          item: { catchupId },
-          ratingRaw: selectedEpgItem?.raw?.event?.parentalRating ?? null,
-          title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
-          message: t('parental.restrictedMessage', { defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.' }),
-          playFn: () =>
-            play({ type: 'catchup', id: catchupId, url: normalized, item: { catchupId }, autoPlay: true }),
-        });
+  const handleEpgWatchCatchup = useCallback(
+    (catchupLookupId) => {
+      if (catchupLookupId == null) return;
+      const ev = selectedEpgItem?.raw?.event ?? selectedEpgItem?.event;
+      const streamId = ev?.id ?? ev?.catchupId ?? catchupLookupId;
+      if (streamId == null) return;
+      setSelectedEpgItem(null);
+      try {
+        const url = panaccessService.normalizePlaybackUrl(
+          panaccessService.getCatchupM3u8Url({ catchupId: streamId }),
+        );
+        if (url) {
+          requestPlayMedia({
+            item: ev || { catchupId: streamId, id: streamId },
+            ratingRaw: selectedEpgItem?.raw?.event?.parentalRating ?? null,
+            title: t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+            message: t('parental.restrictedMessage', {
+              defaultValue: 'Ingresa el PIN para reproducir contenido restringido por clasificación.',
+            }),
+            playFn: () =>
+              play({
+                type: 'catchup',
+                id: streamId,
+                url,
+                item: ev || { catchupId: streamId, id: streamId },
+                autoPlay: true,
+              }),
+          });
+        }
+      } catch {
+        // noop
       }
-    } catch {
-      // noop
-    }
-  }, [selectedEpgItem, play, requestPlayMedia, t]);
+    },
+    [selectedEpgItem, play, requestPlayMedia, t],
+  );
 
   const vodLayout = currentBrand?.vod?.layout === 'classic' ? 'classic' : 'hero';
   const vodCategories = vod.categories || [];
@@ -392,35 +491,42 @@ export function SearchPage() {
       <div className="search-overlay" />
       <div className="search-container">
         <div className="search-header">
-          <input
+          <FocusableInput
             ref={inputRef}
-            id="searchInput"
+            id="search-input-tv"
             className="search-input"
             value={query}
             placeholder={t('search.placeholder', { defaultValue: 'Buscar...' })}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => setSessionQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
-                setQuery('');
+                setSessionQuery('');
               }
-              if (e.key === 'Enter') {
+              if (!isTV && e.key === 'Enter') {
                 const all = resultsAll || [];
                 if (all.length > 0) handleSelect(all[0]);
               }
             }}
+            autoComplete="off"
           />
-          <button type="button" className="search-clear" onClick={() => setQuery('')}>
+          <button
+            type="button"
+            id="search-clear-btn"
+            className="search-clear"
+            tabIndex={0}
+            onClick={() => setSessionQuery('')}
+          >
             {t('search.clear', { defaultValue: 'Limpiar' })}
           </button>
         </div>
 
         {!hideAllTab && (
           <div className="search-tabs" role="tablist" aria-label={t('search.tabs', { defaultValue: 'Tabs de búsqueda' })}>
-            <SearchTab id="all" label={t('search.tabAll', { defaultValue: 'Todos' })} active={activeTab === 'all'} hidden={totalCategories < 2} onSelect={setActiveTab} />
-            <SearchTab id="service" label={t('search.tabServices', { defaultValue: 'Servicios' })} active={activeTab === 'service'} hidden={hideServiceTab} onSelect={setActiveTab} />
-            <SearchTab id="epg" label={t('search.tabEpg', { defaultValue: 'EPG' })} active={activeTab === 'epg'} hidden={hideEpgTab} onSelect={setActiveTab} />
-            <SearchTab id="vod" label={t('search.tabVod', { defaultValue: 'VOD' })} active={activeTab === 'vod'} hidden={hideVodTab} onSelect={setActiveTab} />
-            <SearchTab id="catchup" label={t('search.tabCatchup', { defaultValue: 'Catchup' })} active={activeTab === 'catchup'} hidden={hideCatchupTab} onSelect={setActiveTab} />
+            <SearchTab id="all" label={t('search.tabAll', { defaultValue: 'Todos' })} active={activeTab === 'all'} hidden={totalCategories < 2} onSelect={setSessionActiveTab} />
+            <SearchTab id="service" label={t('search.tabServices', { defaultValue: 'Servicios' })} active={activeTab === 'service'} hidden={hideServiceTab} onSelect={setSessionActiveTab} />
+            <SearchTab id="epg" label={t('search.tabEpg', { defaultValue: 'EPG' })} active={activeTab === 'epg'} hidden={hideEpgTab} onSelect={setSessionActiveTab} />
+            <SearchTab id="vod" label={t('search.tabVod', { defaultValue: 'VOD' })} active={activeTab === 'vod'} hidden={hideVodTab} onSelect={setSessionActiveTab} />
+            <SearchTab id="catchup" label={t('search.tabCatchup', { defaultValue: 'Catchup' })} active={activeTab === 'catchup'} hidden={hideCatchupTab} onSelect={setSessionActiveTab} />
           </div>
         )}
 
@@ -494,6 +600,19 @@ export function SearchPage() {
         onClose={handleEpgModalClose}
         onPlayLive={handleEpgPlayLive}
         onWatchCatchup={handleEpgWatchCatchup}
+      />
+
+      <EpgEventModal
+        open={!!selectedCatchupDetail}
+        channel={selectedCatchupDetail?.channel ?? null}
+        event={selectedCatchupDetail?.event ?? null}
+        isLive={false}
+        nowMs={Date.now()}
+        canPlayLive={false}
+        showActions
+        detailContext="catchup"
+        onClose={handleCatchupModalClose}
+        onWatchCatchup={handleCatchupWatch}
       />
 
       {selectedVodItem && vodLayout === 'classic' && (

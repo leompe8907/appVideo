@@ -1,0 +1,715 @@
+import { create } from 'zustand';
+import { getBouquetsWithChannels, loadEPGForStreams } from '../services/tvDataService';
+import { loadVODData } from '../services/vodService';
+import panaccessService from '../services/panaccessService';
+import { processAdsFromApi } from '../utils/adsData';
+import { mergeEpgIntoChannels } from '../utils/epgMerge';
+import { dedupeStreams } from '../utils/channelId';
+import { normalizeList, prepareRecorded, toMs } from './catchupRecorded';
+import { getStorage, storageKeys, storageRemove } from '../platform/storage';
+
+// Evaluar IS_DEV a nivel de módulo, fuera de cualquier closure asíncrono.
+// IMPORTANTE: `import.meta.env.DEV` tiene que quedar como acceso directo
+// (sin `?.`, sin comparar `import.meta.env` completo contra null/undefined).
+// Vite reemplaza esta expresión exacta por un literal en tiempo de build —
+// nunca se ejecuta como sintaxis real en el bundle final, así que no hace
+// falta ninguna guarda de runtime. Pero en cuanto `import.meta.env` aparece
+// como objeto completo (con `!= null` o similar) en CUALQUIER archivo del
+// bundle, Vite ya no puede reemplazar por clave y termina inyectando TODO el
+// objeto de entorno cargado (incluyendo VITE_BRAND_TOKEN_* de las demás
+// marcas y VITE_SECRET_KEY) como un objeto vivo en runtime. Ese era el bug.
+const IS_DEV = import.meta.env.DEV;
+
+/** Solo VOD preload: cortafuegos global si la carga entera se cuelga. */
+const VOD_LOADING_TIMEOUT_MS = 300000;
+
+const epgInitialState = {
+  status: 'idle', // 'idle' | 'loading' | 'finishing' | 'ready' | 'error'
+  streams: [],
+  bouquetsWithChannels: [],
+  progress: { current: 0, total: 0, percent: 0 },
+  error: null,
+  lastLoadedAt: null,
+};
+
+const vodInitialState = {
+  status: 'idle', // 'idle' | 'loading' | 'ready' | 'error'
+  categories: [],
+  allVods: [],
+  vodRecommended: [],
+  progress: { loadedCount: 0 },
+  error: null,
+  lastLoadedAt: null,
+};
+
+const adsInitialState = {
+  status: 'idle', // 'idle' | 'loading' | 'ready' | 'error'
+  processed: [],
+  top: [],
+  bottom: [],
+  error: null,
+  lastLoadedAt: null,
+};
+
+const catchupInitialState = {
+  status: 'idle', // 'idle' | 'loading' | 'ready' | 'error'
+  groups: [],
+  recorded: [],
+  progress: { loadedGroups: 0, totalGroups: 0 },
+  error: null,
+  lastLoadedAt: null,
+};
+
+// FIX #2: Flags de control fuera del closure de create() para evitar que el
+// code-splitting de producción las resetee al re-evaluar el módulo.
+let vodTimeout = null;
+let vodLoading = false;
+let adsLoading = false;
+let catchupLoading = false;
+
+const clearVodTimeout = () => {
+  if (vodTimeout) {
+    clearTimeout(vodTimeout);
+    vodTimeout = null;
+  }
+};
+
+/** Tiempo de vida del caché EPG en disco (30 minutos) */
+const EPG_CACHE_TTL_MS = 30 * 60 * 1000;
+
+function getEpgCacheKey(brandConfig) {
+  const bId = brandConfig?.brand || 'default';
+  return `app_epg_cache_${bId}`;
+}
+
+/** Exportada para tests: qué campos del evento sobreviven en la caché de EPG. */
+export function pruneEpgEvent(ev) {
+  if (!ev) return null;
+  const pruned = {};
+
+  if (ev.id !== undefined) pruned.id = ev.id;
+  if (ev.eventId !== undefined) pruned.eventId = ev.eventId;
+  if (ev.event_id !== undefined) pruned.event_id = ev.event_id;
+
+  if (ev.start !== undefined) pruned.start = ev.start;
+  if (ev.end !== undefined) pruned.end = ev.end;
+  if (ev.startDate !== undefined) pruned.startDate = ev.startDate;
+  if (ev.endDate !== undefined) pruned.endDate = ev.endDate;
+
+  if (ev.title !== undefined) pruned.title = ev.title;
+  if (ev.name !== undefined) pruned.name = ev.name;
+  if (ev.programTitle !== undefined) pruned.programTitle = ev.programTitle;
+  if (ev.eventName !== undefined) pruned.eventName = ev.eventName;
+
+  if (ev.imageUrl !== undefined) pruned.imageUrl = ev.imageUrl;
+  if (ev.imageUrl2 !== undefined) pruned.imageUrl2 = ev.imageUrl2;
+  if (ev.catchupImageUrl !== undefined) pruned.catchupImageUrl = ev.catchupImageUrl;
+  if (ev.posterUrl !== undefined) pruned.posterUrl = ev.posterUrl;
+  if (ev.image !== undefined) pruned.image = ev.image;
+  if (ev.poster !== undefined) pruned.poster = ev.poster;
+
+  // Control parental por clasificación (parentalGateStore) y catchup del evento.
+  if (ev.parentalRating !== undefined) pruned.parentalRating = ev.parentalRating;
+  if (ev.parental_rating !== undefined) pruned.parental_rating = ev.parental_rating;
+  if (ev.parentalControl !== undefined) pruned.parentalControl = ev.parentalControl;
+  if (ev.catchupId !== undefined) pruned.catchupId = ev.catchupId;
+
+  if (ev.description !== undefined) pruned.description = ev.description;
+  if (ev.extendedDescription !== undefined) pruned.extendedDescription = ev.extendedDescription;
+  if (ev.summary !== undefined) pruned.summary = ev.summary;
+
+  if (Array.isArray(ev.languages)) {
+    pruned.languages = ev.languages.map(function (lang) {
+      if (!lang) return null;
+      const prunedLang = {};
+      if (lang.title !== undefined) prunedLang.title = lang.title;
+      if (lang.description !== undefined) prunedLang.description = lang.description;
+      if (lang.extendedDescription !== undefined) prunedLang.extendedDescription = lang.extendedDescription;
+      return prunedLang;
+    }).filter(Boolean);
+  } else if (ev.languages && typeof ev.languages === 'object') {
+    pruned.languages = {};
+    if (ev.languages.title !== undefined) pruned.languages.title = ev.languages.title;
+    if (ev.languages.description !== undefined) pruned.languages.description = ev.languages.description;
+    if (ev.languages.extendedDescription !== undefined) pruned.languages.extendedDescription = ev.languages.extendedDescription;
+  }
+
+  return pruned;
+}
+
+function pruneBouquets(bouquets) {
+  if (!Array.isArray(bouquets)) return [];
+  return bouquets.map(function (b) {
+    if (!b) return null;
+    return {
+      ...b,
+      items: Array.isArray(b.items)
+        ? b.items.map(function (ch) {
+            if (!ch) return null;
+            return {
+              ...ch,
+              epgItems: Array.isArray(ch.epgItems)
+                ? ch.epgItems.map(pruneEpgEvent).filter(Boolean)
+                : []
+            };
+          }).filter(Boolean)
+        : []
+    };
+  }).filter(Boolean);
+}
+
+function getStoredEpgCache(brandConfig) {
+  try {
+    const key = getEpgCacheKey(brandConfig);
+    const raw = getStorage()?.getItem(key);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !data.timestamp || !Array.isArray(data.bouquetsWithChannels)) return null;
+
+    const age = Date.now() - data.timestamp;
+    if (age < EPG_CACHE_TTL_MS) {
+      // Reconstruir la lista de streams desduplicados a partir de los bouquets
+      const allStreamsRaw = data.bouquetsWithChannels.reduce(function (acc, b) {
+        return acc.concat(b.items || []);
+      }, []);
+      data.streams = dedupeStreams(allStreamsRaw);
+      return data;
+    }
+  } catch {
+    // noop
+  }
+  return null;
+}
+
+function saveEpgCache(brandConfig, bouquetsWithChannels) {
+  const key = getEpgCacheKey(brandConfig);
+
+  // Limpieza proactiva: Elimina cachés de EPG de otras marcas para no saturar el localStorage
+  try {
+    storageKeys()
+      .filter((k) => k.startsWith('app_epg_cache_') && k !== key)
+      .forEach((k) => storageRemove(k));
+  } catch {
+    // noop
+  }
+
+  try {
+    // Podar los bouquets y eventos para eliminar metadatos pesados innecesarios y optimizar espacio
+    const prunedBouquets = pruneBouquets(bouquetsWithChannels);
+    const payload = {
+      timestamp: Date.now(),
+      bouquetsWithChannels: prunedBouquets,
+      // No guardamos 'streams' para evitar duplicar todos los objetos de canal con su EPG (se reconstruye al cargar)
+    };
+    getStorage()?.setItem(key, JSON.stringify(payload));
+  } catch (err) {
+    if (IS_DEV) console.warn('[PreloadStore] Error al guardar caché EPG:', err);
+  }
+}
+
+export const usePreloadStore = create(function (set, get) {
+  return {
+    epg: epgInitialState,
+    vod: vodInitialState,
+    ads: adsInitialState,
+    catchup: catchupInitialState,
+
+    loadEPG: async function (brandConfig, options) {
+      var opts = options || {};
+      var force = opts.force === true;
+      if (!brandConfig) return;
+      var state0 = get();
+      var epg0 = state0.epg;
+      if (epg0.status === 'loading') return;
+      if (
+        !force &&
+        epg0.status === 'ready' &&
+        Array.isArray(epg0.bouquetsWithChannels) &&
+        epg0.bouquetsWithChannels.length > 0
+      ) {
+        return;
+      }
+
+      // Intentar restaurar desde caché persistente en disco si no se fuerza recarga
+      if (!force) {
+        const cached = getStoredEpgCache(brandConfig);
+        if (cached && cached.bouquetsWithChannels && cached.bouquetsWithChannels.length > 0) {
+          if (IS_DEV) console.log('⚡ [PreloadStore] Restaurado EPG desde caché local persistente (TTL < 30m)');
+          set(function (s) {
+            return {
+              epg: {
+                status: 'ready',
+                streams: cached.streams || [],
+                bouquetsWithChannels: cached.bouquetsWithChannels || [],
+                progress: { current: (cached.streams || []).length, total: (cached.streams || []).length, percent: 100 },
+                error: null,
+                lastLoadedAt: cached.timestamp,
+              },
+              vod: s.vod,
+              ads: s.ads,
+              catchup: s.catchup,
+            };
+          });
+          return;
+        }
+      }
+
+      set(function (s) {
+        return {
+          epg: {
+            status: 'loading',
+            error: null,
+            streams: s.epg.streams,
+            bouquetsWithChannels: s.epg.bouquetsWithChannels,
+            progress: { current: 0, total: 0, percent: 0 },
+            lastLoadedAt: s.epg.lastLoadedAt,
+          },
+          vod: s.vod,
+          ads: s.ads,
+          catchup: s.catchup,
+        };
+      });
+
+      var bouquets = [];
+      var allStreams = [];
+
+      try {
+        bouquets = await getBouquetsWithChannels({ enableRetry: false });
+        var allStreamsRaw = bouquets.reduce(function (acc, b) {
+          return acc.concat(b.items || []);
+        }, []);
+        allStreams = dedupeStreams(allStreamsRaw);
+        var total = allStreams.length;
+
+        set(function (s) {
+          return {
+            epg: {
+              status: 'loading',
+              error: null,
+              streams: allStreams.slice(),
+              bouquetsWithChannels: bouquets,
+              progress: { current: 0, total: total, percent: total > 0 ? 10 : 100 },
+              lastLoadedAt: s.epg.lastLoadedAt,
+            },
+            vod: s.vod,
+            ads: s.ads,
+            catchup: s.catchup,
+          };
+        });
+
+        if (total === 0) {
+          set(function (s) {
+            return {
+              epg: {
+                status: 'ready',
+                streams: [],
+                bouquetsWithChannels: bouquets,
+                progress: { current: 0, total: 0, percent: 100 },
+                error: null,
+                lastLoadedAt: Date.now(),
+              },
+              vod: s.vod,
+              ads: s.ads,
+              catchup: s.catchup,
+            };
+          });
+          return;
+        }
+
+        await loadEPGForStreams(allStreams, brandConfig, {
+          maxChannels: total,
+          onProgress: function (current, totalProcessed) {
+            var percent =
+              totalProcessed > 0
+                ? Math.min(99, Math.max(10, Math.round((current / totalProcessed) * 100)))
+                : 10;
+            set(function (s) {
+              return {
+                epg: {
+                  status: 'loading',
+                  error: null,
+                  streams: allStreams.slice(),
+                  bouquetsWithChannels: bouquets,
+                  progress: { current: current, total: totalProcessed, percent: percent },
+                  lastLoadedAt: s.epg.lastLoadedAt,
+                },
+                vod: s.vod,
+                ads: s.ads,
+                catchup: s.catchup,
+              };
+            });
+          },
+        });
+
+        saveEpgCache(brandConfig, bouquets);
+
+        set(function (s) {
+          return {
+            epg: {
+              status: 'ready',
+              streams: allStreams.slice(),
+              bouquetsWithChannels: bouquets,
+              progress: { current: total, total: total, percent: 100 },
+              error: null,
+              lastLoadedAt: Date.now(),
+            },
+            vod: s.vod,
+            ads: s.ads,
+            catchup: s.catchup,
+          };
+        });
+      } catch (err) {
+        var epgErrMsg = (err && err.message) || (err && err.errorInfo && err.errorInfo.userMessage) || 'Error al cargar EPG';
+        var hasBouquets = bouquets.length > 0;
+        if (IS_DEV) console.warn('[PreloadStore] loadEPG error:', err);
+        set(function (s) {
+          return {
+            epg: {
+              status: hasBouquets ? 'ready' : 'error',
+              streams: allStreams.length > 0 ? allStreams.slice() : s.epg.streams,
+              bouquetsWithChannels: bouquets,
+              progress: s.epg.progress,
+              error: hasBouquets ? epgErrMsg : epgErrMsg,
+              lastLoadedAt: hasBouquets ? Date.now() : s.epg.lastLoadedAt,
+            },
+            vod: s.vod,
+            ads: s.ads,
+            catchup: s.catchup,
+          };
+        });
+      }
+    },
+
+    loadVOD: async function (brandConfig, options) {
+      if (!brandConfig || vodLoading) return;
+      var opts = options || {};
+      var force = opts.force === true;
+      var loadOptions = {};
+      // copy loadOptions excluding 'force' and 't'
+      Object.keys(opts).forEach(function (k) {
+        if (k !== 'force') loadOptions[k] = opts[k];
+      });
+
+      var currentVod = get().vod;
+      if (
+        !force &&
+        currentVod.status === 'ready' &&
+        Array.isArray(currentVod.allVods) &&
+        currentVod.allVods.length > 0
+      ) {
+        return;
+      }
+      vodLoading = true;
+      set(function (s) {
+        return {
+          epg: s.epg,
+          vod: { status: 'loading', error: null, categories: s.vod.categories, allVods: s.vod.allVods, vodRecommended: s.vod.vodRecommended, progress: { loadedCount: 0 }, lastLoadedAt: s.vod.lastLoadedAt },
+          ads: s.ads,
+          catchup: s.catchup,
+        };
+      });
+
+      // Safety net: VOD no debe bloquear indefinidamente el flujo de preload.
+      clearVodTimeout();
+      vodTimeout = setTimeout(function () {
+        clearVodTimeout();
+        set(function (s) {
+          if (s.vod.status !== 'loading') return s;
+          return {
+            epg: s.epg,
+            vod: { status: 'error', error: s.vod.error || 'Timeout al cargar VOD', categories: s.vod.categories, allVods: s.vod.allVods, vodRecommended: s.vod.vodRecommended, progress: s.vod.progress, lastLoadedAt: s.vod.lastLoadedAt },
+            ads: s.ads,
+            catchup: s.catchup,
+          };
+        });
+      }, VOD_LOADING_TIMEOUT_MS);
+
+      var runLoad = function (extra) {
+        return loadVODData(brandConfig, Object.assign({}, loadOptions, extra || {}, {
+          onProgress: function (loadedCount) {
+            set(function (s) {
+              return {
+                epg: s.epg,
+                vod: { status: s.vod.status, error: s.vod.error, categories: s.vod.categories, allVods: s.vod.allVods, vodRecommended: s.vod.vodRecommended, progress: { loadedCount: loadedCount }, lastLoadedAt: s.vod.lastLoadedAt },
+                ads: s.ads,
+                catchup: s.catchup,
+              };
+            });
+          },
+        }));
+      };
+
+      try {
+        var payload;
+        try {
+          payload = await runLoad();
+        } catch (firstError) {
+          // FIX #1: IS_DEV en vez de import.meta.env?.DEV
+          if (IS_DEV) {
+            console.warn('[PreloadStore] loadVOD first attempt failed, retrying once:', firstError);
+          }
+          payload = await runLoad({ enableRetry: true });
+        }
+
+        var categories = payload.categories;
+        var allVods = payload.allVods;
+        var vodRecommended = payload.vodRecommended;
+        clearVodTimeout();
+        set(function (s) {
+          return {
+            epg: s.epg,
+            vod: { status: 'ready', categories: categories, allVods: allVods, vodRecommended: vodRecommended, progress: { loadedCount: allVods.length }, error: null, lastLoadedAt: Date.now() },
+            ads: s.ads,
+            catchup: s.catchup,
+          };
+        });
+      } catch (err) {
+        var vodErrMsg = (err && err.message) || 'Error al cargar VOD';
+        if (IS_DEV) console.warn('[PreloadStore] loadVOD error:', err);
+        clearVodTimeout();
+        set(function (s) {
+          var prev = s.vod;
+          var hasCachedData =
+            (prev.categories && prev.categories.length > 0) ||
+            (prev.allVods && prev.allVods.length > 0) ||
+            (prev.vodRecommended && prev.vodRecommended.length > 0);
+          if (hasCachedData) {
+            return { epg: s.epg, vod: { status: 'ready', error: null, categories: prev.categories, allVods: prev.allVods, vodRecommended: prev.vodRecommended, progress: prev.progress, lastLoadedAt: prev.lastLoadedAt }, ads: s.ads, catchup: s.catchup };
+          }
+          return { epg: s.epg, vod: { status: 'error', error: vodErrMsg, categories: prev.categories, allVods: prev.allVods, vodRecommended: prev.vodRecommended, progress: prev.progress, lastLoadedAt: prev.lastLoadedAt }, ads: s.ads, catchup: s.catchup };
+        });
+      } finally {
+        vodLoading = false;
+      }
+    },
+
+    loadAds: async function (options) {
+      if (adsLoading) return;
+      var opts = options || {};
+      var force = opts.force === true;
+      var currentAds = get().ads;
+      var hasAdsData =
+        (currentAds.processed && currentAds.processed.length > 0) ||
+        (currentAds.top && currentAds.top.length > 0) ||
+        (currentAds.bottom && currentAds.bottom.length > 0);
+      if (!force && currentAds.status === 'ready' && hasAdsData) {
+        return;
+      }
+      adsLoading = true;
+      set(function (s) {
+        return { epg: s.epg, vod: s.vod, ads: { status: 'loading', error: null, processed: s.ads.processed, top: s.ads.top, bottom: s.ads.bottom, lastLoadedAt: s.ads.lastLoadedAt }, catchup: s.catchup };
+      });
+
+      try {
+        var raw = await panaccessService.getAds({ enableRetry: false });
+        var list = Array.isArray(raw) ? raw : [];
+        var adsResult = processAdsFromApi(list);
+        set(function (s) {
+          return { epg: s.epg, vod: s.vod, ads: { status: 'ready', processed: adsResult.processed, top: adsResult.top, bottom: adsResult.bottom, error: null, lastLoadedAt: Date.now() }, catchup: s.catchup };
+        });
+      } catch (err) {
+        var adsErrMsg = (err && err.message) || (err && err.errorInfo && err.errorInfo.userMessage) || 'Error al cargar publicidad';
+        if (IS_DEV) console.warn('[PreloadStore] loadAds error:', err);
+        set(function (s) {
+          return { epg: s.epg, vod: s.vod, ads: { status: 'error', processed: [], top: [], bottom: [], error: adsErrMsg, lastLoadedAt: null }, catchup: s.catchup };
+        });
+      } finally {
+        adsLoading = false;
+      }
+    },
+
+    loadCatchup: async function (brandConfig, options) {
+      if (!brandConfig) return;
+      var opts = options || {};
+      var force = opts.force === true;
+      var catchupState = get().catchup;
+      if (catchupState.status === 'loading') return;
+      if (catchupLoading) return;
+      if (
+        !force &&
+        catchupState.status === 'ready' &&
+        ((catchupState.groups && catchupState.groups.length > 0) || (catchupState.recorded && catchupState.recorded.length > 0))
+      ) {
+        return;
+      }
+      catchupLoading = true;
+
+      set(function (s) {
+        return {
+          epg: s.epg,
+          vod: s.vod,
+          ads: s.ads,
+          catchup: { status: 'loading', error: null, groups: [], recorded: [], progress: { loadedGroups: 0, totalGroups: 0 }, lastLoadedAt: s.catchup.lastLoadedAt },
+        };
+      });
+
+      var buildGroupsWithEvents = async function (enableRetry) {
+        var groupsResp = await panaccessService.getCatchupGroups({ enableRetry: enableRetry });
+        var groupsList = normalizeList(groupsResp, ['catchupGroups', 'groups', 'items', 'answer']);
+        groupsList.sort(function (a, b) { return Number(a.lcn || 0) - Number(b.lcn || 0); });
+
+        var totalGroups = groupsList.length;
+        var groupsWithEvents = [];
+        var BATCH_SIZE = 4;
+        var loadedGroupsCount = 0;
+
+        set(function (s) {
+          return {
+            epg: s.epg,
+            vod: s.vod,
+            ads: s.ads,
+            catchup: { status: s.catchup.status, error: s.catchup.error, groups: s.catchup.groups, recorded: s.catchup.recorded, progress: { loadedGroups: 0, totalGroups: totalGroups }, lastLoadedAt: s.catchup.lastLoadedAt },
+          };
+        });
+
+        for (var start = 0; start < groupsList.length; start += BATCH_SIZE) {
+          var batch = groupsList.slice(start, start + BATCH_SIZE);
+          var results = await Promise.all(batch.map(async function(group) {
+            if (!group) return { group: null, eventsList: [] };
+
+            var epgStreamId = group.epgStreamId != null ? group.epgStreamId : (group.epg_stream_id != null ? group.epg_stream_id : group.epgStreamid);
+            try {
+              var eventsResp = await panaccessService.getCatchupEvents({ epgStreamId: epgStreamId, enableRetry: enableRetry });
+              var eventsList = normalizeList(eventsResp, ['events', 'items', 'answer']);
+              return { group: group, eventsList: eventsList };
+            } catch (err) {
+              if (IS_DEV) console.warn('[PreloadStore] Error loading catchup events for group:', group, err);
+              return { group: group, eventsList: [] };
+            }
+          }));
+
+          results.forEach(function (res) {
+            var group = res.group;
+            var eventsList = res.eventsList;
+            if (!group) return;
+
+            var catchupGroupId = group.catchupGroupId != null ? group.catchupGroupId : (group.catchup_group_id != null ? group.catchup_group_id : (group.id != null ? group.id : null));
+
+            var mappedEvents = eventsList.map(function (ev) {
+              var startRaw = ev.start != null ? ev.start : (ev.startDate != null ? ev.startDate : (ev.start_date != null ? ev.start_date : null));
+              var durationSeconds = Number(ev.duration != null ? ev.duration : (ev.durationSeconds != null ? ev.durationSeconds : (ev.duration_sec != null ? ev.duration_sec : 0)));
+              var endRaw = ev.end != null ? ev.end : (ev.endDate != null ? ev.endDate : (ev.end_date != null ? ev.end_date : null));
+
+              var startMs = toMs(startRaw);
+              var endMsFromDuration =
+                startMs != null && isFinite(durationSeconds) && durationSeconds > 0
+                  ? startMs + durationSeconds * 1000
+                  : null;
+              var endMs = endMsFromDuration != null ? endMsFromDuration : toMs(endRaw);
+              // Paridad 10foot: getCatchupM3u8 usa event.id (no eventId de rejilla).
+              var resolvedCatchupId =
+                ev.id != null ? ev.id
+                : ev.catchupId != null ? ev.catchupId
+                : ev.catchup_id != null ? ev.catchup_id
+                : ev.catchupEventId != null ? ev.catchupEventId
+                : ev.eventId != null ? ev.eventId
+                : null;
+
+              var result = {};
+              Object.keys(ev).forEach(function(k) { result[k] = ev[k]; });
+              result.catchupGroupId = catchupGroupId;
+              result.catchupId = resolvedCatchupId;
+              result.startDate = startMs != null ? new Date(startMs) : null;
+              result.endDate = endMs != null ? new Date(endMs) : null;
+              result.durationSeconds = durationSeconds > 0 ? durationSeconds : (ev.durationSeconds != null ? ev.durationSeconds : (ev.duration != null ? ev.duration : null));
+              return result;
+            });
+
+            var groupWithEvents = {};
+            Object.keys(group).forEach(function(k) { groupWithEvents[k] = group[k]; });
+            groupWithEvents.events = mappedEvents;
+            groupsWithEvents.push(groupWithEvents);
+            loadedGroupsCount++;
+          });
+          
+          set(function (s) {
+            return {
+              epg: s.epg,
+              vod: s.vod,
+              ads: s.ads,
+              catchup: { status: s.catchup.status, error: s.catchup.error, groups: s.catchup.groups, recorded: s.catchup.recorded, progress: { loadedGroups: loadedGroupsCount, totalGroups: totalGroups }, lastLoadedAt: s.catchup.lastLoadedAt },
+            };
+          });
+        }
+
+        return groupsWithEvents;
+      };
+
+      // `prepareRecorded`/`normalizeList`/`toMs` viven en `./catchupRecorded`
+      // (import de arriba) — lógica pura movida ahí para poder testearla sin
+      // instanciar este store.
+      var runLoad = async function (enableRetry) {
+        var groupsWithEvents = await buildGroupsWithEvents(enableRetry);
+        var recordedResp = await panaccessService.getRecordingTasks({ enableRetry: enableRetry });
+        var recorded = prepareRecorded(recordedResp, groupsWithEvents);
+        return { groupsWithEvents: groupsWithEvents, recorded: recorded };
+      };
+
+      try {
+        var payload;
+        try {
+          payload = await runLoad(false);
+        } catch (firstError) {
+          // FIX #1: IS_DEV en vez de import.meta.env?.DEV
+          if (IS_DEV) {
+            console.warn('[PreloadStore] loadCatchup first attempt failed, retrying once:', firstError);
+          }
+          payload = await runLoad(true);
+        }
+
+        set(function (s) {
+          return {
+            epg: s.epg,
+            vod: s.vod,
+            ads: s.ads,
+            catchup: {
+              status: 'ready',
+              groups: payload.groupsWithEvents,
+              recorded: payload.recorded,
+              error: null,
+              progress: { loadedGroups: payload.groupsWithEvents.length, totalGroups: payload.groupsWithEvents.length },
+              lastLoadedAt: Date.now(),
+            },
+          };
+        });
+      } catch (err) {
+        var catchupErrMsg = (err && err.message) || 'Error al cargar catchup';
+        set(function (s) {
+          var prev = s.catchup;
+          var hasCachedData = (prev.groups && prev.groups.length > 0) || (prev.recorded && prev.recorded.length > 0);
+          if (hasCachedData) return { epg: s.epg, vod: s.vod, ads: s.ads, catchup: { status: 'ready', error: null, groups: prev.groups, recorded: prev.recorded, progress: prev.progress, lastLoadedAt: prev.lastLoadedAt } };
+          return { epg: s.epg, vod: s.vod, ads: s.ads, catchup: { status: 'error', error: catchupErrMsg, groups: prev.groups, recorded: prev.recorded, progress: prev.progress, lastLoadedAt: prev.lastLoadedAt } };
+        });
+      } finally {
+        catchupLoading = false;
+      }
+    },
+
+    resetPreload: function () {
+      clearVodTimeout();
+      vodLoading = false;
+      adsLoading = false;
+      catchupLoading = false;
+      set(function () {
+        return {
+          epg: epgInitialState,
+          vod: vodInitialState,
+          ads: adsInitialState,
+          catchup: catchupInitialState,
+        };
+      });
+    },
+
+    getStreamsWithEPG: function (channels) {
+      var epg = get().epg;
+      return mergeEpgIntoChannels(channels || [], epg.streams);
+    },
+  };
+});
+
+/** Selectores granulares: evitan re-renders al cambiar solo progreso EPG */
+export const useEpgProgress = () => usePreloadStore((s) => s.epg.progress);
+export const useEpgStatus = () => usePreloadStore((s) => s.epg.status);
+export const useVodStatus = () => usePreloadStore((s) => s.vod.status);
+export const useEpgError = () => usePreloadStore((s) => s.epg.error);
+export const useVodError = () => usePreloadStore((s) => s.vod.error);

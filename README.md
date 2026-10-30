@@ -4,13 +4,32 @@ Aplicación base para múltiples clientes OTT compatible con TVs LG y Samsung 20
 
 ## 🚀 Uso Rápido
 
+### Variables de entorno
+
+Vite **solo** carga `.env.local` (no `.env.example`).
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable | Obligatoria | Descripción |
+|----------|-------------|-------------|
+| `VITE_SECRET_KEY` | Sí (prod) | Cifrado de credenciales y `sessionId` en localStorage |
+| `VITE_BRAND_TOKEN_<MARCA>` | Sí | Token API Panaccess por marca (ej. `VITE_BRAND_TOKEN_WIND`) |
+| `VITE_TV_PLATFORM` | No | Fuerza bootstrap TV: `tizen`, `webos`, `lg`, `samsung` |
+| `VITE_TV_DEPLOY` | No | `true` activa engines nativos Samsung/LG en build TV (Etapa 2) |
+| `VITE_ERROR_REPORT_URL` | No | Endpoint HTTP donde se envían los errores capturados (`src/utils/errorReporting.js`). Sin definir, solo se guardan localmente (localStorage) |
+| `VITE_APP_LOGS_INGEST_KEY` | No | Secreto compartido (`X-App-Log-Key`) para reportar errores al backend Wind (`POST /api/v1/logs/`, `src/utils/errorReporting.js`). Sin definir, ese destino se omite -- pedir el valor al equipo de backend, ver `docs/GUIA_INTEGRACION_UNIFICADA.md` (Back-Wind-V2) sección 7 |
+| `VITE_RECAPTCHA_SITE_KEY_<MARCA>` | No | Site key pública de reCAPTCHA v3 por marca (`src/services/recaptchaService.js` + `resolveRecaptchaSiteKey()` en `src/config/resolveBrandToken.js`, mismo esquema que `VITE_BRAND_TOKEN_<MARCA>`) -- usada por login manual, cambio de contraseña, "olvidé mi contraseña" y "eliminar cuenta" (solo en brands con `login.deviceSession.enabled: true`, hoy solo `wind`). `VITE_RECAPTCHA_SITE_KEY` (sin sufijo de marca) sirve de fallback en builds de una sola marca. Sin ninguna de las dos, no se genera token y esas llamadas se mandan sin `recaptcha_token` (el backend Wind decide si lo exige según tenga `RECAPTCHA_SECRET_KEY` configurado) |
+
+Los tokens **no** van en `src/config/brands.js`. El CI falla si detecta tokens hardcodeados (`pnpm run check:secrets`).
+
 ### Desarrollo
 ```bash
-# Desarrollo normal (sin marca específica)
-npm run dev
+pnpm run dev
 
-# Ver en: http://localhost:3000
-# Cambiar cliente con: http://localhost:3000?brand=bromteck
+# http://localhost:3000
+# Cambiar cliente: http://localhost:3000?brand=bromteck
 ```
 
 ### Builds
@@ -26,8 +45,17 @@ npm run build:intv
 npm run build:gigmax
 
 # Build de todos los clientes a la vez
-npm run build:all
+pnpm run build:all
+
+# Verificar compatibilidad ES5 TV (Chrome 53) tras build
+pnpm run check:es-compat dist/wind
 ```
+
+## Smart TV (Tizen / webOS)
+
+- Bootstrap nativo: `public/tv-platform-bootstrap.js` (webapis / webOSTV.js).
+- Empaquetado: ver `packaging/tizen/` y `packaging/webos/`.
+- Build producción genera solo chunks **legacy** compatibles con TV 2019.
 
 ## Assets en build
 

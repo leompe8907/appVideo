@@ -1,0 +1,630 @@
+/**
+ * Flujo de login: clientLogin → getClientConfig → getStreamingLicenses → activación de licencia.
+ * Incluye reactivación de sesión y de licencia (equivalente al LoginHelper del proyecto 10foot).
+ */
+
+import panaccessService from './panaccessService';
+import * as userSession from '../utils/userSession';
+import { classifyError, retryOperation } from '../cv/errorClassifier';
+import {
+  getLicenseKey,
+  getLicensePin,
+  getLicenseProducts,
+  getLicensesForAutoActivation,
+} from '../utils/licenseProducts';
+import * as deviceAuthService from './deviceAuthService';
+import {
+  closeActiveDeviceSession,
+  registerDeviceSession,
+  getStoredDeviceToken,
+  getStoredDeviceId,
+  restoreStoredDeviceSession,
+} from './deviceSessionService';
+import { stopProfileLease } from './profileLeaseKeeper';
+
+/**
+ * Limpia sesión, storage de marca y caché en memoria antes de un login
+ * (mismo dispositivo, sin importar todavía si el usuario que va a entrar es
+ * el mismo de antes u otro distinto -- eso no se puede saber en este punto,
+ * las credenciales todavía no se enviaron).
+ *
+ * IMPORTANTE -- por qué esto preserva `device_token`/`id` (bug real
+ * encontrado en pruebas): antes, `userSession.setLoggedOut()` borraba TODO
+ * el storage de la marca sin excepciones, incluido el `device_token` que
+ * identifica a este dispositivo físico ante "dispositivos vinculados". Con
+ * eso, cada vez que el MISMO usuario cerraba sesión y volvía a entrar en el
+ * MISMO navegador, `register_device` no tenía nada que reenviar y el
+ * backend creaba un `DeviceSession` nuevo -- el dispositivo se duplicaba en
+ * la lista en cada ciclo de logout/login (reporte real de pruebas).
+ *
+ * No hace falta que este código adivine si el próximo login es del mismo
+ * usuario o de uno distinto: el backend ya resuelve eso solo.
+ * `_register_or_refresh_device()` (`device_consumers.py`) rechaza con
+ * `device_token_invalid` cualquier token que no pertenezca al
+ * `subscriber_code` que se está autenticando (o que ya esté revocado) --
+ * reenviar un token "equivocado" (de otro usuario, en un dispositivo
+ * compartido) es inofensivo, el backend lo descarta y el propio handler de
+ * ese error en `deviceSessionService.js` limpia el token localmente y
+ * reintenta el registro sin él (ver `registerDeviceSession`).
+ */
+export function clearSessionBeforeNewLogin() {
+  // La tarjeta del perfil queda libre al instante para los demás dispositivos.
+  stopProfileLease({ release: true });
+  try {
+    panaccessService.logout?.();
+  } catch {
+    // noop
+  }
+  try {
+    closeActiveDeviceSession();
+  } catch {
+    // noop
+  }
+  try {
+    // Bug real (no solo cosmético): sin esto, el JWT/refresh de
+    // "dispositivos vinculados" del usuario anterior quedaba en storage
+    // tras el logout -- si otro usuario inicia sesión en el mismo
+    // navegador/dispositivo antes de que ese JWT expire por sí solo, el
+    // registro de dispositivo de la sesión nueva se hacía arrastrando
+    // credenciales del usuario anterior. `clearDeviceSessionAuth()` sin
+    // argumento resuelve el brand activo (ver `resolveBrandId` en
+    // `brandStorage.js`), igual que `closeActiveDeviceSession()` arriba.
+    // Nota: esto NO es lo mismo que el `device_token` (identifica al
+    // dispositivo físico) -- son dos JWT/tokens independientes, ver el
+    // comentario de la función sobre por qué el `device_token` sí se
+    // preserva más abajo.
+    deviceAuthService.clearDeviceSessionAuth();
+  } catch {
+    // noop
+  }
+
+  let deviceToken = '';
+  let deviceId = '';
+  try {
+    deviceToken = getStoredDeviceToken();
+    deviceId = getStoredDeviceId();
+  } catch {
+    // noop
+  }
+
+  userSession.setLoggedOut();
+
+  try {
+    restoreStoredDeviceSession({ token: deviceToken, id: deviceId });
+  } catch {
+    // noop
+  }
+}
+
+/**
+ * "Dispositivos vinculados" (Fase 3 del backend externo) -- opt-in por brand
+ * (`login.deviceSession.enabled`, ver `brands.js` y `deviceAuthService.js`).
+ * El nombre es genérico a propósito: hoy solo lo usa el backend Wind, pero
+ * cualquier brand podría apuntarlo a otro backend que implemente el mismo
+ * contrato (`/api/auth/login/`, `/ws/device/`).
+ *
+ * Nunca debe bloquear ni poder tumbar el login principal contra PanAccess,
+ * que para cuando esto se llama ya tuvo éxito: se llama sin `await` desde
+ * `loginAndActivateLicense` (fire-and-forget) y cualquier error interno se
+ * traga en silencio (solo se loguea en DEV).
+ *
+ * @param {Object} brandConfig
+ * @param {{username: string, password: string}} credentials - Mismas
+ *   credenciales ya usadas para `clientLogin` (login1/password reales).
+ * @param {{access: string, refresh: string, user: Object}} [precomputedSession]
+ *   Si el caller ya obtuvo un JWT de este backend por otra vía (login
+ *   social, que lo recibe en la misma respuesta de `/wind/auth/google|facebook/`),
+ *   pasarlo acá evita repetir un login manual innecesario contra `/api/auth/login/`.
+ * @returns {Promise<{ok: boolean, error?: string, retryAfterSeconds?: number|null}|undefined>}
+ *   el resultado de `registerDeviceSession()` (el watchdog de reconexión lo usa
+ *   para decidir cuánto esperar), o `undefined` si no aplica o falló el login.
+ */
+// Último establecimiento de la sesión de dispositivo en curso (ver `waitForDeviceSessionAuth`).
+let pendingDeviceSession = null;
+
+/**
+ * Espera a que haya JWT del backend externo. El login lo obtiene en segundo
+ * plano (`maybeEstablishDeviceSession` sin `await`), pero los perfiles externos
+ * lo necesitan antes de elegir la licencia. Nunca lanza.
+ * @param {number} [timeoutMs]
+ * @returns {Promise<boolean>} `true` si hay JWT.
+ */
+export async function waitForDeviceSessionAuth(timeoutMs = 15000) {
+  if (deviceAuthService.hasDeviceSessionAuth()) return true;
+  if (pendingDeviceSession) {
+    let timer;
+    await Promise.race([
+      pendingDeviceSession.catch(() => undefined),
+      new Promise((resolve) => {
+        timer = setTimeout(resolve, timeoutMs);
+      }),
+    ]);
+    clearTimeout(timer);
+  }
+  return deviceAuthService.hasDeviceSessionAuth();
+}
+
+export async function maybeEstablishDeviceSession(brandConfig, credentials, precomputedSession) {
+  if (!deviceAuthService.isDeviceSessionEnabled(brandConfig)) return undefined;
+
+  try {
+    let session = precomputedSession;
+    if (!session?.access) {
+      session = await deviceAuthService.loginManualForDeviceSession(brandConfig, credentials);
+    }
+    if (!session?.access) return undefined;
+
+    deviceAuthService.persistDeviceSessionAuth(session, brandConfig?.brand);
+
+    const result = await registerDeviceSession(brandConfig, session.access, {
+      onRevoked: (reason) => {
+        // Push en vivo (revocado desde el panel, o en bloque por cambio de
+        // contraseña/cierre de cuenta hecho desde OTRO dispositivo/canal).
+        // El logout/redirect real ya NO depende de este callback -- este
+        // módulo (servicio plano, sin React) sigue sin acceso al router,
+        // pero `deviceSessionService.js` ahora también notifica por un
+        // canal global (`setOnDeviceRevoked`) al que `App.jsx` se
+        // suscribe una sola vez al montar la app y sí puede forzar el
+        // logout/redirect de verdad (antes esa integración no existía y
+        // este callback era el único lugar que se enteraba, sin poder
+        // hacer nada visible con eso). Este callback queda solo para
+        // logging de desarrollo.
+        if (import.meta.env.DEV) {
+          console.warn('[loginFlow] device_revoked recibido:', reason);
+        }
+      },
+    });
+
+    if (import.meta.env.DEV) {
+      console.log('[loginFlow] Device session:', result);
+    }
+    return result;
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.warn('[loginFlow] maybeEstablishDeviceSession falló (no afecta el login):', e?.message);
+    }
+    return undefined;
+  }
+}
+
+const DEFAULT_OPTIONS = {
+  autoActivateLicense: false,
+  activationRecursive: true,
+  maxAutoActivateLicense: 5,
+  failIfInUse: false,
+  storeClientConfig: true,
+  storeLicenses: true,
+};
+
+function getLicensesArray(response) {
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  return response.answer ?? response.licenses ?? response.list ?? response.data ?? [];
+}
+
+/**
+ * Normaliza la respuesta de getStreamingLicenses conservando products para auto-selección.
+ */
+function normalizeLicenses(result) {
+  const list = getLicensesArray(result);
+  return list
+    .map((item) => ({
+      key: getLicenseKey(item),
+      pin: getLicensePin(item),
+      products: getLicenseProducts(item),
+      licenseName:
+        item.licenseName != null
+          ? String(item.licenseName)
+          : item.name != null
+            ? String(item.name)
+            : '',
+    }))
+    .filter((item) => item.key);
+}
+
+function normalizeStreamsResponse(response) {
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  return response.streams ?? response.list ?? response.answer ?? response.data ?? [];
+}
+
+async function verifyActiveLicenseHasStreams(service) {
+  try {
+    const response = await service.getAvailableStreams({ enableRetry: false });
+    const list = normalizeStreamsResponse(response);
+    return Array.isArray(list) && list.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Activa una licencia y confirma que devuelve streams disponibles.
+ * @returns {Promise<{ key: string, pin: string }|null>}
+ */
+async function activateLicenseWithContentCheck(service, license, options = {}) {
+  const key = getLicenseKey(license);
+  const pin = getLicensePin(license);
+  const { failIfInUse = false, requireContent = true } = options;
+
+  if (!key) return null;
+
+  try {
+    await service.setStreamingLicense({ licenseKey: key, pin, failIfInUse });
+    if (requireContent) {
+      const hasContent = await verifyActiveLicenseHasStreams(service);
+      if (!hasContent) {
+        if (import.meta.env.DEV) {
+          console.warn('[loginFlow] Licencia activada sin contenido disponible:', key);
+        }
+        return null;
+      }
+    }
+    if (import.meta.env.DEV) {
+      console.log('[loginFlow] Licencia activada con contenido:', key);
+    }
+    return { key, pin };
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.warn('[loginFlow] Fallo activación licencia', key, e.message);
+    }
+    return null;
+  }
+}
+
+/**
+ * Activa una licencia concreta (por ejemplo la de un perfil externo) y
+ * confirma que trae contenido. No lanza: `null` si no se pudo (en uso con
+ * `failIfInUse`, sin contenido, error de red).
+ * @param {{ key: string, pin: string }} license
+ * @param {{ failIfInUse?: boolean }} [options]
+ * @returns {Promise<{ key: string, pin: string }|null>}
+ */
+export async function activateLicense(brandConfig, license, { failIfInUse = true } = {}) {
+  if (!panaccessService.client) {
+    await panaccessService.initialize(brandConfig);
+  }
+  return activateLicenseWithContentCheck(panaccessService, license, { failIfInUse, requireContent: true });
+}
+
+/**
+ * Licencias de la cuenta con su PIN de tarjeta (las guardadas en el login, o
+ * pedidas de nuevo a PanAccess si falta alguna de `requiredKeys`).
+ * @param {string[]} [requiredKeys]
+ * @returns {Promise<Array<{ key: string, pin: string }>>}
+ */
+export async function getLicensesWithPins(brandConfig, requiredKeys = []) {
+  const stored = userSession.getLicenses() || [];
+  const known = new Set(stored.map((l) => getLicenseKey(l)));
+  if (requiredKeys.every((key) => known.has(key))) return stored;
+
+  if (!panaccessService.client) {
+    await panaccessService.initialize(brandConfig);
+  }
+  const licenses = normalizeLicenses(
+    await panaccessService.getStreamingLicenses({ withPins: true, enableRetry: false }),
+  );
+  if (licenses.length > 0) userSession.setLicenses(licenses);
+  return licenses;
+}
+
+/**
+ * Login completo: autenticar → getClientConfig → getStreamingLicenses → opcionalmente activar licencia.
+ * @param {Object} brandConfig - Configuración de la marca (currentBrand).
+ * @param {{ username: string, password: string }} credentials
+ * @param {Object} [options]
+ * @param {boolean} [options.autoActivateLicense] - Si true, intenta activar la primera licencia disponible.
+ * @param {string} [options.licenseKey] - Licencia a activar (prioridad sobre auto).
+ * @param {string} [options.pin] - PIN de la licencia.
+ * @param {boolean} [options.activationRecursive] - Si falla una licencia, intentar la siguiente.
+ * @param {number} [options.maxAutoActivateLicense] - Máximo de licencias a intentar.
+ * @param {boolean} [options.failIfInUse] - Pasar a setStreamingLicense.
+ * @param {boolean} [options.storeClientConfig] - Guardar getClientConfig en userSession.
+ * @param {boolean} [options.storeLicenses] - Guardar licencias en userSession.
+ * @param {{access: string, refresh: string, user: Object}} [options.deviceSessionAuth] - JWT ya
+ *   obtenido del backend externo (login social, ver auth_views.py) -- evita repetir el login
+ *   manual contra `/api/auth/login/` para el registro de dispositivo vinculado (Fase 3).
+ * @returns {Promise<{ success: true, clientConfig?: Object, licenses?: Array }>}
+ */
+export async function loginAndActivateLicense(brandConfig, credentials, options = {}) {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+  if (!brandConfig || !credentials?.username || !credentials?.password) {
+    throw new Error('brandConfig y credenciales (username, password) son requeridos.');
+  }
+
+  if (!panaccessService.client) {
+    await panaccessService.initialize(brandConfig);
+  }
+
+  const udid = userSession.getUdidOrCreate();
+  const sessionId = await panaccessService.callLoginApi('clientLogin', {
+    apiToken: brandConfig.token,
+    clientId: credentials.username.trim(),
+    pwd: credentials.password.trim(),
+    udid,
+  });
+
+  if (!sessionId || (typeof sessionId === 'string' && sessionId.trim() === '')) {
+    throw new Error('No se recibió sesión. Verifica usuario y contraseña.');
+  }
+
+  userSession.setLoggedIn({
+    username: credentials.username,
+    password: credentials.password,
+    sessionId: Array.isArray(sessionId) ? sessionId[0] : sessionId,
+    udid,
+  });
+
+  // "Dispositivos vinculados" (Fase 3 del backend externo) -- fire-and-forget,
+  // no se espera ni puede afectar el resultado de esta función (ver
+  // maybeEstablishDeviceSession). Cubre, sin cambios adicionales en cada
+  // caller, los 4 caminos que llegan hasta acá: login manual, login social
+  // (Google/Facebook, vía `opts.deviceSessionAuth` si ya viene el JWT), TV pareada
+  // por QR (credenciales ya descifradas) y reactivación de sesión en splash.
+  pendingDeviceSession = maybeEstablishDeviceSession(brandConfig, credentials, opts.deviceSessionAuth);
+
+  // Evita "licencia vieja" en storage si la activación falla (ej. license in use).
+  // Esto es clave para rutas automáticas (splash/login) que dependen de si hay licencia activa.
+  const shouldAttemptActivation = Boolean(
+    opts.autoActivateLicense || (opts.licenseKey != null && String(opts.licenseKey).trim() !== ''),
+  );
+  if (shouldAttemptActivation) {
+    userSession.setActiveLicense({ licenseKey: '', pin: '' });
+  }
+
+  let clientConfig = null;
+  let licenses = [];
+
+  try {
+    clientConfig = await panaccessService.getClientConfig({ enableRetry: false });
+    if (opts.storeClientConfig && clientConfig) {
+      userSession.setClientConfig(clientConfig);
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.warn('[loginFlow] getClientConfig falló:', e.message);
+    }
+  }
+
+  try {
+    const rawLicenses = await panaccessService.getStreamingLicenses({
+      withPins: true,
+      enableRetry: false,
+    });
+    licenses = normalizeLicenses(rawLicenses);
+    if (opts.storeLicenses && licenses.length > 0) {
+      userSession.setLicenses(licenses);
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.warn('[loginFlow] getStreamingLicenses falló:', e.message);
+    }
+  }
+
+  const licenseKey = opts.licenseKey != null ? String(opts.licenseKey).trim() : '';
+  const pin = opts.pin != null ? String(opts.pin) : '';
+  let activated = null;
+
+  if (licenseKey && licenses.length > 0) {
+    activated = await activateLicenseWithContentCheck(
+      panaccessService,
+      { key: licenseKey, pin },
+      { failIfInUse: opts.failIfInUse, requireContent: true },
+    );
+  }
+
+  if (!activated && opts.autoActivateLicense && licenses.length > 0) {
+    const excludeKey = licenseKey || '';
+    const candidates = getLicensesForAutoActivation(licenses).filter(
+      (license) => getLicenseKey(license) !== excludeKey,
+    );
+    activated = await autoActivateLicense(panaccessService, candidates, {
+      activationRecursive: opts.activationRecursive,
+      maxAutoActivateLicense: opts.maxAutoActivateLicense,
+      failIfInUse: opts.failIfInUse,
+    });
+  }
+
+  if (activated) {
+    userSession.setActiveLicense({ licenseKey: activated.key, pin: activated.pin });
+  }
+
+  return { success: true, clientConfig, licenses };
+}
+
+/**
+ * Intenta activar licencias en orden (priorizando las que tienen products) hasta que una tenga contenido.
+ * @returns {Promise<{ key, pin }|null>} La licencia activada o null.
+ */
+async function autoActivateLicense(service, licenses, options) {
+  const { activationRecursive, maxAutoActivateLicense, failIfInUse } = options;
+  const candidates = getLicensesForAutoActivation(licenses);
+  const max = Math.min(candidates.length, maxAutoActivateLicense);
+
+  for (let i = 0; i < max; i++) {
+    const item = candidates[i];
+    const activated = await activateLicenseWithContentCheck(service, item, {
+      failIfInUse,
+      requireContent: true,
+    });
+    if (activated) return activated;
+    if (!activationRecursive) return null;
+  }
+  return null;
+}
+
+/**
+ * Núcleo de `reactivateSession()` -- a diferencia de esa función pública,
+ * ESTA lanza en vez de devolver `false`, para que quien la llame pueda
+ * distinguir por qué falló (ver `checkSessionAndReactivateIfNeeded`, que
+ * necesita esa distinción; `reactivateSession()` de más abajo la sigue
+ * ocultando para no romper a sus otros callers, `splashAuthFlow.js`).
+ *
+ * Reintenta (`retryOperation`, ver `cv/errorClassifier.js`) SOLO ante
+ * errores clasificados como recuperables (red/timeout) -- nunca ante un
+ * rechazo real de credenciales, para no arriesgarse a disparar un bloqueo
+ * por intentos repetidos en PanAccess. Motivo (bug real encontrado): el
+ * momento más común para que este re-login silencioso falle es justo al
+ * volver de background/sleep -- el instante de peor conectividad posible
+ * (wifi/datos reconectando, DNS frío) -- y antes un solo timeout ahí se
+ * trataba exactamente igual que una contraseña incorrecta, cerrando la
+ * sesión del usuario por un problema de red transitorio y no por nada que
+ * hiciera mal.
+ */
+async function reactivateSessionOrThrow(brandConfig, options = {}) {
+  const credentials =
+    userSession.getCredentials() ??
+    userSession.getCredentialsWithFallback(brandConfig?.token);
+  if (!credentials) {
+    const err = new Error('No hay credenciales guardadas.');
+    err.errorInfo = { type: 'AUTH_ERROR', canRetry: false };
+    throw err;
+  }
+
+  const active = userSession.getActiveLicense();
+  const opts = {
+    autoActivateLicense: true,
+    activationRecursive: true,
+    failIfInUse: false,
+    storeClientConfig: true,
+    storeLicenses: true,
+    ...options,
+  };
+  if (active?.licenseKey) {
+    opts.licenseKey = active.licenseKey;
+    opts.pin = active.pin ?? '';
+  }
+
+  await retryOperation(() => loginAndActivateLicense(brandConfig, credentials, opts), {
+    maxRetries: 2,
+    baseDelay: 800,
+  });
+  if (import.meta.env.DEV) console.log('[loginFlow] reactivateSession: ok');
+}
+
+/**
+ * Reactiva sesión usando credenciales guardadas (re-login + getClientConfig + opcional licencia).
+ * @param {Object} brandConfig - currentBrand.
+ * @param {Object} [options] - Mismas opciones que loginAndActivateLicense (autoActivateLicense, etc.).
+ * @returns {Promise<boolean>} true si todo ok, false si no hay credenciales o falla.
+ */
+export async function reactivateSession(brandConfig, options = {}) {
+  try {
+    await reactivateSessionOrThrow(brandConfig, options);
+    return true;
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.warn('[loginFlow] reactivateSession falló:', e.message);
+    }
+    return false;
+  }
+}
+
+/**
+ * Reactiva solo la licencia (sesión ya válida) y verifica que haya streams disponibles.
+ * Si la licencia guardada está en uso por otro dispositivo (o falla por
+ * cualquier otro motivo) y `failIfInUse` es true, prueba el resto de las
+ * licencias de la cuenta antes de rendirse -- mismo criterio que el login
+ * fresco (`LoginPage.jsx`, `autoActivateLicense`) y que el `LoginHelper` del
+ * proyecto de referencia (10foot): un dispositivo nuevo no "pelea" por una
+ * tarjeta ocupada si hay otra libre en la misma cuenta.
+ * @param {Object} brandConfig - currentBrand.
+ * @param {boolean} [failIfInUse=false]
+ * @returns {Promise<boolean>}
+ */
+export async function reactivateLicense(brandConfig, failIfInUse = false) {
+  const active = userSession.getActiveLicense();
+  if (!active?.licenseKey) return true;
+
+  if (!panaccessService.client) {
+    await panaccessService.initialize(brandConfig);
+  }
+
+  const activated = await activateLicenseWithContentCheck(
+    panaccessService,
+    { key: active.licenseKey, pin: active.pin ?? '' },
+    { failIfInUse, requireContent: true },
+  );
+  if (activated) return true;
+  if (!failIfInUse) return false;
+
+  try {
+    const rawLicenses = await panaccessService.getStreamingLicenses({
+      withPins: true,
+      enableRetry: false,
+    });
+    const licenses = normalizeLicenses(rawLicenses);
+    const candidates = getLicensesForAutoActivation(licenses).filter(
+      (license) => getLicenseKey(license) !== active.licenseKey,
+    );
+    const fallback = await autoActivateLicense(panaccessService, candidates, {
+      activationRecursive: true,
+      maxAutoActivateLicense: DEFAULT_OPTIONS.maxAutoActivateLicense,
+      failIfInUse: true,
+    });
+    if (fallback) {
+      userSession.setActiveLicense({ licenseKey: fallback.key, pin: fallback.pin });
+      return true;
+    }
+  } catch {
+    // sin conexión / error al listar licencias -- caer al resultado sin licencia de abajo
+  }
+
+  return false;
+}
+
+/**
+ * Comprueba sesión y reactiva licencia o sesión (equivalente a LoginHelper.checkSessionAndReactivateIfNeeded).
+ *
+ * Importante: si la SESIÓN sigue siendo válida, el resultado de reactivar la
+ * licencia (`reactivateLicense`) no cambia esa conclusión -- que otro
+ * dispositivo haya tomado la tarjeta activa (o que hoy no quede ninguna
+ * libre en la cuenta) no significa que este login esté comprometido. Antes,
+ * cualquier fallo acá (incluido ese) se propagaba como "sesión inválida" y
+ * el validador periódico (`sessionValidator.js`) terminaba deslogueando por
+ * completo al dispositivo -- ver 10foot (`home.js`/`licenseEnded`), que ante
+ * este mismo conflicto solo pausa y pregunta, nunca cierra la sesión. Si el
+ * usuario se queda sin licencia activa, la próxima reproducción real ya
+ * dispara el flujo existente (`tryRecoverAfterError`/`licenseInUsePrompt` en
+ * PlayerContext).
+ *
+ * @param {Object} brandConfig - currentBrand.
+ * @param {{ failIfInUse?: boolean }} [options] - Si la sesión es válida, pasa a reactivateLicense; si no, re-login + licencia guardada.
+ * @returns {Promise<{ok: boolean, reason: 'ok'|'invalid'|'network'}>}
+ *   `reason` distingue por qué falló -- `sessionValidator.js` solo debe
+ *   forzar un logout completo ante `'invalid'` (sesión/credenciales
+ *   realmente rechazadas). Ante `'network'` (error de red/timeout, incluso
+ *   después de reintentar) la sesión local debe quedar intacta: el usuario
+ *   sigue logueado desde su perspectiva, solo falló esta verificación
+ *   puntual -- forzarlo a loguearse de nuevo por un problema de red es
+ *   exactamente el bug real que motivó este cambio.
+ */
+export async function checkSessionAndReactivateIfNeeded(brandConfig, options = {}) {
+  const { failIfInUse = false, ...reactivateOptions } = options;
+  if (!brandConfig) return { ok: false, reason: 'invalid' };
+
+  if (!panaccessService.client) {
+    await panaccessService.initialize(brandConfig);
+  }
+
+  const sessionId = userSession.getSessionId();
+  if (!sessionId) return { ok: false, reason: 'invalid' };
+
+  try {
+    const valid = await panaccessService.loggedIn({ enableRetry: false }).then(Boolean).catch(() => false);
+    if (valid) {
+      await reactivateLicense(brandConfig, failIfInUse);
+      return { ok: true, reason: 'ok' };
+    }
+  } catch {
+    // seguir a reactivar sesión completa
+  }
+
+  try {
+    await reactivateSessionOrThrow(brandConfig, reactivateOptions);
+    return { ok: true, reason: 'ok' };
+  } catch (e) {
+    const info = e.errorInfo || classifyError(e);
+    return { ok: false, reason: info.canRetry ? 'network' : 'invalid' };
+  }
+}
