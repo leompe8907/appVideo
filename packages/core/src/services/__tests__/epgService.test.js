@@ -90,7 +90,40 @@ describe('loadEPGForChannels — carga en paralelo por tandas', () => {
     });
   });
 
-  it('usa DEFAULT_EPG_BATCH_SIZE (5) cuando no se pasa batchSize', async () => {
+  it('un canal lento no frena a los demás: al terminar una request entra la siguiente', async () => {
+    const resolvers = [];
+    const fetchMock = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolvers.push(() => resolve({ ok: true, text: () => Promise.resolve('[]') }));
+        }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const channels = makeChannels(12);
+    const donePromise = loadEPGForChannels(channels, { ...baseOpts, batchSize: 4 });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    // La primera request queda colgada; las otras tres terminan.
+    const [slow, ...fast] = resolvers.splice(0, 4);
+    fast.forEach((resolve) => resolve());
+    await new Promise((r) => setTimeout(r, 30));
+
+    // Con tandas, las siguientes esperarían a la lenta (siguen 4 llamadas).
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(4);
+
+    slow();
+    while (resolvers.length || fetchMock.mock.calls.length < channels.length) {
+      resolvers.splice(0).forEach((resolve) => resolve());
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    resolvers.splice(0).forEach((resolve) => resolve());
+    await donePromise;
+    channels.forEach((ch) => expect(Array.isArray(ch.epgItems)).toBe(true));
+  });
+
+  it('usa DEFAULT_EPG_BATCH_SIZE (6) cuando no se pasa batchSize', async () => {
     let maxInFlight = 0;
     let inFlight = 0;
     vi.stubGlobal(
@@ -107,7 +140,7 @@ describe('loadEPGForChannels — carga en paralelo por tandas', () => {
     const channels = makeChannels(9);
     await loadEPGForChannels(channels, baseOpts);
 
-    expect(DEFAULT_EPG_BATCH_SIZE).toBe(5);
+    expect(DEFAULT_EPG_BATCH_SIZE).toBe(6);
     expect(maxInFlight).toBeLessThanOrEqual(DEFAULT_EPG_BATCH_SIZE);
   });
 

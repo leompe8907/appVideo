@@ -49,7 +49,22 @@ const initial = {
   // Nota: por seguridad, este unlock es solo de sesión (no se persiste en localStorage).
   pcUnlockUntilMs: null, // TTL global (multi-adult)
   pcUnlockSessionActive: false, // "sin límite" en sesión (single-adult)
+
+  // Límite de intentos de PIN. shortcut: solo en memoria (reiniciar la app lo borra);
+  // persistirlo si hace falta frenar un ataque con reinicios.
+  pinFailures: 0,
+  pinLockedUntilMs: 0,
 };
+
+const PIN_ATTEMPTS_PER_LOCK = 5;
+const PIN_LOCK_BASE_MS = 60 * 1000;
+const PIN_LOCK_MAX_MS = 15 * 60 * 1000;
+
+/** Segundos que faltan para poder volver a probar el PIN (0 si no está bloqueado). */
+export function getPinLockSecondsLeft() {
+  const left = useParentalStore.getState().pinLockedUntilMs - Date.now();
+  return left > 0 ? Math.ceil(left / 1000) : 0;
+}
 
 export const useParentalStore = create((set, get) => {
   const hydrate = () => {
@@ -233,8 +248,21 @@ export const useParentalStore = create((set, get) => {
     verifyPin: async (pin) => {
       const s = get();
       if (!s.pinSalt || !s.pinHash) return false;
+      if (s.pinLockedUntilMs && Date.now() < s.pinLockedUntilMs) return false;
       const { hashHex } = await derivePinHash({ pin, saltHex: s.pinSalt, iterations: s.pinIterations || 120000 });
-      return timingSafeEqual(hashHex, s.pinHash);
+      const ok = timingSafeEqual(hashHex, s.pinHash);
+      if (ok) {
+        if (s.pinFailures) set({ pinFailures: 0, pinLockedUntilMs: 0 });
+        return true;
+      }
+      const failures = (get().pinFailures || 0) + 1;
+      const locks = Math.floor(failures / PIN_ATTEMPTS_PER_LOCK);
+      const lockMs =
+        failures % PIN_ATTEMPTS_PER_LOCK === 0
+          ? Math.min(PIN_LOCK_BASE_MS * 2 ** (locks - 1), PIN_LOCK_MAX_MS)
+          : 0;
+      set({ pinFailures: failures, pinLockedUntilMs: lockMs ? Date.now() + lockMs : get().pinLockedUntilMs });
+      return false;
     },
 
     isChannelBlocked: (channelId) => {

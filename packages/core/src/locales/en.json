@@ -1,5 +1,6 @@
 {
   "common": {
+    "pressBackAgainToExit": "Press Back again to exit",
     "loading": "Loading...",
     "backLogout": "← Log out",
     "success": "Success",
@@ -187,6 +188,7 @@
     "unreadBadge": "{{count}} unread"
   },
   "search": {
+    "refine": "refine your search to see more",
     "placeholder": "Channels, Category or Program",
     "clear": "Clear",
     "tabAll": "All",
@@ -550,6 +552,7 @@
     "enterPin": "Enter PIN",
     "maskInput": "••••",
     "wrongPin": "Wrong PIN",
+    "locked": "Too many attempts. Wait {{seconds}} s",
     "keypad": "Numeric keypad",
     "cancel": "Cancel",
     "confirm": "Confirm",

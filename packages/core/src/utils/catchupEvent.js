@@ -1,3 +1,4 @@
+import { getDateTimeFormatter } from './intlFormat';
 import { parseEpgDateToMs } from './epgTime';
 
 export function fmtHHmm(ms) {
@@ -60,16 +61,14 @@ export function getEventStartMs(event) {
   return parseEpgDateToMs(event?.startDate) ?? parseEpgDateToMs(event?.start) ?? parseEpgDateToMs(event?.start_date);
 }
 
+const CATCHUP_DATE_OPTIONS = { day: '2-digit', month: 'short', year: 'numeric' };
+
 export function fmtCatchupDate(ms, locale) {
   if (ms == null) return '';
   const d = ms instanceof Date ? ms : new Date(ms);
   if (Number.isNaN(d.getTime())) return '';
   try {
-    return d.toLocaleDateString(locale || undefined, {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+    return getDateTimeFormatter(locale, CATCHUP_DATE_OPTIONS).format(d);
   } catch {
     return '';
   }

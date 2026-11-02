@@ -1,5 +1,6 @@
 {
   "common": {
+    "pressBackAgainToExit": "Presiona Atrás de nuevo para salir",
     "loading": "Cargando...",
     "backLogout": "← Cerrar sesión",
     "success": "Éxito",
@@ -187,6 +188,7 @@
     "unreadBadge": "{{count}} sin leer"
   },
   "search": {
+    "refine": "afina la búsqueda para ver más",
     "placeholder": "Canales, Categoría o Programa",
     "clear": "Limpiar",
     "tabAll": "Todos",
@@ -550,6 +552,7 @@
     "enterPin": "Ingresa el PIN",
     "maskInput": "••••",
     "wrongPin": "PIN incorrecto",
+    "locked": "Demasiados intentos. Espera {{seconds}} s",
     "keypad": "Teclado numérico",
     "cancel": "Cancelar",
     "confirm": "Confirmar",

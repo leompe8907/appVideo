@@ -2,10 +2,11 @@ import * as React from 'react';
 import {useState} from 'react';
 import {Modal, Pressable, Text, TextInput, View} from 'react-native';
 import i18n from '@appvideo/core/locales/i18n';
+import {getPinLockSecondsLeft} from '@appvideo/core/store/parentalStore';
 import {getTheme} from '../theme';
 import {createScaledStyles, ENTRY_SCALE} from '../scaledStyles';
 
-const t = (key) => i18n.t(key);
+const t = (key, options) => i18n.t(key, options);
 
 function Button({label, onPress, primary}) {
   const theme = getTheme();
@@ -39,7 +40,8 @@ export function PinModal({title, message, onSubmit, onCancel}) {
   const submit = async () => {
     const ok = await onSubmit(pin);
     if (!ok) {
-      setError(t('pinGate.wrongPin'));
+      const lockedSeconds = getPinLockSecondsLeft();
+      setError(lockedSeconds > 0 ? t('pinGate.locked', {seconds: lockedSeconds}) : t('pinGate.wrongPin'));
       setPin('');
     }
   };

@@ -219,7 +219,7 @@ function filterAndEnrichEvents(data, epgHoursLimit) {
 }
 
 /** Cuántos canales se piden en paralelo por tanda (ver `loadEPGForChannels`). */
-export const DEFAULT_EPG_BATCH_SIZE = 5;
+export const DEFAULT_EPG_BATCH_SIZE = 6;
 
 /**
  * Resuelve la EPG de UN canal (fetch + normalización) y le asigna `epgItems`.
@@ -266,14 +266,14 @@ async function loadSingleChannelEpg(channel, opts, { epgHoursLimit, requestTimeo
 }
 
 /**
- * Carga EPG para una lista de canales (streams) en tandas paralelas (hasta
- * `batchSize` canales en simultáneo, en vez de uno por uno como antes) —
+ * Carga EPG para una lista de canales (streams) en paralelo (hasta
+ * `batchSize` canales en simultáneo, entrando el siguiente al terminar uno) —
  * cada canal es una request HTTP independiente al mismo backend, así que no
  * hay ningún estado compartido que obligue a serializar. Mutación: asigna
  * channel.epgItems a cada canal.
  * @param {Array} channels - Lista de canales (cada uno con id, epgStreamId, ...).
  * @param {Object} options - epgApiKey, epgApiToken, epgDaysOffset, epgHoursLimit, epgOldMode,
- *   maxChannels, requestTimeoutMs, batchSize (default 5), onProgress(completedCount, total).
+ *   maxChannels, requestTimeoutMs, batchSize (default 6), onProgress(completedCount, total).
  * @returns {Promise<Array>} La misma lista de canales con epgItems asignados.
  */
 export async function loadEPGForChannels(channels, options = {}) {
@@ -317,27 +317,26 @@ export async function loadEPGForChannels(channels, options = {}) {
   let completedCount = 0;
   const tv = isTvDevice();
 
-  for (let batchStart = 0; batchStart < toProcess; batchStart += batchSize) {
-    const batchEnd = Math.min(batchStart + batchSize, toProcess);
-    const batch = [];
-    for (let index = batchStart; index < batchEnd; index++) {
-      batch.push(
-        loadSingleChannelEpg(list[index], opts, { epgHoursLimit, requestTimeoutMs }).finally(() => {
-          completedCount += 1;
-          onProgress(completedCount, toProcess);
-        }),
-      );
+  // Pool deslizante: `batchSize` canales en vuelo y, al terminar uno, entra el
+  // siguiente. Con tandas (esperar a que terminen los 5) cada tanda tardaba lo
+  // que su canal más lento: ~40 tandas × ~1 s = unos 50 s de preload en el TV.
+  let nextIndex = 0;
+  const worker = async () => {
+    while (nextIndex < toProcess) {
+      const index = nextIndex;
+      nextIndex += 1;
+      await loadSingleChannelEpg(list[index], opts, { epgHoursLimit, requestTimeoutMs }).finally(() => {
+        completedCount += 1;
+        onProgress(completedCount, toProcess);
+      });
+      // Ceder el hilo principal entre canales en TVs de gama baja: evita que
+      // respuestas muy rápidas (EPG vacía/cacheada) lo saturen.
+      if (tv && nextIndex < toProcess) {
+        await yieldToMain(8);
+      }
     }
-    await Promise.all(batch);
-
-    // Ceder el hilo principal entre tandas (no por canal): con hasta 5
-    // requests en simultáneo, esperar su propio I/O ya le da aire a la UI;
-    // este yield extra evita que tandas muy rápidas (EPG vacía/cacheada)
-    // saturen el hilo principal en TVs de gama baja.
-    if (tv && batchEnd < toProcess) {
-      await yieldToMain(8);
-    }
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(batchSize, toProcess) }, worker));
 
   for (let i = toProcess; i < list.length; i++) {
     if (list[i] && list[i].epgItems == null) list[i].epgItems = [];
