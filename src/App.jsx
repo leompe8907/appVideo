@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { HomeEpgRoutesLayout } from './components/preload/HomeEpgRoutesLayout';
 import { useAuthValidator } from './hooks/useAuthValidator';
 import { useAppLifecycle } from './hooks/useAppLifecycle';
@@ -96,6 +97,7 @@ function AppLifecycleHost() {
 function App() {
   useTranslation();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { currentBrand } = useBrand();
   const { isTV } = useDevice();
 
@@ -161,6 +163,8 @@ function App() {
         <OsdKeyboardProvider>
           <TvFocusRing />
           <div className="App">
+            {/* Un fallo de render en una página no tumba la app: reintento o cambiar de ruta lo limpia. */}
+            <ErrorBoundary resetKey={pathname}>
             <Routes>
                 {/* Rutas públicas */}
                 <Route path="/" element={<Suspense fallback={<Loading />}><SplashPage /></Suspense>}/>
@@ -190,6 +194,7 @@ function App() {
                 {/* Fallback */}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </ErrorBoundary>
           </div>
         </OsdKeyboardProvider>
       </PlayerProvider>

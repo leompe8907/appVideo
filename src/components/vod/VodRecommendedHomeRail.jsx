@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useBrand } from '../../contexts/BrandContext';
-import { usePlayer } from '../../contexts/PlayerContext';
+import { usePlayerActions } from '../../contexts/PlayerContext';
 import { usePreload } from '@appvideo/core/store/usePreload';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import VodCard from './VodCard';
@@ -23,7 +23,7 @@ export function VodRecommendedHomeRail() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentBrand } = useBrand();
-  const { play } = usePlayer();
+  const { play } = usePlayerActions();
   const { requestPlayMedia } = useParentalGate();
   const { vod, loadVOD } = usePreload();
   const [detailItem, setDetailItem] = useState(null);

@@ -4,6 +4,7 @@ import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableInput } from '../navigation/FocusableInput';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
 import { focusElementSafe } from '../../navigation/spatialNavigation';
+import { getPinLockSecondsLeft } from '@appvideo/core/store/parentalStore';
 
 export function ParentalPinGate({
   open,
@@ -31,7 +32,12 @@ export function ParentalPinGate({
     }
     const ok = await onSubmit?.(value);
     if (!ok) {
-      setError(t('pinGate.wrongPin', { defaultValue: 'PIN incorrecto' }));
+      const lockedSeconds = getPinLockSecondsLeft();
+      setError(
+        lockedSeconds > 0
+          ? t('pinGate.locked', { seconds: lockedSeconds, defaultValue: 'Demasiados intentos. Espera {{seconds}} s' })
+          : t('pinGate.wrongPin', { defaultValue: 'PIN incorrecto' }),
+      );
       setPin('');
       try { pinInputRef.current?.focus?.(); } catch { /* noop */ }
     }

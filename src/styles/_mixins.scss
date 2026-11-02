@@ -167,3 +167,24 @@
   }
 }
 
+// Chromium < 84 (LG webOS 5 y anteriores, Samsung antiguos) ignora `gap` en flexbox y los hijos
+// quedan pegados ("Ahora13:50", "112:40 - 14:35115 min"). Se emula con márgenes, que funcionan
+// en todos los navegadores.
+@mixin flex-gap-row($gap) {
+  > * + * {
+    margin-left: $gap;
+  }
+}
+
+@mixin flex-gap-column($gap) {
+  > * + * {
+    margin-top: $gap;
+  }
+}
+
+@mixin flex-gap-wrap($row-gap, $column-gap: $row-gap) {
+  > * {
+    margin-right: $column-gap;
+    margin-bottom: $row-gap;
+  }
+}

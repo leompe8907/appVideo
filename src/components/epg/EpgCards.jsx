@@ -1,9 +1,12 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { getMountedRange } from '../../utils/mountedWindow';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePlayer } from '../../contexts/PlayerContext';
+import { usePlayerActions } from '../../contexts/PlayerContext';
 import { usePreload } from '@appvideo/core/store/usePreload';
 import { useBrand } from '../../contexts/BrandContext';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { focusElementSafe, scrollIntoViewWithinAncestors } from '../../navigation/spatialNavigation';
+import { requestTvFocusRingSync } from '../navigation/tvFocusRingSync';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import EpgEventModal from './EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
@@ -91,11 +94,16 @@ const Card = memo(function Card({
   );
 });
 
+/** Altura aproximada de una fila (px) hasta medir la real; filas visibles en 1080p: ~5. */
+const FALLBACK_ROW_HEIGHT = 205;
+const ROWS_BEHIND = 4;
+const ROWS_AHEAD = 10;
+
 export function EpgCards({ onSelect }) {
   const { t } = useTranslation();
   const { epg } = usePreload();
   const { currentBrand } = useBrand();
-  const { play } = usePlayer();
+  const { play } = usePlayerActions();
   const { requestPlayChannel } = useParentalGate();
   const navigate = useNavigate();
   const addReminder = useEpgReminderStore((s) => s.addReminder);
@@ -134,7 +142,50 @@ export function EpgCards({ onSelect }) {
   // deshabilitadas (tabIndex=-1) quedan fuera de los candidatos automáticamente.
   // El modal de detalle, al abrirse, se registra como su propia zona en
   // FocusManager y escopa el foco dentro de sí mismo.
-  useTvInitialFocus('.epg-cards-page .epg-cards-grid', [channels.length]);
+  // Venir del player (`state.focusChannelId`): la Guía abre en la fila del canal que se
+  // estaba viendo, no en el primero.
+  const focusChannelId = useLocation().state?.focusChannelId || '';
+  const targetRow = useMemo(
+    () => (focusChannelId ? channels.findIndex((c) => getChannelStableId(c) === focusChannelId) : -1),
+    [channels, focusChannelId],
+  );
+  useTvInitialFocus(targetRow >= 0 ? '' : '.epg-cards-page .epg-cards-grid', [channels.length]);
+
+  // Solo se montan las filas cercanas al foco: 204 canales con 4 tarjetas cada uno
+  // (816 tarjetas, ~9 000 nodos) hacían 300 ms por tecla y 5 s para abrir la Guía.
+  const [focusRow, setFocusRow] = useState(0);
+  useEffect(() => {
+    if (targetRow < 0) return undefined;
+    setFocusRow(targetRow);
+    let attempts = 0;
+    let rafId = 0;
+    // La fila destino se monta un render después de mover la ventana: se reintenta por frame.
+    const tryFocus = () => {
+      const grid = document.querySelector('.epg-cards-page .epg-cards-grid');
+      // Prioriza "Ahora" y salta las tarjetas deshabilitadas (sin programa).
+      const nowCol = epgPastEnabled ? 1 : 0;
+      for (const col of [nowCol, nowCol + 1, nowCol + 2, 0]) {
+        const el = document.getElementById(`epg-card-${targetRow}-${col}`);
+        if (el && !el.classList.contains('disabled') && focusElementSafe(el)) {
+          scrollIntoViewWithinAncestors(el, grid || undefined);
+          requestTvFocusRingSync?.();
+          return;
+        }
+      }
+      attempts += 1;
+      if (attempts < 24) rafId = requestAnimationFrame(tryFocus);
+    };
+    rafId = requestAnimationFrame(tryFocus);
+    return () => cancelAnimationFrame(rafId);
+  }, [targetRow, epgPastEnabled]);
+  const [rowHeight, setRowHeight] = useState(FALLBACK_ROW_HEIGHT);
+  const firstRowRef = useRef(null);
+  const { start: firstMounted, end: lastMounted } = getMountedRange(focusRow, channels.length, ROWS_BEHIND, ROWS_AHEAD);
+  // Los marcadores usan la altura real de una fila montada: el scroll no salta.
+  useLayoutEffect(() => {
+    const h = firstRowRef.current?.offsetHeight;
+    if (h > 0 && h !== rowHeight) setRowHeight(h);
+  }, [rowHeight, channels.length]);
 
   const resolveChannelLiveUrl = (channel) => {
     if (!channel) return null;
@@ -215,6 +266,17 @@ export function EpgCards({ onSelect }) {
         </div>
 
         {channels.map((channel, rowIdx) => {
+          if (rowIdx < firstMounted || rowIdx > lastMounted) {
+            return (
+              <div
+                key={getChannelStableId(channel) || channel.lcn}
+                className="epg-cards-row"
+                data-placeholder="true"
+                aria-hidden="true"
+                style={{ height: rowHeight }}
+              />
+            );
+          }
           const { before, now, next, later, isLive } = computeSlots(channel.epgItems, {
             nowMs,
             epgPastEnabled,
@@ -271,7 +333,12 @@ export function EpgCards({ onSelect }) {
           })();
 
           return (
-            <div key={getChannelStableId(channel) || channel.lcn} className="epg-cards-row">
+            <div
+              key={getChannelStableId(channel) || channel.lcn}
+              ref={rowIdx === firstMounted ? firstRowRef : undefined}
+              className="epg-cards-row"
+              onFocus={() => setFocusRow(rowIdx)}
+            >
               <div
                 className="epg-cards-channel"
                 style={

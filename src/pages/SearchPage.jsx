@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
-import { usePlayer } from '../contexts/PlayerContext';
+import { usePlayerActions } from '../contexts/PlayerContext';
 import { usePreload } from '@appvideo/core/store/usePreload';
 import { usableImageUrl, markImageFailed } from '@appvideo/core/utils/remoteImage';
 
@@ -19,7 +19,10 @@ import VodDetailModal from '../components/vod/VodDetailModal';
 import VodDetailModalClassic from '../components/vod/VodDetailModalClassic';
 import { useBrandPlaceholderUrl } from '../hooks/useBrandPlaceholderUrl';
 import { catchupGroupToChannel, catchupEventToChannel, findCatchupGroupForEvent } from '@appvideo/core/utils/catchupEvent';
+import { getDateTimeFormatter } from '@appvideo/core/utils/intlFormat';
 import '../styles/pages/_search.scss';
+
+const SEARCH_DATE_OPTIONS = { year: 'numeric', month: '2-digit', day: '2-digit' };
 
 function SearchTab({ id, label, active, hidden, onSelect }) {
   if (hidden) return null;
@@ -54,7 +57,7 @@ function ResultItem({ item, onSelect }) {
     const end = new Date(endMs);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
 
-    const date = start.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const date = getDateTimeFormatter(undefined, SEARCH_DATE_OPTIONS).format(start);
     const hhmm = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     return `${date} ${hhmm(start)} - ${hhmm(end)}`;
   })();
@@ -128,13 +131,16 @@ function ResultItem({ item, onSelect }) {
   );
 }
 
+// Una letra sola devuelve ~2 000 coincidencias: montarlas todas bloqueaba la TV ~10 s.
+const MAX_RENDERED_PER_LIST = 60;
+
 function SearchSection({ title, items, baseIndex, onSelect }) {
   if (!items || items.length === 0) return null;
   return (
     <div className="search-section">
       <div className="search-section__title">{title}</div>
       <div className="search-list">
-        {items.map((r, i) => (
+        {items.slice(0, MAX_RENDERED_PER_LIST).map((r, i) => (
           <ResultItem
             key={`${r.type}-${r.id ?? r.name ?? i}`}
             item={r}
@@ -152,7 +158,7 @@ export function SearchPage() {
   const location = useLocation();
   const { isTV } = useDevice();
   const { currentBrand } = useBrand();
-  const { play } = usePlayer();
+  const { play } = usePlayerActions();
   const { requestPlayChannel, requestPlayMedia } = useParentalGate();
   const { epg, vod, catchup, loadVOD, loadCatchup } = usePreload();
   // Bandera de marca: oculta accesos a la guía completa (EPG.enabled en
@@ -539,6 +545,9 @@ export function SearchPage() {
             <>
               <div className="search-count">
                 {visibleCount} {visibleCount === 1 ? t('search.result', { defaultValue: 'resultado' }) : t('search.results', { defaultValue: 'resultados' })}
+                {visibleCount > MAX_RENDERED_PER_LIST
+                  ? ` · ${t('search.refine', { defaultValue: 'afina la búsqueda para ver más' })}`
+                  : ''}
               </div>
 
               {effectiveTab === 'all' ? (
@@ -574,7 +583,7 @@ export function SearchPage() {
                     : effectiveTab === 'vod' ? grouped.vods
                     : effectiveTab === 'catchup' ? grouped.catchups
                     : grouped.epgEvents
-                  ).map((r, i) => (
+                  ).slice(0, MAX_RENDERED_PER_LIST).map((r, i) => (
                     <ResultItem
                       key={`${r.type}-${r.id ?? r.name ?? i}`}
                       item={r}

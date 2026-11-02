@@ -7,7 +7,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDevice } from '../../contexts/DeviceContext';
-import { usePlayer } from '../../contexts/PlayerContext';
+import { usePlayerSession } from '../../contexts/PlayerContext';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import { getVodImageUrl } from '@appvideo/core/services/vodService';
 import { useBrand } from '../../contexts/BrandContext';
@@ -23,7 +23,7 @@ export function VodDetailModal({ item, categories = [], onClose, onPlay, infoOnl
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
   const { isTV } = useDevice();
-  const { state: playerState } = usePlayer();
+  const { state: playerState } = usePlayerSession();
   const playerActiveRef = useRef(Boolean(playerState?.url));
   const wasPlayerActiveRef = useRef(Boolean(playerState?.url));
   const rootRef = useRef(null);

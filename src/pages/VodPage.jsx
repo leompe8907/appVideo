@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
-import { usePlayer } from '../contexts/PlayerContext';
+import { usePlayerActions } from '../contexts/PlayerContext';
 import { usePreload } from '@appvideo/core/store/usePreload';
 import { useParentalGate } from '../hooks/useParentalGate';
 import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
@@ -28,7 +28,7 @@ export function VodPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { currentBrand } = useBrand();
-  const { play } = usePlayer();
+  const { play } = usePlayerActions();
   const { requestPlayMedia } = useParentalGate();
   const { vod, loadVOD } = usePreload();
   const [detailItem, setDetailItem] = useState(null);

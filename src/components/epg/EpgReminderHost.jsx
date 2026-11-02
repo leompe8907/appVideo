@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { useBrand } from '../../contexts/BrandContext';
 import { usePreload } from '@appvideo/core/store/usePreload';
-import { usePlayer } from '../../contexts/PlayerContext';
+import { usePlayerSession } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import { FocusableButton } from '../navigation/FocusableButton';
@@ -46,7 +46,7 @@ export function EpgReminderHost() {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
   const { epg } = usePreload();
-  const { play, state: playerState } = usePlayer();
+  const { play, state: playerState } = usePlayerSession();
   const { isTV } = useDevice();
   const { requestPlayChannel } = useParentalGate();
 
@@ -60,11 +60,15 @@ export function EpgReminderHost() {
   const showWhilePlaying = currentBrand?.EPG?.reminderShowWhilePlaying === true;
   const isPlayerActive = Boolean(playerState?.url);
 
+  // Sin recordatorios no hay nada que vigilar: antes re-renderizaba el host 4 veces por segundo siempre.
+  const hasReminders = Array.isArray(reminders) && reminders.length > 0;
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    const id = window.setInterval(() => setNowMs(Date.now()), 250);
+    if (!hasReminders) return undefined;
+    setNowMs(Date.now());
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [hasReminders]);
 
   const due = useMemo(() => {
     if (isPlayerActive && !showWhilePlaying) return null;

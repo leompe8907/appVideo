@@ -63,10 +63,11 @@ $home-sidebar-overlay-width: 15vw;
 }
 
 .home-shell-ui--hidden {
-  opacity: 0;
+  // Sin `opacity`/`transform` (re-rasterizaban todo el Home) y sin `display: none`: al cerrar el
+  // player, volver de display:none obligaba a recalcular estilo y layout de ~3 500 nodos y
+  // bloqueaba el control ~4 s en el TV; con visibility el Home ya está calculado (~1 s).
   visibility: hidden;
   pointer-events: none;
-  transform: scale(1.01);
 }
 
 .inicio-header-wrap {
@@ -220,6 +221,8 @@ $home-sidebar-overlay-width: 15vw;
 }
 
 .inicio-service-info__time {
+  // El texto "Ahora"/"Siguiente" es un nodo de texto suelto: el margen entre hijos (arriba) no lo alcanza.
+  margin-left: 0.5rem;
   font-weight: 600;
   opacity: 0.95;
 }

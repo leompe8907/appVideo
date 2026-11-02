@@ -5,7 +5,7 @@
  */
 
 import { useNavigate } from 'react-router-dom';
-import { usePlayer } from '../contexts/PlayerContext';
+import { usePlayerActions } from '../contexts/PlayerContext';
 import { useBrand } from '../contexts/BrandContext';
 import { useParentalGate } from '../hooks/useParentalGate';
 import BouquetWall from '../components/bouquet/BouquetWall';
@@ -21,7 +21,7 @@ import '../styles/pages/_bouquet.scss';
 
 export function BouquetPage() {
   // El background común lo maneja Home (.home-content)
-  const { play } = usePlayer();
+  const { play } = usePlayerActions();
   const { requestPlayChannel } = useParentalGate();
   const { setFocusedChannel } = useHomeHeaderDispatch();
   const handleChannelFocus = useCallback(

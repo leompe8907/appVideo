@@ -1,9 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { navigationRouter } from '../../navigation/NavigationRouter';
-import { moveFocus } from '../../navigation/spatialNavigation';
+import { focusElementSafe, moveFocus } from '../../navigation/spatialNavigation';
+import { requestTvFocusRingSync } from '../navigation/tvFocusRingSync';
 import { useDevice } from '../../contexts/DeviceContext';
 import { TV_ACTION, isEditableTextInputElement } from '../../utils/tvRemote';
+import { exitAppBestEffort } from '../../utils/tvNavigation';
+import { createExitConfirm, showExitHint } from '../../utils/tvNavigation/exitConfirm';
+import { resolveHomeBackAction } from './homeBackAction';
 import {
   dismissEpgReminderOverlayFromDom,
   dismissOsdKeyboardOverlayFromDom,
@@ -37,6 +42,8 @@ export function HomeInputDispatcher({ isPlayerActive }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { isTV } = useDevice();
+  const { t } = useTranslation();
+  const [confirmExit] = useState(createExitConfirm);
 
   // TV: RIGHT en el último canal de una fila. Cada fila scrollea horizontal por
   // su cuenta y el motor de geometría busca en TODO el documento (incluye
@@ -79,17 +86,39 @@ export function HomeInputDispatcher({ isPlayerActive }) {
       if (shouldDeferHomeShellNavigation()) return true;
       if (isEditableTextInputElement(document.activeElement)) return false;
 
-      const path = location.pathname || '';
-      if (path.startsWith('/home/') && path !== '/home/inicio') {
+      const sidebar = document.querySelector('aside.home-sidebar');
+      const sidebarTarget = sidebar?.querySelector('a.home-sidebar-link.active, a.home-sidebar-link');
+      const backAction = resolveHomeBackAction({
+        pathname: location.pathname,
+        isTV,
+        historyIndex: window.history.state?.idx ?? 0,
+        // Sin menú lateral a mano no hay a dónde llevar el foco: se trata como "ya está ahí".
+        focusInSidebar: !sidebarTarget || !!document.activeElement?.closest?.('.home-sidebar'),
+      });
+      if (backAction === 'focus-sidebar') {
+        focusElementSafe(sidebarTarget);
+        requestTvFocusRingSync?.();
+        return true;
+      }
+      if (backAction === 'history-back') {
         navigate(-1);
         return true;
       }
-
-      // /home/inicio: no consumir BACK (permite salida SO / historial real del WebView).
+      if (backAction === 'go-inicio') {
+        navigate('/home/inicio', { replace: true });
+        return true;
+      }
+      if (backAction === 'exit') {
+        // Con `disableBackHistoryAPI` (webOS) el sistema no sale solo: sale la app, pero con doble Atrás
+        // (una ráfaga de Atrás desde cualquier sección llegaba aquí y cerraba la app sin querer).
+        if (confirmExit()) exitAppBestEffort();
+        else showExitHint(t('common.pressBackAgainToExit'));
+        return true;
+      }
       return false;
     });
     return unregister;
-  }, [isPlayerActive, location.pathname, navigate]);
+  }, [isPlayerActive, isTV, location.pathname, navigate, t, confirmExit]);
 
   return null;
 }

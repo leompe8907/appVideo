@@ -5,7 +5,8 @@ const DEFAULT_LONG_PRESS_MS = 1600;
 /**
  * Intenta cerrar la aplicación según la plataforma.
  * - Samsung Tizen: window.tizen.application.getCurrentApplication().exit()
- * - LG webOS / fallback: window.close()
+ * - LG webOS: webOS.platformBack() (popup de salida en webOS 6+, launcher en 5 o menos)
+ * - fallback: window.close()
  *
  * Es best-effort: si ningún método está disponible, falla en silencio.
  */
@@ -14,6 +15,14 @@ export function exitAppBestEffort() {
     const tizenApp = window?.tizen?.application?.getCurrentApplication?.();
     if (tizenApp?.exit) {
       tizenApp.exit();
+      return true;
+    }
+  } catch {
+    // continuar al fallback
+  }
+  try {
+    if (typeof window?.webOS?.platformBack === 'function') {
+      window.webOS.platformBack();
       return true;
     }
   } catch {

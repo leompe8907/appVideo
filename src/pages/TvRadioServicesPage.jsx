@@ -3,7 +3,7 @@
  */
 
 import { Navigate } from 'react-router-dom';
-import { usePlayer } from '../contexts/PlayerContext';
+import { usePlayerActions } from '../contexts/PlayerContext';
 import { useParentalGate } from '../hooks/useParentalGate';
 import BouquetWall from '../components/bouquet/BouquetWall';
 import { usePreload } from '@appvideo/core/store/usePreload';
@@ -15,7 +15,7 @@ import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
 import '../styles/pages/_bouquet.scss';
 
 export function TvRadioServicesPage() {
-  const { play } = usePlayer();
+  const { play } = usePlayerActions();
   const { requestPlayChannel } = useParentalGate();
   const { epg } = usePreload();
   const { setFocusedChannel } = useHomeHeaderDispatch();

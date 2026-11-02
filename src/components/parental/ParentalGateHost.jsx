@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useParentalGate } from '../../hooks/useParentalGate';
-import { usePlayer } from '../../contexts/PlayerContext';
+import { usePlayerActions } from '../../contexts/PlayerContext';
 import ConfirmModal from '../ConfirmModal';
 import ParentalPinGate from './ParentalPinGate';
 
@@ -10,7 +10,7 @@ export function ParentalGateHost() {
   const { gate, closeGate, submitPin } = useParentalGate();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { close } = usePlayer();
+  const { close } = usePlayerActions();
 
   const title = useMemo(() => {
     if (gate?.title) return String(gate.title);

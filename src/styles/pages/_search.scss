@@ -158,7 +158,7 @@ $search-tv-result-meta-size: 1.3rem;
 .search-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: $search-tabs-gap-y $search-tabs-gap-x;
+  @include flex-gap-wrap($search-tabs-gap-y, $search-tabs-gap-x);
   width: 100%;
   max-width: 100%;
   min-width: 0;

@@ -1,3 +1,4 @@
+@use '../mixins' as *;
 .player-hud {
   position: absolute;
   left: 0;
@@ -193,7 +194,7 @@
 .player-hud__volume {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  @include flex-gap-row(0.6rem);
 }
 
 .player-hud__volume-slider {
@@ -801,7 +802,7 @@
   // y descarta la línea entera, quedándose con la última declaración válida.
   width: 32em;
   width: min(32em, 44vw);
-  background:linear-gradient(180deg, rgba(10, 10, 12, 0.72) 0%, rgba(10, 10, 12, 0.9) 100%);
+  background: linear-gradient(180deg, rgba(10, 10, 12, 0.94) 0%, rgba(10, 10, 12, 0.98) 100%);
   color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -813,7 +814,7 @@
   align-items: center;
   justify-content: flex-start;
   padding: 14px 14px 10px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 
   // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
   > *:not(:last-child) {
@@ -827,7 +828,9 @@
 }
 
 .player-channel-sidebar__list {
+  position: relative; // offsetParent de las filas: la navegación calcula el scroll con offsetTop
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 10px;
   display: flex;
@@ -849,21 +852,31 @@
 }
 
 .player-channel-sidebar__row {
-  display: grid;
-  grid-template-columns: 11rem auto 1fr;
-  align-items: center;
-  gap: 10px;
+  // `flex: none`: sin esto los botones se encogen en la lista (flex column) y las filas se solapan.
+  flex: 0 0 auto;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
   color: inherit;
+  font: inherit;
   text-align: left;
 }
 
+// Grid en un <span> interno: Chromium < 83 (webOS 5) ignora `display: grid` en un <button>.
+.player-channel-sidebar__row-inner {
+  display: grid;
+  grid-template-columns: 7rem 3.5rem 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
 .player-channel-sidebar__row--active {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(0, 0, 0, 0.14);
+  background: rgba(88, 204, 255, 0.14);
+  border-color: rgba(88, 204, 255, 0.55);
 }
 
 .player-channel-sidebar__row.focused {
@@ -874,15 +887,15 @@
 }
 
 .player-channel-sidebar__logo {
-  width: 10em;
-  // height: 46px;
+  width: 7rem;
+  height: 3.6rem;
   border-radius: 10px;
   object-fit: contain;
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .player-channel-sidebar__logo--placeholder {
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .player-channel-sidebar__lcn {
@@ -992,7 +1005,7 @@
 
 .player-stats__row {
   display: flex;
-  gap: 0.75em;
+  @include flex-gap-row(0.75em);
   padding: 0.1em 0;
 }
 

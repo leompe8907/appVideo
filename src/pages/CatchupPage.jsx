@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { usePreload } from '@appvideo/core/store/usePreload';
-import { usePlayer } from '../contexts/PlayerContext';
+import { usePlayerActions } from '../contexts/PlayerContext';
 import { useParentalGate } from '../hooks/useParentalGate';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import EpgEventModal from '../components/epg/EpgEventModal';
@@ -90,7 +90,7 @@ export function CatchupPage() {
   const location = useLocation();
   const { currentBrand } = useBrand();
   const { catchup, loadCatchup } = usePreload();
-  const { play } = usePlayer();
+  const { play } = usePlayerActions();
   const { requestPlayMedia } = useParentalGate();
 
   const catchupCfg = currentBrand?.catchup || {};
@@ -217,7 +217,6 @@ export function CatchupPage() {
 
   return (
     <div className="catchup-page">
-      <div className="catchup-overlay" />
 
       <div className="catchup-content">
         <header className="catchup-header">

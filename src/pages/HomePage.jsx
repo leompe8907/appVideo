@@ -6,7 +6,7 @@ import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { resolveShellMode } from '@appvideo/core/config/brandConfig';
 import { HomeShellContent } from '../components/ads/HomeShellContent';
-import { usePlayer } from '../contexts/PlayerContext';
+import { usePlayerSession } from '../contexts/PlayerContext';
 import PlayerHud from '../components/player/PlayerHud';
 import ConfirmModal from '../components/ConfirmModal';
 import ParentalGateHost from '../components/parental/ParentalGateHost';
@@ -23,6 +23,7 @@ import {
 } from '../utils/homeShellLastContentFocus';
 import { shouldDeferHomeShellNavigation } from '../utils/homeShellOverlays';
 import { usePlayerLoadingVisible } from '../hooks/usePlayerLoadingVisible';
+import { useBackgroundEpgPreload } from '../hooks/useBackgroundEpgPreload';
 import { exitAppFullscreenSync } from '../utils/playerFullscreen';
 
 export function HomePlaceholderPage({ title, description }) {
@@ -35,10 +36,11 @@ export function HomePlaceholderPage({ title, description }) {
 }
 
 export function HomePage() {
+  useBackgroundEpgPreload();
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const { containerRef, state: playerState, licenseInUsePrompt, confirmLicenseInUse, close, subtitleCueText } =
-    usePlayer();
+    usePlayerSession();
   const isPlayerActive = Boolean(playerState?.url);
   const showPlayerLoading = usePlayerLoadingVisible(isPlayerActive, containerRef, playerState);
   const wasPlayerActiveRef = useRef(false);

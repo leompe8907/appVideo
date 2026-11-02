@@ -52,6 +52,28 @@ describe('NavigationRouter', () => {
     expect(e.defaultPrevented).toBe(true);
   });
 
+  it('ENTER se delega a los handlers de zona y, si alguno lo consume, el botón enfocado no se activa', () => {
+    const calls = [];
+    navigationRouter.register('global', (action) => {
+      calls.push(action);
+      return true;
+    });
+    const e = dispatchKey(13, 'Enter');
+    expect(calls).toEqual([TV_ACTION.ENTER]);
+    expect(e.defaultPrevented).toBe(true);
+  });
+
+  it('ENTER sin handler que lo consuma sigue siendo nativo (activa el elemento enfocado)', () => {
+    navigationRouter.register('global', () => false);
+    const e = dispatchKey(13, 'Enter');
+    expect(e.defaultPrevented).toBe(false);
+    const e2 = (() => {
+      navigationRouter.unregister('global');
+      return dispatchKey(13, 'Enter');
+    })();
+    expect(e2.defaultPrevented).toBe(false);
+  });
+
   it('teclas de media sin handler que las maneje no se consumen', () => {
     navigationRouter.register('global', () => false);
     const e = dispatchKey(415, 'MediaPlay');

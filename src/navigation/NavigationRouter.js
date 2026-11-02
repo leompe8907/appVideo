@@ -220,12 +220,13 @@ class NavigationRouter {
       return;
     }
 
-    // --- CHANNEL_UP/CHANNEL_DOWN (CH+/CH-), teclas de media y dígitos: sin geometría propia, se delegan
+    // --- ENTER, CHANNEL_UP/CHANNEL_DOWN (CH+/CH-), teclas de media y dígitos: sin geometría propia, se delegan
     // por completo a handlers de zona registrados (ej. zapping de canal del
     // reproductor). Antes cada consumidor de estas teclas necesitaba su propio
     // listener de `keydown` en `window`; ahora comparten el único listener
     // central igual que BACK/LRUD. Si ningún handler la consume, se deja pasar.
     if (
+      action === TV_ACTION.ENTER ||
       action === TV_ACTION.CHANNEL_UP ||
       action === TV_ACTION.CHANNEL_DOWN ||
       action === TV_ACTION.PLAY ||
@@ -244,8 +245,10 @@ class NavigationRouter {
       return;
     }
 
-    // ENTER: comportamiento nativo del elemento enfocado (un <button>/<a> ya
-    // dispara su onClick con OK/Enter del control remoto).
+    // ENTER sin handler que lo consuma: comportamiento nativo del elemento enfocado (un
+    // <button>/<a> ya dispara su onClick con OK/Enter del control remoto). Se delega primero
+    // porque con el HUD del player oculto el foco sigue en uno de sus botones invisibles, y
+    // OK tiene que mostrar el HUD en vez de pulsar "Volver" a ciegas.
   }
 }
 

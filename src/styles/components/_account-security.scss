@@ -1,3 +1,4 @@
+@use '../mixins' as *;
 /**
  * Paneles nativos de cuenta (dispositivos vinculados, cambiar contraseña,
  * eliminar cuenta) -- solo se muestran en PC/web cuando el brand tiene
@@ -426,7 +427,7 @@ $account-security-request-width: 22rem;
 .account-security-danger-card__body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  @include flex-gap-column(4px);
 }
 
 .account-security-danger-card__title {
@@ -564,7 +565,7 @@ $account-security-request-width: 22rem;
 .account-security-otp-boxes {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  @include flex-gap-row(10px);
 }
 
 .account-security-otp-box {
