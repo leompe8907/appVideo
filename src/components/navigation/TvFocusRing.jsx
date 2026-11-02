@@ -46,6 +46,9 @@ function resolveFocusRingTarget(el) {
 function resolveLayoutAnchors(focusEl) {
   const anchors = new Set();
   if (!focusEl || typeof focusEl.querySelectorAll !== 'function') return anchors;
+  // Los anclajes son del layout del Home; con el foco en el menú de canales o el HUD del player no aplican
+  // y estas búsquedas en todo el documento costaban ~20 ms por tecla en la TV.
+  if (focusEl.closest('.player-channel-sidebar-overlay, .player-hud')) return anchors;
 
   try {
     for (const selector of LAYOUT_ANCHOR_SELECTORS) {

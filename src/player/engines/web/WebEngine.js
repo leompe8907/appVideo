@@ -10,6 +10,12 @@ import {
 } from '../contracts';
 import { isHlsUrl } from './hlsSupport';
 import { applyStreamrootHlsSessionConfig } from './sessionHlsXhr';
+import { createStallWatchdog } from './stallWatchdog';
+import { createProgressTracker } from '../../../utils/progressTracker';
+
+// Buffering en plena reproducción (red caída, segmento colgado): reintentar el stream cada 30 s, 3 veces.
+const STALL_MS = 30000;
+const STALL_MAX_RETRIES = 3;
 
 let videoElementIdSeq = 0;
 
@@ -30,6 +36,32 @@ export class WebEngine extends BaseEngine {
     this._lastTracksSnapshotKey = '';
     this._suppressPlayerErrors = false;
     this._suppressErrorsTimer = null;
+    this._lastLoad = null;
+    this._playedSinceLoad = false;
+    this._stallRetrying = false;
+    this._progress = createProgressTracker();
+    this._stallPoll = null;
+    this._stall = createStallWatchdog({
+      stallMs: STALL_MS,
+      maxRetries: STALL_MAX_RETRIES,
+      onRetry: () => {
+        if (!this.player || !this._lastLoad) return;
+        this._log('stall: reintentando stream');
+        this._stallRetrying = true;
+        try {
+          this.load(this._lastLoad.url, { type: this._lastLoad.type, autoPlay: true });
+        } finally {
+          this._stallRetrying = false;
+        }
+      },
+      onGiveUp: () => {
+        this._playedSinceLoad = false; // deja de vigilar hasta que vuelva a reproducir
+        this.emit(
+          PLAYER_ENGINE_EVENTS.ERROR,
+          new Error('Se perdió la conexión con el servidor. Verifica tu red e intenta de nuevo.'),
+        );
+      },
+    });
     // Última preferencia de volumen/mute conocida (la setea PlayerContext vía
     // setVolume()/mute()/unmute()). Se guarda acá porque video.js pisa estos
     // valores en cada load() -- ver nota en load()/_reapplyVolumePreference().
@@ -181,6 +213,12 @@ export class WebEngine extends BaseEngine {
       preload: 'auto',
       fluid: false,
       inactivityTimeout: 0,
+      // La app dibuja su propio HUD: sin barra de control, el SeekBar de video.js no corre su
+      // bucle de actualización (getBoundingClientRect/offsetParent → layout forzado por frame).
+      controlBar: false,
+      bigPlayButton: false,
+      loadingSpinner: false,
+      posterImage: false,
     });
     applyStreamrootHlsSessionConfig(this.player);
 
@@ -198,6 +236,7 @@ export class WebEngine extends BaseEngine {
 
     this._handlers = {
       onTimeUpdate: () => {
+        if (this._playedSinceLoad) this._stall.clear();
         const now = Date.now();
         if (now - this.lastTimeUpdateEmitMs < this.timeUpdateThrottleMs) return;
         this.lastTimeUpdateEmitMs = now;
@@ -217,7 +256,13 @@ export class WebEngine extends BaseEngine {
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
       },
       onPlaying: () => {
+        this._playedSinceLoad = true;
+        this._stall.clear();
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
+      },
+      onWaiting: () => {
+        // Solo tras haber reproducido: el arranque lento ya lo cubren los tiempos de hls.js.
+        if (this._playedSinceLoad) this._stall.arm();
       },
       onCanPlay: () => {
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADED });
@@ -256,12 +301,24 @@ export class WebEngine extends BaseEngine {
     player.on('ended', this._handlers.onEnded);
     player.on('play', this._handlers.onPlay);
     player.on('playing', this._handlers.onPlaying);
+    player.on('waiting', this._handlers.onWaiting);
     player.on('canplay', this._handlers.onCanPlay);
     player.on('pause', this._handlers.onPause);
     player.on('seeking', this._handlers.onSeeking);
     player.on('seeked', this._handlers.onSeeked);
     player.on('error', this._handlers.onError);
     player.on('loadeddata', this._handlers.onLoadedData);
+
+    // El `waiting` no llega en todas las TV: se mira también si currentTime deja de avanzar.
+    clearInterval(this._stallPoll);
+    this._stallPoll = setInterval(() => {
+      if (!this._playedSinceLoad) return;
+      const v = this._getTechVideo();
+      if (!v) return;
+      const active = !v.paused && !v.seeking && !v.ended;
+      if (this._progress.update(v.currentTime, active) >= 4000) this._stall.arm();
+      else this._stall.clear();
+    }, 2000);
   }
 
   detachEvents() {
@@ -272,12 +329,15 @@ export class WebEngine extends BaseEngine {
     player.off('ended', this._handlers.onEnded);
     player.off('play', this._handlers.onPlay);
     player.off('playing', this._handlers.onPlaying);
+    player.off('waiting', this._handlers.onWaiting);
     player.off('canplay', this._handlers.onCanPlay);
     player.off('pause', this._handlers.onPause);
     player.off('seeking', this._handlers.onSeeking);
     player.off('seeked', this._handlers.onSeeked);
     player.off('error', this._handlers.onError);
     player.off('loadeddata', this._handlers.onLoadedData);
+    clearInterval(this._stallPoll);
+    this._stallPoll = null;
     this._handlers = null;
   }
 
@@ -286,6 +346,10 @@ export class WebEngine extends BaseEngine {
 
     this._debug = this._isDebugEnabled();
     this._log('load', { url, type, autoPlay, isHls: isHlsUrl(url) });
+    // Una carga pedida por el usuario (zapping, otro contenido) reinicia la vigilancia; la del propio reintento no.
+    if (!this._stallRetrying) this._stall.clear();
+    this._lastLoad = { url, type };
+    this._playedSinceLoad = false;
     this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADING, type });
 
     this._teardownMedia();
@@ -339,6 +403,7 @@ export class WebEngine extends BaseEngine {
   pause() {
     if (!this.player) return;
     this._log('pause()');
+    this._stall.clear();
     this.player.pause();
   }
 
@@ -349,6 +414,7 @@ export class WebEngine extends BaseEngine {
   reset() {
     if (!this.player) return;
     this._log('reset()');
+    this._stall.clear();
     this._lastTracksSnapshotKey = '';
     this._teardownMedia();
     this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
@@ -449,6 +515,7 @@ export class WebEngine extends BaseEngine {
 
   destroy() {
     this._log('destroy()');
+    this._stall.clear();
     if (this._suppressErrorsTimer) {
       clearTimeout(this._suppressErrorsTimer);
       this._suppressErrorsTimer = null;

@@ -38,6 +38,9 @@ function bufferAheadSeconds(video) {
   return 0;
 }
 
+/** Hueco máximo (s) entre la posición y el inicio del buffer que se salta solo (más grande puede ser un seek del usuario). */
+const MAX_START_GAP_SEC = 10;
+
 /** Cada cuánto se reevalúa si conviene subir/bajar de nivel (ver `_startWindAdaptive`). */
 const WIND_ADAPTIVE_CHECK_INTERVAL_MS = 10000;
 /** Mínimo tiempo entre dos cambios de nivel reales, aunque el check corra más seguido. */
@@ -489,6 +492,7 @@ export class HlsPlaybackController {
       // ir agotando un contador que nunca se limpia durante toda la sesión.
       this._networkRetryCount = 0;
       this._nonFatalMediaErrorCount = 0;
+      this._seekPastStartGap(hls, videoEl);
       this._emitLoaded();
       if (autoPlay) this._ensurePlay(videoEl);
     });
@@ -715,6 +719,20 @@ export class HlsPlaybackController {
     if (generation === this._loadGeneration) {
       this._handlers.onError?.(toPlaybackError(data));
     }
+  }
+
+  /**
+   * VOD/catchup: el primer fragmento puede empezar unos segundos después de 0
+   * (buffer 2–60 s con la posición en 0). El video queda en HAVE_METADATA sin
+   * reproducir hasta que el usuario pulsa Play. En vivo no aplica: hls.js
+   * ya arranca en el punto en vivo.
+   */
+  _seekPastStartGap(hls, video) {
+    const details = hls.levels?.map((level) => level.details).find(Boolean);
+    if (details?.live !== false || !video.buffered.length) return;
+    const bufferStart = video.buffered.start(0);
+    const gap = bufferStart - video.currentTime;
+    if (gap > 0.1 && gap <= MAX_START_GAP_SEC) video.currentTime = bufferStart;
   }
 
   _emitLoaded() {

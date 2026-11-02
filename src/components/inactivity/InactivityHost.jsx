@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePlayer } from '../../contexts/PlayerContext';
+import { usePlayerSession } from '../../contexts/PlayerContext';
 import { useBrand } from '../../contexts/BrandContext';
 import { usePreload } from '@appvideo/core/store/usePreload';
 import { useInactivityStore } from '@appvideo/core/store/inactivityStore';
@@ -86,7 +86,7 @@ export function InactivityHost() {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
   const { vod, epg } = usePreload();
-  const player = usePlayer();
+  const player = usePlayerSession();
 
   const lastInteractionAtMs = useInactivityStore((s) => s.lastInteractionAtMs);
   const touch = useInactivityStore((s) => s.touch);

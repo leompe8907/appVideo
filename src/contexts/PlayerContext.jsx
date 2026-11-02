@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useDevice } from './DeviceContext';
 import { useBrand } from './BrandContext';
 import { createEngine } from '../player/engines/createEngine';
@@ -15,8 +15,13 @@ import {
   persistSubtitlePreference,
 } from '@appvideo/core/utils/playerTrackPreferences';
 import { getSavedVolumePreference, saveVolumePreference } from '../utils/playerVolumePreference';
+import { createStableActions, omitTimeFields } from './playerContextState';
 
 const PlayerContext = createContext(null);
+// `PlayerContext` (completo) cambia ~4 veces por segundo con el tiempo de reproducción.
+// Estos dos no: acciones con identidad estable, y estado sin los campos de tiempo.
+const PlayerActionsContext = createContext(null);
+const PlayerSessionContext = createContext(null);
 
 function normalizeTracksSnapshot(raw) {
   if (!raw) return null;
@@ -51,6 +56,26 @@ export function usePlayer() {
   const ctx = useContext(PlayerContext);
   if (!ctx) {
     throw new Error('usePlayer debe usarse dentro de PlayerProvider');
+  }
+  return ctx;
+}
+
+/** Solo las acciones (`play`, `close`…): nunca provoca un re-render. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function usePlayerActions() {
+  const ctx = useContext(PlayerActionsContext);
+  if (!ctx) {
+    throw new Error('usePlayerActions debe usarse dentro de PlayerProvider');
+  }
+  return ctx;
+}
+
+/** Como `usePlayer()` pero sin el tiempo (`currentTime`, `duration`, `liveSecondsLate`…): no se re-dibuja con cada `timeupdate`. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function usePlayerSession() {
+  const ctx = useContext(PlayerSessionContext);
+  if (!ctx) {
+    throw new Error('usePlayerSession debe usarse dentro de PlayerProvider');
   }
   return ctx;
 }
@@ -893,6 +918,28 @@ export function PlayerProvider({ children }) {
     },
   };
 
-  return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
+  // Las funciones de `value` se recrean en cada render: las acciones estables delegan en la última.
+  const latestValueRef = useRef(value);
+  useLayoutEffect(() => {
+    latestValueRef.current = value;
+  });
+  const actions = useMemo(() => ({ ...createStableActions(latestValueRef), containerRef }), []);
+
+  // Estado sin tiempo: misma referencia mientras no cambie otro campo.
+  const nonTimeState = omitTimeFields(state);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const sessionState = useMemo(() => nonTimeState, Object.values(nonTimeState));
+  const sessionValue = useMemo(
+    () => ({ state: sessionState, tracks, subtitleCueText, licenseInUsePrompt, ...actions }),
+    [sessionState, tracks, subtitleCueText, licenseInUsePrompt, actions],
+  );
+
+  return (
+    <PlayerActionsContext.Provider value={actions}>
+      <PlayerSessionContext.Provider value={sessionValue}>
+        <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>
+      </PlayerSessionContext.Provider>
+    </PlayerActionsContext.Provider>
+  );
 }
 

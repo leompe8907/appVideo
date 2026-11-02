@@ -37,7 +37,10 @@ import {
   isAppFullscreenActive,
 } from '../../utils/playerFullscreen';
 import { focusManager, createZoneId } from '../../navigation/FocusManager';
-import { focusElementSafe, scrollIntoViewWithinAncestors } from '../../navigation/spatialNavigation';
+import { navigationRouter } from '../../navigation/NavigationRouter';
+import { TV_ACTION } from '../../utils/tvRemote';
+import { computeListScrollTop, moveRowFocus } from './channelSidebarNav';
+import { focusElementSafe } from '../../navigation/spatialNavigation';
 import { requestTvFocusRingSync } from '../navigation/tvFocusRingSync';
 
 function clamp(v, min, max) {
@@ -148,7 +151,17 @@ function ChannelSidebar({
         onClose?.();
       },
     });
+    // UP/DOWN por hermanos del DOM (O(1)); el motor geométrico recorría las ~200 filas en cada tecla.
+    const unregisterNav = navigationRouter.register(zoneId, (action) => {
+      if (action !== TV_ACTION.UP && action !== TV_ACTION.DOWN) return false;
+      const list = listRef.current;
+      if (!(list instanceof HTMLElement)) return false;
+      const moved = moveRowFocus(list, PLAYER_CHANNEL_SELECTOR, action === TV_ACTION.UP ? 'up' : 'down');
+      if (moved) requestTvFocusRingSync();
+      return moved;
+    });
     return () => {
+      unregisterNav();
       focusManager.pop(zoneId);
     };
   }, [open, onClose]);
@@ -177,7 +190,14 @@ function ChannelSidebar({
       const t = e.target;
       if (!(t instanceof HTMLElement) || !t.matches(PLAYER_CHANNEL_SELECTOR)) return;
       const list = listRef.current;
-      if (list instanceof HTMLElement) scrollIntoViewWithinAncestors(t, list);
+      if (list instanceof HTMLElement) {
+        list.scrollTop = computeListScrollTop({
+          rowTop: t.offsetTop,
+          rowHeight: t.offsetHeight,
+          scrollTop: list.scrollTop,
+          viewHeight: list.clientHeight,
+        });
+      }
     };
     document.addEventListener('focusin', onFocusIn, true);
     return () => document.removeEventListener('focusin', onFocusIn, true);
@@ -196,7 +216,8 @@ function ChannelSidebar({
           {(channels || []).slice(0, 400).map((ch) => {
             const chLogo = ch?.img || ch?.imageUrl || ch?.logoUrl || ch?.logo || ch?.icon || null;
             const id = ch?.id ?? ch?.lcn ?? ch?.name;
-            const isActive = String(activeId ?? '') === String(ch?.id ?? '') || String(activeId ?? '') === String(ch?.lcn ?? '');
+            // El LCN de un canal puede coincidir con el `id` de otro: se compara por id y solo sin id por LCN.
+            const isActive = String(activeId ?? '') === String(ch?.id ?? ch?.lcn ?? '');
             const { now } = resolveNowNextFromEpgItems(ch?.epgItems, Date.now());
             const nowTitle = now?.languages?.[0]?.title || now?.title || now?.name || '';
             return (
@@ -212,15 +233,17 @@ function ChannelSidebar({
                 }}
                 role="listitem"
               >
-                {chLogo ? (
-                  <img className="player-channel-sidebar__logo" src={chLogo} alt="" />
-                ) : (
-                  <div className="player-channel-sidebar__logo player-channel-sidebar__logo--placeholder" />
-                )}
-                <span className="player-channel-sidebar__lcn">{ch?.lcn ?? ''}</span>
-                <span className="player-channel-sidebar__meta">
-                  <span className="player-channel-sidebar__name">{ch?.name ?? ''}</span>
-                  {nowTitle ? <span className="player-channel-sidebar__now">{nowTitle}</span> : null}
+                <span className="player-channel-sidebar__row-inner">
+                  {chLogo ? (
+                    <img className="player-channel-sidebar__logo" src={chLogo} alt="" />
+                  ) : (
+                    <div className="player-channel-sidebar__logo player-channel-sidebar__logo--placeholder" />
+                  )}
+                  <span className="player-channel-sidebar__lcn">{ch?.lcn ?? ''}</span>
+                  <span className="player-channel-sidebar__meta">
+                    <span className="player-channel-sidebar__name">{ch?.name ?? ''}</span>
+                    {nowTitle ? <span className="player-channel-sidebar__now">{nowTitle}</span> : null}
+                  </span>
                 </span>
               </FocusableButton>
             );
@@ -1074,7 +1097,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
               onClick={() => {
                 closePlayerOverlay();
                 close();
-                navigate('/home/epg');
+                navigate('/home/epg', { state: { focusChannelId: currentChannelId } });
               }}
               aria-label={t('epg.title', { defaultValue: 'EPG' })}
               title={t('epg.title', { defaultValue: 'EPG' })}

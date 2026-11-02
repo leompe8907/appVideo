@@ -6,17 +6,14 @@ import { resolveLiveBuffer } from '@appvideo/core/player/liveBufferConfig';
 /**
  * Configuración única de hls.js para todo el middleware Panaccess (web).
  *
- * `enableWorker: false` a propósito para TODOS los hosts (antes solo se
- * desactivaba para Wind): un Web Worker que no arranca (bloqueado por CSP,
- * fallo al crear el Blob URL, etc.) falla en silencio — el fetch de
- * segmentos/keys sigue funcionando por XHR en el hilo principal (por eso se
- * ven los `.ts` bajando bien en la pestaña Red), pero el demux/decrypt que
- * corre DENTRO del worker nunca responde y el video se queda "cargando" para
- * siempre sin ningún error visible. Demuxear en el hilo principal es algo
- * más caro de CPU pero muchísimo más confiable en el rango de navegadores/
- * WebViews de 2019 que apunta este proyecto. Medido en un LG webOS 5 (2020): con
- * el worker activo el arranque de un canal no mejora (el cuello es la interfaz,
- * la descarga del primer segmento y el pipeline de la TV, no el demux).
+ * `enableWorker: false` a propósito para TODOS los hosts: un Web Worker que no arranca
+ * (bloqueado por CSP, fallo al crear el Blob URL, etc.) falla en silencio — el fetch de
+ * segmentos/keys sigue funcionando por XHR en el hilo principal, pero el demux/decrypt que corre
+ * DENTRO del worker nunca responde y el video se queda "cargando" para siempre sin ningún error
+ * visible. Probado dos veces en un LG webOS 5 con el worker activo (flag `player.hlsWorker`,
+ * retirado): ni el tiempo hasta la imagen ni la carga del hilo principal cambiaron (el
+ * descifrado y el demux siguen apareciendo en el hilo principal); la solución real al
+ * descifrado por software es servir la app por HTTPS (WebCrypto nativo).
  */
 export function buildHlsPlaybackConfig(playbackUrl = '', getSessionId, brand = getActiveBrandConfig()) {
   const wind = isWindMiddlewareHost(playbackUrl);

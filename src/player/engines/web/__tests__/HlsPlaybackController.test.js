@@ -655,3 +655,74 @@ describe('PanaccessKeyUnwrapLoader - caché del master', () => {
     controller.destroy();
   });
 });
+
+describe('HlsPlaybackController - arranque de VOD/catchup con hueco al inicio', () => {
+  const URL = 'https://mw.example.com/index.php?requestMode=function&f=getCatchupM3u8&catchupId=1';
+  const FRAG = {
+    frag: {
+      type: 'main',
+      sn: 1,
+      level: 0,
+      elementaryStreams: {},
+      stats: {
+        loaded: 0,
+        total: 0,
+        loading: { start: 0, first: 0, end: 0 },
+        buffering: { start: 0, first: 0, end: 0 },
+        parsing: { start: 0, end: 0 },
+      },
+    },
+  };
+
+  function setup({ buffered, currentTime = 0 }) {
+    const videoEl = makeVideoEl();
+    Object.defineProperty(videoEl, 'currentTime', { value: currentTime, writable: true, configurable: true });
+    Object.defineProperty(videoEl, 'buffered', {
+      value: { length: buffered ? 1 : 0, start: () => buffered?.[0], end: () => buffered?.[1] },
+      configurable: true,
+    });
+    const play = vi.spyOn(videoEl, 'play').mockResolvedValue();
+    return { videoEl, play };
+  }
+
+  it('si el buffer empieza después de la posición (catchup), salta al inicio del buffer y reproduce', async () => {
+    const { videoEl, play } = setup({ buffered: [2, 60] });
+    const controller = new HlsPlaybackController({});
+    await controller.load(videoEl, URL, { autoPlay: true });
+    vi.spyOn(controller.instance, 'levels', 'get').mockReturnValue([{ details: { live: false } }]);
+
+    controller.instance.trigger(Hls.Events.FRAG_BUFFERED, FRAG);
+
+    expect(videoEl.currentTime).toBe(2);
+    expect(play).toHaveBeenCalled();
+    controller.destroy();
+  });
+
+  it('no toca la posición en vivo ni cuando el buffer ya incluye la posición', async () => {
+    const live = setup({ buffered: [20, 50], currentTime: 0 });
+    const c1 = new HlsPlaybackController({});
+    await c1.load(live.videoEl, URL);
+    vi.spyOn(c1.instance, 'levels', 'get').mockReturnValue([{ details: { live: true } }]);
+    c1.instance.trigger(Hls.Events.FRAG_BUFFERED, FRAG);
+    expect(live.videoEl.currentTime).toBe(0);
+    c1.destroy();
+
+    const vod = setup({ buffered: [0, 30], currentTime: 5 });
+    const c2 = new HlsPlaybackController({});
+    await c2.load(vod.videoEl, URL);
+    vi.spyOn(c2.instance, 'levels', 'get').mockReturnValue([{ details: { live: false } }]);
+    c2.instance.trigger(Hls.Events.FRAG_BUFFERED, FRAG);
+    expect(vod.videoEl.currentTime).toBe(5);
+    c2.destroy();
+  });
+
+  it('un hueco enorme (más de 10 s) no se salta: puede ser un seek legítimo del usuario', async () => {
+    const { videoEl } = setup({ buffered: [300, 360], currentTime: 0 });
+    const controller = new HlsPlaybackController({});
+    await controller.load(videoEl, URL);
+    vi.spyOn(controller.instance, 'levels', 'get').mockReturnValue([{ details: { live: false } }]);
+    controller.instance.trigger(Hls.Events.FRAG_BUFFERED, FRAG);
+    expect(videoEl.currentTime).toBe(0);
+    controller.destroy();
+  });
+});
