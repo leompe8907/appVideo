@@ -21,9 +21,16 @@
   "title": "appVideo",
   "icon": "icon.png",
   "largeIcon": "icon.png",
-  "uiRevision": 2
+  "uiRevision": 2,
+  "disableBackHistoryAPI": true
 }
 ```
+
+### Botón Back (`disableBackHistoryAPI`)
+
+Sin ese campo webOS maneja el Back con el historial del navegador y la app **nunca recibe la tecla**: desde la primera página lanza el Home del TV (la app queda suspendida y al volver sigue donde estaba, p. ej. en el player). Con `"disableBackHistoryAPI": true` la app recibe el keydown 461: cierra el player, vuelve por las secciones y, en Inicio, sale con `webOS.platformBack()` (popup de salida en webOS 6+, launcher en 5 o menos) o `window.close()` si no hay `webOSTV.js`.
+
+Verificado en un LG 49UN7310PSC (webOS 5). Si usas un `appinfo.json` propio (p. ej. un IPK "envoltorio" que solo redirige a una URL) agrégalo ahí también.
 
 ## Variables de build opcionales
 

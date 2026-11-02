@@ -1,0 +1,11 @@
+[
+  {"cmd": "Page.enable"},
+  {"cmd": "Page.addScriptToEvaluateOnNewDocument", "params": {"source": "(()=>{window.__errs=[];window.__tl=[];window.addEventListener('error',e=>window.__errs.push('onerror: '+String(e.message).slice(0,160)+' @'+String(e.filename||'').split('/').pop()));window.addEventListener('unhandledrejection',e=>window.__errs.push('rejection: '+String(e.reason&&e.reason.message||e.reason).slice(0,160)));const ce=console.error;console.error=function(){window.__errs.push('console.error: '+Array.prototype.map.call(arguments,a=>String(a&&a.message||a)).join(' ').slice(0,200));return ce.apply(console,arguments)};let last='';setInterval(()=>{const p=location.pathname;if(p!==last){last=p;window.__tl.push(Math.round(performance.now())+'ms '+p)}},200)})()"}},
+  {"eval": "setTimeout(()=>location.reload(),50),1"},
+  {"wait": 8000},
+  {"eval": "(async()=>{const t0=Date.now();while(Date.now()-t0<180000){if(location.pathname.startsWith('/home')&&!/Preparando/.test(document.body.innerText))break;await new Promise(r=>setTimeout(r,1000));}await new Promise(r=>setTimeout(r,2500));return 'listo en '+Math.round(performance.now())+'ms desde el inicio de la pagina'})()"},
+  {"eval": "'LINEA DE TIEMPO: '+window.__tl.join(' -> ')"},
+  {"eval": "(()=>{const nav=performance.getEntriesByType('navigation')[0];const res=performance.getEntriesByType('resource');const js=res.filter(r=>/[.]js/.test(r.name));return JSON.stringify({domContentLoaded:Math.round(nav.domContentLoadedEventEnd),load:Math.round(nav.loadEventEnd),jsFiles:js.length,jsTransferKB:Math.round(js.reduce((a,r)=>a+(r.transferSize||0),0)/1024),heapMB:Math.round(performance.memory.usedJSHeapSize/1048576),nodes:document.querySelectorAll('*').length,secure:isSecureContext,subtle:typeof(crypto.subtle),webOS:typeof window.webOS,ua:navigator.userAgent.match(/Chrome[/][0-9.]+/)[0]})})()"},
+  {"eval": "'ERRORES JS ('+window.__errs.length+'): '+JSON.stringify(window.__errs.slice(0,8))"},
+  {"events": true}
+]
