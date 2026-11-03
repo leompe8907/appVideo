@@ -46,6 +46,17 @@
   object-fit: contain;
 }
 
+// Tope de alto: con `width: 100%` sin tope, una imagen se escala a todo el ancho
+// (un 220×160 llegaba a 1 313 px de alto en un TV de 1080). El tope deja que un
+// banner apaisado (≥ 5:1, como los 2544×500 de wind) ocupe todo el ancho.
+.home-ad-media--img {
+  max-height: 36vh;
+}
+
+.home-ad-zone--bottom .home-ad-media--img {
+  max-height: 24vh;
+}
+
 .home-ad-media--video {
   max-height: 8em;
   background: #000;
