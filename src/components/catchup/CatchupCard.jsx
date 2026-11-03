@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
+import { BrandFallbackImage } from '../common/BrandFallbackImage';
 import {
   fmtCatchupSchedule,
   getCatchupId,
   getEventImage,
   getEventStartMs,
   getEventTitle,
-} from '../../utils/catchupEvent';
+} from '@appvideo/core/utils/catchupEvent';
 
 export function CatchupCard({ event, onSelect }) {
   const { i18n } = useTranslation();
@@ -37,11 +38,12 @@ export function CatchupCard({ event, onSelect }) {
       aria-label={scheduleText ? `${title}, ${scheduleText}` : title}
     >
       <div className="catchup-card-poster">
-        {imageUrl ? (
-          <img src={imageUrl} alt="" loading="lazy" />
-        ) : (
-          <div className="catchup-card-poster-placeholder" aria-hidden="true" />
-        )}
+        <BrandFallbackImage
+          src={imageUrl}
+          alt=""
+          loading="lazy"
+          placeholderClassName="catchup-card-poster-placeholder"
+        />
       </div>
       <div className="catchup-card-title">{title || '—'}</div>
       {scheduleText ? <div className="catchup-card-time">{scheduleText}</div> : null}

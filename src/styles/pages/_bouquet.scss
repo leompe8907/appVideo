@@ -70,7 +70,7 @@ $bouquet-items-gap: 2rem;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0);
     z-index: 1;
     pointer-events: none; /* no interceptar clics; que lleguen al contenido */
   }
@@ -179,7 +179,17 @@ $bouquet-items-gap: 2rem;
     min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
-    scroll-behavior: smooth;
+    // `smooth` acá hacía que cada "muesca" de la rueda del mouse dispare/
+    // extienda una animación de scroll en vez de saltar directo -- cerca de
+    // los bordes (arriba/abajo del todo) esa animación se corta antes de
+    // llegar al límite real (`scrollTop` 0 o máximo), y hacían falta 1-2
+    // gestos de scroll más para completarlo. TV ya lo resetea a `auto` más
+    // abajo (`.device-tv .bouquet-page .bouquet-inicio-scroll`) por el mismo
+    // motivo de responsividad -- acá se saca directamente en la base en vez
+    // de agregar otro override que compita con este, ya que no hay ningún
+    // `scrollIntoView`/`scrollTo` en el código que dependa de que este
+    // contenedor anime sus saltos de scroll.
+    scroll-behavior: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
 
@@ -198,6 +208,7 @@ $bouquet-items-gap: 2rem;
     overflow-x: visible;
     overflow-y: hidden;
     padding: 0 0.5rem 1rem;
+    margin: 0 2rem;
 
     .vod-row-title {
       flex-shrink: 0;
@@ -246,7 +257,7 @@ $bouquet-items-gap: 2rem;
         .embla-slide {
           height: 100%;
           display: flex;
-          align-items: center;
+          align-items: stretch;
         }
       }
 
@@ -285,95 +296,248 @@ $bouquet-items-gap: 2rem;
     gap: 0;
     overflow: visible;
     padding: 0.75rem 0;
+    margin: 0 2rem;
 
     @include bouquet-stack-spacing;
   }
 
-  .bouquet-row-carousel,
-  .bouquet-grid-horizontal {
-    overflow-x: visible;
-    overflow-y: hidden;
-  }
-
-  @include embla-horizontal-rail;
-
-  .bouquet-grid-horizontal {
+  /**
+   * Bouquet horizontal unificado (CSS Grid): carrusel, horizontal_grid y logo_with_number wrap.
+   */
+  .bouquet-horizontal-grid {
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: visible;
+    overflow-y: hidden;
+    --bouquet-cell-width: 14em;
+
+    // Nota: a diferencia de los raíles flex (`bouquet-rail-horizontal-items`,
+    // que sí necesitan márgenes porque el `gap` en flexbox llegó tarde a los
+    // WebKit de TV 2019), `.bouquet-horizontal-grid-track` es un CSS Grid, y
+    // `gap` en Grid es compatible desde mucho antes — no hace falta el mismo
+    // parche. Forzar `gap:0` + márgenes acá causaba que el margen se sumara
+    // al ancho fijo de cada celda (`grid-auto-columns`), y las tarjetas
+    // terminaban superpuestas/demasiado juntas en TV (además de afectar los
+    // cálculos de distancia del motor de navegación espacial). Se usa el
+    // `gap` nativo del grid (línea de abajo) tanto en TV como en PC.
+
+    &--logo-with-number {
+      --bouquet-cell-width: 12.5rem;
+    }
+
+    &--logo-large {
+      --bouquet-cell-width: 16em;
+    }
+
+    &--event-large,
+    &--full-width-line {
+      --bouquet-cell-width: 18em;
+    }
 
     .bouquet-heading {
       flex-shrink: 0;
-      font-size: 1.25rem;
+      font-size: 1.6rem;
       font-weight: 600;
       color: #fff;
       margin: 0 0 0.35rem;
       padding: 0 0.25rem;
     }
 
-    .bouquet-grid-horizontal-rows {
+    .bouquet-horizontal-grid-track {
+      display: grid;
+      justify-content: start;
+      align-content: start;
+      justify-items: start;
+      width: 100%;
+      box-sizing: border-box;
+      padding-inline: 1.25rem 1.75rem;
+      gap: var(--bouquet-items-gap, #{$bouquet-items-gap});
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      > .channel-card {
+        width: var(--bouquet-cell-width);
+        max-width: 100%;
+        min-width: 0;
+      }
+
+      &[data-grid-flow='column'] {
+        grid-template-rows: repeat(var(--bouquet-grid-rows, 1), auto);
+        grid-auto-flow: column;
+        grid-auto-columns: var(--bouquet-cell-width);
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-behavior: smooth;
+
+        &[data-grid-rows='1'] {
+          min-height: 18rem;
+          align-content: center;
+        }
+      }
+
+      // Filas que se envuelven (logo + número, etc.): las columnas se estiran
+      // para llenar el ancho en vez de dejar un hueco vacío a la derecha
+      // (igual que Fire TV). `--bouquet-cell-width` queda como ancho mínimo.
+      &[data-grid-flow='row'] {
+        grid-template-columns: repeat(auto-fill, minmax(var(--bouquet-cell-width), 1fr));
+        justify-items: stretch;
+        grid-auto-flow: row;
+
+        > .channel-card {
+          width: 100%;
+        }
+
+        overflow: visible;
+        padding-top: 0.35rem;
+      }
+
+      &--event-line[data-grid-flow='column'][data-grid-rows='1'] {
+        min-height: 20rem;
+      }
+
+      &--event-and-logo[data-grid-flow='column'][data-grid-rows='1'] {
+        min-height: calc(18rem + 0.85rem);
+        align-content: flex-start;
+        padding-block: 0.4rem;
+      }
+
+      &.embla-viewport {
+        display: block;
+        overflow: hidden;
+        padding-inline: 0;
+
+        .embla-container {
+          display: flex;
+          flex-wrap: nowrap;
+          align-items: flex-start;
+          gap: 0;
+          padding-inline: 1.25rem 1.75rem;
+
+          @include bouquet-embla-slide-spacing;
+        }
+
+        .embla-slide {
+          flex: 0 0 auto;
+          min-width: 0;
+        }
+
+        &[data-grid-rows='1'] {
+          min-height: 18rem;
+
+          .embla-container {
+            align-items: center;
+            height: 100%;
+          }
+
+          .embla-slide {
+            display: flex;
+            align-items: center;
+          }
+        }
+
+        &.bouquet-horizontal-grid-track--logo-with-number[data-grid-rows='1'] {
+          min-height: auto;
+          height: auto;
+
+          .embla-container {
+            align-items: flex-start;
+            height: auto;
+          }
+        }
+
+        &.bouquet-horizontal-grid-track--event-line[data-grid-rows='1'] {
+          min-height: 20rem;
+        }
+
+        &.bouquet-horizontal-grid-track--event-and-logo[data-grid-rows='1'] {
+          min-height: calc(18rem + 0.85rem);
+          padding-block: 0.4rem;
+        }
+      }
+    }
+
+    .bouquet-horizontal-grid-column {
       display: flex;
       flex-direction: column;
-      gap: 0;
+      width: var(--bouquet-cell-width);
+      flex-shrink: 0;
 
+      // A diferencia de `.bouquet-horizontal-grid-track` (Grid, `gap`
+      // compatible), esto es flexbox — sin `gap`, no soportado por varios
+      // WebKit de Smart TV. Se usa margin, igual que el resto del archivo.
       @include bouquet-stack-spacing;
     }
 
-    .horizontal-slide--grid-row {
-      margin: 0;
+    /**
+     * PC + Embla: viewport dedicado (sin grid nativo ni data-grid-* que rompen el carrusel).
+     * Misma idea que .vod-row-cards.embla-viewport en el carril VOD de Inicio.
+     */
+    .bouquet-horizontal-embla-viewport {
       width: 100%;
-      box-sizing: border-box;
-      padding-inline: 0.5rem 0;
+      max-width: 100%;
+      min-width: 0;
+      min-height: 18rem;
 
       &.embla-viewport {
         overflow: hidden;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-
-        &::-webkit-scrollbar {
-          display: none;
-        }
+        padding-inline: 0;
+        scroll-behavior: auto;
 
         .embla-container {
           display: flex;
           flex-wrap: nowrap;
           align-items: center;
-          justify-items: center;
           gap: 0;
-          padding-inline-end: 1.75rem;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
+          padding-inline: 1.25rem 1.75rem;
+          touch-action: pan-y pinch-zoom;
 
           @include bouquet-embla-slide-spacing;
+        }
 
-          &::-webkit-scrollbar {
-            display: none;
+        .embla-slide {
+          flex: 0 0 var(--bouquet-cell-width, 14em);
+          min-width: var(--bouquet-cell-width, 14em);
+          max-width: none;
+          display: flex;
+          align-items: flex-start;
+          height: auto;
+          margin-top:1rem;
+
+          > .channel-card {
+            width: var(--bouquet-cell-width, 14em);
+            max-width: none;
+            min-width: 0;
+            flex-shrink: 0;
+          }
+
+          > .bouquet-horizontal-grid-column {
+            width: var(--bouquet-cell-width, 14em);
+            flex-shrink: 0;
           }
         }
       }
+    }
 
-      &[data-native-horizontal-rail] {
-        display: flex;
-        flex-wrap: nowrap;
-        align-items: center;
-        justify-items: center;
-        gap: 0;
-        padding-inline: 0.5rem 1.75rem;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scroll-behavior: smooth;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
+    &--logo-with-number .bouquet-horizontal-embla-viewport {
+      min-height: auto;
+    }
 
-        @include bouquet-rail-horizontal-items;
+    &--event-line .bouquet-horizontal-embla-viewport {
+      min-height: 20rem;
+    }
 
-        &::-webkit-scrollbar {
-          display: none;
-        }
-      }
+    &--event-and-logo .bouquet-horizontal-embla-viewport {
+      min-height: calc(18rem + 0.85rem);
+      padding-block: 0.4rem;
     }
   }
+
+  @include embla-horizontal-rail;
 
   .bouquet-grid-vertical {
     flex: 0 0 auto;
@@ -383,7 +547,7 @@ $bouquet-items-gap: 2rem;
 
     .bouquet-heading {
       flex-shrink: 0;
-      font-size: 1.25rem;
+      font-size: 1.6rem;
       font-weight: 600;
       color: #fff;
       margin: 0 0 0.35rem;
@@ -393,119 +557,11 @@ $bouquet-items-gap: 2rem;
     .bouquet-grid-vertical-content {
       display: grid;
       grid-auto-rows: minmax(10em, auto);
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(var(--bouquet-grid-columns, 1), minmax(0, 1fr));
       gap: var(--bouquet-items-gap, #{$bouquet-items-gap});
       padding: 0 0.25rem;
       justify-items: center;
     }
-  }
-
-  .bouquet-row-carousel {
-    flex: 0 0 auto;
-    display: flex;
-    flex-direction: column;
-
-    .bouquet-heading {
-      flex-shrink: 0;
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: #fff;
-      margin: 0 0 0.35rem;
-      padding: 0 0.25rem;
-    }
-
-    /* Carril base + modificadores por layout (ver bouquetLayoutClasses.js) */
-    .horizontal-slide {
-      margin-left: 0;
-      width: 100%;
-      box-sizing: border-box;
-      padding-inline: 1.25rem 0;
-
-      &.embla-viewport {
-        overflow: hidden;
-        height: 18rem;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-
-        &::-webkit-scrollbar {
-          display: none;
-        }
-
-        .embla-container {
-          display: flex;
-          flex-wrap: nowrap;
-          align-items: center;
-          justify-items: center;
-          height: 100%;
-          gap: 0;
-          padding-inline-end: 1.75rem;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-
-          @include bouquet-embla-slide-spacing;
-
-          &::-webkit-scrollbar {
-            display: none;
-          }
-        }
-
-        .embla-slide {
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-items: center;
-        }
-      }
-
-      &[data-native-horizontal-rail]:not(.horizontal-slide--logo-with-number) {
-        height: 18rem;
-        display: flex;
-        flex-wrap: nowrap;
-        align-items: center;
-        justify-items: center;
-        gap: 0;
-        padding-inline: 1.25rem 1.75rem;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scroll-behavior: smooth;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-
-        @include bouquet-rail-horizontal-items;
-
-        &::-webkit-scrollbar {
-          display: none;
-        }
-      }
-    }
-
-    .horizontal-slide--logo-with-number[data-native-horizontal-rail] {
-      height: auto;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      justify-items: center;
-      justify-content: center;
-      gap: 0;
-      padding-top: 0.35rem;
-      padding-inline: 1.25rem 1.75rem;
-      overflow-x: auto;
-      overflow-y: hidden;
-      scroll-behavior: smooth;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-
-      @include bouquet-rail-wrap-items;
-
-      &::-webkit-scrollbar {
-        display: none;
-      }
-    }
-
-    /* Ejemplos para orientar cada diseño sin tocar el carril base:
-    .horizontal-slide--event-and-logo { align-items: flex-start; height: 17rem; }
-    .horizontal-slide--event-line { height: 20rem; }
-    */
   }
 
   .channel-card {
@@ -521,6 +577,7 @@ $bouquet-items-gap: 2rem;
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
     cursor: pointer;
     position: relative;
+    outline: none;
 
     .channel-card-img {
       display: block;
@@ -537,18 +594,23 @@ $bouquet-items-gap: 2rem;
     &.channel-card--event_and_logo {
       display: flex;
       flex-direction: column;
-      height: 15rem;
-      min-height: 15rem;
+      height: 18rem;
+      min-height: 18rem;
       background: transparent;
       background-color: transparent;
+      border-color: transparent;
+      overflow: visible;
 
       .channel-card-frame {
         flex: 0 0 auto;
+        width: 100%;
         border: 2px solid #fff;
-        border-radius: 0.25em;
+        border-radius: 1.25em;
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        box-sizing: border-box;
+        transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, outline 0.2s ease-in-out;
       }
 
       .channel-card-logo-top {
@@ -585,7 +647,7 @@ $bouquet-items-gap: 2rem;
           position: absolute;
           top: 0;
           left: 0;
-          object-fit: cover;
+          object-fit: fill;
         }
 
         .channel-card-event-info {
@@ -602,18 +664,22 @@ $bouquet-items-gap: 2rem;
         .channel-card-event-meta {
           display: flex;
           flex-direction: column;
-          gap: 0.15em;
           margin-bottom: 0.35em;
+
+          // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+          > *:not(:last-child) {
+            margin-bottom: 0.15em;
+          }
         }
 
         .channel-card-event-time {
-          font-size: 0.75rem;
+          font-size: 1.2rem;
           opacity: 0.9;
           font-variant-numeric: tabular-nums;
         }
 
         .channel-card-event-title {
-          font-size: 0.8rem;
+          font-size: 1.2rem;
           font-weight: 500;
           line-height: 1.2;
           display: -webkit-box;
@@ -647,19 +713,23 @@ $bouquet-items-gap: 2rem;
         background: transparent;
         display: flex;
         flex-direction: column;
-        gap: 0.15em;
         overflow: hidden;
         justify-content: center;
 
+        // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+        > *:not(:last-child) {
+          margin-bottom: 0.15em;
+        }
+
         .channel-card-event-time {
-          font-size: 0.8rem;
+          font-size: 1.2rem;
           opacity: 0.9;
           font-variant-numeric: tabular-nums;
           flex-shrink: 0;
         }
 
         .channel-card-event-title {
-          font-size: 0.9rem;
+          font-size: 1.2rem;
           font-weight: 600;
           line-height: 1.2;
           display: -webkit-box;
@@ -668,6 +738,33 @@ $bouquet-items-gap: 2rem;
           overflow: hidden;
           flex: 1;
           min-height: 0;
+        }
+      }
+
+      &:hover,
+      &:focus,
+      &:focus-visible,
+      &.focused {
+        transform: none;
+        border-color: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
+
+        .channel-card-frame {
+          border-color: $secondary-color;
+          outline: 2px solid rgba(var(--secondary-color-rgb, 118, 75, 162), 0.95);
+          outline-offset: 3px;
+          box-shadow:
+            0 0 0 1px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.45),
+            0 0 18px 4px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.55);
+          -webkit-box-shadow:
+            0 0 0 1px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.45),
+            0 0 18px 4px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.55);
+          -moz-box-shadow:
+            0 0 0 1px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.45),
+            0 0 18px 4px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.55);
         }
       }
     }
@@ -739,19 +836,22 @@ $bouquet-items-gap: 2rem;
       }
 
       &:hover,
+      &:focus,
+      &:focus-visible,
       &.focused {
         transform: none;
-        border-color: transparent;
-        box-shadow: none;
-        -webkit-box-shadow: none;
-        -moz-box-shadow: none;
+        border-color: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
 
         .channel-card-lwn-frame {
           transform: translateY(-2px) scale(1.02);
-          border-color: rgba(255, 255, 255, 0.6);
-          box-shadow: 1px 0 11px 5px rgba(244, 0, 0, 0.61);
-          -webkit-box-shadow: 1px 0 11px 5px rgba(244, 0, 0, 0.61);
-          -moz-box-shadow: 1px 0 11px 5px rgba(244, 0, 0, 0.61);
+          border-color: $secondary-color;
+          box-shadow: 1px 0 11px 5px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.61);
+          -webkit-box-shadow: 1px 0 11px 5px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.61);
+          -moz-box-shadow: 1px 0 11px 5px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.61);
         }
       }
     }
@@ -760,6 +860,23 @@ $bouquet-items-gap: 2rem;
     &.channel-card--event_and_logo_overlay {
       display: flex;
       flex-direction: column;
+      background: transparent;
+      background-color: transparent;
+      border-color: transparent;
+      overflow: visible;
+
+      .channel-card-frame {
+        flex: 1;
+        min-height: 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        border: 2px solid transparent;
+        border-radius: 1.25em;
+        overflow: hidden;
+        box-sizing: border-box;
+        transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, outline 0.2s ease-in-out;
+      }
 
       .channel-card-logo-top {
         flex-shrink: 0;
@@ -789,7 +906,7 @@ $bouquet-items-gap: 2rem;
           width: 100%;
           flex: 1;
           min-height: 0;
-          object-fit: cover;
+          object-fit: fill;
         }
 
         .channel-card-event-info {
@@ -802,18 +919,22 @@ $bouquet-items-gap: 2rem;
         .channel-card-event-meta {
           display: flex;
           flex-direction: column;
-          gap: 0.15em;
           margin-bottom: 0.35em;
+
+          // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+          > *:not(:last-child) {
+            margin-bottom: 0.15em;
+          }
         }
 
         .channel-card-event-time {
-          font-size: 0.75rem;
+          font-size: 1.2rem;
           opacity: 0.9;
           font-variant-numeric: tabular-nums;
         }
 
         .channel-card-event-title {
-          font-size: 0.8rem;
+          font-size: 1.2rem;
           font-weight: 500;
           line-height: 1.2;
           display: -webkit-box;
@@ -836,16 +957,43 @@ $bouquet-items-gap: 2rem;
           }
         }
       }
+
+      &:hover,
+      &:focus,
+      &:focus-visible,
+      &.focused {
+        transform: none;
+        border-color: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
+
+        .channel-card-frame {
+          border-color: $secondary-color;
+          outline: 2px solid rgba(var(--secondary-color-rgb, 118, 75, 162), 0.95);
+          outline-offset: 3px;
+          box-shadow:
+            0 0 0 1px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.45),
+            0 0 18px 4px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.55);
+          -webkit-box-shadow:
+            0 0 0 1px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.45),
+            0 0 18px 4px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.55);
+          -moz-box-shadow:
+            0 0 0 1px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.45),
+            0 0 18px 4px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.55);
+        }
+      }
     }
 
-    &:hover,
-    &.focused {
+    &:not(.channel-card--logo_with_number):not(.channel-card--event_and_logo):not(.channel-card--event_and_logo_overlay):hover,
+    &:not(.channel-card--logo_with_number):not(.channel-card--event_and_logo):not(.channel-card--event_and_logo_overlay).focused {
       transform: translateY(-2px);
-      border-color: rgba(255, 255, 255, 0.6);
-      box-shadow: 1px 0px 11px 5px rgba(244,0,0,0.61);
-      -webkit-box-shadow: 1px 0px 11px 5px rgba(244,0,0,0.61);
-      -moz-box-shadow: 1px 0px 11px 5px rgba(244,0,0,0.61);
-      border-radius: 20px;
+      border-color: $secondary-color;
+      box-shadow: 1px 0 11px 5px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.61);
+      -webkit-box-shadow: 1px 0 11px 5px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.61);
+      -moz-box-shadow: 1px 0 11px 5px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.61);
+      border-radius: $border-radius-sm;
       transform: scale(1.02);
     }
   }
@@ -895,8 +1043,12 @@ $bouquet-items-gap: 2rem;
     max-width: 900px;
     display: flex;
     flex-direction: column;
-    gap: $spacing-md;
     padding: $spacing-xl 0;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: $spacing-md;
+    }
   }
 
   .bouquet-row {
@@ -919,7 +1071,11 @@ $bouquet-items-gap: 2rem;
     .bouquet-row-main {
       display: flex;
       flex-direction: column;
-      gap: $spacing-xs;
+
+      // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+      > *:not(:last-child) {
+        margin-bottom: $spacing-xs;
+      }
     }
 
     .bouquet-row-name {
@@ -999,9 +1155,10 @@ $bouquet-items-gap: 2rem;
 
 /* TV: scroll nativo (sin Embla) + foco ligero. Espaciado vía márgenes (--bouquet-items-gap), no flex gap. */
 .device-tv .bouquet-page {
-  .bouquet-inicio-scroll,
-  .bouquet-row-carousel .embla-viewport,
-  .bouquet-grid-horizontal .horizontal-slide--grid-row.embla-viewport,
+  // `.bouquet-inicio-scroll` ya no hace falta acá -- su base ahora es
+  // `scroll-behavior: auto` para todos los dispositivos (ver arriba).
+  .bouquet-horizontal-grid-track[data-native-horizontal-rail],
+  .bouquet-horizontal-grid-track.embla-viewport,
   .bouquet-vod-recommended .vod-row-cards.embla-viewport {
     scroll-behavior: auto;
   }
@@ -1029,15 +1186,33 @@ $bouquet-items-gap: 2rem;
     }
   }
 
-  .horizontal-slide--logo-with-number[data-native-horizontal-rail] {
-    flex-wrap: wrap;
-    align-content: flex-start;
-    justify-items: center;
-    justify-content: center;
+  .bouquet-horizontal-grid-track {
+    gap: 2rem !important;
+
+    > .channel-card,
+    > .vod-card,
+    > .bouquet-horizontal-grid-column {
+      margin-inline-end: var(--bouquet-items-gap, #{$bouquet-items-gap}) !important;
+      margin-block-end: var(--bouquet-items-gap, #{$bouquet-items-gap}) !important;
+    }
+
+    &--event-and-logo[data-grid-flow='column'][data-grid-rows='1'] {
+      min-height: calc(18rem + 0.85rem);
+      padding-block: 0.4rem;
+    }
+
+    &[data-grid-flow='column'] {
+      align-content: flex-start;
+      justify-content: start;
+    }
+
+    &[data-grid-flow='row'] {
+      align-content: flex-start;
+      justify-content: start;
+    }
   }
 
-  .bouquet-grid-horizontal .horizontal-slide--grid-row.embla-viewport,
-  .bouquet-row-carousel .horizontal-slide.embla-viewport {
+  .bouquet-horizontal-grid-track.embla-viewport {
     padding-bottom: 0.75rem;
 
     .embla-container {
@@ -1067,7 +1242,9 @@ $bouquet-items-gap: 2rem;
       z-index: 1 !important;
     }
 
-    &.channel-card--logo_with_number {
+    &.channel-card--logo_with_number,
+    &.channel-card--event_and_logo,
+    &.channel-card--event_and_logo_overlay {
       border-color: transparent !important;
       border-width: 2px !important;
 
@@ -1075,12 +1252,38 @@ $bouquet-items-gap: 2rem;
       &.focused {
         border-color: transparent !important;
         border-width: 2px !important;
+      }
+    }
 
+    &.channel-card--logo_with_number {
+      &:hover,
+      &.focused {
         .channel-card-lwn-frame {
           transform: none !important;
           border-radius: 1rem;
           border-width: 3px !important;
           border-color: var(--focus-color, rgba(255, 255, 255, 0.92)) !important;
+          outline: 2px solid var(--focus-color, rgba(255, 255, 255, 0.92)) !important;
+          outline-offset: 3px;
+          box-shadow: none !important;
+          -webkit-box-shadow: none !important;
+          -moz-box-shadow: none !important;
+        }
+      }
+    }
+
+    &.channel-card--event_and_logo,
+    &.channel-card--event_and_logo_overlay {
+      overflow: visible !important;
+
+      &:hover,
+      &.focused {
+        .channel-card-frame {
+          transform: none !important;
+          border-radius: 1.25em;
+          border-width: 3px !important;
+          border-color: transparent !important;
+          outline: none !important;
           box-shadow: none !important;
           -webkit-box-shadow: none !important;
           -moz-box-shadow: none !important;

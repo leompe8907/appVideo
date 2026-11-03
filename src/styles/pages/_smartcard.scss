@@ -50,9 +50,13 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
     overflow: hidden;
     max-height: 100vh;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: 1rem;
+    }
   }
 
   // Vista lista tipo 10foot: instrucciones + lista scrollable
@@ -68,6 +72,10 @@
     color: rgba(255, 255, 255, 0.95);
     text-align: left;
     flex-shrink: 0;
+    // El texto (`smartcard.instructionsNoPIN`) trae un `\n` a propósito para
+    // separar "¡Todas tus pantallas están en uso!" de la instrucción de abajo
+    // -- sin esto, HTML colapsa el salto de línea y queda todo en un renglón.
+    white-space: pre-line;
   }
 
   .licenses-list {
@@ -79,11 +87,15 @@
     overflow: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
     background: rgba(0, 0, 0, 0.25);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.15);
     @include scrollbar-hidden;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: 0.25rem;
+    }
   }
 
   .license-list-item {
@@ -126,9 +138,9 @@
     }
 
     &.focused {
-      border-color: #e50914;
+      border-color: $secondary-color;
       background: rgba(42, 42, 42, 0.9);
-      box-shadow: 0 0 0 1px #e50914 inset, 0 0 12px rgba(229, 9, 20, 0.4) !important;
+      box-shadow: 0 0 0 1px $secondary-color inset, 0 0 12px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.4) !important;
       // Override local contra el foco global TV de botones (scale 1.08),
       // porque los items ocupan todo el ancho y tapaban el borde del contenedor.
       transform: scale(1.015) !important;
@@ -178,9 +190,13 @@
 
   .confirm-in-use-actions {
     display: flex;
-    gap: 0.75rem;
     justify-content: center;
     flex-wrap: wrap;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > * {
+      margin: 0 0.375rem 0.75rem;
+    }
   }
 
   .confirm-in-use-btn {
@@ -196,8 +212,8 @@
 
     &:hover,
     &.focused {
-      background: rgba(229, 9, 20, 0.8);
-      border-color: #e50914;
+      background: rgba(var(--secondary-color-rgb, 118, 75, 162), 0.8);
+      border-color: $secondary-color;
     }
   }
 
@@ -207,10 +223,18 @@
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: 1rem;
     width: 100%;
     overflow: hidden;
+    // Fallback fijo antes de `min()`: WebKit viejo de Smart TV no lo
+    // interpreta y descarta la línea entera, quedándose con la última
+    // declaración válida.
+    max-height: 34em;
     max-height: min(34em, calc(100vh - 7.5rem));
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > * {
+      margin: 0 0.5rem 1rem;
+    }
   }
 
   // Tarjeta de licencia - estilo Netflix minimalista
@@ -248,14 +272,14 @@
                   0 0 40px rgba(255, 255, 255, 0.1);
     }
 
-    // Estilo cuando está enfocado - rojo Netflix
+    // Estilo cuando está enfocado (color de marca)
     &.focused {
       outline: none !important;
-      border: 2px solid #e50914 !important;
-      box-shadow: 0 0 0 1px #e50914 inset,
-                  0 0 20px rgba(229, 9, 20, 0.5),
-                  0 0 40px rgba(229, 9, 20, 0.3),
-                  inset 0 0 25px rgba(229, 9, 20, 0.15) !important;
+      border: 2px solid $secondary-color !important;
+      box-shadow: 0 0 0 1px $secondary-color inset,
+                  0 0 20px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.5),
+                  0 0 40px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.3),
+                  inset 0 0 25px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.15) !important;
       transform: scale(1.03) !important;
       transform-origin: center center !important;
       animation: focusPulse 2s ease-in-out infinite;
@@ -264,14 +288,14 @@
     // Animación de pulso para el foco
     @keyframes focusPulse {
       0%, 100% {
-        box-shadow: 0 0 20px rgba(229, 9, 20, 0.5),
-                    0 0 40px rgba(229, 9, 20, 0.3),
-                    inset 0 0 25px rgba(229, 9, 20, 0.15);
+        box-shadow: 0 0 20px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.5),
+                    0 0 40px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.3),
+                    inset 0 0 25px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.15);
       }
       50% {
-        box-shadow: 0 0 25px rgba(229, 9, 20, 0.6),
-                    0 0 50px rgba(229, 9, 20, 0.4),
-                    inset 0 0 30px rgba(229, 9, 20, 0.2);
+        box-shadow: 0 0 25px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.6),
+                    0 0 50px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.4),
+                    inset 0 0 30px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.2);
       }
     }
 
@@ -310,18 +334,25 @@
   .license-fields {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
     width: 100%;
     overflow: hidden;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: 0.6rem;
+    }
   }
 
   .license-field {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
     padding: 0.6rem 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
+
+    > *:not(:last-child) {
+      margin-bottom: 0.25rem;
+    }
 
     &:last-child {
       border-bottom: none;
@@ -415,13 +446,17 @@
   .success-message {
     @include flex-center;
     flex-direction: column;
-    gap: 0.5rem;
     padding: 1.25rem 1.75rem;
     background: rgba(34, 139, 34, 0.85);
     backdrop-filter: blur(10px);
     border-radius: 8px;
     border: 2px solid rgba(255, 255, 255, 0.4);
     flex-shrink: 0;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-bottom: 0.5rem;
+    }
 
     .success-icon {
       font-size: 1.75rem;
@@ -514,8 +549,8 @@
     &:focus,
     &:focus-visible {
       outline: none;
-      border-color: #e50914;
-      box-shadow: 0 0 20px rgba(229, 9, 20, 0.5);
+      border-color: $secondary-color;
+      box-shadow: 0 0 20px rgba(var(--secondary-color-rgb, 118, 75, 162), 0.5);
     }
   }
 }

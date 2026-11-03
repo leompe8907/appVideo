@@ -4,7 +4,7 @@
  */
 
 import { Navigate, useLocation } from 'react-router-dom';
-import { usePreload } from '../../store/usePreload';
+import { usePreload } from '@appvideo/core/store/usePreload';
 
 export function PreloadGate({ required = 'epg', children }) {
   const { epg } = usePreload();

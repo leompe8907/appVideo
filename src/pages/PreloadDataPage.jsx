@@ -13,8 +13,8 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
-import { usePreload } from '../store/usePreload';
-import { useEpgStatus, useVodStatus } from '../store/preloadStore';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { useEpgStatus, useVodStatus } from '@appvideo/core/store/preloadStore';
 import { PreloadScreen } from '../components/preload/PreloadScreen';
 
 export function PreloadDataPage() {
@@ -30,13 +30,17 @@ export function PreloadDataPage() {
   useEffect(() => {
     if (!currentBrand) return;
 
-    loadEPG(currentBrand, { force: true });
-    loadVOD(currentBrand, { t, force: true });
+    loadEPG(currentBrand);
     if (currentBrand?.catchup?.enabled !== false) {
-      loadCatchup(currentBrand, { force: true });
+      loadCatchup(currentBrand);
     }
-    loadAds({ force: true });
-  }, [currentBrand, location.search, loadEPG, loadVOD, loadCatchup, loadAds, t]);
+    loadAds();
+  }, [currentBrand, location.search, loadEPG, loadCatchup, loadAds]);
+
+  useEffect(() => {
+    if (!currentBrand) return;
+    loadVOD(currentBrand, { t, force: true });
+  }, [currentBrand, location.search, loadVOD, t]);
 
   // Cuando EPG y VOD estén listos (o en error), redirigir a Home/Bouquets
   useEffect(() => {

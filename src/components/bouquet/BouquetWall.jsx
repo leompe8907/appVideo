@@ -1,104 +1,55 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  getBouquetsWithChannels,
   filterBouquetsForInicio,
   filterBouquetsForTvRadioServices,
-} from '../../services/tvDataService';
-import { usePreload } from '../../store/usePreload';
-import { mergeEpgIntoChannels } from '../../utils/epgMerge';
-import { resolveBouquetLayoutForDevice } from '../../utils/bouquetLayoutConfig';
+  sortBouquetsByPriority,
+} from '@appvideo/core/services/tvDataService';
+import { useDevice } from '../../contexts/DeviceContext';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { resolveBouquetLayoutForDevice } from '@appvideo/core/utils/bouquetLayoutConfig';
 import {
-  BouquetRowCarousel,
-  BouquetGridHorizontal,
+  BouquetHorizontalGrid,
   BouquetGridVertical,
 } from './BouquetLayouts';
+import { useMostWatchedBouquet } from '../../hooks/useMostWatchedBouquet';
 
 /**
  * BouquetWall: filas de canales por bouquet (home 10foot).
- * Con precarga EPG lista: usa `epg.bouquetsWithChannels` del PreloadContext (sin repetir getBouquets/getAvailableStreams).
- * Solo pide red si el preload de EPG falló.
+ * Solo usa datos del preload (sin re-fetch ni spinner: la carga ocurre en /preload).
  *
  * @param {'inicio' | 'servicios'} variant - inicio: isMain !== false explícito; servicios: solo isMain=false.
  */
 export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio' }) {
   const { t } = useTranslation();
+  const { isTV, isPC } = useDevice();
   const { epg } = usePreload();
+  // Se llama siempre (regla de hooks), pero solo se mezcla al resultado en
+  // variant "inicio" -- el hook mismo devuelve null si el brand no tiene
+  // telemetry habilitado, así que en "servicios" es un no-op sin costo extra.
+  const mostWatchedBouquet = useMostWatchedBouquet();
 
-  const bouquetsFromPreload = useMemo(() => {
-    if (epg.status !== 'ready') return null;
+  const bouquets = useMemo(() => {
+    if (epg.status !== 'ready') return [];
     const list = epg.bouquetsWithChannels || [];
-    const merged = list.map((b) => ({
-      ...b,
-      items: mergeEpgIntoChannels(b.items || [], epg.streams),
-    }));
-    return variant === 'servicios'
-      ? filterBouquetsForTvRadioServices(merged)
-      : filterBouquetsForInicio(merged);
-  }, [epg.status, epg.bouquetsWithChannels, epg.streams, variant]);
+    // Tras preload, bouquet.items ya comparten referencia con epg.streams y traen epgItems.
+    const base = variant === 'servicios'
+      ? filterBouquetsForTvRadioServices(list)
+      : filterBouquetsForInicio(list);
 
-  const [fallbackBouquets, setFallbackBouquets] = useState([]);
-  const [fallbackLoading, setFallbackLoading] = useState(false);
-  const [fallbackError, setFallbackError] = useState(null);
+    if (variant !== 'inicio' || !mostWatchedBouquet) return base;
 
-  useEffect(() => {
-    if (bouquetsFromPreload !== null) {
-      return;
-    }
-    if (epg.status !== 'error') {
-      return;
-    }
+    // "Más vistos" compite por posición según su `priority` real (viene del
+    // mismo backend que los demás bouquets) en vez de quedar siempre fijo al
+    // final -- re-ordena el conjunto completo con la misma función que ya
+    // usan `filterBouquetsForInicio`/`filterBouquetsForTvRadioServices`.
+    return sortBouquetsByPriority([...base, mostWatchedBouquet]);
+  }, [epg.status, epg.bouquetsWithChannels, variant, mostWatchedBouquet]);
 
-    let isMounted = true;
-
-    const fetchData = async () => {
-      try {
-        setFallbackLoading(true);
-        setFallbackError(null);
-        const list = await getBouquetsWithChannels({ enableRetry: false });
-        if (!isMounted) return;
-        const withEpg = list.map((b) => ({
-          ...b,
-          items: mergeEpgIntoChannels(b.items || [], epg.streams),
-        }));
-        setFallbackBouquets(
-          variant === 'servicios' ? filterBouquetsForTvRadioServices(withEpg) : filterBouquetsForInicio(withEpg)
-        );
-      } catch (err) {
-        if (!isMounted) return;
-        console.error('[BouquetWall] Error al cargar bouquets con canales:', err);
-        setFallbackError(err?.errorInfo?.userMessage || err?.message || t('bouquet.errorLoad'));
-      } finally {
-        if (isMounted) {
-          setFallbackLoading(false);
-        }
-      }
-    };
-
-    fetchData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [bouquetsFromPreload, epg.status, epg.streams, t, variant]);
-
-  const bouquets = bouquetsFromPreload !== null ? bouquetsFromPreload : fallbackBouquets;
-  const isLoading = bouquetsFromPreload !== null ? false : fallbackLoading;
-  const error = bouquetsFromPreload !== null ? null : fallbackError;
-
-  if (isLoading) {
-    return (
-      <div className="bouquet-loading">
-        <div className="loading-spinner" />
-        <p className="bouquet-loading-text">{t('bouquet.loading')}</p>
-      </div>
-    );
-  }
-
-  if (error) {
+  if (epg.status === 'error') {
     return (
       <div className="bouquet-error">
-        <p className="bouquet-error-text">{error}</p>
+        <p className="bouquet-error-text">{epg.error || t('bouquet.errorLoad')}</p>
       </div>
     );
   }
@@ -114,7 +65,7 @@ export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio
   return (
     <div className="bouquet-wall">
       {bouquets.map((bouquet) => {
-        const layout = resolveBouquetLayoutForDevice(bouquet);
+        const layout = resolveBouquetLayoutForDevice(bouquet, { isTV, isPC });
         const key = bouquet.bouquetId ?? bouquet.id;
         const layoutProps = {
           bouquet,
@@ -123,6 +74,8 @@ export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio
           gridRows: layout.gridRows,
           gridColumns: layout.gridColumns,
           containerType: layout.containerType,
+          platformLayoutType: layout.platformLayoutType,
+          backgroundColor: layout.backgroundColor,
           onChannelSelect,
           onChannelFocus,
         };
@@ -131,11 +84,7 @@ export function BouquetWall({ onChannelSelect, onChannelFocus, variant = 'inicio
           return <BouquetGridVertical key={key} {...layoutProps} />;
         }
 
-        if (layout.containerType === 'horizontal_multi_row') {
-          return <BouquetGridHorizontal key={key} {...layoutProps} />;
-        }
-
-        return <BouquetRowCarousel key={key} {...layoutProps} />;
+        return <BouquetHorizontalGrid key={key} {...layoutProps} />;
       })}
     </div>
   );

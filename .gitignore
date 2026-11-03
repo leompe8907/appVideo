@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Herramientas de despliegue (no commitear binarios)
+azcopy.exe
+azcopy
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +26,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Metadatos de macOS en discos exFAT
+._*
+
+# Graphify (grafo de conocimiento generado)
+graphify-out/

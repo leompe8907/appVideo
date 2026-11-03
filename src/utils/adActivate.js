@@ -44,18 +44,14 @@ export function createAdActivateHandler(deps) {
     const actionUrl = ad.actionUrl;
     const generic = ad.genericData != null ? String(ad.genericData) : '';
 
-    const isValidUrl =
-      actionUrl &&
-      typeof actionUrl === 'string' &&
-      actionUrl !== '#' &&
-      actionUrl !== 'null' &&
-      actionUrl !== 'undefined';
+    // Solo http(s): `actionUrl` viene del backend y `javascript:`/`data:` ejecutarían código.
+    const isValidUrl = typeof actionUrl === 'string' && /^https?:\/\//i.test(actionUrl.trim());
 
     if (isValidUrl) {
       try {
-        window.open(actionUrl, '_blank', 'noopener,noreferrer');
+        window.open(actionUrl.trim(), '_blank', 'noopener,noreferrer');
       } catch {
-        window.location.href = actionUrl;
+        window.location.href = actionUrl.trim();
       }
       return;
     }

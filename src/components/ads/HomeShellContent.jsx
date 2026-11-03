@@ -5,12 +5,14 @@
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { usePlayer } from '../../contexts/PlayerContext';
-import panaccessService from '../../services/panaccessService';
+import { usePlayerActions } from '../../contexts/PlayerContext';
+import panaccessService from '@appvideo/core/services/panaccessService';
 import { AdZone } from './AdZone';
-import { usePreload } from '../../store/usePreload';
+import { usePreload } from '@appvideo/core/store/usePreload';
 import InicioHeader from '../home/InicioHeader';
 import { useBrand } from '../../contexts/BrandContext';
+import { useDevice } from '../../contexts/DeviceContext';
+import { resolveHomeShellHeaderEnabled, resolveHeaderActivado } from '@appvideo/core/config/brandConfig';
 import { HomeHeaderProvider } from '../../contexts/HomeHeaderProvider';
 import { useParentalGate } from '../../hooks/useParentalGate';
 import { createAdActivateHandler } from '../../utils/adActivate';
@@ -19,9 +21,10 @@ export function HomeShellContent() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { play } = usePlayer();
+  const { play } = usePlayerActions();
   const { requestPlayChannel, requestPlayMedia } = useParentalGate();
   const { currentBrand } = useBrand();
+  const { isTV } = useDevice();
   const { epg, ads, loadAds } = usePreload();
 
   const sectionKey = (() => {
@@ -33,11 +36,11 @@ export function HomeShellContent() {
     return null;
   })();
 
+  // Se monta solo si la página lo tiene (homeShell.header.[sectionKey]) Y la
+  // plataforma lo tiene (brand.header.activado.{pc,tv}) — dos preguntas
+  // independientes, ver brandConfig.js.
   const headerEnabled =
-    sectionKey &&
-    (currentBrand?.homeShell?.header?.[sectionKey] ??
-      // fallback seguro: si no está configurado, mantener el header activo en estas 4 secciones
-      (sectionKey === 'inicio' || sectionKey === 'serviciosTvRadio' || sectionKey === 'vod' || sectionKey === 'catchup'));
+    resolveHomeShellHeaderEnabled(currentBrand, sectionKey) && resolveHeaderActivado(currentBrand, isTV);
 
   const adsEnabled =
     sectionKey &&

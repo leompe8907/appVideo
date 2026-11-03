@@ -1,22 +1,30 @@
 /**
  * Punto de entrada - Providers + Render
  * Compatibilidad: Samsung Tizen 4/5 (~2019), LG webOS 4/5 (~2019)
- *
- * ReactDOM.render (API clásica): algunos WebViews de TV se comportan mejor que createRoot.
  */
 
-import './locales/i18n';
-import React from 'react';
-import ReactDOM from 'react-dom';
+import '@appvideo/core/locales/i18n';
+import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { BrandProvider } from './contexts/BrandContext';
 import { DeviceProvider } from './contexts/DeviceContext';
-import { AppQueryProvider } from './query/QueryProvider';
+import { AppQueryProvider } from '@appvideo/core/query/QueryProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import App from './App';
 import { runCompatCheck, showCompatError } from './utils/compatCheck';
+import { installGlobalErrorReporting } from './utils/errorReporting';
+import { registerParentalGateWebFocus } from './utils/parentalGateWebFocus';
+import { registerTvKeys } from './utils/tvNavigation/registerTvKeys';
 
 import './styles/main.scss';
+
+// Errores fuera del render de React (handlers, timeouts, promesas sin catch:
+// player, EPG, etc). En TV no hay devtools accesibles, así que esta es la
+// única forma de enterarse de que algo rompió en producción.
+installGlobalErrorReporting();
+registerParentalGateWebFocus();
+// Samsung: sin registrar, CH±, media y números no llegan al keydown.
+registerTvKeys();
 
 // Foco visible (PC + 10-foot): aplica/quita clase `.focused` automáticamente.
 // Controlado por bandera: html[data-focus="on|off"] (setea BrandTheme).
@@ -44,10 +52,19 @@ import './styles/main.scss';
     }
   };
 
+  const isTvRingMode = () => {
+    try {
+      return document.documentElement.classList.contains('device-tv');
+    } catch {
+      return false;
+    }
+  };
+
   document.addEventListener(
     'focusin',
     (e) => {
       if (!shouldApply()) return;
+      if (isTvRingMode()) return;
       const el = e.target;
       if (!isInteractive(el)) return;
       try {
@@ -63,6 +80,7 @@ import './styles/main.scss';
   document.addEventListener(
     'focusout',
     (e) => {
+      if (isTvRingMode()) return;
       const el = e.target;
       if (!isInteractive(el)) return;
       try {
@@ -82,14 +100,29 @@ const routerBasename = (() => {
   return trimmed || undefined;
 })();
 
-const compatIssues = runCompatCheck();
-const rootEl = document.getElementById('root');
-if (!rootEl) {
-  console.error('[main] No se encontró #root en el DOM');
-} else if (compatIssues.length > 0) {
-  showCompatError(compatIssues);
-} else {
-  ReactDOM.render(
+async function mountApp() {
+  try {
+    if (typeof window !== 'undefined' && window.__tvPlatformReady) {
+      await window.__tvPlatformReady;
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.warn('[main] tv-platform-bootstrap:', e?.message || e);
+    }
+  }
+
+  const compatIssues = runCompatCheck();
+  const rootEl = document.getElementById('root');
+  if (!rootEl) {
+    console.error('[main] No se encontró #root en el DOM');
+    return;
+  }
+  if (compatIssues.length > 0) {
+    showCompatError(compatIssues);
+    return;
+  }
+
+  createRoot(rootEl).render(
     <ErrorBoundary>
       <BrowserRouter basename={routerBasename}>
         <DeviceProvider>
@@ -100,7 +133,8 @@ if (!rootEl) {
           </BrandProvider>
         </DeviceProvider>
       </BrowserRouter>
-    </ErrorBoundary>,
-    rootEl
+    </ErrorBoundary>
   );
 }
+
+mountApp();

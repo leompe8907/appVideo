@@ -35,9 +35,34 @@ function copyRecursive(src, dest) {
 }
 
 /**
+ * Copia archivos sueltos en la RAÍZ de `public/` (no dentro de una carpeta de
+ * marca ni de `shared/`) directo a la raíz de `destRoot`, preservando el
+ * nombre plano -- p. ej. `public/tv-platform-bootstrap.js` -> `dist/{marca}/
+ * tv-platform-bootstrap.js`. Necesario porque `index.html` lo referencia
+ * como `%BASE_URL%tv-platform-bootstrap.js` (ruta raíz, ver `index.html`),
+ * y ninguna de las dos ramas de abajo copiaba nunca archivos sueltos de la
+ * raíz de `public/` -- solo carpetas -- así que en CUALQUIER build (con o
+ * sin marca) ese script nunca llegaba al `dist/`. En producción/TV
+ * (Vercel con rewrite catch-all a `index.html`, o el paquete .wgt de Tizen
+ * armado directo desde `dist/{marca}/`) pedir ese `.js` inexistente devolvía
+ * HTML en vez del script -- el "Uncaught SyntaxError: Unexpected token <"
+ * que se vio en la consola de la TV. Sin ese script, `window.tizen`/
+ * `webapis` nunca se inicializa a tiempo, lo que rompe cualquier lectura de
+ * UDID/API nativa de la que dependa el login en TV.
+ */
+function copyRootLevelFiles(publicRoot, destRoot) {
+  if (!fs.existsSync(publicRoot)) return;
+  for (const entry of fs.readdirSync(publicRoot, { withFileTypes: true })) {
+    if (entry.isDirectory()) continue;
+    fs.mkdirSync(destRoot, { recursive: true });
+    fs.copyFileSync(path.join(publicRoot, entry.name), path.join(destRoot, entry.name));
+  }
+}
+
+/**
  * Copia assets estáticos según el modo de build:
- * - Con VITE_BRAND: solo public/{brand}/ y public/shared/
- * - Sin marca (build universal): todo public/ (varias marcas vía ?brand=)
+ * - Con VITE_BRAND: public/{brand}/, public/shared/, y archivos sueltos de la raíz de public/
+ * - Sin marca (build universal): todo public/ (varias marcas vía ?brand=), incluyendo archivos sueltos de la raíz
  */
 export function copyBrandPublicAssets(publicRoot, destRoot, brand) {
   fs.mkdirSync(destRoot, { recursive: true });
@@ -53,6 +78,7 @@ export function copyBrandPublicAssets(publicRoot, destRoot, brand) {
     if (fs.existsSync(sharedSrc)) {
       copyRecursive(sharedSrc, path.join(destRoot, 'shared'));
     }
+    copyRootLevelFiles(publicRoot, destRoot);
     return;
   }
 
@@ -61,6 +87,7 @@ export function copyBrandPublicAssets(publicRoot, destRoot, brand) {
     if (!entry.isDirectory()) continue;
     copyRecursive(path.join(publicRoot, entry.name), path.join(destRoot, entry.name));
   }
+  copyRootLevelFiles(publicRoot, destRoot);
 }
 
 function resolvePublicFile(publicRoot, brand, urlPath) {
@@ -74,7 +101,12 @@ function resolvePublicFile(publicRoot, brand, urlPath) {
     } else if (normalized.startsWith('/shared/')) {
       relative = path.join('shared', normalized.slice('/shared/'.length));
     } else {
-      return null;
+      // Archivo suelto en la raíz de public/ (ej. tv-platform-bootstrap.js,
+      // referenciado en index.html como ruta raíz `%BASE_URL%archivo.js`) --
+      // sin esto, `vite dev`/`preview` con VITE_BRAND seteado tampoco podía
+      // servirlo (mismo bug que en el build, ver `copyRootLevelFiles`).
+      relative = normalized.replace(/^\/+/, '');
+      if (!relative || relative.includes('/')) return null;
     }
   } else {
     relative = normalized.replace(/^\/+/, '');

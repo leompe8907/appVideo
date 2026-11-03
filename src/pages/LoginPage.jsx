@@ -7,18 +7,23 @@ import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { FocusableInput } from '../components/navigation/FocusableInput';
 import { FocusableButton } from '../components/navigation/FocusableButton';
-import { resolvePostLoginRoute } from '../utils/navigation';
-import { clearSessionBeforeNewLogin, loginAndActivateLicense } from '../services/loginFlow';
-import { classifyError, ERROR_TYPES } from '../cv/errorClassifier';
+import { MessageModal } from '../components/MessageModal';
+import { resolvePostLoginRoute } from '@appvideo/core/utils/navigation';
+import { clearSessionBeforeNewLogin, loginAndActivateLicense } from '@appvideo/core/services/loginFlow';
+import { classifyError, ERROR_TYPES } from '@appvideo/core/cv/errorClassifier';
 import { useUdidLoginFlow } from '../hooks/useUdidLoginFlow';
 import { LOGIN_FOCUS_IDS, useLoginTvNavigation } from '../hooks/useLoginTvNavigation';
+import { focusManager, createZoneId } from '../navigation/FocusManager';
 import { getFacebookSocialPostUrl, getGoogleSocialPostUrl } from '../utils/socialAuthUrls';
-import { exchangeGoogleCredentialWithBackend } from '../services/googleSocialLogin';
+import { exchangeGoogleCredentialWithBackend } from '@appvideo/core/services/googleSocialLogin';
 import {
   exchangeFacebookAccessTokenWithBackend,
   getFacebookAccessToken,
 } from '../services/facebookSocialLogin';
-import { preloadImage } from '../utils/assetLoader';
+import { isDeviceSessionEnabled } from '@appvideo/core/services/deviceAuthService';
+import { requestPasswordReset } from '@appvideo/core/services/accountSecurityService';
+import { preloadImage } from '@appvideo/core/utils/assetLoader';
+import { LOGIN_SOCIAL_LOGOS } from '../constants/login/socialLogos.js';
 import '../styles/components/_login.scss';
 
 export function LoginPage() {
@@ -35,16 +40,55 @@ export function LoginPage() {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrImageSrc, setQrImageSrc] = useState('');
   const [qrError, setQrError] = useState('');
+  const [isForgotQrModalOpen, setIsForgotQrModalOpen] = useState(false);
+  const [forgotQrImageSrc, setForgotQrImageSrc] = useState('');
+  const [forgotQrError, setForgotQrError] = useState('');
+  const [isForgotNativeModalOpen, setIsForgotNativeModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+  const [forgotNativeError, setForgotNativeError] = useState('');
+  const [forgotNativeSuccess, setForgotNativeSuccess] = useState(false);
   const [isUdidModalOpen, setIsUdidModalOpen] = useState(false);
   const [udidQrImageSrc, setUdidQrImageSrc] = useState('');
   const [isLoginBgReady, setIsLoginBgReady] = useState(false);
 
   const loginFormRef = useRef(null);
+  const qrModalRootRef = useRef(null);
+  const forgotQrModalRootRef = useRef(null);
+  const udidModalRootRef = useRef(null);
+  const qrZoneIdRef = useRef(null);
+  const forgotQrZoneIdRef = useRef(null);
+  const udidZoneIdRef = useRef(null);
+  if (!qrZoneIdRef.current) qrZoneIdRef.current = createZoneId('login-qr-modal');
+  if (!forgotQrZoneIdRef.current) forgotQrZoneIdRef.current = createZoneId('login-forgot-qr-modal');
+  if (!udidZoneIdRef.current) udidZoneIdRef.current = createZoneId('login-udid-modal');
 
   const qrRegisterConfig = currentBrand?.login?.qrRegister || currentBrand?.qrRegister;
   const qrRegisterEnabled = !!qrRegisterConfig?.enabled;
   const qrRegisterUrl = typeof qrRegisterConfig?.url === 'string' ? qrRegisterConfig.url.trim() : '';
   const canShowQrRegister = qrRegisterEnabled && qrRegisterUrl.length > 0;
+  const forgotPasswordConfig = currentBrand?.login?.forgotPassword;
+  const forgotPasswordUrl =
+    typeof forgotPasswordConfig?.url === 'string' ? forgotPasswordConfig.url.trim() : '';
+  // origin=app (2026-09-09, ver docs/REDIRECT_OLVIDAR_CONTRASENA_2026-09-09.md
+  // en Back-Wind-V2): estos dos caminos (QR de TV, redirect directo en PC)
+  // mandan al usuario a la página de "olvidé contraseña" del backend -- se
+  // le agrega esta banderita para que, al terminar todo el flujo (después
+  // de tocar el link del correo), vuelva a la app/windtv en vez de
+  // quedarse en el login de prueba del backend. Inofensivo si `forgotPasswordUrl`
+  // apunta a un sistema de otra marca que no sea nuestro backend: un query
+  // param que no reconoce simplemente lo ignora.
+  const forgotPasswordUrlWithOrigin = forgotPasswordUrl
+    ? `${forgotPasswordUrl}${forgotPasswordUrl.includes('?') ? '&' : '?'}origin=app`
+    : forgotPasswordUrl;
+  // Nativo: si el brand tiene el backend de "dispositivos vinculados"/cuenta
+  // (`login.deviceSession.enabled`, ver `deviceAuthService.js`) y no estamos
+  // en TV, se resuelve con un formulario dentro de la misma app en vez de
+  // mandar al usuario a un link/QR externo (que ni siquiera hace falta que
+  // el brand tenga configurado para que esto aparezca).
+  const canUseNativeForgotPassword = !isTV && isDeviceSessionEnabled(currentBrand);
+  const canShowForgotPassword =
+    canUseNativeForgotPassword || (forgotPasswordConfig?.enabled === true && forgotPasswordUrl.length > 0);
   // En TV siempre usamos modal (redirigir es peor UX y muchos runtimes no se detectan como LG/Samsung).
   const shouldShowQrModal = isTV;
   const udidLoginConfig = currentBrand?.login?.udid || currentBrand?.udidLogin;
@@ -56,6 +100,10 @@ export function LoginPage() {
 
   const handleCloseQrModal = useCallback(() => {
     setIsQrModalOpen(false);
+  }, []);
+
+  const handleCloseForgotQrModal = useCallback(() => {
+    setIsForgotQrModalOpen(false);
   }, []);
 
   const handleUdidCredentials = async (credentials) => {
@@ -91,19 +139,79 @@ export function LoginPage() {
     setIsUdidModalOpen(false);
   }, [udidFlow]);
 
-  useLoginTvNavigation({
-    isTV,
-    loginFormRef,
-    isQrModalOpen,
-    isUdidModalOpen,
-    isSubmitting,
-    qrRegisterEnabled,
-    udidEnabled: !!effectiveUdidConfig?.enabled,
-    googleEnabled: !!currentBrand?.login?.socialLogin?.google?.enabled,
-    facebookEnabled: !!currentBrand?.login?.socialLogin?.facebook?.enabled,
-    onCloseQrModal: handleCloseQrModal,
-    onCloseUdidModal: handleCloseUdidModal,
-  });
+  useLoginTvNavigation({ isTV, loginFormRef });
+
+  // Modal QR: zona de FocusManager — atrapa LEFT/RIGHT/UP/DOWN dentro del modal
+  // (motor de geometría genérico) y BACK lo cierra; al cerrar, restaura el foco
+  // al elemento que lo abrió (típicamente "Suscríbete aquí").
+  useEffect(() => {
+    if (!isQrModalOpen) return undefined;
+    const zoneId = qrZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: qrModalRootRef.current,
+      onBack: () => {
+        handleCloseQrModal();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [isQrModalOpen, handleCloseQrModal]);
+
+  useEffect(() => {
+    if (!isUdidModalOpen) return undefined;
+    const zoneId = udidZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: udidModalRootRef.current,
+      onBack: () => {
+        handleCloseUdidModal();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [isUdidModalOpen, handleCloseUdidModal]);
+
+  useEffect(() => {
+    if (!isForgotQrModalOpen) return undefined;
+    const zoneId = forgotQrZoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: forgotQrModalRootRef.current,
+      onBack: () => {
+        handleCloseForgotQrModal();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+  }, [isForgotQrModalOpen, handleCloseForgotQrModal]);
+
+  // Foco inicial al abrir los modales QR/UDID (TV): sin esto, el foco se queda
+  // en el botón que abrió el modal y el usuario no puede alcanzar "Cerrar" con
+  // el control remoto hasta la primera flecha arriba/abajo.
+  useEffect(() => {
+    if (!isTV || !isQrModalOpen) return undefined;
+    const timer = setTimeout(() => {
+      document.getElementById(LOGIN_FOCUS_IDS.MODAL_CLOSE_QR)?.focus();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isTV, isQrModalOpen]);
+
+  useEffect(() => {
+    if (!isTV || !isUdidModalOpen) return undefined;
+    const timer = setTimeout(() => {
+      document.getElementById(LOGIN_FOCUS_IDS.MODAL_CLOSE_UDID)?.focus();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isTV, isUdidModalOpen]);
+
+  useEffect(() => {
+    if (!isTV || !isForgotQrModalOpen) return undefined;
+    const timer = setTimeout(() => {
+      document.getElementById(LOGIN_FOCUS_IDS.MODAL_CLOSE_FORGOT_QR)?.focus();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isTV, isForgotQrModalOpen]);
 
   useEffect(() => {
     if (!isQrModalOpen) return;
@@ -137,6 +245,37 @@ export function LoginPage() {
   }, [isQrModalOpen, canShowQrRegister, qrRegisterUrl, t]);
 
   useEffect(() => {
+    if (!isForgotQrModalOpen) return;
+    if (!canShowForgotPassword) {
+      setForgotQrError(t('login.registerUnavailable'));
+      setForgotQrImageSrc('');
+      return;
+    }
+
+    let cancelled = false;
+    const buildQr = async () => {
+      try {
+        const dataUrl = await QRCode.toDataURL(forgotPasswordUrlWithOrigin, {
+          width: 256,
+          margin: 1,
+        });
+        if (cancelled) return;
+        setForgotQrImageSrc(dataUrl);
+        setForgotQrError('');
+      } catch {
+        if (cancelled) return;
+        setForgotQrImageSrc('');
+        setForgotQrError(t('login.registerUnavailable'));
+      }
+    };
+
+    buildQr();
+    return () => {
+      cancelled = true;
+    };
+  }, [isForgotQrModalOpen, canShowForgotPassword, forgotPasswordUrlWithOrigin, t]);
+
+  useEffect(() => {
     if (!isUdidModalOpen || !udidFlow.code) {
       setUdidQrImageSrc('');
       return;
@@ -144,7 +283,29 @@ export function LoginPage() {
     let cancelled = false;
     const buildUdidQr = async () => {
       try {
-        const payload = `${appName}:${udidFlow.code}`;
+        // Formato del QR (hallazgo #34, ver Back-Wind-V2/docs/
+        // PROPUESTA_FORMATO_QR_UDID_2026-09-02.md): antes era un string
+        // plano "{appName}:{code}:{temp_token}" que solo la propia app
+        // sabía parsear -- escanearlo con cualquier otra cámara no hacía
+        // nada. Ahora es una URL real (/wind/l/v1/<udid>/) que el backend
+        // resuelve: cualquier cámara la abre en un navegador y termina en
+        // "Vincular dispositivo" (auto-servicio), y una futura app nativa
+        // con Universal/App Links configurados la interceptaría antes,
+        // leyendo `t` (temp_token) para su propio flujo de login social
+        // (sección 2.2 de esa guía) -- ninguno de los dos casos cambia acá.
+        // `temp_token` sigue siendo el secreto real; la URL solo lo
+        // transporta, igual que antes lo transportaba el string plano.
+        const base = String(effectiveUdidConfig?.baseUrl || '').replace(/\/$/, '');
+        const payload = base
+          ? `${base}/wind/l/v1/${encodeURIComponent(udidFlow.code)}/${
+              udidFlow.tempToken ? `?t=${encodeURIComponent(udidFlow.tempToken)}` : ''
+            }`
+          // Sin baseUrl configurado (no debería pasar si `enabled: true`,
+          // pero por si acaso) cae al formato viejo en vez de generar un
+          // QR con una URL relativa sin sentido.
+          : udidFlow.tempToken
+            ? `${appName}:${udidFlow.code}:${udidFlow.tempToken}`
+            : `${appName}:${udidFlow.code}`;
         const dataUrl = await QRCode.toDataURL(payload, { width: 200, margin: 1 });
         if (cancelled) return;
         setUdidQrImageSrc(dataUrl);
@@ -157,12 +318,56 @@ export function LoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [appName, isUdidModalOpen, udidFlow.code]);
+  }, [appName, isUdidModalOpen, udidFlow.code, udidFlow.tempToken, effectiveUdidConfig?.baseUrl]);
+
+  const handleOpenForgotPassword = () => {
+    if (!canShowForgotPassword) return;
+    if (canUseNativeForgotPassword) {
+      setForgotEmail('');
+      setForgotNativeError('');
+      setForgotNativeSuccess(false);
+      setIsForgotNativeModalOpen(true);
+      return;
+    }
+    // En TV, redirigir (perder la app en la misma "pestaña") es mala UX y muchos
+    // runtimes no navegan bien a una URL externa: mostramos un QR para que el
+    // usuario continúe desde su teléfono. En PC (sin backend nativo) se mantiene
+    // el link directo.
+    if (isTV) {
+      setForgotQrError('');
+      setForgotQrImageSrc('');
+      setIsForgotQrModalOpen(true);
+      return;
+    }
+    window.location.assign(forgotPasswordUrlWithOrigin);
+  };
+
+  const handleCloseForgotNativeModal = useCallback(() => {
+    setIsForgotNativeModalOpen(false);
+  }, []);
+
+  const handleForgotNativeSubmit = async (e) => {
+    e.preventDefault();
+    if (forgotSubmitting || !currentBrand) return;
+    setForgotSubmitting(true);
+    setForgotNativeError('');
+    try {
+      await requestPasswordReset(currentBrand, forgotEmail);
+      setForgotNativeSuccess(true);
+    } catch (err) {
+      setForgotNativeError(
+        err?.message || t('login.forgotPasswordNativeError', { defaultValue: 'No se pudo procesar la solicitud. Intenta de nuevo.' }),
+      );
+    } finally {
+      setForgotSubmitting(false);
+    }
+  };
 
   const handleOpenQrModal = () => {
     if (!canShowQrRegister) return;
     if (!shouldShowQrModal) {
-      window.location.assign(qrRegisterUrl);
+      // PC: abrir en una pestaña/ventana nueva para no perder la sesión de login actual.
+      window.open(qrRegisterUrl, '_blank', 'noopener,noreferrer');
       return;
     }
     setQrError('');
@@ -214,6 +419,10 @@ export function LoginPage() {
             activationRecursive: true,
             storeClientConfig: true,
             storeLicenses: true,
+            // El JWT ya vino en esta misma respuesta del backend Wind
+            // (login social) -- se pasa para que loginAndActivateLicense
+            // no repita un login manual innecesario (Fase 3, ver loginFlow.js).
+            deviceSessionAuth: { access: data.access, refresh: data.refresh, user: data.user },
           },
         );
 
@@ -409,6 +618,8 @@ export function LoginPage() {
             activationRecursive: true,
             storeClientConfig: true,
             storeLicenses: true,
+            // Ver comentario equivalente en handleGoogleCredentialSuccess.
+            deviceSessionAuth: { access: data.access, refresh: data.refresh, user: data.user },
           },
         );
 
@@ -446,12 +657,10 @@ export function LoginPage() {
     >
       <div className="login-card">
         {logoPath && <img src={logoPath} alt={appName} className="brand-logo" />}
-        <h2>{t('login.title')}</h2>
+        <h2 className="login-welcome">{t('login.title')}</h2>
 
-        <form onSubmit={handleSubmit} ref={loginFormRef}>
-          {/* Username */}
-          <div className="form-group">
-            <label htmlFor={LOGIN_FOCUS_IDS.USERNAME}>{t('login.user')}</label>
+        <form onSubmit={handleSubmit} ref={loginFormRef} className="login-form">
+          <div className="form-group form-group--plain">
             <FocusableInput
               id={LOGIN_FOCUS_IDS.USERNAME}
               type="text"
@@ -461,13 +670,12 @@ export function LoginPage() {
               disabled={isSubmitting}
               autoComplete="username"
               required
+              aria-label={t('login.user')}
             />
           </div>
 
-          {/* Password */}
-          <div className="form-group">
-            <label htmlFor={LOGIN_FOCUS_IDS.PASSWORD}>{t('login.password')}</label>
-            <div className="password-row">
+          <div className="form-group form-group--plain">
+            <div className="password-field">
               <FocusableInput
                 id={LOGIN_FOCUS_IDS.PASSWORD}
                 type={showPassword ? 'text' : 'password'}
@@ -477,23 +685,46 @@ export function LoginPage() {
                 disabled={isSubmitting}
                 autoComplete="current-password"
                 required
+                aria-label={t('login.password')}
               />
               <FocusableButton
                 type="button"
-                className="password-toggle"
+                className="password-toggle password-toggle--inline"
                 onClick={() => setShowPassword(!showPassword)}
                 id={LOGIN_FOCUS_IDS.PASSWORD_TOGGLE}
                 tabIndex={0}
+                aria-label={showPassword ? t('login.hidePassword', { defaultValue: 'Ocultar contraseña' }) : t('login.showPassword', { defaultValue: 'Mostrar contraseña' })}
               >
-                {showPassword ? '🙈' : '👁️'}
+                <span className={`password-toggle__icon${showPassword ? ' is-visible' : ''}`} aria-hidden="true" />
               </FocusableButton>
             </div>
           </div>
 
-          {error && <div className="error-message">{error}</div>}
+          {canShowForgotPassword && (
+            <div className={`login-forgot-row${isTV ? ' login-forgot-row--tv' : ''}`}>
+              <FocusableButton
+                type="button"
+                className={`login-forgot-password${isTV ? ' login-tv-action-button' : ' login-text-link'}`}
+                onClick={handleOpenForgotPassword}
+                id={LOGIN_FOCUS_IDS.FORGOT_PASSWORD}
+                tabIndex={0}
+                data-tv-nav="login-actions"
+              >
+                {t('login.forgotPassword')}
+              </FocusableButton>
+            </div>
+          )}
 
-          <FocusableButton 
-            type="submit" 
+          {error && (
+            <MessageModal
+              type="error"
+              message={error}
+              onClose={() => setError('')}
+            />
+          )}
+
+          <FocusableButton
+            type="submit"
             disabled={isSubmitting}
             className="login-button"
             id={LOGIN_FOCUS_IDS.SUBMIT}
@@ -503,28 +734,43 @@ export function LoginPage() {
             {isSubmitting ? t('login.submitting') : t('login.submit')}
           </FocusableButton>
 
-          {qrRegisterEnabled && (
-            <div className="register-section">
-              <p className="register-hint">{t('login.registerHint')}</p>
-              <FocusableButton
-                type="button"
-                className="register-button"
-                onClick={handleOpenQrModal}
-                id={LOGIN_FOCUS_IDS.REGISTER}
-                tabIndex={0}
-                data-tv-nav="login-actions"
-              >
-                {t('login.register')}
-              </FocusableButton>
-            </div>
+          {canShowQrRegister && (
+            isTV ? (
+              <div className="login-subscribe-row">
+                <span className="login-subscribe-hint">{t('login.noAccountYet')}</span>
+                <FocusableButton
+                  type="button"
+                  className="login-tv-action-button login-subscribe-link"
+                  onClick={handleOpenQrModal}
+                  id={LOGIN_FOCUS_IDS.SUBSCRIBE}
+                  tabIndex={0}
+                  data-tv-nav="login-actions"
+                >
+                  {t('login.subscribeHere')}
+                </FocusableButton>
+              </div>
+            ) : (
+              <p className="login-subscribe-prompt">
+                {t('login.noAccountYet')}{' '}
+                <FocusableButton
+                  type="button"
+                  className="login-text-link login-subscribe-link"
+                  onClick={handleOpenQrModal}
+                  id={LOGIN_FOCUS_IDS.SUBSCRIBE}
+                  tabIndex={0}
+                  data-tv-nav="login-actions"
+                >
+                  {t('login.subscribeHere')}
+                </FocusableButton>
+              </p>
+            )
           )}
 
           {effectiveUdidConfig?.enabled && (
-            <div className="register-section">
-              <p className="register-hint">{t('login.udidHint')}</p>
+            <div className="login-udid-section">
               <FocusableButton
                 type="button"
-                className="udid-button"
+                className="login-secondary-button udid-button"
                 onClick={handleOpenUdidModal}
                 id={LOGIN_FOCUS_IDS.UDID}
                 tabIndex={0}
@@ -536,7 +782,11 @@ export function LoginPage() {
           )}
 
           {showAnySocial && (
-            <div className="social-login">
+            <>
+              <div className="login-divider" aria-hidden="true">
+                <span>{t('login.orDivider')}</span>
+              </div>
+              <div className="social-login">
               {showGoogleOAuth && !preferCustomGoogleButton && (
                 <div
                   className="google-login-host"
@@ -564,7 +814,7 @@ export function LoginPage() {
                   className="google-login-host"
                   style={{
                     position: 'relative',
-                    width: '20rem',
+                    width: '100%',
                     maxWidth: '100%',
                     opacity: isSubmitting ? 0.65 : 1,
                     pointerEvents: isSubmitting ? 'none' : 'auto',
@@ -578,6 +828,12 @@ export function LoginPage() {
                     style={{ width: '100%', pointerEvents: 'none' }}
                     aria-hidden="true"
                   >
+                    <img
+                      src={LOGIN_SOCIAL_LOGOS.google}
+                      alt=""
+                      className="social-button__icon"
+                      aria-hidden="true"
+                    />
                     {t('login.continueWithGoogle')}
                   </FocusableButton>
 
@@ -607,6 +863,12 @@ export function LoginPage() {
                   tabIndex={0}
                   data-tv-nav="login-actions"
                 >
+                  <img
+                    src={LOGIN_SOCIAL_LOGOS.google}
+                    alt=""
+                    className="social-button__icon"
+                    aria-hidden="true"
+                  />
                   {t('login.continueWithGoogle')}
                 </FocusableButton>
               )}
@@ -620,16 +882,23 @@ export function LoginPage() {
                   tabIndex={0}
                   data-tv-nav="login-actions"
                 >
+                  <img
+                    src={LOGIN_SOCIAL_LOGOS.facebook}
+                    alt=""
+                    className="social-button__icon"
+                    aria-hidden="true"
+                  />
                   {t('login.continueWithFacebook')}
                 </FocusableButton>
               )}
-            </div>
+              </div>
+            </>
           )}
         </form>
       </div>
 
       {isQrModalOpen && (
-        <div className="register-modal-backdrop">
+        <div className="register-modal-backdrop" ref={qrModalRootRef}>
           <div className="register-modal">
             <h3>{t('login.registerTitle')}</h3>
             <p>{t('login.registerHint')}</p>
@@ -653,8 +922,117 @@ export function LoginPage() {
         </div>
       )}
 
-      {isUdidModalOpen && (
+      {isForgotQrModalOpen && (
+        <div className="register-modal-backdrop" ref={forgotQrModalRootRef}>
+          <div className="register-modal">
+            <h3>{t('login.forgotPasswordTitle')}</h3>
+            <p>{t('login.forgotPasswordHint')}</p>
+
+            {forgotQrImageSrc ? (
+              <img src={forgotQrImageSrc} alt={t('login.forgotPassword')} className="register-qr-image" />
+            ) : (
+              <div className="register-qr-placeholder">{forgotQrError || t('common.loading')}</div>
+            )}
+
+            <FocusableButton
+              type="button"
+              className="register-close-button"
+              onClick={handleCloseForgotQrModal}
+              id={LOGIN_FOCUS_IDS.MODAL_CLOSE_FORGOT_QR}
+              tabIndex={0}
+            >
+              {t('common.close')}
+            </FocusableButton>
+          </div>
+        </div>
+      )}
+
+      {isForgotNativeModalOpen && (
         <div className="register-modal-backdrop">
+          <div className="register-modal register-modal--forgot">
+            {forgotNativeSuccess ? (
+              <>
+                <div className="register-modal-icon register-modal-icon--success" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 12.5l4.5 4.5L20 6" />
+                  </svg>
+                </div>
+                <h3>{t('login.forgotPasswordTitle')}</h3>
+                <p>
+                  {t('login.forgotPasswordNativeSuccess', {
+                    defaultValue:
+                      'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña. Revisa también la carpeta de spam.',
+                  })}
+                </p>
+                <FocusableButton
+                  type="button"
+                  className="register-close-button"
+                  onClick={handleCloseForgotNativeModal}
+                >
+                  {t('login.forgotPasswordBackToLogin', { defaultValue: 'Volver a iniciar sesión' })}
+                </FocusableButton>
+              </>
+            ) : (
+              <>
+                <div className="register-modal-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="5" y="11" width="14" height="9" rx="2" />
+                    <path d="M8 11V7a4 4 0 1 1 8 0v4" />
+                  </svg>
+                </div>
+                <h3>{t('login.forgotPasswordTitle')}</h3>
+                <form onSubmit={handleForgotNativeSubmit} className="login-form">
+                  <p>
+                    {t('login.forgotPasswordNativeHint', {
+                      defaultValue: 'Ingresa el correo de tu cuenta y te enviaremos instrucciones para recuperar tu contraseña.',
+                    })}
+                  </p>
+                  <div className="form-group form-group--plain form-group--icon">
+                    <svg className="form-group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h15A1.5 1.5 0 0 1 21 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-11Z" />
+                      <path d="M4 6.5l8 6 8-6" />
+                    </svg>
+                    <FocusableInput
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder={t('login.forgotPasswordEmailPlaceholder', { defaultValue: 'Correo electrónico' })}
+                      disabled={forgotSubmitting}
+                      autoComplete="email"
+                      required
+                      aria-label={t('login.forgotPasswordEmailPlaceholder', { defaultValue: 'Correo electrónico' })}
+                    />
+                  </div>
+
+                  {forgotNativeError && (
+                    <p className="form-error" role="alert">
+                      {forgotNativeError}
+                    </p>
+                  )}
+
+                  <FocusableButton type="submit" className="login-button" disabled={forgotSubmitting}>
+                    {forgotSubmitting
+                      ? t('login.forgotPasswordSubmitting', { defaultValue: 'Enviando...' })
+                      : t('login.forgotPasswordSubmit', { defaultValue: 'Enviar' })}
+                  </FocusableButton>
+
+                  <FocusableButton
+                    type="button"
+                    className="register-text-link"
+                    onClick={handleCloseForgotNativeModal}
+                    disabled={forgotSubmitting}
+                  >
+                    {t('common.close')}
+                  </FocusableButton>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isUdidModalOpen && (
+        <div className="register-modal-backdrop" ref={udidModalRootRef}>
           <div className="register-modal">
             <h3>{t('login.udidTitle')}</h3>
             <p>{t('login.udidHint')}</p>

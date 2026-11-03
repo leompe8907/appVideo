@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
-import * as userSession from '../utils/userSession';
+import * as userSession from '@appvideo/core/utils/userSession';
 import { validateSessionIfDue } from '../utils/sessionValidator';
 
 /**

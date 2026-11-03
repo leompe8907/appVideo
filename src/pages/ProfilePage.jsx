@@ -9,23 +9,30 @@ import { useTranslation } from 'react-i18next';
 import { useBrand } from '../contexts/BrandContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { CreateProfileModal } from '../components/Profile/CreateProfileModal';
+import { EditProfileModal } from '../components/Profile/EditProfileModal';
 import { DeleteProfileModal } from '../components/Profile/DeleteProfileModal';
 import { MessageModal } from '../components/MessageModal';
 import { FocusableButton } from '../components/navigation/FocusableButton';
 import AppIcon from '../components/AppIcon';
-import panaccessService from '../services/panaccessService';
-import { setLoggedOut } from '../utils/userSession';
-import { filterProfileSmartCards } from '../utils/licenseProducts';
-import Img from '../constants/images';
+import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
+import panaccessService from '@appvideo/core/services/panaccessService';
+import { setLoggedOut } from '@appvideo/core/utils/userSession';
+import { filterProfileSmartCards } from '@appvideo/core/utils/licenseProducts';
+import { getProfileAvatars } from '../constants/images';
+import { useActiveProfile } from '@appvideo/core/store/useActiveProfile';
 import '../styles/pages/_profile.scss';
 
 /**
- * Busca una imagen por su ID en el array de imágenes
+ * Busca una imagen por su ID en el array de avatares de la marca activa.
+ * Los avatares ahora son imágenes locales por marca (`public/<marca>/avatars/`,
+ * ver `getProfileAvatars`), no un CDN remoto compartido -- por eso hace falta
+ * el `brand` acá.
  * @param {number} imageId - ID de la imagen a buscar
+ * @param {string} brand - `currentBrand.brand`
  * @returns {string|null} URL de la imagen o null si no se encuentra
  */
-const getImageById = (imageId) => {
-  const image = Img.find(img => img.id === imageId);
+const getImageById = (imageId, brand) => {
+  const image = getProfileAvatars(brand).find((img) => img.id === imageId);
   return image ? image.img : null;
 };
 
@@ -34,6 +41,7 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const { currentBrand, appName, getImage, isFeatureEnabled } = useBrand();
   const { isTV } = useDevice();
+  const { setActiveProfile: persistActiveProfile } = useActiveProfile();
 
   const [profiles, setProfiles] = useState([]);
   const [smartCards, setSmartCards] = useState([]);
@@ -44,6 +52,7 @@ export function ProfilePage() {
   const [profileMessage, setProfileMessage] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState(null);
+  const [profileToEdit, setProfileToEdit] = useState(null);
 
   // Si esta marca no tiene perfiles, redirigir a smartcard (evita acceso directo por URL)
   const profilesFeatureEnabled = currentBrand ? isFeatureEnabled('profiles') : true;
@@ -75,7 +84,7 @@ export function ProfilePage() {
 
       if (clientConfig?.profiles && Array.isArray(clientConfig.profiles)) {
         const profilesWithImages = clientConfig.profiles.map(profile => {
-          const imageUrl = getImageById(profile.imageId);
+          const imageUrl = getImageById(profile.imageId, currentBrand?.brand);
           return {
             id: profile.id,
             name: profile.name,
@@ -105,22 +114,16 @@ export function ProfilePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [t]);
+  }, [t, currentBrand?.brand]);
 
   useEffect(() => {
     fetchProfiles();
   }, [fetchProfiles]);
 
-  // Establecer focus inicial en TV
-  useEffect(() => {
-    if (isTV && (profiles.length > 0 || smartCards.length > 0)) {
-      const timer = setTimeout(() => {
-        const firstProfile = document.getElementById('profile-0');
-        if (firstProfile) firstProfile.focus();
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isTV, profiles.length, smartCards.length]);
+  // Foco inicial en TV: el motor de geometría genérico resuelve el resto de la
+  // navegación entre tarjetas (los modales de crear/eliminar perfil y mensajes
+  // atrapan el foco ellos mismos vía FocusManager cuando están abiertos).
+  useTvInitialFocus('.profiles-grid', [profiles.length, smartCards.length, isLoading]);
 
   const handleProfileSelect = async (profile) => {
     if (isActivating) return;
@@ -138,6 +141,10 @@ export function ProfilePage() {
         failIfInUse: false,
         pin,
       });
+      // Guardar qué perfil quedó activo (id/nombre/avatar) ANTES de navegar --
+      // el ícono de "Mi cuenta" del sidebar lo lee de acá para mostrar el
+      // avatar del perfil en vez del ícono genérico (ver Sidebar.jsx).
+      persistActiveProfile({ id: profile.id, name: profile.name, imageId: profile.imageId });
       // Ingreso directo: no mostrar modal de bienvenida en éxito.
       navigate('/home/inicio', { replace: true });
     } catch (err) {
@@ -160,6 +167,11 @@ export function ProfilePage() {
 
   const handleDeleteSuccess = () => {
     setProfileToDelete(null);
+    fetchProfiles();
+  };
+
+  const handleEditSuccess = () => {
+    setProfileToEdit(null);
     fetchProfiles();
   };
 
@@ -188,6 +200,13 @@ export function ProfilePage() {
           profile={profileToDelete}
           onClose={() => setProfileToDelete(null)}
           onSuccess={handleDeleteSuccess}
+        />
+      )}
+      {profileToEdit && (
+        <EditProfileModal
+          profile={profileToEdit}
+          onClose={() => setProfileToEdit(null)}
+          onSuccess={handleEditSuccess}
         />
       )}
       {profileMessage?.type === 'error' && (
@@ -238,6 +257,7 @@ export function ProfilePage() {
                     profile={profile}
                     index={index}
                     onSelect={() => handleProfileSelect(profile)}
+                    onEdit={() => setProfileToEdit(profile)}
                     onDelete={() => setProfileToDelete(profile)}
                     isSelected={selectedProfile?.id === profile.id}
                     disabled={isActivating}
@@ -274,7 +294,7 @@ export function ProfilePage() {
 /**
  * Componente de tarjeta de perfil
  */
-function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled = false }) {
+function ProfileCard({ profile, index, onSelect, onEdit, onDelete, isSelected, disabled = false }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
 
@@ -285,10 +305,16 @@ function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled 
 
   const handleKeyDown = (e) => {
     if (disabled) return;
-    if (!isTV && (e.key === 'Enter' || e.key === ' ')) {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onSelect();
     }
+  };
+
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    if (disabled) return;
+    onEdit?.(profile);
   };
 
   const handleDeleteClick = (e) => {
@@ -337,23 +363,45 @@ function ProfileCard({ profile, index, onSelect, onDelete, isSelected, disabled 
         </div>
         <div className="profile-name">{profile.name}</div>
       </div>
-      {onDelete && (
-        <button
-          type="button"
-          className="profile-card-delete"
-          onClick={handleDeleteClick}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              e.stopPropagation();
-              onDelete(profile);
-            }
-          }}
-          tabIndex={disabled ? -1 : 0}
-          aria-label={t('profile.deleteProfileAria', { name: profile.name })}
-        >
-          {t('profile.deleteConfirm')}
-        </button>
+      {(onEdit || onDelete) && (
+        <div className="profile-card-actions">
+          {onEdit && (
+            <button
+              type="button"
+              className="profile-card-edit"
+              onClick={handleEditClick}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit(profile);
+                }
+              }}
+              tabIndex={disabled ? -1 : 0}
+              aria-label={t('profile.editProfileAria', { name: profile.name })}
+            >
+              {t('profile.editButton')}
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              className="profile-card-delete"
+              onClick={handleDeleteClick}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete(profile);
+                }
+              }}
+              tabIndex={disabled ? -1 : 0}
+              aria-label={t('profile.deleteProfileAria', { name: profile.name })}
+            >
+              {t('profile.deleteConfirm')}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -373,7 +421,7 @@ function AddProfileCard({ onAdd }) {
   };
 
   const handleKeyDown = (e) => {
-    if (!isTV && (e.key === 'Enter' || e.key === ' ')) {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onAdd();
     }
