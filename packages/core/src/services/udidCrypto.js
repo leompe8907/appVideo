@@ -110,7 +110,8 @@ export function encodePublicKeyForHeader(publicKeyPem) {
 /**
  * Descifra `encrypted_credentials` usando WebCrypto:
  * - RSA-OAEP SHA-256 (decrypt encrypted_key)
- * - AES-CBC (decrypt encrypted_data)
+ * - AES-256-GCM si viene `tag` (IV de 12 bytes; es lo que manda el backend con
+ *   la llave efímera), si no AES-CBC (IV de 16, esquema viejo de llave estática)
  * - plaintext es JSON (backend hizo json.dumps(...))
  */
 export async function decryptEncryptedCredentials(encryptedUdid, privateKeyOrUrl) {
@@ -138,11 +139,14 @@ export async function decryptEncryptedCredentials(encryptedUdid, privateKeyOrUrl
   const encryptedDataB64 = normalizedCreds.encrypted_data;
   const encryptedAESKeyB64 = normalizedCreds.encrypted_key;
   const ivB64 = normalizedCreds.iv;
+  const tagB64 = normalizedCreds.tag;
+  const useGcm = !!tagB64;
 
   udidLog('UDID crypto: decryptEncryptedCredentials inputs', {
     hasEncryptedData: !!encryptedDataB64,
     hasEncryptedKey: !!encryptedAESKeyB64,
     hasIv: !!ivB64,
+    useGcm,
   });
 
   if (!encryptedDataB64 || !encryptedAESKeyB64 || !ivB64) {
@@ -154,7 +158,7 @@ export async function decryptEncryptedCredentials(encryptedUdid, privateKeyOrUrl
   const ivBytes = base64ToBytes(ivB64);
   const encryptedDataBytes = base64ToBytes(encryptedDataB64);
 
-  if (ivBytes.length !== 16) {
+  if (ivBytes.length !== (useGcm ? 12 : 16)) {
     throw new Error(`IV inválido - longitud: ${ivBytes.length}`);
   }
 
@@ -233,17 +237,29 @@ export async function decryptEncryptedCredentials(encryptedUdid, privateKeyOrUrl
     throw new Error(`Clave AES inválida - longitud: ${aesKeyRaw.byteLength}`);
   }
 
-  const aesKey = await crypto.subtle.importKey('raw', aesKeyRaw, { name: 'AES-CBC' }, false, [
-    'decrypt',
-  ]);
+  const aesMode = useGcm ? 'AES-GCM' : 'AES-CBC';
+  const aesKey = await crypto.subtle.importKey('raw', aesKeyRaw, { name: aesMode }, false, ['decrypt']);
 
-  // 2) AES-CBC -> plaintext (WebCrypto quita padding)
+  // 2) AES -> plaintext. GCM: WebCrypto espera el tag pegado al final del
+  // ciphertext y falla si no coincide (datos alterados). CBC: quita el padding.
   let plaintextBuf;
   try {
-    plaintextBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: ivBytes }, aesKey, encryptedDataBytes);
+    if (useGcm) {
+      const tagBytes = base64ToBytes(tagB64);
+      const sealed = new Uint8Array(encryptedDataBytes.length + tagBytes.length);
+      sealed.set(encryptedDataBytes, 0);
+      sealed.set(tagBytes, encryptedDataBytes.length);
+      plaintextBuf = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: ivBytes, tagLength: tagBytes.length * 8 },
+        aesKey,
+        sealed,
+      );
+    } else {
+      plaintextBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: ivBytes }, aesKey, encryptedDataBytes);
+    }
   } catch (e) {
-    udidLog('UDID crypto: WebCrypto AES-CBC decrypt failed', { name: e?.name, message: e?.message });
-    throw new Error(`AES-CBC decrypt failed: ${e?.name || ''} ${e?.message || ''}`.trim());
+    udidLog(`UDID crypto: WebCrypto ${aesMode} decrypt failed`, { name: e?.name, message: e?.message });
+    throw new Error(`${aesMode} decrypt failed: ${e?.name || ''} ${e?.message || ''}`.trim());
   }
 
   const plaintext = new TextDecoder('utf-8').decode(plaintextBuf);
