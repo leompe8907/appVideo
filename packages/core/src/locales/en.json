@@ -260,6 +260,8 @@
     "udidButton": "Sign in with code",
     "udidTitle": "UDID Login",
     "udidHint": "Scan or enter this code in your mobile app to authorize sign in.",
+    "udidSocialTitle": "Continue with Google",
+    "udidSocialHint": "Scan the QR code with your phone and sign in with Google. The TV will sign in on its own.",
     "udidRequesting": "Requesting code...",
     "udidReconnecting": "Reconnecting to server...",
     "udidLoggingIn": "Verifying access...",

@@ -260,6 +260,8 @@
     "udidButton": "Entrar com codigo",
     "udidTitle": "Login por UDID",
     "udidHint": "Escaneie ou informe este codigo no app movel para autorizar o login.",
+    "udidSocialTitle": "Continuar com o Google",
+    "udidSocialHint": "Escaneie o código QR com o celular e entre com o Google. A TV vai entrar sozinha.",
     "udidRequesting": "Solicitando codigo...",
     "udidReconnecting": "Reconectando ao servidor...",
     "udidLoggingIn": "Validando acesso...",

@@ -260,6 +260,8 @@
     "udidButton": "Iniciar con código",
     "udidTitle": "Inicio por UDID",
     "udidHint": "Escanea o ingresa este código en tu app móvil para autorizar el inicio de sesión.",
+    "udidSocialTitle": "Continuar con Google",
+    "udidSocialHint": "Escanea el código QR con tu celular e inicia sesión con Google. La TV entrará sola.",
     "udidRequesting": "Solicitando código...",
     "udidReconnecting": "Reconectando con el servidor...",
     "udidLoggingIn": "Verificando acceso...",

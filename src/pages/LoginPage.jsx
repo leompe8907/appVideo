@@ -14,6 +14,7 @@ import { classifyError, ERROR_TYPES } from '@appvideo/core/cv/errorClassifier';
 import { useUdidLoginFlow } from '../hooks/useUdidLoginFlow';
 import { LOGIN_FOCUS_IDS, useLoginTvNavigation } from '../hooks/useLoginTvNavigation';
 import { focusManager, createZoneId } from '../navigation/FocusManager';
+import { requestTvFocusRingSync } from '../components/navigation/tvFocusRingSync';
 import { getFacebookSocialPostUrl, getGoogleSocialPostUrl } from '../utils/socialAuthUrls';
 import { exchangeGoogleCredentialWithBackend } from '@appvideo/core/services/googleSocialLogin';
 import {
@@ -25,6 +26,8 @@ import { requestPasswordReset } from '@appvideo/core/services/accountSecuritySer
 import { preloadImage } from '@appvideo/core/utils/assetLoader';
 import { LOGIN_SOCIAL_LOGOS } from '../constants/login/socialLogos.js';
 import '../styles/components/_login.scss';
+
+const UDID_RETRY_FOCUS_ID = 'login-udid-retry';
 
 export function LoginPage() {
   const { t, i18n } = useTranslation();
@@ -49,6 +52,10 @@ export function LoginPage() {
   const [forgotNativeError, setForgotNativeError] = useState('');
   const [forgotNativeSuccess, setForgotNativeSuccess] = useState(false);
   const [isUdidModalOpen, setIsUdidModalOpen] = useState(false);
+  // El mismo modal abierto desde "Continuar con Google" en TV: Google no puede iniciar sesión
+  // dentro de la TV (corre desde file://, sin ventanas emergentes), así que se hace en el celular
+  // con el QR: el panel web del backend tiene el botón de Google y vuelve con el código puesto.
+  const [isUdidModalSocial, setIsUdidModalSocial] = useState(false);
   const [udidQrImageSrc, setUdidQrImageSrc] = useState('');
   const [isLoginBgReady, setIsLoginBgReady] = useState(false);
 
@@ -134,10 +141,14 @@ export function LoginPage() {
     t,
   });
 
+  // Depende de `cancel` (estable), no de `udidFlow`: ese objeto es nuevo en cada tick
+  // de la cuenta regresiva y rehacía cada segundo la zona de foco del modal, cuyo
+  // pop() devolvía el foco al botón de atrás que lo abrió.
+  const cancelUdidFlow = udidFlow.cancel;
   const handleCloseUdidModal = useCallback(() => {
-    udidFlow.cancel();
+    cancelUdidFlow();
     setIsUdidModalOpen(false);
-  }, [udidFlow]);
+  }, [cancelUdidFlow]);
 
   useLoginTvNavigation({ isTV, loginFormRef });
 
@@ -204,6 +215,30 @@ export function LoginPage() {
     }, 50);
     return () => clearTimeout(timer);
   }, [isTV, isUdidModalOpen]);
+
+  // El contenido del modal UDID cambia de alto (llega el código, carga el QR, aparece o se va
+  // "Reconectando…") y empuja "Cerrar" hacia abajo sin que el foco se mueva: sin esto el anillo
+  // de foco quedaba en la posición vieja, encima del QR, y el celular no podía escanearlo.
+  useEffect(() => {
+    if (!isTV || !isUdidModalOpen) return undefined;
+    const frame = requestAnimationFrame(requestTvFocusRingSync);
+    return () => cancelAnimationFrame(frame);
+  }, [isTV, isUdidModalOpen, udidFlow.code, udidFlow.status, udidQrImageSrc]);
+
+  // Con un error aparece "Reintentar" y el foco va ahí; al reintentar ese botón desaparece y el
+  // foco vuelve a "Cerrar" (si no, quedaba en un botón que ya no existe).
+  const udidCanRetry = ['error', 'expired', 'rate_limited'].includes(udidFlow.status);
+  useEffect(() => {
+    if (!isTV || !isUdidModalOpen) return undefined;
+    const timer = setTimeout(() => {
+      const target = udidCanRetry ? UDID_RETRY_FOCUS_ID : LOGIN_FOCUS_IDS.MODAL_CLOSE_UDID;
+      const modal = udidModalRootRef.current;
+      if (udidCanRetry || !modal?.contains(document.activeElement)) {
+        document.getElementById(target)?.focus();
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isTV, isUdidModalOpen, udidCanRetry]);
 
   useEffect(() => {
     if (!isTV || !isForgotQrModalOpen) return undefined;
@@ -375,7 +410,8 @@ export function LoginPage() {
     setIsQrModalOpen(true);
   };
 
-  const handleOpenUdidModal = () => {
+  const handleOpenUdidModal = (social = false) => {
+    setIsUdidModalSocial(social);
     setIsUdidModalOpen(true);
     udidFlow.start();
   };
@@ -771,7 +807,7 @@ export function LoginPage() {
               <FocusableButton
                 type="button"
                 className="login-secondary-button udid-button"
-                onClick={handleOpenUdidModal}
+                onClick={() => handleOpenUdidModal(false)}
                 id={LOGIN_FOCUS_IDS.UDID}
                 tabIndex={0}
                 data-tv-nav="login-actions"
@@ -858,7 +894,11 @@ export function LoginPage() {
                 <FocusableButton
                   type="button"
                   className="social-button google"
-                  onClick={() => setError(t('login.socialNotAvailable'))}
+                  onClick={() =>
+                    effectiveUdidConfig?.enabled
+                      ? handleOpenUdidModal(true)
+                      : setError(t('login.socialNotAvailable'))
+                  }
                   id="login-social-google"
                   tabIndex={0}
                   data-tv-nav="login-actions"
@@ -904,7 +944,7 @@ export function LoginPage() {
             <p>{t('login.registerHint')}</p>
 
             {qrImageSrc ? (
-              <img src={qrImageSrc} alt={t('login.register')} className="register-qr-image" />
+              <img src={qrImageSrc} alt={t('login.register')} className="register-qr-image" onLoad={requestTvFocusRingSync} />
             ) : (
               <div className="register-qr-placeholder">{qrError || t('common.loading')}</div>
             )}
@@ -929,7 +969,7 @@ export function LoginPage() {
             <p>{t('login.forgotPasswordHint')}</p>
 
             {forgotQrImageSrc ? (
-              <img src={forgotQrImageSrc} alt={t('login.forgotPassword')} className="register-qr-image" />
+              <img src={forgotQrImageSrc} alt={t('login.forgotPassword')} className="register-qr-image" onLoad={requestTvFocusRingSync} />
             ) : (
               <div className="register-qr-placeholder">{forgotQrError || t('common.loading')}</div>
             )}
@@ -1034,15 +1074,15 @@ export function LoginPage() {
       {isUdidModalOpen && (
         <div className="register-modal-backdrop" ref={udidModalRootRef}>
           <div className="register-modal">
-            <h3>{t('login.udidTitle')}</h3>
-            <p>{t('login.udidHint')}</p>
+            <h3>{t(isUdidModalSocial ? 'login.udidSocialTitle' : 'login.udidTitle')}</h3>
+            <p>{t(isUdidModalSocial ? 'login.udidSocialHint' : 'login.udidHint')}</p>
 
             {!!udidFlow.code && (
               <>
                 <div className="udid-code">{udidFlow.code}</div>
                 <div className="udid-countdown">{formatRemaining(udidFlow.remainingSeconds)}</div>
                 {udidQrImageSrc && (
-                  <img src={udidQrImageSrc} alt={t('login.udidButton')} className="register-qr-image" />
+                  <img src={udidQrImageSrc} alt={t('login.udidButton')} className="register-qr-image" onLoad={requestTvFocusRingSync} />
                 )}
               </>
             )}
@@ -1069,6 +1109,8 @@ export function LoginPage() {
                   type="button"
                   className="udid-button"
                   onClick={udidFlow.retry}
+                  id={UDID_RETRY_FOCUS_ID}
+                  tabIndex={0}
                 >
                   {t('login.udidRetry')}
                 </FocusableButton>
