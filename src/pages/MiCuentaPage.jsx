@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import QRCode from 'qrcode';
@@ -20,6 +20,9 @@ import { exitAppBestEffort } from '../utils/tvNavigation';
 import { getActiveLicense, getCredentials } from '@appvideo/core/utils/userSession';
 import { canChangeProfile } from '@appvideo/core/utils/externalProfiles';
 import { useActiveProfileStore } from '@appvideo/core/store/activeProfileStore';
+import { navigationRouter } from '../navigation/NavigationRouter';
+import { focusElementSafe, getFocusableCandidates, moveFocus } from '../navigation/spatialNavigation';
+import { isEditableTextInputElement, TV_ACTION } from '../utils/tvRemote';
 import '../styles/pages/_mi-cuenta.scss';
 
 /**
@@ -167,6 +170,51 @@ export function MiCuentaPage() {
 
   useTvInitialFocus('.mi-cuenta-page', [qrItems.length]);
 
+  // TV: menú y panel como dos columnas. Por geometría pura, DOWN al final de un
+  // panel caía en un ítem del menú (desde "Enviar correo" a "Eliminar cuenta") y
+  // BACK desde el panel salía al sidebar del Home en vez de volver al menú.
+  const menuRef = useRef(null);
+  const contentRef = useRef(null);
+  useEffect(() => {
+    if (!isTV) return undefined;
+    const focusMenu = () => {
+      const menu = menuRef.current;
+      const target = menu?.querySelector('.mi-cuenta-item.active') || getFocusableCandidates(menu)[0];
+      return focusElementSafe(target);
+    };
+    return navigationRouter.register('global', (action) => {
+      const menu = menuRef.current;
+      const content = contentRef.current;
+      const active = document.activeElement;
+      if (!menu || !content || !(active instanceof HTMLElement)) return false;
+      const vertical = action === TV_ACTION.UP || action === TV_ACTION.DOWN;
+      if (menu.contains(active)) {
+        if (vertical) {
+          moveFocus(action, menu);
+          return true;
+        }
+        if (action === TV_ACTION.RIGHT) {
+          const [first] = getFocusableCandidates(content);
+          if (first) focusElementSafe(first);
+          return true;
+        }
+        return false;
+      }
+      if (content.contains(active)) {
+        if (vertical) {
+          moveFocus(action, content);
+          return true;
+        }
+        if (action === TV_ACTION.LEFT) {
+          if (isEditableTextInputElement(active)) return false; // mueve el caret
+          return moveFocus(action, content) || focusMenu();
+        }
+        if (action === TV_ACTION.BACK) return focusMenu();
+      }
+      return false;
+    });
+  }, [isTV]);
+
   useEffect(() => {
     if (!activeUrl) {
       setQrImageSrc('');
@@ -255,7 +303,7 @@ export function MiCuentaPage() {
         onCancel={() => setConfirmAction(null)}
       />
 
-      <nav className="mi-cuenta-sidebar" aria-label={t('account.title', { defaultValue: 'Mi cuenta' })}>
+      <nav ref={menuRef} className="mi-cuenta-sidebar" aria-label={t('account.title', { defaultValue: 'Mi cuenta' })}>
           <h2 className="mi-cuenta-sidebar__title">{t('account.title', { defaultValue: 'Mi cuenta' })}</h2>
 
           <div className="mi-cuenta-sidebar__group">
@@ -335,7 +383,7 @@ export function MiCuentaPage() {
           </div>
         </nav>
 
-        <div className="mi-cuenta-content">
+        <div ref={contentRef} className="mi-cuenta-content">
           <div className="mi-cuenta-clock">{clockText}</div>
 
           {activeKey === 'osms' && osmsInline ? (

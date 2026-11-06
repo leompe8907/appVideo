@@ -3,6 +3,14 @@ import { isOsdKeyboardOverlayInDom } from '../utils/homeShellOverlays';
 import { focusManager } from './FocusManager';
 import { focusElementSafe, getFocusableCandidates, moveFocus } from './spatialNavigation';
 
+/** ¿La flecha vertical puede sacar el foco de este input de texto? (ver `onKeyDown`). */
+function leavesTextInputVertically(el, action) {
+  if (action !== TV_ACTION.UP && action !== TV_ACTION.DOWN) return false;
+  if (el.tagName === 'TEXTAREA') return false;
+  if (String(el.type || '').toLowerCase() === 'number' && !el.readOnly) return false;
+  return true;
+}
+
 /**
  * Router de navegación central para Smart TVs — ÚNICO listener de `keydown`
  * de toda la app para LEFT/RIGHT/UP/DOWN/BACK.
@@ -194,7 +202,12 @@ class NavigationRouter {
       // de un campo en una dirección (ej. DOWN de username → password), lo hace
       // explícitamente en su propio handler de zona (arriba), llamando a
       // `moveFocus`/`focusElementSafe` él mismo.
-      if (isTextInputElement(activeEl)) return;
+      //
+      // Excepción: UP/DOWN en un input de una sola línea no tienen uso para el caret,
+      // y sin esto cada formulario sin handler propio dejaba el foco atrapado en su
+      // primer campo (crear/editar perfil, olvidé el PIN). Se excluyen el <textarea>
+      // (UP/DOWN cambian de línea) y el number editable (UP/DOWN cambian el valor).
+      if (isTextInputElement(activeEl) && !leavesTextInputVertically(activeEl, action)) return;
       if (activeEl instanceof HTMLElement && activeEl.tagName === 'SELECT') return;
 
       if (!this.spatialNavEnabled) return;

@@ -87,6 +87,29 @@ describe('findNextFocusable / moveFocus — geometría direccional', () => {
     void belowRight;
   });
 
+  // Regresión (Samsung, modal de editar perfil): desde el input de ancho completo,
+  // DOWN saltaba la fila de avatares y caía en el botón ancho de más abajo.
+  it('DOWN desde un elemento ancho elige la fila angosta de justo debajo, no un elemento ancho más lejos', () => {
+    const input = makeButton('input', { top: 0, left: 0, width: 1100, height: 60 });
+    const avatars = [0, 1, 2, 3, 4].map((i) =>
+      makeButton(`avatar-${i}`, { top: 100, left: 250 + i * 120, width: 112, height: 112 }),
+    );
+    makeButton('toggle', { top: 240, left: 0, width: 1100, height: 56 });
+    input.focus();
+
+    expect(findNextFocusable(input, 'down')).toBe(avatars[2]); // el más centrado
+  });
+
+  it('DOWN desde un elemento ancho alcanza chips alineados a la izquierda debajo', () => {
+    const toggle = makeButton('toggle', { top: 0, left: 0, width: 1100, height: 56 });
+    makeButton('chip-0', { top: 100, left: 0, width: 150, height: 56 });
+    makeButton('chip-1', { top: 100, left: 160, width: 60, height: 56 });
+    makeButton('pin', { top: 220, left: 0, width: 1100, height: 60 });
+    toggle.focus();
+
+    expect(findNextFocusable(toggle, 'down').id.startsWith('chip-')).toBe(true);
+  });
+
   it('RIGHT elige el vecino inmediato a la derecha', () => {
     const from = makeButton('from', { top: 0, left: 0, width: 100, height: 40 });
     const right = makeButton('right', { top: 0, left: 120, width: 100, height: 40 });

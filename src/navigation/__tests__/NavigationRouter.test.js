@@ -130,6 +130,43 @@ describe('NavigationRouter', () => {
    * busca desde un elemento fuera del scope, así que las flechas no hacían
    * nada y el control "dejaba de responder".
    */
+  describe('input de texto con foco', () => {
+    let input;
+    let saveBtn;
+    beforeEach(() => {
+      const modal = document.createElement('div');
+      input = document.createElement('input');
+      input.type = 'text';
+      saveBtn = document.createElement('button');
+      modal.append(input, saveBtn);
+      document.body.append(modal);
+      input.getBoundingClientRect = () => ({ top: 0, left: 0, width: 300, height: 40, right: 300, bottom: 40 });
+      saveBtn.getBoundingClientRect = () => ({ top: 100, left: 0, width: 120, height: 40, right: 120, bottom: 140 });
+      focusManager.push('test-form', { containerEl: modal });
+      input.focus();
+    });
+
+    // Regresión (Samsung): el modal de editar perfil abría con el foco en el nombre
+    // y ninguna flecha lo sacaba de ahí.
+    it('DOWN sale del input aunque la pantalla no registre un handler propio', () => {
+      const e = dispatchKey(40, 'ArrowDown');
+      expect(document.activeElement).toBe(saveBtn);
+      expect(e.defaultPrevented).toBe(true);
+    });
+
+    it('LEFT/RIGHT se quedan en el input (mueven el caret)', () => {
+      const e = dispatchKey(39, 'ArrowRight');
+      expect(document.activeElement).toBe(input);
+      expect(e.defaultPrevented).toBe(false);
+    });
+
+    it('en un number editable, DOWN no sale (cambia el valor)', () => {
+      input.type = 'number';
+      dispatchKey(40, 'ArrowDown');
+      expect(document.activeElement).toBe(input);
+    });
+  });
+
   it('con el foco fuera de la zona activa, una flecha lo lleva al primer candidato de la zona', () => {
     const hudBtn = document.createElement('button');
     const modal = document.createElement('div');

@@ -117,32 +117,38 @@ export function getFocusableCandidates(root, opts = {}) {
  * @returns {number | null}
  */
 function scoreCandidate(fromRect, toRect, direction) {
-  const fromCenterX = fromRect.left + fromRect.width / 2;
-  const fromCenterY = fromRect.top + fromRect.height / 2;
-  const toCenterX = toRect.left + toRect.width / 2;
-  const toCenterY = toRect.top + toRect.height / 2;
-
   if (direction === 'right' || direction === 'left') {
     const primary = direction === 'right' ? toRect.left - fromRect.right : fromRect.left - toRect.right;
     if (primary < -1) return null; // el candidato no está realmente hacia ese lado
-    const overlapTop = Math.max(fromRect.top, toRect.top);
-    const overlapBottom = Math.min(fromRect.bottom, toRect.bottom);
-    const overlap = Math.max(0, overlapBottom - overlapTop);
-    const perpDist = Math.abs(fromCenterY - toCenterY);
-    return Math.max(primary, 1) + perpDist * 2.2 - overlap * 0.6;
+    return axisScore(primary, fromRect.top, fromRect.bottom, toRect.top, toRect.bottom);
   }
 
   if (direction === 'down' || direction === 'up') {
     const primary = direction === 'down' ? toRect.top - fromRect.bottom : fromRect.top - toRect.bottom;
     if (primary < -1) return null;
-    const overlapLeft = Math.max(fromRect.left, toRect.left);
-    const overlapRight = Math.min(fromRect.right, toRect.right);
-    const overlap = Math.max(0, overlapRight - overlapLeft);
-    const perpDist = Math.abs(fromCenterX - toCenterX);
-    return Math.max(primary, 1) + perpDist * 2.2 - overlap * 0.6;
+    return axisScore(primary, fromRect.left, fromRect.right, toRect.left, toRect.right);
   }
 
   return null;
+}
+
+/**
+ * Puntaje con la distancia `primary` (en la dirección de la tecla) y los intervalos
+ * de los dos elementos en el eje perpendicular.
+ *
+ * Antes la penalización perpendicular iba de centro a centro y el bonus de solape
+ * crecía sin tope con el ancho: desde un elemento ancho (input de un formulario),
+ * un botón igual de ancho dos filas más abajo le ganaba a una fila de avatares o
+ * chips justo debajo, y los chips alineados a la izquierda pagaban la distancia al
+ * centro del input. Ahora se penaliza el hueco entre intervalos (0 si se solapan),
+ * el solape cuenta como proporción del menor y el centro solo desempata.
+ */
+function axisScore(primary, fromStart, fromEnd, toStart, toEnd) {
+  const overlap = Math.max(0, Math.min(fromEnd, toEnd) - Math.max(fromStart, toStart));
+  const gap = Math.max(0, Math.max(fromStart, toStart) - Math.min(fromEnd, toEnd));
+  const centerDist = Math.abs((fromStart + fromEnd) / 2 - (toStart + toEnd) / 2);
+  const smaller = Math.max(1, Math.min(fromEnd - fromStart, toEnd - toStart));
+  return Math.max(primary, 1) + gap * 2.2 + centerDist * 0.1 - (overlap / smaller) * 60;
 }
 
 /**
