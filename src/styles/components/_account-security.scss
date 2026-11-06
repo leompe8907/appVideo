@@ -618,3 +618,160 @@ $account-security-request-width: 22rem;
     cursor: default;
   }
 }
+
+// Fila de botones de Eliminar cuenta: antes `style={{ display: flex, gap }}`
+// inline, que Chromium < 84 (Tizen 5.5, webOS 5) ignora y dejaba los dos
+// botones pegados.
+.account-security-actions-row {
+  display: flex;
+  @include flex-gap-row(10px);
+}
+
+.account-security-actions-row--full {
+  width: 100%;
+}
+
+.account-security-actions-row--request {
+  width: 100%;
+  max-width: $account-security-request-width;
+}
+
+// Mismo motivo: `gap` del checkbox con su texto.
+.account-security-checkbox-row {
+  gap: 0;
+
+  input[type='checkbox'] {
+    margin-right: 10px;
+  }
+}
+
+// ============================================================
+// TV a ~3 m (medido en Samsung 1080p: detalle de dispositivos en 13 px,
+// botones en 14,7 px, checkbox de 22 px). Todo en rem, así que se repiten
+// los tamaños acá en vez de escalar la raíz (que afectaría a toda la app).
+// ============================================================
+.device-tv {
+  .account-security-panel {
+    max-width: 52rem;
+
+    > *:not(:last-child) {
+      margin-bottom: 20px;
+    }
+  }
+
+  .account-security-hint,
+  .account-security-error,
+  .account-security-success,
+  .account-security-loading,
+  .account-security-empty {
+    font-size: 1.5rem;
+  }
+
+  .account-security-label {
+    font-size: 1.4rem;
+  }
+
+  .account-security-field-hint {
+    font-size: 1.25rem;
+  }
+
+  .account-security-input {
+    font-size: 1.625rem;
+    padding: 14px 18px;
+    border-width: 2px;
+  }
+
+  .account-security-password-toggle {
+    width: 3.5rem;
+    height: 3rem;
+  }
+
+  .account-security-password-toggle__icon {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .account-security-btn {
+    font-size: 1.5rem;
+    padding: 14px 32px;
+  }
+
+  .linked-devices-row {
+    padding: 18px 22px;
+  }
+
+  .linked-devices-row__type {
+    font-size: 1.5rem;
+  }
+
+  .linked-devices-row__model,
+  .linked-devices-row__meta {
+    font-size: 1.25rem;
+  }
+
+  .linked-devices-row__self-badge {
+    font-size: 1.1rem;
+    padding: 2px 12px;
+  }
+
+  .account-security-icon {
+    width: 6.5rem;
+    height: 6.5rem;
+    background-size: 2.8rem 2.8rem;
+  }
+
+  .account-security-hint--plain,
+  .account-security-input--centered,
+  .account-security-btn--pill,
+  .account-security-email-badge {
+    max-width: 36rem;
+    font-size: 1.625rem;
+  }
+
+  .account-security-actions-row--request {
+    max-width: 36rem;
+  }
+
+  .account-security-list,
+  .account-security-text,
+  .account-security-danger-card__text,
+  .account-security-checkbox-row {
+    font-size: 1.5rem;
+  }
+
+  .account-security-checkbox-row input[type='checkbox'] {
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-right: 16px;
+  }
+
+  .account-security-danger-card__title {
+    font-size: 1.75rem;
+  }
+
+  .account-security-title {
+    font-size: 2rem;
+  }
+
+  .account-security-btn--pill-split,
+  .account-security-panel--delete-email .account-security-btn--pill-split {
+    font-size: 1.625rem;
+    padding: 18px 28px;
+  }
+
+  .account-security-panel--delete-email {
+    .account-security-hint--plain,
+    .account-security-input--centered {
+      font-size: 1.625rem;
+    }
+  }
+
+  .account-security-otp-tv-input {
+    max-width: 22rem;
+    font-size: 2rem;
+  }
+
+  .account-security-link {
+    font-size: 1.4rem;
+  }
+}

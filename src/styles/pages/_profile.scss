@@ -505,6 +505,75 @@
   }
 }
 
+// TV a distancia de sala (~3 m en 43"): medido en Samsung 1080p, el nombre quedaba
+// en 18 px, «Editar» en 12 px y el avatar en 112 px. Mínimo legible a esa distancia:
+// ~24 px de texto. `.device-tv` gana en especificidad al bloque `fullhd` de arriba.
+.device-tv .profile-page {
+  .profile-header {
+    .profile-logo {
+      max-width: 280px;
+      max-height: 110px;
+      margin-bottom: $spacing-lg;
+    }
+
+    .profile-title {
+      font-size: 4rem;
+    }
+  }
+
+  .profiles-grid {
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 20rem));
+  }
+
+  .profile-card {
+    .profile-avatar-wrapper {
+      width: 11rem;
+      height: 11rem;
+      margin-bottom: $spacing-md;
+    }
+
+    .profile-avatar {
+      font-size: 6rem;
+
+      &.profile-avatar-add .add-icon {
+        font-size: 6rem;
+      }
+    }
+
+    .profile-name {
+      font-size: 1.875rem;
+    }
+
+    .profile-card-actions {
+      margin-top: $spacing-sm;
+    }
+
+    .profile-card-edit,
+    .profile-card-delete {
+      font-size: 1.375rem;
+      padding: $spacing-sm $spacing-lg;
+      border-width: 2px;
+
+      &.focused {
+        outline-width: 4px;
+        outline-offset: 3px;
+      }
+    }
+  }
+
+  .profile-back-button {
+    font-size: 1.625rem;
+    padding: $spacing-md $spacing-xxl;
+  }
+
+  .profile-loading p,
+  .profile-empty p,
+  .profile-message .profile-message-text,
+  .profile-error .profile-error-text {
+    font-size: 1.625rem;
+  }
+}
+
 // Modo oscuro mejorado
 [data-theme="dark"] .profile-page {
   background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #0a0a0a 100%);

@@ -205,7 +205,7 @@ export function CloseAccountPanel({ brandConfig, brand }) {
 
         {error && <div className="account-security-error">{error}</div>}
 
-        <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+        <div className="account-security-actions-row account-security-actions-row--full">
           <button
             type="button"
             className="account-security-btn account-security-btn--ghost account-security-btn--pill-split"
@@ -258,7 +258,7 @@ export function CloseAccountPanel({ brandConfig, brand }) {
 
         {error && <div className="account-security-error">{error}</div>}
 
-        <div style={{ display: 'flex', gap: '10px', width: '100%', maxWidth: '22rem' }}>
+        <div className="account-security-actions-row account-security-actions-row--request">
           <button
             type="button"
             className="account-security-btn account-security-btn--ghost account-security-btn--pill-split"
@@ -335,6 +335,13 @@ export function CloseAccountPanel({ brandConfig, brand }) {
           type="checkbox"
           checked={understood}
           onChange={(e) => setUnderstood(e.target.checked)}
+          // OK del control llega como Enter, y en un checkbox Enter no lo marca (solo Espacio).
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+              e.preventDefault();
+              setUnderstood((v) => !v);
+            }
+          }}
         />
         <span>
           {t('account.deleteAccountUnderstoodLabel', {
@@ -345,7 +352,7 @@ export function CloseAccountPanel({ brandConfig, brand }) {
 
       {error && <div className="account-security-error">{error}</div>}
 
-      <div style={{ display: 'flex', gap: '10px' }}>
+      <div className="account-security-actions-row">
         <button
           type="button"
           className="account-security-btn account-security-btn--ghost account-security-btn--pill-split"

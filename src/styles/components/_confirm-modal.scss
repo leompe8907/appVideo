@@ -175,3 +175,53 @@
   }
 }
 
+// TV a ~3 m (medido en Samsung 1080p: título 16 px, botones 15 px). El modal es
+// global: cubre Cerrar sesión / Salir de Mi Cuenta y el resto de confirmaciones.
+.device-tv {
+  .confirm-modal {
+    max-width: 760px;
+    padding: 2.25rem;
+  }
+
+  .confirm-modal__title {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .confirm-modal__message {
+    font-size: 1.6rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .confirm-modal__btn {
+    font-size: 1.6rem;
+    padding: 0.9rem 2.25rem;
+  }
+
+  .confirm-modal--danger {
+    max-width: 40rem;
+    height: auto;
+    min-height: 30rem;
+  }
+
+  .confirm-modal__icon {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+
+  .confirm-modal--danger .confirm-modal__title {
+    font-size: 2.1rem;
+  }
+
+  .confirm-modal--danger .confirm-modal__message {
+    font-size: 1.5rem;
+  }
+
+  .confirm-modal--danger .confirm-modal__btn--primary {
+    font-size: 1.6rem;
+  }
+
+  .confirm-modal--danger .confirm-modal__btn--link {
+    font-size: 1.4rem;
+  }
+}

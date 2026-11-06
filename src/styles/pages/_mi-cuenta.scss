@@ -280,4 +280,62 @@
     font-size: clamp(1.2rem, 2.5vh, 1.8rem);
     min-width: 18em; // ~18em * 2.5vh = ~45vh (~486px de ancho en Full HD)
   }
+
+  // El panel scrollea solo (no la página entera): la lista de dispositivos
+  // vinculados pasaba del borde inferior, y el foco por flechas está acotado al
+  // panel (MiCuentaPage), así que el scroll tiene que vivir dentro de él.
+  .mi-cuenta-page {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .mi-cuenta-content {
+    max-height: 100vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    @include scrollbar-hidden;
+  }
+
+  // A ~3 m el título del panel quedaba en 21,6 px, más chico que el menú (26 px).
+  .mi-cuenta-content__title {
+    font-size: 2.25rem;
+    margin-bottom: 36px;
+  }
+
+  .mi-cuenta-clock {
+    font-size: 1.75rem;
+  }
+
+  .mi-cuenta-about-list {
+    max-width: 56rem;
+
+    > *:not(:last-child) {
+      margin-bottom: 14px;
+    }
+  }
+
+  .mi-cuenta-about-row {
+    font-size: 1.5rem;
+    padding: 16px 22px;
+  }
+
+  .mi-cuenta-qr-box {
+    width: 20rem;
+    height: 20rem;
+  }
+
+  .mi-cuenta-qr-empty {
+    font-size: 1.4rem;
+  }
+
+  .mi-cuenta-steps {
+    max-width: 40rem;
+    font-size: 1.5rem;
+  }
+
+  .mi-cuenta-step__num {
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: 1.25rem;
+  }
 }

@@ -651,3 +651,52 @@
     border: 0;
   }
 }
+
+// TV a ~3 m (medido en Samsung 1080p dentro de Mi Cuenta: botones en 14 px,
+// aviso de vacío en 14–16 px).
+.device-tv {
+  .osms-page__title {
+    font-size: 2.25rem;
+  }
+
+  .osms-page__pill {
+    font-size: 1.1rem;
+  }
+
+  .osms-page__btn {
+    font-size: 1.4rem;
+    padding: 12px 24px;
+  }
+
+  .osms-page__error,
+  .osms-page__loading,
+  .osms-page__empty-hint,
+  .osms-page__detail-empty {
+    font-size: 1.4rem;
+  }
+
+  .osms-page__empty-title {
+    font-size: 1.75rem;
+  }
+
+  .osms-list-group__label,
+  .osms-list-item__date,
+  .osms-detail__label,
+  .osms-modal__date {
+    font-size: 1.15rem;
+  }
+
+  .osms-list-item__preview,
+  .osms-modal__back {
+    font-size: 1.4rem;
+  }
+
+  .osms-detail__date {
+    font-size: 1.4rem;
+  }
+
+  .osms-detail__message,
+  .osms-modal__message {
+    font-size: 1.6rem;
+  }
+}

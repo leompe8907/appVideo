@@ -43,6 +43,22 @@
   }
 }
 
+// TV a ~3 m: mismo criterio que el bloque `.device-tv` de `_profile.scss`.
+.device-tv .profile-page {
+  .external-profile-badge {
+    font-size: 1.25rem;
+  }
+
+  .external-profile-slots {
+    font-size: 1.375rem;
+  }
+
+  .external-profile-lock svg {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+}
+
 // El formulario de perfiles externos es más largo que el wizard de PanAccess: alto máximo con scroll y
 // avatares más chicos, para que la edad, el PIN y los botones entren en una pantalla de TV.
 .create-profile-modal.create-profile-modal--external {
@@ -51,6 +67,32 @@
   .create-profile-avatar-option {
     width: 5.5rem;
     height: 5.5rem;
+  }
+}
+
+// TV a ~3 m: modal más ancho para que los 9 avatares entren en una fila y el
+// formulario completo siga cabiendo en 1080 px de alto sin scroll.
+.device-tv .create-profile-modal.create-profile-modal--wizard.create-profile-modal--external {
+  max-width: 1240px;
+
+  .create-profile-avatar-option {
+    width: 7rem;
+    height: 7rem;
+  }
+}
+
+.device-tv .create-profile-modal {
+  .external-profile-chip,
+  .external-profile-toggle {
+    font-size: 1.5rem;
+    padding: $spacing-sm $spacing-lg;
+    border-width: 2px;
+
+    &.focused,
+    &:focus-visible {
+      outline-width: 4px;
+      outline-offset: 3px;
+    }
   }
 }
 
@@ -73,10 +115,12 @@
     color: rgba(255, 255, 255, 0.85);
     cursor: pointer;
 
+    // Activo en blanco, no en $primary-color: con marcas de color oscuro (wind:
+    // #000737) el chip activo no se distinguía del resto sobre el fondo del modal.
     &.active {
-      border-color: $primary-color;
-      background: $primary-color;
-      color: #fff;
+      border-color: #fff;
+      background: #fff;
+      color: #111;
     }
 
     &.focused,
