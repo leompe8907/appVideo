@@ -17,6 +17,15 @@
         "node_modules/vite/bin/vite.js"
       ],
       "port": 3000
+    },
+    {
+      "name": "wind-preview",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "run",
+        "preview:wind"
+      ],
+      "port": 4173
     }
   ]
 }
