@@ -35,6 +35,8 @@
         object-fit: cover;
       }
     </style>
+    <!-- TV_PLATFORM_ENV -->
+    <script src="%BASE_URL%tv-platform-bootstrap.js"></script>
   </head>
   <body>
     <div id="root">
@@ -46,7 +48,7 @@
       (function () {
         try {
           var params = new URLSearchParams(window.location.search || '');
-          var brand = params.get('brand') || window.localStorage.getItem('brand') || 'bromteck';
+          var brand = params.get('brand') || window.localStorage.getItem('brand') || 'wind';
 
           // Si viene por URL, persistimos para próximos arranques.
           if (params.get('brand')) {

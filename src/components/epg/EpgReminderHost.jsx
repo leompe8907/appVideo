@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { useBrand } from '../../contexts/BrandContext';
-import { usePreload } from '../../store/usePreload';
-import { usePlayer } from '../../contexts/PlayerContext';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { usePlayerSession } from '../../contexts/PlayerContext';
 import { useDevice } from '../../contexts/DeviceContext';
-import panaccessService from '../../services/panaccessService';
+import panaccessService from '@appvideo/core/services/panaccessService';
 import { FocusableButton } from '../navigation/FocusableButton';
 import { useParentalGate } from '../../hooks/useParentalGate';
-import { useEpgReminderStore } from '../../store/epgReminderStore';
-import { getChannelStableId } from '../../utils/channelId';
+import { useEpgReminderStore } from '@appvideo/core/store/epgReminderStore';
+import { getChannelStableId } from '@appvideo/core/utils/channelId';
 import AppIcon from '../AppIcon';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe } from '../../navigation/spatialNavigation';
 
 function formatCountdown(ms) {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -44,7 +46,7 @@ export function EpgReminderHost() {
   const { t } = useTranslation();
   const { currentBrand } = useBrand();
   const { epg } = usePreload();
-  const { play, state: playerState } = usePlayer();
+  const { play, state: playerState } = usePlayerSession();
   const { isTV } = useDevice();
   const { requestPlayChannel } = useParentalGate();
 
@@ -58,11 +60,15 @@ export function EpgReminderHost() {
   const showWhilePlaying = currentBrand?.EPG?.reminderShowWhilePlaying === true;
   const isPlayerActive = Boolean(playerState?.url);
 
+  // Sin recordatorios no hay nada que vigilar: antes re-renderizaba el host 4 veces por segundo siempre.
+  const hasReminders = Array.isArray(reminders) && reminders.length > 0;
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    const id = window.setInterval(() => setNowMs(Date.now()), 250);
+    if (!hasReminders) return undefined;
+    setNowMs(Date.now());
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [hasReminders]);
 
   const due = useMemo(() => {
     if (isPlayerActive && !showWhilePlaying) return null;
@@ -92,26 +98,45 @@ export function EpgReminderHost() {
 
   const active = due && openId === due.id ? due : null;
   const countdown = active ? formatCountdown(active.startMs - nowMs) : '00:00';
-  useEffect(() => {
-    if (!active || !isTV) return;
-    const tm = setTimeout(() => {
-      const btn = document.getElementById('epg-reminder-go');
-      if (btn) btn.focus();
-    }, 50);
-    return () => clearTimeout(tm);
-  }, [active, isTV]);
+  const rootRef = useRef(null);
+  const zoneIdRef = useRef(null);
+  if (!zoneIdRef.current) zoneIdRef.current = createZoneId('epg-reminder-modal');
 
-  if (!active) return null;
-
-  const channelId = String(active.channelStableId ?? '');
+  const channelId = String(active?.channelStableId ?? '');
   const channel =
     (epg?.streams || []).find((ch) => String(getChannelStableId(ch)) === channelId) || null;
 
   const close = () => {
     setOpenId(null);
     // Si el usuario cierra, hacemos snooze hasta el inicio (para no re-abrir en loop)
-    dismissReminderUntil(active.id, active.startMs);
+    if (active) dismissReminderUntil(active.id, active.startMs);
   };
+
+  // Navegación (LEFT/RIGHT entre botones por geometría, BACK cierra) delegada al motor central.
+  useEffect(() => {
+    if (!active) return undefined;
+    const zoneId = zoneIdRef.current;
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
+        close();
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+
+  useEffect(() => {
+    if (!active || !isTV) return undefined;
+    const tm = setTimeout(() => {
+      focusElementSafe(document.getElementById('epg-reminder-go'));
+    }, 50);
+    return () => clearTimeout(tm);
+  }, [active, isTV]);
+
+  if (!active) return null;
 
   const goToChannel = () => {
     setOpenId(null);
@@ -126,7 +151,7 @@ export function EpgReminderHost() {
   };
 
   return createPortal(
-    <div className="epg-event-modal-overlay" role="dialog" aria-modal="true" onClick={close}>
+    <div ref={rootRef} className="epg-event-modal-overlay" role="dialog" aria-modal="true" onClick={close}>
       <div className="epg-event-modal" onClick={(e) => e.stopPropagation()}>
         <div className="epg-event-modal-header">
           <div className="epg-event-modal-header-left">

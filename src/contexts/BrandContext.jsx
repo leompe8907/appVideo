@@ -5,13 +5,13 @@ import {
   enrichConfigWithAssets,
   invalidateBrandCache,
   validateBrandConfig,
-} from '../config/brandConfig';
-import { getBrandConfig } from '../config/brands';
-import { getBrandAsset } from '../utils/assetLoader';
+} from '@appvideo/core/config/brandConfig';
+import { getBrandConfig } from '@appvideo/core/config/brands';
+import { getBrandAsset } from '@appvideo/core/utils/assetLoader';
 import { applyTheme } from '../utils/config';
-import panaccessService from '../services/panaccessService';
-import { useParentalStore } from '../store/parentalStore';
-import { useEpgReminderStore } from '../store/epgReminderStore';
+import panaccessService from '@appvideo/core/services/panaccessService';
+import { useParentalStore } from '@appvideo/core/store/parentalStore';
+import { useEpgReminderStore } from '@appvideo/core/store/epgReminderStore';
 
 const BrandContext = createContext(null);
 

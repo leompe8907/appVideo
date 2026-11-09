@@ -1,4 +1,4 @@
-import { videojs } from '../../vendor/videojsAssign.js';
+﻿import { videojs } from '../../vendor/videojsAssign.js';
 import { ensureVideojsHlsPlugin } from '../../vendor/ensureVideojsHlsPlugin.js';
 import 'video.js/dist/video-js.css';
 import BaseEngine from '../base/BaseEngine';
@@ -9,10 +9,13 @@ import {
   PLAYER_ENGINE_STATES,
 } from '../contracts';
 import { isHlsUrl } from './hlsSupport';
-import {
-  applyStreamrootHlsSessionConfig,
-  buildStreamrootHlsPluginOptions,
-} from './sessionHlsXhr';
+import { applyStreamrootHlsSessionConfig } from './sessionHlsXhr';
+import { createStallWatchdog } from './stallWatchdog';
+import { createProgressTracker } from '../../../utils/progressTracker';
+
+// Buffering en plena reproducción (red caída, segmento colgado): reintentar el stream cada 30 s, 3 veces.
+const STALL_MS = 30000;
+const STALL_MAX_RETRIES = 3;
 
 let videoElementIdSeq = 0;
 
@@ -33,9 +36,40 @@ export class WebEngine extends BaseEngine {
     this._lastTracksSnapshotKey = '';
     this._suppressPlayerErrors = false;
     this._suppressErrorsTimer = null;
+    this._lastLoad = null;
+    this._playedSinceLoad = false;
+    this._stallRetrying = false;
+    this._progress = createProgressTracker();
+    this._stallPoll = null;
+    this._stall = createStallWatchdog({
+      stallMs: STALL_MS,
+      maxRetries: STALL_MAX_RETRIES,
+      onRetry: () => {
+        if (!this.player || !this._lastLoad) return;
+        this._log('stall: reintentando stream');
+        this._stallRetrying = true;
+        try {
+          this.load(this._lastLoad.url, { type: this._lastLoad.type, autoPlay: true });
+        } finally {
+          this._stallRetrying = false;
+        }
+      },
+      onGiveUp: () => {
+        this._playedSinceLoad = false; // deja de vigilar hasta que vuelva a reproducir
+        this.emit(
+          PLAYER_ENGINE_EVENTS.ERROR,
+          new Error('Se perdió la conexión con el servidor. Verifica tu red e intenta de nuevo.'),
+        );
+      },
+    });
+    // Última preferencia de volumen/mute conocida (la setea PlayerContext vía
+    // setVolume()/mute()/unmute()). Se guarda acá porque video.js pisa estos
+    // valores en cada load() -- ver nota en load()/_reapplyVolumePreference().
+    this._volume = 1;
+    this._muted = false;
   }
 
-  /** CODE:4 al vaciar src tras close/reset; no es fallo de reproducción. */
+  /** CODE:4 al vaciar src tras close/reset; no es fallo de reproducci├│n. */
   _isBenignPlayerError(err) {
     if (!err) return false;
     const code = err.code ?? err?.status;
@@ -120,7 +154,7 @@ export class WebEngine extends BaseEngine {
         // noop
       }
     }
-    // Evitar player.src(''): Video.js dispara MEDIA_ERR_SRC_NOT_SUPPORTED de forma asíncrona.
+    // Evitar player.src(''): Video.js dispara MEDIA_ERR_SRC_NOT_SUPPORTED de forma as├¡ncrona.
     try {
       if (typeof this.player.reset === 'function') {
         this.player.reset();
@@ -161,7 +195,7 @@ export class WebEngine extends BaseEngine {
     const id = `app-main-video-${++videoElementIdSeq}`;
     const videoEl = document.createElement('video');
     videoEl.id = id;
-    videoEl.className = 'video-js vjs-default-skin';
+    videoEl.className = 'video-js vjs-default-skin vjs-fill';
     videoEl.setAttribute('playsinline', 'true');
     videoEl.setAttribute('webkit-playsinline', 'true');
     videoEl.setAttribute('preload', 'auto');
@@ -179,7 +213,12 @@ export class WebEngine extends BaseEngine {
       preload: 'auto',
       fluid: false,
       inactivityTimeout: 0,
-      ...buildStreamrootHlsPluginOptions(),
+      // La app dibuja su propio HUD: sin barra de control, el SeekBar de video.js no corre su
+      // bucle de actualización (getBoundingClientRect/offsetParent → layout forzado por frame).
+      controlBar: false,
+      bigPlayButton: false,
+      loadingSpinner: false,
+      posterImage: false,
     });
     applyStreamrootHlsSessionConfig(this.player);
 
@@ -197,6 +236,7 @@ export class WebEngine extends BaseEngine {
 
     this._handlers = {
       onTimeUpdate: () => {
+        if (this._playedSinceLoad) this._stall.clear();
         const now = Date.now();
         if (now - this.lastTimeUpdateEmitMs < this.timeUpdateThrottleMs) return;
         this.lastTimeUpdateEmitMs = now;
@@ -214,6 +254,18 @@ export class WebEngine extends BaseEngine {
       },
       onPlay: () => {
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
+      },
+      onPlaying: () => {
+        this._playedSinceLoad = true;
+        this._stall.clear();
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PLAYING });
+      },
+      onWaiting: () => {
+        // Solo tras haber reproducido: el arranque lento ya lo cubren los tiempos de hls.js.
+        if (this._playedSinceLoad) this._stall.arm();
+      },
+      onCanPlay: () => {
+        this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADED });
       },
       onPause: () => {
         this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
@@ -237,7 +289,7 @@ export class WebEngine extends BaseEngine {
           return;
         }
         this._log('player:error', err);
-        this.emit(PLAYER_ENGINE_EVENTS.ERROR, err || new Error('Error de reproducción Video.js'));
+        this.emit(PLAYER_ENGINE_EVENTS.ERROR, err || new Error('Error de reproducci├│n Video.js'));
       },
       onLoadedData: () => {
         this._log('player:loadeddata');
@@ -248,11 +300,25 @@ export class WebEngine extends BaseEngine {
     player.on('durationchange', this._handlers.onDurationChange);
     player.on('ended', this._handlers.onEnded);
     player.on('play', this._handlers.onPlay);
+    player.on('playing', this._handlers.onPlaying);
+    player.on('waiting', this._handlers.onWaiting);
+    player.on('canplay', this._handlers.onCanPlay);
     player.on('pause', this._handlers.onPause);
     player.on('seeking', this._handlers.onSeeking);
     player.on('seeked', this._handlers.onSeeked);
     player.on('error', this._handlers.onError);
     player.on('loadeddata', this._handlers.onLoadedData);
+
+    // El `waiting` no llega en todas las TV: se mira también si currentTime deja de avanzar.
+    clearInterval(this._stallPoll);
+    this._stallPoll = setInterval(() => {
+      if (!this._playedSinceLoad) return;
+      const v = this._getTechVideo();
+      if (!v) return;
+      const active = !v.paused && !v.seeking && !v.ended;
+      if (this._progress.update(v.currentTime, active) >= 4000) this._stall.arm();
+      else this._stall.clear();
+    }, 2000);
   }
 
   detachEvents() {
@@ -262,11 +328,16 @@ export class WebEngine extends BaseEngine {
     player.off('durationchange', this._handlers.onDurationChange);
     player.off('ended', this._handlers.onEnded);
     player.off('play', this._handlers.onPlay);
+    player.off('playing', this._handlers.onPlaying);
+    player.off('waiting', this._handlers.onWaiting);
+    player.off('canplay', this._handlers.onCanPlay);
     player.off('pause', this._handlers.onPause);
     player.off('seeking', this._handlers.onSeeking);
     player.off('seeked', this._handlers.onSeeked);
     player.off('error', this._handlers.onError);
     player.off('loadeddata', this._handlers.onLoadedData);
+    clearInterval(this._stallPoll);
+    this._stallPoll = null;
     this._handlers = null;
   }
 
@@ -275,6 +346,10 @@ export class WebEngine extends BaseEngine {
 
     this._debug = this._isDebugEnabled();
     this._log('load', { url, type, autoPlay, isHls: isHlsUrl(url) });
+    // Una carga pedida por el usuario (zapping, otro contenido) reinicia la vigilancia; la del propio reintento no.
+    if (!this._stallRetrying) this._stall.clear();
+    this._lastLoad = { url, type };
+    this._playedSinceLoad = false;
     this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADING, type });
 
     this._teardownMedia();
@@ -283,6 +358,15 @@ export class WebEngine extends BaseEngine {
     const useHls = isHlsUrl(url);
 
     const emitLoadedAndMaybePlay = () => {
+      // FIX volumen/mute al cambiar de canal: _teardownMedia() (arriba) llama
+      // a player.reset(), y video.js internamente fuerza volume(1.0) y
+      // reconstruye el tech con el `muted` de la config original de
+      // construcción (no el que el usuario haya seteado en runtime) -- ver
+      // resetVolumeBar_()/loadTech_() en video.js. Sin esto, cada cambio de
+      // canal "olvidaba" el volumen/mute que el usuario había elegido. Se
+      // reaplica ACÁ (antes de play()) para que no haya ni un instante de
+      // audio a volumen completo/desmuteado antes de corregirse.
+      this._reapplyVolumePreference();
       this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.LOADED, type });
       this._emitTracksChange();
       if (autoPlay) this.play();
@@ -319,6 +403,7 @@ export class WebEngine extends BaseEngine {
   pause() {
     if (!this.player) return;
     this._log('pause()');
+    this._stall.clear();
     this.player.pause();
   }
 
@@ -329,6 +414,7 @@ export class WebEngine extends BaseEngine {
   reset() {
     if (!this.player) return;
     this._log('reset()');
+    this._stall.clear();
     this._lastTracksSnapshotKey = '';
     this._teardownMedia();
     this.emit(PLAYER_ENGINE_EVENTS.STATE_CHANGE, { state: PLAYER_ENGINE_STATES.PAUSED });
@@ -385,17 +471,51 @@ export class WebEngine extends BaseEngine {
   }
 
   mute() {
+    this._muted = true;
     if (!this.player) return;
     this.player.muted(true);
   }
 
   unmute() {
+    this._muted = false;
     if (!this.player) return;
     this.player.muted(false);
   }
 
+  /** @param {number} volume 0..1 */
+  setVolume(volume) {
+    const v = Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : 1;
+    this._volume = v;
+    if (!this.player) return;
+    this.player.volume(v);
+  }
+
+  /**
+   * Reaplica el último volumen/mute conocido (seteado por PlayerContext vía
+   * setVolume()/mute()/unmute()) sobre el player real. Necesario después de
+   * cada load() porque player.reset() (dentro de _teardownMedia()) resetea
+   * volumen/mute a sus valores por defecto -- ver comentario en load().
+   */
+  _reapplyVolumePreference() {
+    if (!this.player) return;
+    try {
+      this.player.volume(this._volume);
+      this.player.muted(this._muted);
+    } catch {
+      // noop -- mismo criterio defensivo que el resto de los métodos de este engine.
+    }
+  }
+
+  /** @returns {number} 0..1 */
+  getVolume() {
+    if (!this.player) return 1;
+    const v = this.player.volume();
+    return Number.isFinite(v) ? v : 1;
+  }
+
   destroy() {
     this._log('destroy()');
+    this._stall.clear();
     if (this._suppressErrorsTimer) {
       clearTimeout(this._suppressErrorsTimer);
       this._suppressErrorsTimer = null;
@@ -423,6 +543,18 @@ export class WebEngine extends BaseEngine {
       return Array.isArray(tracks) ? tracks : [];
     } catch {
       return [];
+    }
+  }
+
+  /**
+   * Estadísticas del reproductor (panel del HUD). Solo con hls.js; `null` si
+   * no hay HLS activo (MP4, HLS nativo, o adapter nativo LG/Samsung).
+   */
+  getDiagnostics() {
+    try {
+      return this.player?.tech?.(true)?.hlsProvider?.getDiagnostics?.() ?? null;
+    } catch {
+      return null;
     }
   }
 

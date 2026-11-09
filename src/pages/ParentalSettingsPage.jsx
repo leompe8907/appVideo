@@ -1,16 +1,36 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePreload } from '../store/usePreload';
-import { useParental } from '../store/useParental';
-import { getChannelStableId } from '../utils/channelId';
+import { usePreload } from '@appvideo/core/store/usePreload';
+import { useParental } from '@appvideo/core/store/useParental';
+import { useBrand } from '../contexts/BrandContext';
+import { isParentalControlEnabledForBrand } from '@appvideo/core/config/brandConfig';
+import { useDevice } from '../contexts/DeviceContext';
+import { getChannelStableId } from '@appvideo/core/utils/channelId';
 import { useParentalGate } from '../hooks/useParentalGate';
 import ParentalChannelCard from '../components/parental/ParentalChannelCard';
 import ParentalPinGate from '../components/parental/ParentalPinGate';
 import ConfirmModal from '../components/ConfirmModal';
+import { useTvInitialFocus } from '../hooks/useTvInitialFocus';
+import { navigationRouter } from '../navigation/NavigationRouter';
+import { TV_ACTION } from '../utils/tvRemote';
+import { findNextFocusable, focusElementSafe } from '../navigation/spatialNavigation';
 import '../styles/pages/_parental.scss';
 
-export function ParentalSettingsPage() {
+/**
+ * @param {boolean} [embedded=false] - true cuando se muestra dentro de Mi Cuenta
+ * (a la derecha del menú, como en Vega): sin foco inicial propio (el foco queda
+ * en el ítem del menú) y con lugar para el reloj de Mi Cuenta junto al título.
+ */
+export function ParentalSettingsPage({ embedded = false } = {}) {
   const { t } = useTranslation();
+  const { currentBrand } = useBrand();
+  const { isTV } = useDevice();
+  // Gate por marca (`brand.account.sections.parentalControl`): MiCuentaPage
+  // ya oculta el botón que trae a esta ruta si está deshabilitado, pero esta
+  // ruta es independiente y navegable por URL directa -- el gate real tiene
+  // que vivir acá también (mismo patrón que `OsmsPage.jsx`), no solo en el
+  // botón de origen.
+  const parentalControlEnabled = isParentalControlEnabledForBrand(currentBrand);
   const { epg } = usePreload();
   const parental = useParental();
   const { requestPlayChannel } = useParentalGate();
@@ -27,6 +47,50 @@ export function ParentalSettingsPage() {
   useEffect(() => {
     setPinMsg('');
   }, [parental.enabled]);
+
+  // Cobertura nueva: página sin ninguna navegación por D-pad previa; el motor
+  // de geometría genérico ya resuelve LRUD entre todos los controles, solo
+  // falta colocar el foco inicial al entrar (los modales de PIN/confirmación
+  // atrapan el foco ellos mismos vía FocusManager cuando están abiertos).
+  useTvInitialFocus(embedded ? '' : '.parental-page', [channels.length]);
+
+  // El grid de canales y el segmento de clasificación por edad viven en
+  // tarjetas separadas; la fila de "Bloquear ahora" (más arriba, alineada a
+  // la derecha) queda geométricamente más cerca de la última columna del
+  // grid que el propio segmento (más a la izquierda, pero en la fila
+  // inmediatamente superior al grid) — por eso UP desde el grid "se cruzaba"
+  // con el bloque de PIN en vez de llegar al segmento, y viceversa.
+  useEffect(() => {
+    if (!isTV) return undefined;
+    const unregister = navigationRouter.register('global', (action) => {
+      const active = document.activeElement;
+      if (!(active instanceof HTMLElement)) return false;
+      if (!active.closest('.parental-page')) return false;
+
+      if (action === TV_ACTION.UP) {
+        const grid = active.closest('.parental-channel-grid');
+        if (grid && !findNextFocusable(active, 'up', grid)) {
+          const target =
+            document.querySelector('.parental-rating-segbtn.active') ||
+            document.querySelector('.parental-rating-segbtn');
+          if (target instanceof HTMLElement) return focusElementSafe(target);
+        }
+        return false;
+      }
+
+      if (
+        action === TV_ACTION.DOWN &&
+        active.matches('.parental-rating-segbtn, .parental-rating-apply-live')
+      ) {
+        const firstCard = document.querySelector('.parental-channel-grid .parental-channel-card');
+        if (firstCard instanceof HTMLElement) return focusElementSafe(firstCard);
+        return false;
+      }
+
+      return false;
+    });
+    return unregister;
+  }, [isTV]);
 
   const openChangePinFlow = () => {
     setPinMsg('');
@@ -45,8 +109,23 @@ export function ParentalSettingsPage() {
     parental.unlockUntilMs != null &&
     Date.now() < parental.unlockUntilMs;
 
+  const rootClassName = `parental-page${embedded ? ' parental-page--embedded' : ''}`;
+
+  if (!parentalControlEnabled) {
+    return (
+      <section className={rootClassName} aria-label={t('parental.title', { defaultValue: 'Control parental' })}>
+        <div className="parental-header">
+          <h2 className="parental-title">{t('parental.title', { defaultValue: 'Control parental' })}</h2>
+        </div>
+        <div className="parental-empty">
+          {t('parental.disabledByBrand', { defaultValue: 'El control parental no está habilitado para esta cuenta.' })}
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="parental-page" aria-label={t('parental.title', { defaultValue: 'Control parental' })}>
+    <section className={rootClassName} aria-label={t('parental.title', { defaultValue: 'Control parental' })}>
       <ConfirmModal
         open={showForgotPin}
         title={t('parental.forgotPinTitle', { defaultValue: 'Olvidé mi PIN' })}
@@ -164,7 +243,7 @@ export function ParentalSettingsPage() {
 
         <div className="parental-divider" />
 
-        <div className="parental-row">
+        <div className="parental-row parental-row--stacked">
           <div className="parental-row__label">
             {t('parental.ratingTitle', { defaultValue: 'Clasificación (BR)' })}
           </div>
@@ -213,14 +292,17 @@ export function ParentalSettingsPage() {
           </div>
 
           {parental.ratingEnabled ? (
-            <label className="parental-rating-checkbox">
-              <input
-                type="checkbox"
-                checked={parental.ratingApplyToLive !== false}
-                onChange={(e) => parental.setRatingApplyToLive(e.target.checked)}
-              />
+            // Botón en vez de checkbox nativo (como Vega): en TV el checkbox
+            // es chico y no muestra el foco con el mismo estilo que el resto.
+            <button
+              type="button"
+              className="parental-btn parental-rating-apply-live"
+              aria-pressed={parental.ratingApplyToLive !== false}
+              onClick={() => parental.setRatingApplyToLive(parental.ratingApplyToLive === false)}
+            >
+              {`${parental.ratingApplyToLive !== false ? '☑' : '☐'} `}
               {t('parental.ratingApplyToLive', { defaultValue: 'Aplicar a TV en vivo (EPG)' })}
-            </label>
+            </button>
           ) : null}
         </div>
       </div>

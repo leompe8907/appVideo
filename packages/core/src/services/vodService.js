@@ -1,0 +1,294 @@
+/**
+ * Servicio de carga y preparación de datos VOD.
+ * Equivalente a getVOD/callGetVODContent/prepareDataForVOD de app-data.js (10foot).
+ * Plantillas de imagen igual que 10foot config.js (vod_poster_list, vod_poster_info, original).
+ */
+
+import panaccessService from './panaccessService';
+
+const VOD_CONTENT_PAGE_SIZE = 100;
+const VOD_CONTENT_MAX_OFFSET = 1000;
+/** Categoría sintética cuando la API no manda grupos de categorías (ver prepareDataForVOD). */
+export const FALLBACK_MOVIES_CATEGORY_ID = -2;
+
+/** Tipos de grupo de getOttCategoryGroups que van como filas: género, destacados, listas, recomendado. */
+export const OTT_SHELF_GROUP_TYPES = [1, 4, 5, 6];
+
+/** Plantillas por defecto 10foot: mismo patrón que config.js imageUrlVodPosterList/Info/Original */
+const DEFAULT_VOD_IMAGE_TEMPLATES = {
+  posterList: '%base_url%/cv_data_pub/images/%image_id%/v/vod_poster_list.jpg',
+  posterInfo: '%base_url%/cv_data_pub/images/%image_id%/v/vod_poster_info.jpg',
+  original: '%base_url%/cv_data_pub/images/%image_id%/v/original.jpg',
+};
+
+/**
+ * Construye una URL de imagen VOD a partir de baseUrl e imageId (fallback 10foot).
+ * @param {string} baseUrl - URL base (p. ej. brandConfig.drm)
+ * @param {string|number} imageId - ID de imagen (image1Id, image2Id, image3Id)
+ * @param {'posterList'|'posterInfo'|'original'} type - Tipo de imagen
+ * @returns {string} URL de la imagen
+ */
+export function getVodImageUrl(baseUrl, imageId, type = 'posterList') {
+  if (baseUrl == null || imageId == null) return '';
+  const base = String(baseUrl).replace(/\/?$/, '');
+  const template = DEFAULT_VOD_IMAGE_TEMPLATES[type] || DEFAULT_VOD_IMAGE_TEMPLATES.posterList;
+  return template.replace(/%base_url%/g, base).replace(/%image_id%/g, imageId);
+}
+
+/**
+ * Construye URLs de imagen VOD. Usa plantillas de marca o las por defecto (10foot).
+ * Siempre rellena posterListURL/posterInfoURL cuando hay image1Id (fallback como en home.js getHTMLRowVOD).
+ * @param {Object} vod - Ítem VOD con image1Id, image2Id, image3Id
+ * @param {string} baseUrl - URL base (p. ej. brandConfig.drm)
+ * @param {Object} templates - { posterList, posterInfo, original } con %base_url% y %image_id%
+ */
+function buildVodImageUrls(vod, baseUrl, templates = {}) {
+  const base = (baseUrl || '').replace(/\/?$/, '');
+  const t = { ...DEFAULT_VOD_IMAGE_TEMPLATES, ...templates };
+  const result = {};
+
+  if (vod.image1Id != null) {
+    const posterList = t.posterList ? t.posterList.replace(/%base_url%/g, base).replace(/%image_id%/g, vod.image1Id) : getVodImageUrl(base, vod.image1Id, 'posterList');
+    const posterInfo = t.posterInfo ? t.posterInfo.replace(/%base_url%/g, base).replace(/%image_id%/g, vod.image1Id) : getVodImageUrl(base, vod.image1Id, 'posterInfo');
+    result.posterListURL = posterList;
+    result.posterInfoURL = posterInfo;
+  }
+
+  if (vod.image2Id != null) {
+    result.extraImageURL = t.original ? t.original.replace(/%base_url%/g, base).replace(/%image_id%/g, vod.image2Id) : getVodImageUrl(base, vod.image2Id, 'original');
+  }
+
+  if (vod.image3Id != null) {
+    result.backgroundImageURL = t.original ? t.original.replace(/%base_url%/g, base).replace(/%image_id%/g, vod.image3Id) : getVodImageUrl(base, vod.image3Id, 'original');
+  }
+
+  result.baseImageUrl = t.original ? t.original.replace(/%base_url%/g, base).replace(/%image_id%/g, '{id}') : (base + '/cv_data_pub/images/{id}/v/original.jpg');
+  return result;
+}
+
+/**
+ * Prepara categorías con vods asignados, series y recomendados (igual que app-data prepareDataForVOD).
+ * @param {Array} vods - Lista plana de ítems VOD del API
+ * @param {Array} categories - Categorías extraídas de getVodLibraries (type 5 y 6)
+ * @param {number} vodRecommendedId - id del grupo "recomendados" (type 6)
+ * @param {string} baseUrl - brandConfig.drm
+ * @param {Object} imageTemplates - opcional, desde brandConfig.vod.imageUrlTemplates
+ * @param {Function} t - opcional, función de traducción (p. ej. (key) => i18n.t(key))
+ */
+export function prepareDataForVOD(vods, categories, vodRecommendedId, baseUrl, imageTemplates = {}, t = (x) => x) {
+  const allVods = [];
+  const seenIds = new Set();
+  const templates = imageTemplates || {};
+
+  const pushUnique = (vod) => {
+    if (vod.id != null) {
+      if (seenIds.has(vod.id)) return;
+      seenIds.add(vod.id);
+    }
+    allVods.push(vod);
+  };
+
+  // Sin grupos de categorías (la librería llega con `categoryGroups: []`, p. ej.
+  // cuando el operador quita el permiso de getVodCategoryGroups) el contenido
+  // igual llega por getVodContent: en vez de descartarlo, se agrupa en una
+  // categoría "Películas" (más nuevas primero); las series se agregan abajo
+  // como siempre.
+  if (categories.length === 0 && Array.isArray(vods) && vods.length > 0) {
+    const releaseMs = (v) => Date.parse(String(v.libraryReleaseDate || '').replace(' ', 'T')) || 0;
+    const movies = vods.filter((v) => v.isSeries !== true).sort((a, b) => releaseMs(b) - releaseMs(a));
+    vods.forEach((vod) => Object.assign(vod, buildVodImageUrls(vod, baseUrl, templates)));
+    if (movies.length > 0) {
+      categories.push({ id: FALLBACK_MOVIES_CATEGORY_ID, name: t('vod.title') || 'Películas', vods: movies });
+      movies.forEach(pushUnique);
+    }
+  }
+
+  categories.forEach((category, index) => {
+    if (category.id === FALLBACK_MOVIES_CATEGORY_ID) return;
+    const filtered = (vods || []).filter((vod) =>
+      Array.isArray(vod.categories) && vod.categories.indexOf(category.id) >= 0
+    );
+    filtered.forEach((vod, i) => {
+      const urls = buildVodImageUrls(vod, baseUrl, templates);
+      Object.assign(filtered[i], urls);
+    });
+    categories[index].vods = filtered;
+    filtered.forEach(pushUnique);
+  });
+
+  const series = (vods || []).filter((vod) => vod.isSeries === true);
+  if (series.length > 0 && categories.length > 0) {
+    series.sort((a, b) => (a.name != null && b.name != null ? (a.name > b.name ? 1 : a.name < b.name ? -1 : 0) : 0));
+    categories.push({ id: 0, name: t('vod.seriesCategory') || 'Séries', vods: series });
+    series.forEach(pushUnique);
+  }
+
+  let vodRecommended = [];
+  if (vodRecommendedId >= 0) {
+    const recCat = categories.find((c) => c.id === vodRecommendedId);
+    if (recCat && recCat.vods) vodRecommended = recCat.vods;
+  }
+  const categoriesWithoutRecommended = categories.filter((c) => c.id !== vodRecommendedId);
+  categoriesWithoutRecommended.sort((a, b) =>
+    a.name != null && b.name != null ? (a.name > b.name ? 1 : a.name < b.name ? -1 : 0) : 0
+  );
+
+  return {
+    categories: categoriesWithoutRecommended,
+    allVods,
+    vodRecommended,
+  };
+}
+
+/**
+ * Carga todo el VOD: bibliotecas → categorías → contenido paginado → prepareDataForVOD.
+ * No bloquea: se puede ejecutar en paralelo con loadEPG.
+ * @param {Object} brandConfig - Config de marca (drm, vod.imageUrlTemplates, etc.)
+ * @param {Object} options - onProgress(loadedCount), t (traducción), enableRetry
+ * @returns {Promise<{ categories, allVods, vodRecommended }>}
+ */
+export async function loadVODData(brandConfig, options = {}) {
+  const { onProgress = () => {}, t = (x) => x, enableRetry = false } = options;
+  const baseUrl = brandConfig?.drm || '';
+  const imageTemplates = { ...DEFAULT_VOD_IMAGE_TEMPLATES, ...(brandConfig?.vod?.imageUrlTemplates || {}) };
+
+  const libraryResponse = await panaccessService.getVodLibraries({ enableRetry });
+  const library = Array.isArray(libraryResponse) && libraryResponse.length > 0
+    ? libraryResponse[0]
+    : (libraryResponse && typeof libraryResponse === 'object' && libraryResponse.categoryGroups != null ? libraryResponse : {});
+  let allGroups = library.categoryGroups || [];
+  let categoryGroups = allGroups.filter((g) => g.type === 5 || g.type === 6);
+
+  // Sin grupos en la librería (operadores que quitaron getVodCategoryGroups):
+  // se piden con getOttCategoryGroups, como la app de Android, y se usan los
+  // grupos "curados" (género, destacados, listas, recomendado); actor,
+  // dirección y año son índices, no filas.
+  let fromOttGroups = false;
+  if (categoryGroups.length === 0) {
+    try {
+      const ott = await panaccessService.getOttCategoryGroups({ enableRetry });
+      const groups = Array.isArray(ott) ? ott : [];
+      const curated = groups.filter((g) => OTT_SHELF_GROUP_TYPES.includes(Number(g?.type)));
+      if (curated.length > 0) {
+        allGroups = groups;
+        categoryGroups = curated;
+        fromOttGroups = true;
+      }
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn('[vod] getOttCategoryGroups falló:', error?.cause?.message || error?.message);
+    }
+  }
+
+  // Metadata VOD (por categorías) como en legacy: Actor / Direção.
+  // En algunos backends viene como type 3 (Actor) y type 7 (Direção), o por name.
+  const actorGroup = allGroups.find((g) => g?.type === 3 || String(g?.name || '').toLowerCase() === 'actor');
+  const directorGroup =
+    allGroups.find((g) => g?.type === 7 || String(g?.name || '').toLowerCase() === 'direção' || String(g?.name || '').toLowerCase() === 'direcao');
+
+  const actorByCategoryId = new Map();
+  const directorByCategoryId = new Map();
+  (actorGroup?.categories || []).forEach((c) => {
+    const id = c?.id;
+    const name = c?.name;
+    if (id == null || !name) return;
+    actorByCategoryId.set(String(id), String(name));
+  });
+  (directorGroup?.categories || []).forEach((c) => {
+    const id = c?.id;
+    const name = c?.name;
+    if (id == null || !name) return;
+    directorByCategoryId.set(String(id), String(name));
+  });
+
+  const categories = categoryGroups.flatMap((g) => (g.categories || []).map((c) => ({ ...c, groupId: g.id })));
+  categories.forEach((cat, i) => {
+    if (cat.name && typeof t === 'function') {
+      const key = `vod.categories.${cat.name}`;
+      const translated = t(key);
+      categories[i].name = translated !== key ? translated : cat.name;
+    }
+  });
+
+  let vodRecommendedId = -1;
+  const recGroup = (fromOttGroups ? categoryGroups : library.categoryGroups || []).find((g) => g.type === 6);
+  // En getOttCategoryGroups el id que traen los títulos es el de la categoría del grupo.
+  if (recGroup) vodRecommendedId = fromOttGroups ? (recGroup.categories?.[0]?.id ?? recGroup.id) : recGroup.id;
+
+  const allVods = [];
+  let offset = 0;
+
+  while (offset <= VOD_CONTENT_MAX_OFFSET) {
+    const page = await panaccessService.getVodContent({ offset, limit: VOD_CONTENT_PAGE_SIZE, enableRetry });
+    const list = Array.isArray(page) ? page : (page && Array.isArray(page.items) ? page.items : []);
+    if (list.length === 0) break;
+    allVods.push(...list);
+    onProgress(allVods.length);
+    if (list.length < VOD_CONTENT_PAGE_SIZE) break;
+    offset += VOD_CONTENT_PAGE_SIZE;
+  }
+
+  // Enriquecer items VOD con actorNames/directorNames a partir de categories[] + mapas de library.
+  if (actorByCategoryId.size > 0 || directorByCategoryId.size > 0) {
+    allVods.forEach((vod) => {
+      const ids = Array.isArray(vod?.categories) ? vod.categories : [];
+      if (ids.length === 0) return;
+      const actorNames = [];
+      const directorNames = [];
+      ids.forEach((id) => {
+        const key = String(id);
+        const a = actorByCategoryId.get(key);
+        const d = directorByCategoryId.get(key);
+        if (a) actorNames.push(a);
+        if (d) directorNames.push(d);
+      });
+      if (actorNames.length > 0) vod.actorNames = [...new Set(actorNames)];
+      if (directorNames.length > 0) vod.directorNames = [...new Set(directorNames)];
+    });
+  }
+
+  const data = prepareDataForVOD(allVods, categories, vodRecommendedId, baseUrl, imageTemplates, t);
+  if (fromOttGroups) data.categories = dedupeOttShelves(data.categories);
+  return data;
+}
+
+/**
+ * Filas de getOttCategoryGroups como en Android (VodShelves): sin filas de
+ * menos de 2 títulos y sin repetir entre grupos la misma fila. Hay operadores
+ * con "Listas" y "Genero" que traen las mismas categorías por nombre (con
+ * títulos casi iguales): entre grupos distintos se deja una sola por nombre
+ * (la de más títulos) y también se quitan las de títulos idénticos. Dentro de
+ * un mismo grupo no se deduplica. Las series (id 0) quedan siempre.
+ */
+export function dedupeOttShelves(categories) {
+  const titlesOf = (cat) => (cat.vods || []).map((v) => v.id ?? v.vodId);
+  const nameKey = (cat) => String(cat.name || '').trim().toLowerCase();
+  const candidates = (categories || []).filter((cat) => cat.id === 0 || titlesOf(cat).length >= 2);
+
+  // Por nombre: entre grupos distintos gana la de más títulos.
+  const bestByName = new Map();
+  candidates.forEach((cat) => {
+    if (cat.id === 0) return;
+    const key = nameKey(cat);
+    const best = bestByName.get(key);
+    if (!best || (best.groupId !== cat.groupId && titlesOf(cat).length > titlesOf(best).length)) bestByName.set(key, cat);
+  });
+
+  const ownerBySignature = new Map();
+  return candidates.filter((cat) => {
+    if (cat.id === 0) return true;
+    const best = bestByName.get(nameKey(cat));
+    if (best !== cat && best.groupId !== cat.groupId) return false;
+    const signature = titlesOf(cat).sort().join(',');
+    const owner = ownerBySignature.get(signature);
+    if (owner != null && owner !== cat.groupId) return false;
+    if (owner == null) ownerBySignature.set(signature, cat.groupId);
+    return true;
+  });
+}
+
+export default {
+  loadVODData,
+  prepareDataForVOD,
+  getVodImageUrl,
+  DEFAULT_VOD_IMAGE_TEMPLATES,
+};

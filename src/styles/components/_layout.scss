@@ -42,12 +42,15 @@
   .home-nav {
     flex: 1;
     @include flex(row, center, center);
-    gap: $spacing-xl;
     flex-wrap: wrap;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > * {
+      margin: 0 calc(#{$spacing-xl} / 2) $spacing-xl;
+    }
 
     .nav-card {
       @include flex(column, center, center);
-      gap: $spacing-md;
       background: rgba(255, 255, 255, 0.1);
       padding: $spacing-xl;
       border-radius: $border-radius-lg;
@@ -56,6 +59,11 @@
       min-width: 150px;
       transition: all $transition-normal;
       border: 2px solid transparent;
+
+      // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+      > *:not(:last-child) {
+        margin-bottom: $spacing-md;
+      }
 
       .icon {
         font-size: 3rem;
@@ -118,7 +126,9 @@
     }
 
     .home-nav {
-      gap: $spacing-md;
+      > * {
+        margin: 0 calc(#{$spacing-md} / 2) $spacing-md;
+      }
 
       .nav-card {
         min-width: 120px;
@@ -148,7 +158,6 @@
   .back-button {
     display: inline-flex;
     align-items: center;
-    gap: $spacing-sm;
     padding: $spacing-md $spacing-lg;
     margin-bottom: $spacing-lg;
     background: rgba(255, 255, 255, 0.1);
@@ -158,6 +167,11 @@
     font-size: $font-size-base;
     cursor: pointer;
     transition: all $transition-normal;
+
+    // Sin `gap`: no soportado en flexbox por varios WebKit de Smart TV.
+    > *:not(:last-child) {
+      margin-right: $spacing-sm;
+    }
 
     &:hover {
       background: rgba(255, 255, 255, 0.15);

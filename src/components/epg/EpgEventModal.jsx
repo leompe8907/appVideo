@@ -1,11 +1,14 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useDevice } from '../../contexts/DeviceContext';
 import { FocusableButton } from '../navigation/FocusableButton';
-import { getEventDescription, getEventTitle } from '../../utils/catchupEvent';
+import { getCatchupStreamId, getEventDescription, getEventTitle } from '@appvideo/core/utils/catchupEvent';
 import '../epg/epg-common.scss';
 import AppIcon from '../AppIcon';
+import { BrandFallbackImage } from '../common/BrandFallbackImage';
+import { focusManager, createZoneId } from '../../navigation/FocusManager';
+import { focusElementSafe } from '../../navigation/spatialNavigation';
 
 function fmtHHmm(ms) {
   if (!ms || Number.isNaN(ms)) return '';
@@ -39,27 +42,22 @@ export function EpgEventModal({
 }) {
   const { t } = useTranslation();
   const { isTV } = useDevice();
-
+  const rootRef = useRef(null);
+  const [zoneId] = useState(() => createZoneId('epg-event-modal'));
+  // Navegación (LEFT/RIGHT/UP/DOWN por geometría, escopada al modal, y BACK)
+  // delegada al motor central en vez de un listener de keydown propio.
   useEffect(() => {
     if (!open) return undefined;
-    const onKeyDown = (e) => {
-      const key = String(e.key || '');
-      const code = String(e.code || '');
-      const keyCode = Number(e.keyCode || e.which || 0);
-      const isEscape = key === 'Escape' || code === 'Escape' || keyCode === 27;
-      const isBackspace = key === 'Backspace' || code === 'Backspace' || keyCode === 8;
-      const isReturnLike = key === 'Return' || key === 'GoBack' || key === 'BrowserBack';
-      const isTvBackCodes = keyCode === 10009 || keyCode === 461; // Tizen Back / LG Back (comunes)
-      if (isEscape || isBackspace || isReturnLike || isTvBackCodes) {
-        e.preventDefault();
-        e.stopPropagation();
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
         onClose?.();
-      }
+      },
+    });
+    return () => {
+      focusManager.pop(zoneId);
     };
-    // capture=true para ejecutarse antes que handlers globales de teclado
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [open, onClose]);
+  }, [open, onClose, zoneId]);
 
   const eventTitle = getEventTitle(event);
   const eventDescription = getEventDescription(event);
@@ -97,8 +95,8 @@ export function EpgEventModal({
 
   // El evento EPG puede incluir identificador de catchup (backend/config).
   // Si existe, habilitamos "Watch / Catchup".
-  const catchupId = event?.catchupId ?? event?.catchup_id ?? event?.catchupEventId ?? null;
-  const canWatch = catchupId != null && Number(catchupId) > -1;
+  const catchupStreamId = getCatchupStreamId(event);
+  const canWatch = catchupStreamId != null;
 
   const isCatchupContext = detailContext === 'catchup';
 
@@ -118,25 +116,37 @@ export function EpgEventModal({
 
   useEffect(() => {
     if (isTV && open) {
-      const t = setTimeout(() => {
-        const id =
-          !showActions
-            ? 'epg-event-close'
-            : isCatchupContext
-              ? showCatchupAction
-                ? 'epg-event-watch-catchup'
-                : 'epg-event-close'
-              : canPlayLive
-                ? 'epg-event-play-live'
-                : isFuture
-                  ? 'epg-event-remind'
-                  : showCatchupAction
-                    ? 'epg-event-watch-catchup'
-                    : 'epg-event-close';
-        const el = document.getElementById(id);
-        if (el) el.focus();
-      }, 400);
-      return () => clearTimeout(t);
+      // El botón detrás de la card EPG originalmente seleccionada retiene el foco
+      // real del navegador hasta que lo movemos acá. Con un delay largo (antes
+      // 400ms) el anillo de foco se queda flotando sobre esa card, ya tapada por
+      // el overlay del modal, y recién "viaja" al botón cuando expira el timer —
+      // se percibe como que el foco salta entre los dos. Un par de rAF alcanza
+      // para que el modal (portal) ya esté montado, sin ese hueco perceptible.
+      let rafId1 = null;
+      let rafId2 = null;
+      rafId1 = requestAnimationFrame(() => {
+        rafId2 = requestAnimationFrame(() => {
+          const id =
+            !showActions
+              ? 'epg-event-close'
+              : isCatchupContext
+                ? showCatchupAction
+                  ? 'epg-event-watch-catchup'
+                  : 'epg-event-close'
+                : canPlayLive
+                  ? 'epg-event-play-live'
+                  : isFuture
+                    ? 'epg-event-remind'
+                    : showCatchupAction
+                      ? 'epg-event-watch-catchup'
+                      : 'epg-event-close';
+          focusElementSafe(document.getElementById(id));
+        });
+      });
+      return () => {
+        if (rafId1) cancelAnimationFrame(rafId1);
+        if (rafId2) cancelAnimationFrame(rafId2);
+      };
     }
   }, [isTV, open, canPlayLive, showActions, isFuture, showCatchupAction, isCatchupContext]);
 
@@ -151,6 +161,7 @@ export function EpgEventModal({
 
   return createPortal(
     <div
+      ref={rootRef}
       className="epg-event-modal-overlay"
       role="dialog"
       aria-modal="true"
@@ -160,16 +171,11 @@ export function EpgEventModal({
         <div className="epg-event-modal-header">
           <div className="epg-event-modal-header-left">
             <div className="epg-event-modal-channel">
-              {channelImg ? (
-                <img
-                  src={channelImg}
-                  alt={channel?.name || ''}
-                  className="epg-event-modal-channel-logo"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              ) : null}
+              <BrandFallbackImage
+                src={channelImg}
+                alt={channel?.name || ''}
+                className="epg-event-modal-channel-logo"
+              />
               <div className="epg-event-modal-channel-text">
                 <div className="epg-event-modal-name">{channel?.name ?? ''}</div>
                 <div className="epg-event-modal-meta-row">
@@ -195,22 +201,12 @@ export function EpgEventModal({
           </div>
 
           <div className="epg-event-modal-header-right">
-            {eventImg ? (
-              <img
-                key={eventImg}
-                src={eventImg}
-                alt={eventTitle || ''}
-                className="epg-event-modal-event-img"
-                onLoad={(e) => {
-                  // Si el evento anterior falló y dejó opacidad baja, al cargar bien volvemos a mostrar al 100%.
-                  e.currentTarget.style.opacity = '1';
-                }}
-                onError={(e) => {
-                  // No ocultar para que podamos ver si el problema es de URL.
-                  e.currentTarget.style.opacity = '0.25';
-                }}
-              />
-            ) : null}
+            <BrandFallbackImage
+              key={eventImg || 'event-placeholder'}
+              src={eventImg}
+              alt={eventTitle || ''}
+              className="epg-event-modal-event-img"
+            />
 
             <FocusableButton
               className="epg-event-modal-close"
@@ -265,7 +261,7 @@ export function EpgEventModal({
               <FocusableButton
                 className={`epg-event-modal-secondary ${isCatchupContext ? 'epg-event-modal-primary' : ''}`}
                 type="button"
-                onClick={() => onWatchCatchup?.(catchupId, event)}
+                onClick={() => onWatchCatchup?.(catchupStreamId, event)}
                 id="epg-event-watch-catchup"
               >
                 {isCatchupContext

@@ -1,7 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { getTvActionFromKeyEvent, TV_ACTION } from '../utils/tvRemote';
+import { focusManager, createZoneId } from '../navigation/FocusManager';
+import { focusElementSafe } from '../navigation/spatialNavigation';
 
+/** Delay antes de aplicar el foco inicial: da tiempo a que el portal termine de montarse. */
+const INITIAL_FOCUS_DELAY_MS = 50;
+
+/**
+ * Modal de confirmación genérico. La navegación (LEFT/RIGHT entre botones,
+ * BACK para cancelar) ya no la maneja este componente directamente: se
+ * registra como zona en `FocusManager` y deja que el `NavigationRouter`
+ * central (motor de navegación espacial) mueva el foco por geometría real
+ * entre los botones, y que `onBack` decida qué hacer con BACK/Escape.
+ */
 export function ConfirmModal({
   open,
   title,
@@ -10,63 +21,82 @@ export function ConfirmModal({
   cancelText,
   onConfirm,
   onCancel,
+  // Variante opcional "danger" (popup "¿Estás seguro?" de Eliminar cuenta,
+  // ver CloseAccountPanel.jsx): ícono + título grande + botón píldora +
+  // "Cancelar" como link, todo activado por prop -- por defecto (sin pasar
+  // `variant`) el modal se ve exactamente igual que en el resto de la app
+  // (HomePage, Dispositivos vinculados, Configuración parental, etc.).
+  variant = null,
+  icon = null,
+  cancelAsLink = false,
 }) {
+  const rootRef = useRef(null);
+  const confirmBtnRef = useRef(null);
+  const cancelBtnRef = useRef(null);
+  const [zoneId] = useState(() => createZoneId('confirm-modal'));
+
   useEffect(() => {
     if (!open) return undefined;
-    const onKeyDown = (e) => {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      const action = getTvActionFromKeyEvent(e);
-      const hasCancel = typeof onCancel === 'function';
-      const hasConfirm = typeof onConfirm === 'function';
+    const hasCancel = typeof onCancel === 'function';
+    const hasConfirm = typeof onConfirm === 'function';
 
-      if (action === TV_ACTION.BACK) {
-        if (hasCancel) {
-          e.preventDefault();
-          e.stopPropagation();
-          onCancel();
-          return;
-        }
-        if (hasConfirm) {
-          e.preventDefault();
-          e.stopPropagation();
-          onConfirm();
-        }
-        return;
-      }
+    focusManager.push(zoneId, {
+      containerEl: rootRef.current,
+      onBack: () => {
+        if (hasCancel) onCancel();
+        else if (hasConfirm) onConfirm();
+      },
+    });
 
-      if (e.key === 'Escape') {
-        if (hasCancel) {
-          e.preventDefault();
-          e.stopPropagation();
-          onCancel();
-          return;
-        }
-        if (hasConfirm) {
-          e.preventDefault();
-          e.stopPropagation();
-          onConfirm();
-        }
-      }
+    // Foco inicial: sin esto, con control remoto el foco del documento queda en el
+    // elemento que abrió el modal (oculto tras el overlay) y solo BACK responde.
+    const timer = setTimeout(() => {
+      focusElementSafe(cancelBtnRef.current || confirmBtnRef.current);
+    }, INITIAL_FOCUS_DELAY_MS);
+
+    return () => {
+      clearTimeout(timer);
+      focusManager.pop(zoneId);
     };
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [open, onCancel, onConfirm]);
+  }, [open, onCancel, onConfirm, zoneId]);
 
   if (!open) return null;
 
   const showCancel = typeof onCancel === 'function';
+  const modalClassName = ['confirm-modal', variant ? `confirm-modal--${variant}` : '']
+    .filter(Boolean)
+    .join(' ');
+  const overlayClassName = ['confirm-modal-overlay', variant ? `confirm-modal-overlay--${variant}` : '']
+    .filter(Boolean)
+    .join(' ');
+  const cancelClassName = cancelAsLink
+    ? 'confirm-modal__btn confirm-modal__btn--link'
+    : 'confirm-modal__btn';
 
   return createPortal(
-    <div className="confirm-modal-overlay" role="dialog" aria-modal="true">
-      <div className="confirm-modal">
+    <div ref={rootRef} className={overlayClassName} role="dialog" aria-modal="true">
+      <div className={modalClassName}>
+        {icon === 'warning' ? (
+          <div className="confirm-modal__icon confirm-modal__icon--warning" aria-hidden="true" />
+        ) : null}
         {title ? <h4 className="confirm-modal__title">{title}</h4> : null}
         {message ? <p className="confirm-modal__message">{message}</p> : null}
         <div className="confirm-modal__actions">
-          <button type="button" className="confirm-modal__btn confirm-modal__btn--primary" onClick={onConfirm}>
+          <button
+            type="button"
+            ref={confirmBtnRef}
+            className="confirm-modal__btn confirm-modal__btn--primary"
+            onClick={onConfirm}
+          >
             {confirmText || 'Aceptar'}
           </button>
           {showCancel && (
-            <button type="button" className="confirm-modal__btn" onClick={onCancel}>
+            <button
+              type="button"
+              ref={cancelBtnRef}
+              className={cancelClassName}
+              onClick={onCancel}
+            >
               {cancelText || 'Cancelar'}
             </button>
           )}
@@ -78,4 +108,3 @@ export function ConfirmModal({
 }
 
 export default ConfirmModal;
-

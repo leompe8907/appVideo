@@ -1,44 +1,74 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { EmblaHorizontalRail } from '../navigation/EmblaHorizontalRail';
 import CatchupCard from './CatchupCard';
 import CatchupSeeMoreCard from './CatchupSeeMoreCard';
 import CatchupGroupModal from './CatchupGroupModal';
-import { getCatchupGroupKey, getCatchupGroupTitle } from '../../utils/catchupEvent';
+import { getMountedGroupRange } from './mountedGroupRange';
+import { getCatchupGroupKey, getCatchupGroupTitle, getCatchupRailItemKey } from '@appvideo/core/utils/catchupEvent';
 
 const ITEMS_PER_RAIL = 9;
 
+/** Altura aproximada de una sección de riel (px) hasta medir la real. */
+const FALLBACK_RAIL_HEIGHT = 340;
+
 export function ChannelsRailsCatchupLayout({ groups, onSelectEvent, t }) {
   const [modalGroup, setModalGroup] = useState(null);
+  const [focusGroup, setFocusGroup] = useState(0);
+  const [railHeight, setRailHeight] = useState(FALLBACK_RAIL_HEIGHT);
+  const firstSectionRef = useRef(null);
 
   const nonEmptyGroups = (groups || []).filter((g) => (g?.events || []).length > 0);
+  const { start, end } = getMountedGroupRange(focusGroup, nonEmptyGroups.length);
+
+  // Los marcadores de las secciones sin montar usan la altura real de una montada: el scroll no salta.
+  useLayoutEffect(() => {
+    const h = firstSectionRef.current?.offsetHeight;
+    if (h > 0 && h !== railHeight) setRailHeight(h);
+  }, [railHeight, nonEmptyGroups.length]);
 
   return (
     <>
       <div className="catchup-layout catchup-layout--rails">
-        {nonEmptyGroups.map((group) => {
+        {nonEmptyGroups.map((group, groupIndex) => {
           const events = group.events || [];
           const preview = events.slice(0, ITEMS_PER_RAIL);
           const hasMore = events.length > ITEMS_PER_RAIL;
-          const groupKey = getCatchupGroupKey(group);
+          const groupKey = getCatchupGroupKey(group, groupIndex);
           const groupTitle = getCatchupGroupTitle(group, t('catchup.unknownChannel', { defaultValue: 'Canal' }));
+
+          if (groupIndex < start || groupIndex > end) {
+            return (
+              <section
+                key={groupKey}
+                className="catchup-rail-section"
+                data-placeholder="true"
+                aria-hidden="true"
+                style={{ height: railHeight }}
+              />
+            );
+          }
 
           return (
             <section
               key={groupKey}
+              ref={groupIndex === start ? firstSectionRef : undefined}
               className="catchup-rail-section"
-              style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 280px' }}
+              onFocus={() => setFocusGroup(groupIndex)}
             >
               <h2 className="catchup-rail-title">{groupTitle}</h2>
               <EmblaHorizontalRail className="catchup-rail-cards">
                 {preview.map((event, index) => (
                   <CatchupCard
-                    key={event?.catchupId ?? event?.id ?? `${groupKey}-${index}`}
+                    key={getCatchupRailItemKey(event, groupKey, index)}
                     event={event}
                     onSelect={() => onSelectEvent?.(event, group)}
                   />
                 ))}
                 {hasMore ? (
-                  <CatchupSeeMoreCard onSelect={() => setModalGroup({ group, groupTitle })} />
+                  <CatchupSeeMoreCard
+                    key={`${groupKey}-see-more`}
+                    onSelect={() => setModalGroup({ group, groupTitle })}
+                  />
                 ) : null}
               </EmblaHorizontalRail>
             </section>

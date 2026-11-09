@@ -1,33 +1,20 @@
 import Hls from 'hls.js';
-import { buildHlsPlaybackConfig } from './hlsPlaybackConfig';
 import { isWindMiddlewareHost } from './windHlsManifest';
 import { pickWindCompatibleLevel } from './windLevelSelect';
 
 export { createSessionHlsXhrSetup } from './sessionHlsXhrSetup';
 
-/** El plugin 10foot usa `plugins.streamrootHls`. */
-export function buildStreamrootHlsPluginOptions(getSessionId) {
-  return {
-    plugins: {
-      streamrootHls: {
-        hlsjsConfig: buildHlsPlaybackConfig('', getSessionId),
-      },
-    },
-  };
-}
-
+/**
+ * Antes fijaba `player.srOptions_`/intentaba `player.streamrootHls(...)` —
+ * ganchos del plugin vendorizado (Streamroot) ya removido (ver
+ * `videojsHlsSourceHandler.js`). Ese motor arma su propio `hlsjsConfig` por
+ * carga vía `buildHlsPlaybackConfig(src)`, así que ya no hace falta empujarlo
+ * acá. Se mantiene la función (y el enganche Wind) para no tocar los
+ * call-sites en `WebEngine.js`.
+ */
 export function applyStreamrootHlsSessionConfig(player, getSessionId, playbackUrl = '') {
   if (!player) return;
-  const hlsjsConfig = buildHlsPlaybackConfig(playbackUrl, getSessionId);
-  player.srOptions_ = player.srOptions_ || {};
-  player.srOptions_.hlsjsConfig = hlsjsConfig;
-  try {
-    if (typeof player.streamrootHls === 'function') {
-      player.streamrootHls({ hlsjsConfig });
-    }
-  } catch {
-    // noop
-  }
+  void getSessionId;
   if (isWindMiddlewareHost(playbackUrl)) {
     attachWindLevelLock(player);
   }

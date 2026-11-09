@@ -48,8 +48,8 @@ src/
 │   ├── brandLogout.js            # resetOnLogout de stores por marca
 │   └── homeShellOverlays.js      # Selector .parental-pin-overlay para prioridad de BACK
 ├── config/
-│   ├── brands.js                 # Doc/overrides por marca: parental.parentalControlMultiTtlMs
-│   └── brandConfig.js            # Default de parentalControlMultiTtlMs (40 min)
+│   ├── brands.js                 # Doc/overrides por marca: parental.channelUnlockTtlMs
+│   └── brandConfig.js            # Default de channelUnlockTtlMs (15 min)
 ├── styles/pages/_parental.scss   # Estilos de la página, tarjetas y modal PIN (importado global en main.scss)
 └── locales/{es,en,pt}.json       # Claves i18n `parental.*` (39) y `pinGate.*` (7)
 ```
@@ -116,22 +116,17 @@ Store Zustand que concentra **toda la configuración y los desbloqueos temporale
 | `pinMethod` | `string \| null` | `null` | ✅ | `'pbkdf2-sha256'` o `'sha256'` (fallback). |
 | `pinIterations` | `number` | `0` | ✅ | Iteraciones PBKDF2 (120 000) o `0` en fallback. |
 | `blockedChannelIds` | `string[]` | `[]` | ✅ | IDs estables de canales bloqueados (`getChannelStableId`). |
-| `unlockUntilMs` | `number \| null` | `null` | ✅ | Fin del desbloqueo temporal de canales bloqueados. |
-| `lastUnlockScope` | `'global' \| 'channel' \| null` | `null` | ✅ | Alcance del desbloqueo vigente. |
-| `lastUnlockedChannelId` | `string \| null` | `null` | ✅ | Canal desbloqueado cuando el scope es `'channel'`. |
 | `ratingEnabled` | `boolean` | `false` | ✅ | Filtro por clasificación activo. |
 | `ratingAllowedMax` | `0\|10\|12\|14\|16\|18` | `18` | ✅ | “Permitir hasta”. Valores fuera de la lista se fuerzan a `18`. |
 | `ratingApplyToLive` | `boolean` | `true` | ✅ | Aplicar el filtro de rating también a TV en vivo. |
-| `ratingUnlockUntilMs` | `number \| null` | `null` | ✅ | Fin del desbloqueo temporal por rating. |
-| `pcUnlockUntilMs` | `number \| null` | `null` | ❌ (solo sesión) | Desbloqueo TTL de contenido adulto (bouquet con 2+ adultos). |
-| `pcUnlockSessionActive` | `boolean` | `false` | ❌ (solo sesión) | Desbloqueo “sin límite” de contenido adulto (bouquet con 1 adulto). |
+| `unlockUntilMs` | `number \| null` | `null` | ❌ (solo memoria) | Fin del desbloqueo con PIN. Abre **todo** lo restringido (canales bloqueados, adultos y rating) hasta esa hora. |
 
 ### 3.2 Persistencia
 
 - Clave: `` `${brandId}.parental.v1` `` vía `getBrandItem` / `setBrandItem` (`src/utils/brandStorage.js`).
 - Formato: JSON con `version: 1`. Si la versión no coincide o el JSON es inválido, `hydrate()` resetea a `initial`.
 - `persist()` se ejecuta en `queueMicrotask` después de cada acción mutadora.
-- Los campos `pc*` **no se persisten** a propósito (comentario en el store: “por seguridad, este unlock es solo de sesión”).
+- `unlockUntilMs` **no se persiste ni se sincroniza** a propósito: reiniciar la app vuelve a pedir el PIN. Los blobs viejos que traen `unlockUntilMs`, `lastUnlockScope` o `ratingUnlockUntilMs` se ignoran al hidratar.
 
 **Hidratación**
 
@@ -146,9 +141,7 @@ Store Zustand que concentra **toda la configuración y los desbloqueos temporale
 
 | Constante | Valor | Uso |
 |---|---|---|
-| `DEFAULT_UNLOCK_TTL_MS` | 15 min | Desbloqueo de canal bloqueado |
-| `DEFAULT_RATING_UNLOCK_TTL_MS` | 15 min | Desbloqueo por rating |
-| `DEFAULT_PARENTALCONTROL_MULTI_TTL_MS` | 40 min | Desbloqueo adulto multi‑canal (sobreescribible por marca) |
+| `DEFAULT_UNLOCK_TTL_MS` | 15 min | Desbloqueo con PIN si la marca no define un `parental.channelUnlockTtlMs` válido |
 
 ### 3.4 API del store
 
@@ -181,13 +174,11 @@ Store Zustand que concentra **toda la configuración y los desbloqueos temporale
 
 | Acción | Efecto |
 |---|---|
-| `isUnlockedFor(channelId)` | Unlock de canal vigente y (scope global **o** mismo canal). |
-| `unlockWithPin(pin, { scope, channelId, ttlMs })` | Verifica PIN y abre ventana de 15 min. |
-| `isRatingUnlocked()` / `unlockRatingWithPin(pin, { ttlMs })` | Ídem para rating (global, 15 min). |
-| `isParentalControlUnlocked()` | `pcUnlockSessionActive` o `pcUnlockUntilMs` vigente. |
-| `unlockParentalControlWithPin(pin, { mode, ttlMs })` | `mode: 'session'` → sin límite en la sesión; `mode: 'ttl'` → ventana configurable. |
-| `invalidateParentalControlUnlock()` | Anula el unlock adulto (se llama al reproducir un canal no adulto). |
-| `lockNow()` | Anula **todos** los unlocks (botón “Bloquear ahora”). |
+| `isUnlocked()` | Hay un desbloqueo con PIN vigente. |
+| `unlockWithPin(pin, { ttlMs })` | Verifica el PIN y abre todo lo restringido durante `ttlMs` (inválido o ≤ 0 → 15 min). |
+| `lockNow()` | Anula el desbloqueo (botón “Bloquear ahora”). |
+
+También anulan el desbloqueo: `setPin`, desactivar el control parental y bloquear un canal nuevo.
 
 `src/store/useParental.js` expone estos mismos valores y acciones como selectores individuales para componentes React.
 
@@ -249,13 +240,11 @@ Store Zustand **global y único** (por eso `useParentalGate` es solo un wrapper:
 | `title`, `message` | `string` | Textos del modal. |
 | `gateKind` | `'channel' \| 'rating' \| 'parentalControl' \| 'setupPin'` | Qué regla disparó el gate. |
 | `purpose` | `'playback' \| 'action'` | Reproducir vs. acción administrativa (p. ej. desbloquear un canal). |
-| `unlockScope` | `'channel' \| 'global'` | Alcance del unlock para `gateKind: 'channel'`. |
-| `pcUnlockMode` / `pcUnlockTtlMs` | `'session' \| 'ttl'` / ms | Modo del unlock adulto. |
 | `lastFocusedEl` | `Element` | Elemento con foco antes de abrir; se restaura en `closeGate()` (clave para navegación TV). |
 
 ### 6.2 `requestPlayChannel` (TV en vivo)
 
-Firma: `requestPlayChannel({ channel, playFn, title?, message?, purpose?, unlockScope? })`
+Firma: `requestPlayChannel({ channel, playFn, title?, message?, purpose? })`
 
 ```mermaid
 flowchart TD
@@ -267,34 +256,31 @@ flowchart TD
     pinA -- no --> setup([Gate setupPin])
     pinA -- sí --> gA([Gate 'channel'<br/>purpose=action<br/>pide PIN SIEMPRE])
 
-    act -- no --> blk{canal bloqueado<br/>y sin unlock vigente?}
+    act -- no --> unl{desbloqueo con PIN vigente?}
+    unl -- sí --> play
+    unl -- no --> blk{canal bloqueado?}
     blk -- sí --> pinB{hay PIN?}
     pinB -- no --> setup
-    pinB -- sí --> gC([Gate 'channel'<br/>scope channel/global])
+    pinB -- sí --> gC([Gate 'channel'])
 
     blk -- no --> adult{channel.parentalControl?}
-    adult -- sí --> pcu{unlock adulto vigente?}
-    pcu -- no --> cnt{nº adultos en el bouquet}
-    cnt -- "1" --> gS([Gate 'parentalControl'<br/>mode=session])
-    cnt -- "2+" --> gT([Gate 'parentalControl'<br/>mode=ttl<br/>brand.parental.parentalControlMultiTtlMs])
-    pcu -- sí --> rat
-    adult -- no --> inv[invalidateParentalControlUnlock] --> rat
+    adult -- sí --> gP([Gate 'parentalControl'])
+    adult -- no --> rat
 
     rat{ratingEnabled y<br/>ratingApplyToLive?}
     rat -- no --> play
-    rat -- sí --> rchk{rating evento/canal ><br/>ratingAllowedMax<br/>y sin unlock rating?}
+    rat -- sí --> rchk{rating evento/canal ><br/>ratingAllowedMax?}
     rchk -- sí --> gR([Gate 'rating'])
     rchk -- no --> play
 ```
 
-Orden de prioridad: **acción administrativa → canal bloqueado → contenido adulto → rating**.
+Orden de prioridad: **acción administrativa → desbloqueo vigente → canal bloqueado → contenido adulto → rating**.
+
+**Desbloqueo único.** El PIN ingresado en cualquiera de los gates de reproducción (`channel`, `parentalControl` o `rating`) abre todo lo restringido durante `parental.channelUnlockTtlMs` de la marca: se puede navegar por todos los canales bloqueados, adultos y con rating sin volver a pedirlo. Al vencer, lo que se está viendo **sigue reproduciendo** (el gate solo actúa al pedir reproducir); el próximo cambio a contenido restringido, incluido volver a ese mismo canal, vuelve a pedir el PIN.
 
 Detalles relevantes:
 
-- **Contenido adulto**: el flag se lee de `channel.parentalControl ?? channel.parental_control` y admite `true`, `1`, `'1'`, `'true'`. `getAdultCountInBouquet` busca en `preloadStore.epg.bouquetsWithChannels` el **primer bouquet** que contiene al canal y cuenta cuántos de sus ítems son adultos.
-  - 1 adulto → unlock de **sesión** (sin TTL).
-  - 2+ adultos → unlock **global con TTL** (default 40 min, configurable por marca).
-  - En ambos casos, **reproducir un canal no adulto invalida el unlock adulto**.
+- **Contenido adulto**: el flag se lee de `channel.parentalControl ?? channel.parental_control` y admite `true`, `1`, `'1'`, `'true'`.
 - Si el canal está bloqueado y **no hay PIN** configurado, no se reproduce: se abre el gate `setupPin`, que ofrece ir a *Configurar PIN*.
 
 ### 6.3 `requestPlayMedia` (VOD / Catchup)
@@ -306,7 +292,7 @@ Solo evalúa **clasificación**:
 1. `enabled === false` → reproduce.
 2. **Sin PIN configurado** → reproduce (a diferencia de `requestPlayChannel`, aquí no se exige configurar PIN).
 3. `ratingEnabled !== true` → reproduce.
-4. `normalizeBrParentalRating(ratingRaw ?? item.parentalRating)` > `ratingAllowedMax` y sin unlock de rating → abre gate `'rating'`.
+4. `normalizeBrParentalRating(ratingRaw ?? item.parentalRating)` > `ratingAllowedMax` y sin desbloqueo vigente → abre gate `'rating'`.
 5. En otro caso reproduce.
 
 `ratingApplyToLive` **no** afecta a VOD/Catchup: el rating siempre aplica ahí cuando está activo.
@@ -316,9 +302,7 @@ Solo evalúa **clasificación**:
 | `purpose` / `gateKind` | Acción sobre `parentalStore` | Unlock resultante |
 |---|---|---|
 | `action` | `verifyPin` | Ninguno (solo valida y ejecuta `playFn`) |
-| `playback` + `rating` | `unlockRatingWithPin` | Rating global 15 min |
-| `playback` + `parentalControl` | `unlockParentalControlWithPin({ mode, ttlMs })` | Sesión o TTL |
-| `playback` + `channel` | `unlockWithPin({ scope, channelId })` | Canal (o global) 15 min |
+| `playback` + `channel` / `parentalControl` / `rating` | `unlockWithPin({ ttlMs: brand.parental.channelUnlockTtlMs })` | Todo lo restringido durante el TTL de la marca |
 
 Si el PIN es válido: `closeGate()` (restaura foco) **y después** `playFn()`. Si no, devuelve `false` y el modal muestra “PIN incorrecto”.
 
@@ -446,20 +430,18 @@ Reglas:
 
 ```js
 parental: {
-  parentalControlMultiTtlMs: config.parental?.parentalControlMultiTtlMs ?? 40 * 60 * 1000,
+  channelUnlockTtlMs: config.parental?.channelUnlockTtlMs ?? 15 * 60 * 1000,
   ...(config.parental || {}),
 }
 ```
 
-Para sobreescribir en una marca (`src/config/brands.js`):
+Cada marca lo define en `packages/core/src/config/brands/<marca>.js`:
 
 ```js
-parental: {
-  parentalControlMultiTtlMs: 20 * 60 * 1000, // 20 minutos
+"parental": {
+  "channelUnlockTtlMs": 300000 // 5 min (valor de desarrollo; ajustar por marca)
 },
 ```
-
-Actualmente ninguna marca define `parental`, por lo que todas usan 40 minutos. El resto de TTL (15 min) está fijo en `parentalStore.js`.
 
 Relacionado (solo visual, no restringe): `vod.vodDetail.showParentalRating` y `vod.vodDetail.parentalBadgeBorderColor` controlan el badge de clasificación en `VodDetailModal`.
 
@@ -493,11 +475,10 @@ Todas las llamadas usan `defaultValue` en español como respaldo.
 
 | Tipo | Se abre con | Duración | Alcance | Persiste recarga | Se invalida con |
 |---|---|---|---|---|---|
-| Canal bloqueado | PIN en gate `channel` | 15 min | Ese canal (o global si `unlockScope: 'global'`) | ✅ | `lockNow`, `setPin`, desactivar, bloquear otro canal, expiración |
-| Rating | PIN en gate `rating` | 15 min | Todo el contenido por rating | ✅ | `lockNow`, `setPin`, desactivar, expiración |
-| Adulto (1 en bouquet) | PIN en gate `parentalControl` | Sesión | Contenido adulto | ❌ | Reproducir canal no adulto, `lockNow`, `setPin`, desactivar, recarga |
-| Adulto (2+ en bouquet) | PIN en gate `parentalControl` | 40 min (marca) | Contenido adulto | ❌ | Reproducir canal no adulto, `lockNow`, `setPin`, desactivar, recarga, expiración |
+| Desbloqueo con PIN | PIN en gate `channel`, `parentalControl` o `rating` | `parental.channelUnlockTtlMs` de la marca | Todo: canales bloqueados, adultos y rating (en vivo y VOD/Catchup) | ❌ | `lockNow`, `setPin`, desactivar, bloquear un canal nuevo, expiración |
 | Acción administrativa | PIN en gate `action` | — | Solo esa acción | — | — |
+
+Al vencer no se interrumpe lo que se está reproduciendo; el siguiente cambio a contenido restringido pide el PIN.
 
 ---
 
@@ -517,7 +498,6 @@ Hallazgos de la revisión. No se modificó código; se listan para priorizar.
 
 6. **Fallback SHA‑256 frágil.** `verifyPin` usa `s.pinIterations || 120000` e ignora `pinMethod`: si el PIN se creó con el fallback SHA‑256 y luego `crypto.subtle` está disponible (p. ej. cambio a contexto seguro HTTPS), se deriva con PBKDF2 y el PIN correcto deja de validar. El caso inverso también falla.
 7. **Rating en vivo solo al iniciar.** El rating del evento EPG se evalúa al pedir reproducción; si durante la reproducción empieza un programa con clasificación mayor, no se vuelve a pedir PIN.
-8. **Conteo de adultos por el primer bouquet.** `getAdultCountInBouquet` usa el primer bouquet que contiene al canal; si el canal está en varios, el modo (sesión vs. TTL) depende del orden de los bouquets.
 9. **Indicadores inconsistentes.** Los bouquets solo muestran 🔒 si `enabled`, mientras que el botón del Player muestra el estado bloqueado aunque el parental esté desactivado.
 
 **Limpieza menor**
@@ -531,11 +511,12 @@ Hallazgos de la revisión. No se modificó código; se listan para priorizar.
 - [ ] Sin PIN: bloquear canal desde el Player → aparece “Configurar PIN” → navega a ajustes y cierra el player.
 - [ ] Configurar PIN (< 4 dígitos rechazado; 4–6 aceptado); cambiar PIN pide el actual.
 - [ ] Canal bloqueado + parental activo: desde Bouquet, EPG, Búsqueda, recordatorio EPG y zapping del Player se pide PIN.
-- [ ] PIN correcto → reproduce y, durante 15 min, ese canal no vuelve a pedir PIN; otro canal bloqueado sí.
+- [ ] PIN correcto → reproduce y, durante el TTL de la marca (5 min en desarrollo), ningún canal bloqueado, adulto ni con rating vuelve a pedir PIN.
+- [ ] TTL vencido estando en un canal bloqueado → sigue reproduciendo; al cambiar de canal y volver, pide PIN.
 - [ ] “Bloquear ahora” → vuelve a pedir PIN.
 - [ ] Rating “Permitir hasta 12”: VOD/Catchup 14+ piden PIN; sin rating reproducen. Con “Aplicar a TV en vivo” marcado, un evento en vivo 16 pide PIN.
-- [ ] Canal `parentalControl: true` en bouquet con 1 adulto: PIN una vez por sesión; al pasar a un canal normal y volver, lo pide de nuevo.
-- [ ] Bouquet con 2+ adultos: se puede cambiar entre adultos sin PIN durante el TTL de la marca.
+- [ ] Canal `parentalControl: true`: el PIN ingresado ahí también abre los canales bloqueados y el rating durante el TTL; pasar por un canal normal no lo anula.
+- [ ] Reiniciar la app con un desbloqueo vigente → vuelve a pedir PIN.
 - [ ] TV: BACK (Tizen 10009 / webOS 461) cierra el modal y devuelve el foco al elemento previo; ENTER confirma.
 - [ ] Logout / login: la configuración parental queda en valores por defecto.
 - [ ] Cambio de marca: cada marca mantiene su propia configuración (`{brand}.parental.v1`).

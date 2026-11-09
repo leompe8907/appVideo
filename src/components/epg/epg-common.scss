@@ -1,3 +1,4 @@
+@use '../../styles/mixins' as *;
 /* Estilos comunes EPG (modal + layout cards).
    Se mantienen aquí porque el módulo EPGcards aún no está 100% migrado desde el legacy. */
 
@@ -5,7 +6,6 @@
   position: fixed;
   inset: 0;
   z-index: 10000;
-  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -15,7 +15,7 @@
   width: 60vw;
   height: 80vh;
   border-radius: 16px;
-  background: rgba(20, 20, 20, 0.95);
+  background: rgb(20, 20, 20);
   border: 1px solid rgba(255, 255, 255, 0.12);
   overflow: hidden;
   display: flex;
@@ -27,28 +27,28 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  @include flex-gap-row(12px);
   padding: 18px 18px 12px;
 }
 
 .epg-event-modal-header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  @include flex-gap-row(16px);
   min-width: 0;
 }
 
 .epg-event-modal-channel {
   display: flex;
   flex-direction: row;
-  gap: 16px;
+  @include flex-gap-row(16px);
   align-items: center;
 }
 
 .epg-event-modal-channel-text {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  @include flex-gap-column(8px);
   min-width: 0;
 }
 
@@ -81,14 +81,14 @@
 .epg-event-modal-meta-row {
   display: flex;
   align-items: baseline;
-  gap: 20px;
+  @include flex-gap-wrap(20px);
   flex-wrap: wrap;
 }
 
 .epg-event-modal-meta-item {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  @include flex-gap-row(8px);
 }
 
 .epg-event-modal-meta-time {
@@ -106,7 +106,7 @@
 .epg-event-modal-header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  @include flex-gap-row(12px);
 }
 
 .epg-event-modal-close {
@@ -126,7 +126,7 @@
   padding: 0 18px 18px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  @include flex-gap-column(8px);
 }
 
 .epg-event-modal-title {
@@ -218,7 +218,7 @@
   padding: 14px 18px 18px;
   display: flex;
   justify-content: flex-start;
-  gap: 12px;
+  @include flex-gap-row(12px);
 }
 
 .epg-event-modal-primary {
@@ -270,7 +270,7 @@
   padding: 18px 18px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  @include flex-gap-column(6px);
   flex: 0 0 auto;
   max-width: 100%;
   min-width: 0;
@@ -330,12 +330,13 @@
 .epg-cards-table-header {
   display: grid;
   grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+  border-radius:1rem;
   gap: 14px;
   padding: 0 0 10px;
   position: sticky;
   top: 0;
   z-index: 2;
-  background: rgb(0, 0, 0);
+  background: var(--epg-cards-table-header-bg, rgb(0, 0, 0));
   backdrop-filter: blur(4px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   height: 5em;
@@ -383,7 +384,7 @@
 .epg-cards-channel {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  @include flex-gap-column(6px);
   align-items: center;
   flex-wrap: nowrap;
   min-width: 0;
@@ -407,7 +408,7 @@
   height: 6em;
   object-fit: contain;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0);
 }
 
 .epg-cards-channel-rating {
@@ -431,7 +432,7 @@
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  @include flex-gap-column(8px);
   min-height: 92px;
   user-select: none;
 }
