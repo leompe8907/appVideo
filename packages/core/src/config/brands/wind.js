@@ -92,7 +92,7 @@ export default {
         "backendBaseUrl": ""
       },
       "facebook": {
-        "enabled": true,
+        "enabled": false,
         "redirectUrl": "/wind/auth/facebook/",
         "accessToken": "823584907447149",
         "backendBaseUrl": ""
