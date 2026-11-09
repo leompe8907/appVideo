@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * El desbloqueo de un canal bloqueado dura `parental.channelUnlockTtlMs` de la
- * marca (default 15 min en brandConfig). Valores inválidos (no numéricos, 0 o
- * negativos) caen al default del store en vez de dejar el canal sin desbloquear.
+ * El desbloqueo con PIN dura `parental.channelUnlockTtlMs` de la marca
+ * (default 15 min en brandConfig). Valores inválidos (no numéricos, 0 o
+ * negativos) caen al default del store en vez de dejar todo sin desbloquear.
  */
 
 let brandCfg = {};
@@ -16,10 +16,6 @@ vi.mock('../../config/brandConfig', () => ({
 
 vi.mock('../parentalStore', () => ({
   useParentalStore: { getState: () => parentalState },
-}));
-
-vi.mock('../preloadStore', () => ({
-  usePreloadStore: { getState: () => ({}) },
 }));
 
 vi.mock('../../locales/i18n', () => ({
@@ -39,14 +35,14 @@ async function unlockBlockedChannel() {
   expect(playFn).toHaveBeenCalledTimes(1);
 }
 
-describe('parentalGateStore: TTL de desbloqueo de canal por marca', () => {
+describe('parentalGateStore: TTL del desbloqueo con PIN por marca', () => {
   beforeEach(() => {
     useParentalGateStore.getState().closeGate();
     parentalState = {
       enabled: true,
       hasPinConfigured: () => true,
       isChannelBlocked: () => true,
-      isUnlockedFor: () => false,
+      isUnlocked: () => false,
       unlockWithPin: vi.fn(async () => true),
     };
   });
@@ -54,21 +50,13 @@ describe('parentalGateStore: TTL de desbloqueo de canal por marca', () => {
   it('usa parental.channelUnlockTtlMs de la marca', async () => {
     brandCfg = { parental: { channelUnlockTtlMs: 5 * 60 * 1000 } };
     await unlockBlockedChannel();
-    expect(parentalState.unlockWithPin).toHaveBeenCalledWith('1234', {
-      scope: 'channel',
-      channelId: 'ch-1',
-      ttlMs: 5 * 60 * 1000,
-    });
+    expect(parentalState.unlockWithPin).toHaveBeenCalledWith('1234', { ttlMs: 5 * 60 * 1000 });
   });
 
   it.each([undefined, 0, -1, 'abc'])('con valor inválido (%s) deja el default del store', async (value) => {
     brandCfg = { parental: { channelUnlockTtlMs: value } };
     await unlockBlockedChannel();
-    expect(parentalState.unlockWithPin).toHaveBeenCalledWith('1234', {
-      scope: 'channel',
-      channelId: 'ch-1',
-      ttlMs: undefined,
-    });
+    expect(parentalState.unlockWithPin).toHaveBeenCalledWith('1234', { ttlMs: undefined });
   });
 });
 

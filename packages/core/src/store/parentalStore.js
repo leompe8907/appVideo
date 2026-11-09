@@ -6,8 +6,6 @@ import { pushPreferences } from '../services/preferencesSyncService';
 import { onStorageBackendChange } from '../platform/storage';
 
 const DEFAULT_UNLOCK_TTL_MS = 15 * 60 * 1000;
-const DEFAULT_RATING_UNLOCK_TTL_MS = 15 * 60 * 1000;
-const DEFAULT_PARENTALCONTROL_MULTI_TTL_MS = 40 * 60 * 1000;
 const STORAGE_VERSION = 1;
 
 const PARENTAL_STORAGE_KEY = `parental.v${STORAGE_VERSION}`;
@@ -37,18 +35,14 @@ const initial = {
   pinMethod: null,
   pinIterations: 0,
   blockedChannelIds: [],
-  unlockUntilMs: null,
-  lastUnlockScope: null, // 'global' | 'channel' | null
-  lastUnlockedChannelId: null,
   ratingEnabled: false,
   ratingAllowedMax: 18, // "Permitir hasta" (BR)
   ratingApplyToLive: true,
-  ratingUnlockUntilMs: null, // unlock temporal global para rating
 
-  // Unlock por metadata `parentalControl:true` (adultos).
-  // Nota: por seguridad, este unlock es solo de sesión (no se persiste en localStorage).
-  pcUnlockUntilMs: null, // TTL global (multi-adult)
-  pcUnlockSessionActive: false, // "sin límite" en sesión (single-adult)
+  // Fin del desbloqueo con PIN: abre todo lo restringido (canales bloqueados,
+  // adultos y clasificación) hasta esa hora. Solo en memoria, a propósito: no
+  // se guarda ni se sincroniza, así que reiniciar la app vuelve a pedir el PIN.
+  unlockUntilMs: null,
 
   // Límite de intentos de PIN. shortcut: solo en memoria (reiniciar la app lo borra);
   // persistirlo si hace falta frenar un ataque con reinicios.
@@ -83,19 +77,14 @@ export const useParentalStore = create((set, get) => {
       blockedChannelIds: Array.isArray(data.blockedChannelIds)
         ? data.blockedChannelIds.map(String)
         : [],
-      unlockUntilMs: Number.isFinite(Number(data.unlockUntilMs)) ? Number(data.unlockUntilMs) : null,
-      lastUnlockScope: data.lastUnlockScope === 'global' || data.lastUnlockScope === 'channel' ? data.lastUnlockScope : null,
-      lastUnlockedChannelId: data.lastUnlockedChannelId != null ? String(data.lastUnlockedChannelId) : null,
       ratingEnabled: data.ratingEnabled === true,
       ratingAllowedMax: Number.isFinite(Number(data.ratingAllowedMax)) ? Number(data.ratingAllowedMax) : 18,
       ratingApplyToLive: data.ratingApplyToLive !== false,
-      ratingUnlockUntilMs: Number.isFinite(Number(data.ratingUnlockUntilMs)) ? Number(data.ratingUnlockUntilMs) : null,
     }));
   };
 
-  // Blobs completos que ya escribe `localStorage` HOY -- incluye los campos
-  // de desbloqueo transitorio (`unlockUntilMs`/etc), que tiene sentido que
-  // sobrevivan a un refresh de página EN ESTE MISMO dispositivo.
+  // Lo que se guarda en este dispositivo. Sin `unlockUntilMs`: el desbloqueo
+  // con PIN es solo de memoria (los blobs viejos que lo traen se ignoran).
   const persistLocalOnly = (s) => {
     safeWrite({
       version: STORAGE_VERSION,
@@ -105,19 +94,14 @@ export const useParentalStore = create((set, get) => {
       pinMethod: s.pinMethod,
       pinIterations: s.pinIterations,
       blockedChannelIds: Array.isArray(s.blockedChannelIds) ? s.blockedChannelIds : [],
-      unlockUntilMs: s.unlockUntilMs,
-      lastUnlockScope: s.lastUnlockScope,
-      lastUnlockedChannelId: s.lastUnlockedChannelId,
       ratingEnabled: s.ratingEnabled === true,
       ratingAllowedMax: s.ratingAllowedMax,
       ratingApplyToLive: s.ratingApplyToLive !== false,
-      ratingUnlockUntilMs: s.ratingUnlockUntilMs,
     });
   };
 
-  // Subconjunto "durable" que sí viaja a otros dispositivos -- deliberadamente
-  // SIN los campos de desbloqueo transitorio: un desbloqueo temporal en este
-  // dispositivo no debe "desbloquear" el resto (ver
+  // Subconjunto que viaja a otros dispositivos -- sin el desbloqueo: un
+  // desbloqueo temporal en este dispositivo no debe "desbloquear" el resto (ver
   // docs/SINCRONIZACION_PREFERENCIAS_2026-08-31.md, Back-Wind-V2).
   const buildDurableParentalPayload = (s) => ({
     enabled: s.enabled === true,
@@ -189,16 +173,7 @@ export const useParentalStore = create((set, get) => {
         ...s,
         enabled: nextEnabled,
         // Si se desactiva, invalidar unlocks de sesión por seguridad/coherencia.
-        ...(nextEnabled
-          ? null
-          : {
-              unlockUntilMs: null,
-              lastUnlockScope: null,
-              lastUnlockedChannelId: null,
-              ratingUnlockUntilMs: null,
-              pcUnlockUntilMs: null,
-              pcUnlockSessionActive: false,
-            }),
+        ...(nextEnabled ? null : { unlockUntilMs: null }),
       }));
       queueMicrotask(() => persist());
     },
@@ -235,11 +210,6 @@ export const useParentalStore = create((set, get) => {
         pinIterations: iterations || 0,
         // Al cambiar PIN, invalidar unlock vigente por seguridad.
         unlockUntilMs: null,
-        lastUnlockScope: null,
-        lastUnlockedChannelId: null,
-        ratingUnlockUntilMs: null,
-        pcUnlockUntilMs: null,
-        pcUnlockSessionActive: false,
       }));
       queueMicrotask(() => persist());
       return true;
@@ -285,16 +255,8 @@ export const useParentalStore = create((set, get) => {
         const prev = Array.isArray(s.blockedChannelIds) ? s.blockedChannelIds : [];
         const wasBlocked = prev.includes(id);
         const next = wasBlocked ? prev.filter((x) => x !== id) : [...prev, id];
-        // Si se está BLOQUEANDO un canal, no debe quedar un unlock global vigente que lo “salte”.
-        if (!wasBlocked) {
-          return {
-            ...s,
-            blockedChannelIds: next,
-            unlockUntilMs: null,
-            lastUnlockScope: null,
-            lastUnlockedChannelId: null,
-          };
-        }
+        // Si se está BLOQUEANDO un canal, no debe quedar un unlock vigente que lo “salte”.
+        if (!wasBlocked) return { ...s, blockedChannelIds: next, unlockUntilMs: null };
         return { ...s, blockedChannelIds: next };
       });
       queueMicrotask(() => persist());
@@ -306,13 +268,7 @@ export const useParentalStore = create((set, get) => {
       set((s) => {
         const prev = Array.isArray(s.blockedChannelIds) ? s.blockedChannelIds : [];
         if (prev.includes(id)) return s;
-        return {
-          ...s,
-          blockedChannelIds: [...prev, id],
-          unlockUntilMs: null,
-          lastUnlockScope: null,
-          lastUnlockedChannelId: null,
-        };
+        return { ...s, blockedChannelIds: [...prev, id], unlockUntilMs: null };
       });
       queueMicrotask(() => persist());
     },
@@ -329,90 +285,20 @@ export const useParentalStore = create((set, get) => {
     },
 
     lockNow: () => {
-      set((s) => ({
-        ...s,
-        unlockUntilMs: null,
-        lastUnlockScope: null,
-        lastUnlockedChannelId: null,
-        ratingUnlockUntilMs: null,
-        pcUnlockUntilMs: null,
-        pcUnlockSessionActive: false,
-      }));
-      queueMicrotask(() => persist());
+      set({ unlockUntilMs: null });
     },
 
-    isUnlockedFor: (channelId) => {
-      const s = get();
-      const now = Date.now();
-      if (!s.unlockUntilMs || now >= s.unlockUntilMs) return false;
-      if (s.lastUnlockScope === 'global') return true;
-      if (s.lastUnlockScope === 'channel') {
-        const id = String(channelId ?? '').trim();
-        return id && s.lastUnlockedChannelId === id;
-      }
-      return false;
+    isUnlocked: () => {
+      const until = get().unlockUntilMs;
+      return !!until && Date.now() < until;
     },
 
-    unlockWithPin: async (pin, { scope = 'global', channelId = null, ttlMs = DEFAULT_UNLOCK_TTL_MS } = {}) => {
+    /** Verifica el PIN y abre todo lo restringido durante `ttlMs`. */
+    unlockWithPin: async (pin, { ttlMs = DEFAULT_UNLOCK_TTL_MS } = {}) => {
       const ok = await get().verifyPin(pin);
       if (!ok) return false;
-      const until = Date.now() + (Number.isFinite(Number(ttlMs)) ? Number(ttlMs) : DEFAULT_UNLOCK_TTL_MS);
-      set((s) => ({
-        ...s,
-        unlockUntilMs: until,
-        lastUnlockScope: scope === 'channel' ? 'channel' : 'global',
-        lastUnlockedChannelId: scope === 'channel' ? String(channelId ?? '') : null,
-      }));
-      queueMicrotask(() => persist());
-      return true;
-    },
-
-    isRatingUnlocked: () => {
-      const s = get();
-      const now = Date.now();
-      return !!(s.ratingUnlockUntilMs && now < s.ratingUnlockUntilMs);
-    },
-
-    unlockRatingWithPin: async (pin, { ttlMs = DEFAULT_RATING_UNLOCK_TTL_MS } = {}) => {
-      const ok = await get().verifyPin(pin);
-      if (!ok) return false;
-      const until = Date.now() + (Number.isFinite(Number(ttlMs)) ? Number(ttlMs) : DEFAULT_RATING_UNLOCK_TTL_MS);
-      set((s) => ({ ...s, ratingUnlockUntilMs: until }));
-      queueMicrotask(() => persist());
-      return true;
-    },
-
-    // --- Unlock por metadata parentalControl:true ---
-    isParentalControlUnlocked: () => {
-      const s = get();
-      if (s.pcUnlockSessionActive === true) return true;
-      const now = Date.now();
-      return !!(s.pcUnlockUntilMs && now < s.pcUnlockUntilMs);
-    },
-
-    invalidateParentalControlUnlock: () => {
-      set((s) => {
-        if (!s.pcUnlockUntilMs && !s.pcUnlockSessionActive) return s;
-        return { ...s, pcUnlockUntilMs: null, pcUnlockSessionActive: false };
-      });
-    },
-
-    unlockParentalControlWithPin: async (
-      pin,
-      { mode = 'ttl', ttlMs = DEFAULT_PARENTALCONTROL_MULTI_TTL_MS } = {}
-    ) => {
-      const ok = await get().verifyPin(pin);
-      if (!ok) return false;
-
-      if (mode === 'session') {
-        set((s) => ({ ...s, pcUnlockSessionActive: true, pcUnlockUntilMs: null }));
-        return true;
-      }
-
-      const until =
-        Date.now() +
-        (Number.isFinite(Number(ttlMs)) ? Number(ttlMs) : DEFAULT_PARENTALCONTROL_MULTI_TTL_MS);
-      set((s) => ({ ...s, pcUnlockUntilMs: until, pcUnlockSessionActive: false }));
+      const ms = Number(ttlMs);
+      set({ unlockUntilMs: Date.now() + (Number.isFinite(ms) && ms > 0 ? ms : DEFAULT_UNLOCK_TTL_MS) });
       return true;
     },
   };

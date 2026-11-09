@@ -239,10 +239,9 @@
  *     @param {string} vod.vodDetail.contentPosition - Posición vertical del bloque de contenido (poster + info): "top" | "middle" | "bottom". Default: "bottom".
  *
  * @param {Object} parental - Configuración de Control Parental por marca:
- *   @param {number} parental.parentalControlMultiTtlMs - TTL (ms) para unlock temporal global cuando en el bouquet hay 2+ canales
- *     con `parentalControl:true`. Default: 40 minutos.
- *   @param {number} parental.channelUnlockTtlMs - TTL (ms) del desbloqueo con PIN de un canal bloqueado por el
- *     usuario (solo ese canal). Default: 15 minutos.
+ *   @param {number} parental.channelUnlockTtlMs - TTL (ms) del desbloqueo con PIN. Un solo PIN abre todo lo
+ *     restringido (canales bloqueados, adultos y clasificación) hasta que vence; lo que se está viendo al
+ *     vencer sigue, y el próximo cambio a contenido restringido lo vuelve a pedir. Default: 15 minutos.
  *
  * @param {Object} EPG - Configuración de EPG por marca (guía + cards):
  *   @param {boolean} [EPG.enabled=true] - false: oculta TODO acceso a la guía completa (link del menú/Sidebar,

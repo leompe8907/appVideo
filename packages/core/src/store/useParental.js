@@ -7,7 +7,6 @@ export function useParental() {
   const ratingEnabled = useParentalStore((s) => s.ratingEnabled);
   const ratingAllowedMax = useParentalStore((s) => s.ratingAllowedMax);
   const ratingApplyToLive = useParentalStore((s) => s.ratingApplyToLive);
-  const ratingUnlockUntilMs = useParentalStore((s) => s.ratingUnlockUntilMs);
 
   const setEnabled = useParentalStore((s) => s.setEnabled);
   const setRatingEnabled = useParentalStore((s) => s.setRatingEnabled);
@@ -18,13 +17,8 @@ export function useParental() {
   const hasPinConfigured = useParentalStore((s) => s.hasPinConfigured);
   const toggleBlock = useParentalStore((s) => s.toggleBlock);
   const isChannelBlocked = useParentalStore((s) => s.isChannelBlocked);
-  const isUnlockedFor = useParentalStore((s) => s.isUnlockedFor);
+  const isUnlocked = useParentalStore((s) => s.isUnlocked);
   const unlockWithPin = useParentalStore((s) => s.unlockWithPin);
-  const isRatingUnlocked = useParentalStore((s) => s.isRatingUnlocked);
-  const unlockRatingWithPin = useParentalStore((s) => s.unlockRatingWithPin);
-  const isParentalControlUnlocked = useParentalStore((s) => s.isParentalControlUnlocked);
-  const unlockParentalControlWithPin = useParentalStore((s) => s.unlockParentalControlWithPin);
-  const invalidateParentalControlUnlock = useParentalStore((s) => s.invalidateParentalControlUnlock);
   const lockNow = useParentalStore((s) => s.lockNow);
 
   return {
@@ -34,7 +28,6 @@ export function useParental() {
     ratingEnabled,
     ratingAllowedMax,
     ratingApplyToLive,
-    ratingUnlockUntilMs,
     setEnabled,
     setRatingEnabled,
     setRatingAllowedMax,
@@ -44,13 +37,8 @@ export function useParental() {
     hasPinConfigured,
     toggleBlock,
     isChannelBlocked,
-    isUnlockedFor,
+    isUnlocked,
     unlockWithPin,
-    isRatingUnlocked,
-    unlockRatingWithPin,
-    isParentalControlUnlocked,
-    unlockParentalControlWithPin,
-    invalidateParentalControlUnlock,
     lockNow,
   };
 }

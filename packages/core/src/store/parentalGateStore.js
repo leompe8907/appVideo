@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { useParentalStore } from './parentalStore';
-import { usePreloadStore } from './preloadStore';
 import { useActiveProfileStore } from './activeProfileStore';
 import { getChannelStableId } from '../utils/channelId';
 import { normalizeBrParentalRating } from '../utils/parentalRatingBR';
@@ -41,9 +40,6 @@ const initial = {
   message: '',
   gateKind: 'channel', // 'channel' | 'rating' | 'parentalControl' | 'setupPin' | 'profileAge'
   purpose: 'playback', // 'playback' | 'action'
-  unlockScope: 'channel', // 'channel' | 'global'
-  pcUnlockMode: null, // 'session' | 'ttl' | null
-  pcUnlockTtlMs: null,
   lastFocusedEl: null,
 };
 
@@ -73,24 +69,6 @@ function getParentalControlFlag(channel) {
   return boolish(channel?.parentalControl ?? channel?.parental_control ?? false);
 }
 
-function getAdultCountInBouquet(channel) {
-  const preload = usePreloadStore.getState();
-  const bouquets = preload?.epg?.bouquetsWithChannels || [];
-  if (!Array.isArray(bouquets) || bouquets.length === 0) return 0;
-
-  const targetId = getChannelStableId(channel);
-  if (!targetId) return 0;
-
-  const bouquet = bouquets.find((b) => {
-    const items = b?.items || b?.channels || [];
-    if (!Array.isArray(items) || items.length === 0) return false;
-    return items.some((it) => getChannelStableId(it) === targetId);
-  });
-  const items = bouquet?.items || bouquet?.channels || [];
-  if (!Array.isArray(items) || items.length === 0) return 0;
-  return items.filter((it) => getParentalControlFlag(it)).length;
-}
-
 export const useParentalGateStore = create((set, get) => ({
   ...initial,
 
@@ -103,7 +81,6 @@ export const useParentalGateStore = create((set, get) => ({
       message: typeof message === 'string' ? message : '',
       gateKind: 'setupPin',
       purpose: 'action',
-      unlockScope: 'global',
       lastFocusedEl: captureGateFocusSnapshot(),
     });
     return true;
@@ -134,13 +111,12 @@ export const useParentalGateStore = create((set, get) => ({
       }),
       gateKind: 'profileAge',
       purpose: 'playback',
-      unlockScope: 'global',
       lastFocusedEl: captureGateFocusSnapshot(),
     });
     return true;
   },
 
-  requestPlayChannel: ({ channel, playFn, title, message, purpose, unlockScope }) => {
+  requestPlayChannel: ({ channel, playFn, title, message, purpose }) => {
     if (!channel || typeof playFn !== 'function') return false;
     const channelId = getChannelStableId(channel);
 
@@ -197,17 +173,21 @@ export const useParentalGateStore = create((set, get) => ({
         message: typeof message === 'string' ? message : '',
         gateKind: 'channel',
         purpose: 'action',
-        unlockScope: unlockScope === 'global' ? 'global' : 'channel',
         lastFocusedEl: captureGateFocusSnapshot(),
       });
       return true;
     }
 
-    const blocked = parental.isChannelBlocked?.(channelId) === true;
-    const unlocked = parental.isUnlockedFor?.(channelId) === true;
+    // Un PIN vigente abre todo lo restringido (bloqueados, adultos y rating)
+    // hasta que vence. Al vencer no se corta lo que se está viendo: el gate
+    // solo actúa al pedir reproducir, así que el próximo cambio vuelve a pedirlo.
+    if (parental.isUnlocked?.() === true) {
+      playFn();
+      return true;
+    }
 
     // 1) Si el canal está bloqueado, aplicar gate por canal.
-    if (blocked && !unlocked) {
+    if (parental.isChannelBlocked?.(channelId) === true) {
       if (!hasPin) {
         return get().requestSetupPin({
           channel,
@@ -225,53 +205,29 @@ export const useParentalGateStore = create((set, get) => ({
         message: typeof message === 'string' ? message : '',
         gateKind: 'channel',
         purpose: 'playback',
-        unlockScope: unlockScope === 'global' ? 'global' : 'channel',
         lastFocusedEl: captureGateFocusSnapshot(),
       });
       return true;
     }
 
     // 2) parentalControl:true (adultos) - gate por metadata.
-    // Regla:
-    // - Si el bouquet tiene 1 solo canal adulto -> unlock de sesión (sin TTL), se invalida al entrar a un canal no-adulto.
-    // - Si el bouquet tiene 2+ canales adultos -> unlock global con TTL configurable por marca, se invalida al entrar a un canal no-adulto.
-    const isAdult = getParentalControlFlag(channel);
-    if (isAdult) {
-      const pcUnlocked = parental.isParentalControlUnlocked?.() === true;
-      if (!pcUnlocked) {
-        const adultCount = getAdultCountInBouquet(channel);
-        const mode = adultCount >= 2 ? 'ttl' : 'session';
-        const brandCfg = getActiveBrandConfig?.();
-        const ttlMs = Number(
-          brandCfg?.parental?.parentalControlMultiTtlMs ?? 40 * 60 * 1000
-        );
-        set({
-          open: true,
-          channel,
-          playFn,
-          title: typeof title === 'string' && title ? title : i18n.t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
-          message:
-            typeof message === 'string' && message
-              ? message
-              : i18n.t('parental.parentalControlMessage', {
-                  defaultValue: 'Ingresa el PIN para reproducir contenido restringido.',
-                }),
-          gateKind: 'parentalControl',
-          purpose: 'playback',
-          unlockScope: 'global',
-          pcUnlockMode: mode,
-          pcUnlockTtlMs: mode === 'ttl' ? (Number.isFinite(ttlMs) ? ttlMs : 40 * 60 * 1000) : null,
-          lastFocusedEl: captureGateFocusSnapshot(),
-        });
-        return true;
-      }
-    } else {
-      // Seguridad/coherencia: al reproducir contenido no-adulto invalidamos unlock "adulto".
-      try {
-        parental.invalidateParentalControlUnlock?.();
-      } catch {
-        // noop
-      }
+    if (getParentalControlFlag(channel)) {
+      set({
+        open: true,
+        channel,
+        playFn,
+        title: typeof title === 'string' && title ? title : i18n.t('parental.restrictedTitle', { defaultValue: 'Contenido restringido' }),
+        message:
+          typeof message === 'string' && message
+            ? message
+            : i18n.t('parental.parentalControlMessage', {
+                defaultValue: 'Ingresa el PIN para reproducir contenido restringido.',
+              }),
+        gateKind: 'parentalControl',
+        purpose: 'playback',
+        lastFocusedEl: captureGateFocusSnapshot(),
+      });
+      return true;
     }
 
     // 3) Si no está bloqueado por canal, evaluar gate por rating (si está habilitado).
@@ -281,9 +237,8 @@ export const useParentalGateStore = create((set, get) => ({
       const rawFromEvent = currentEvent?.parentalRating ?? currentEvent?.parental_rating ?? null;
       const rating = normalizeBrParentalRating(rawFromEvent ?? rawFromChannel);
       const allowedMax = Number(parental.ratingAllowedMax ?? 18);
-      const ratingUnlocked = parental.isRatingUnlocked?.() === true;
 
-      if (!ratingUnlocked && rating != null && rating > allowedMax) {
+      if (rating != null && rating > allowedMax) {
         set({
           open: true,
           channel,
@@ -294,7 +249,6 @@ export const useParentalGateStore = create((set, get) => ({
           }),
           gateKind: 'rating',
           purpose: 'playback',
-          unlockScope: 'global',
           lastFocusedEl: captureGateFocusSnapshot(),
         });
         return true;
@@ -339,9 +293,8 @@ export const useParentalGateStore = create((set, get) => ({
       ratingRaw ?? item?.parentalRating ?? item?.parental_rating ?? null
     );
     const allowedMax = Number(parental.ratingAllowedMax ?? 18);
-    const ratingUnlocked = parental.isRatingUnlocked?.() === true;
 
-    if (!ratingUnlocked && rating != null && rating > allowedMax) {
+    if (parental.isUnlocked?.() !== true && rating != null && rating > allowedMax) {
       set({
         open: true,
         channel: item,
@@ -358,8 +311,7 @@ export const useParentalGateStore = create((set, get) => ({
               }),
         gateKind: 'rating',
         purpose: 'playback',
-        unlockScope: 'global',
-        lastFocusedEl: captureGateFocusSnapshot(),
+          lastFocusedEl: captureGateFocusSnapshot(),
       });
       return true;
     }
@@ -369,11 +321,10 @@ export const useParentalGateStore = create((set, get) => ({
   },
 
   submitPin: async (pin) => {
-    const { channel, playFn, purpose, unlockScope, gateKind, pcUnlockMode, pcUnlockTtlMs } = get();
+    const { playFn, purpose, gateKind } = get();
     // La edad del perfil externo no se desbloquea con ningún PIN.
     if (gateKind === 'profileAge') return false;
     const parental = useParentalStore.getState();
-    const channelId = getChannelStableId(channel);
 
     // Si el PIN se pide para una acción administrativa (p.ej. desbloquear canal en settings),
     // validamos el PIN sin habilitar unlock temporal.
@@ -389,25 +340,12 @@ export const useParentalGateStore = create((set, get) => ({
       return true;
     }
 
-    // Playback:
-    // - canal bloqueado: unlock por canal (default)
-    // - rating: unlock temporal global por TTL
-    const ok = await (async () => {
-      if (gateKind === 'rating') return parental.unlockRatingWithPin?.(pin);
-      if (gateKind === 'parentalControl') {
-        return parental.unlockParentalControlWithPin?.(pin, {
-          mode: pcUnlockMode === 'session' ? 'session' : 'ttl',
-          ttlMs: pcUnlockTtlMs,
-        });
-      }
-      // TTL por marca; inválido o <= 0 -> undefined para que el store use su default.
-      const ttlMs = Number(getActiveBrandConfig?.()?.parental?.channelUnlockTtlMs);
-      return parental.unlockWithPin?.(pin, {
-        scope: unlockScope === 'global' ? 'global' : 'channel',
-        channelId,
-        ttlMs: Number.isFinite(ttlMs) && ttlMs > 0 ? ttlMs : undefined,
-      });
-    })();
+    // Playback (canal bloqueado, adulto o rating): un solo desbloqueo que abre
+    // todo durante el TTL de la marca; inválido o <= 0 -> default del store.
+    const ttlMs = Number(getActiveBrandConfig?.()?.parental?.channelUnlockTtlMs);
+    const ok = await parental.unlockWithPin?.(pin, {
+      ttlMs: Number.isFinite(ttlMs) && ttlMs > 0 ? ttlMs : undefined,
+    });
     if (!ok) return false;
     // cerrar antes de reproducir para restaurar foco/UI limpia
     get().closeGate();
