@@ -151,8 +151,7 @@ export default {
     }
   },
   "parental": {
-    "channelUnlockTtlMs": 315360000000,
-    "parentalControlMultiTtlMs": 315360000000
+    "channelUnlockTtlMs": 300000
   },
   "EPG": {
     "enabled": true,
