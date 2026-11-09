@@ -32,3 +32,6 @@ azcopy
 
 # Graphify (grafo de conocimiento generado)
 graphify-out/
+
+# Prueba de resistencia: datos y tokens de emparejamiento de TV
+tools/soak/out/
