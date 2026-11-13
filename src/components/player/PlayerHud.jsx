@@ -12,6 +12,7 @@ import { useBrand } from '../../contexts/BrandContext';
 import { isParentalControlEnabledForBrand } from '@appvideo/core/config/brandConfig';
 import AppIcon from '../AppIcon';
 import { PlayerStatsPanel } from './PlayerStatsPanel';
+import { isNetworkPlaybackError } from './playbackErrorKind';
 import { getStatsVisible, setStatsVisible } from './playerStatsVisibility';
 import EpgEventModal from '../epg/EpgEventModal';
 import { useParentalGate } from '../../hooks/useParentalGate';
@@ -1025,7 +1026,7 @@ export function PlayerHud({ className = '', isPlaybackMaximized = true }) {
           <div className="player-error-overlay__box">
             <AppIcon name="warning" size="2em" />
             <p className="player-error-overlay__message">
-              {t('player.playbackError')}
+              {isNetworkPlaybackError(state.error) ? t('player.networkError') : t('player.playbackError')}
             </p>
             <div className="player-error-overlay__actions">
               <FocusableButton

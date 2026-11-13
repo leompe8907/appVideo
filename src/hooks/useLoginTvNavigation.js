@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { getCaretInfo, isTextInputElement, TV_ACTION } from '../utils/tvRemote';
 import { createBackLongPress, exitAppBestEffort } from '../utils/tvNavigation';
+import { createExitConfirm, showExitHint } from '../utils/tvNavigation/exitConfirm';
 import { navigationRouter } from '../navigation/NavigationRouter';
 import { focusElementSafe, moveFocus } from '../navigation/spatialNavigation';
 
@@ -26,6 +27,15 @@ export const LOGIN_FOCUS_IDS = Object.freeze({
 
 const INITIAL_FOCUS_DELAY_MS = 0;
 
+/** Return/Back del control remoto (Tizen 10009, webOS 461 o nombres estándar). */
+export function isRemoteReturnKey(e) {
+  const key = String(e?.key || '');
+  const keyCode = Number(e?.keyCode || e?.which || 0);
+  return (
+    keyCode === 10009 || keyCode === 461 || key === 'GoBack' || key === 'BrowserBack' || key === 'Return'
+  );
+}
+
 /**
  * Hook que encapsula la navegación remota específica del LoginPage en TV que
  * el motor genérico de navegación espacial NO puede resolver por sí solo:
@@ -49,8 +59,9 @@ const INITIAL_FOCUS_DELAY_MS = 0;
  * @param {object} params
  * @param {boolean} params.isTV
  * @param {React.RefObject<HTMLElement>} params.loginFormRef
+ * @param {string} [params.exitHint] Aviso del primer Atrás antes de salir.
  */
-export function useLoginTvNavigation({ isTV, loginFormRef }) {
+export function useLoginTvNavigation({ isTV, loginFormRef, exitHint = '' }) {
   // -------------------------------------------------------------------------
   // 1) Foco inicial al montar (TV)
   // -------------------------------------------------------------------------
@@ -98,6 +109,24 @@ export function useLoginTvNavigation({ isTV, loginFormRef }) {
 
     return unregister;
   }, [isTV, loginFormRef]);
+
+  // -------------------------------------------------------------------------
+  // 2b) Atrás corto: el login es la pantalla raíz, así que sale de la app con
+  //     doble Atrás como el Home (requisito de certificación Samsung/LG). Los
+  //     modales (QR/UDID) tienen zona propia y cierran antes de llegar aquí.
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (!isTV) return undefined;
+    const confirmExit = createExitConfirm();
+    return navigationRouter.register('global', (action, e) => {
+      if (action !== TV_ACTION.BACK || e?.repeat) return false;
+      // Solo la tecla Return/Back del control: Backspace/Escape borran o cancelan texto.
+      if (!isRemoteReturnKey(e)) return false;
+      if (confirmExit()) exitAppBestEffort();
+      else showExitHint(exitHint);
+      return true;
+    });
+  }, [isTV, exitHint]);
 
   // -------------------------------------------------------------------------
   // 3) Long-press de BACK para salir de la app (no es navegación espacial)

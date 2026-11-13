@@ -12,6 +12,7 @@ import {createChannelNumberInput} from '@appvideo/core/utils/channelNumberInput'
 import {buildChannelLogoUrl} from '@appvideo/core/utils/bouquetLayoutConfig';
 import {getCurrentEpgEvent, getEpgEventTimeBoundsMs, getEpgEventTitle} from '@appvideo/core/utils/epgCurrentEvent';
 import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
+import {isNetworkPlaybackError} from '../player/playbackErrors';
 import {VideoSurface} from '../player/VideoSurface';
 import {channelStepOfTvEvent, digitOfTvEvent} from '../player/remoteKeys';
 import {StatsPanel, getStatsVisible, setStatsVisible} from '../player/StatsPanel';
@@ -228,6 +229,7 @@ export function PlayerScreen({params, navigate}) {
   const channel = channels[index];
 
   const [state, setState] = useState('loading');
+  const [networkError, setNetworkError] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
   const [hudVisible, setHudVisible] = useState(true);
   const [panel, setPanel] = useState(null); // null | 'channels' | 'info' | 'tracks'
@@ -412,7 +414,10 @@ export function PlayerScreen({params, navigate}) {
       const p = new VegaHlsPlayer({
         onState: (s, detail) => {
           if (cancelled) return;
-          if (s === 'error') devLog('player: error', channel.name, detail);
+          if (s === 'error') {
+            setNetworkError(isNetworkPlaybackError(detail));
+            devLog('player: error', channel.name, detail)
+          }
           setState(s);
         },
         onTracks: (next) => {
@@ -433,7 +438,9 @@ export function PlayerScreen({params, navigate}) {
       telemetryService.recordSwitch({type: 'service', id: channel.id ?? channel.epgStreamId, item: channel});
       p.load(channel.url).catch((e) => {
         devLog('player: load', e?.message);
-        if (!cancelled) setState('error');
+        if (cancelled) return;
+        setNetworkError(isNetworkPlaybackError(e));
+        setState('error');
       });
     }, zapDelay.current);
     zapDelay.current = ZAP_DELAY_MS;
@@ -469,7 +476,7 @@ export function PlayerScreen({params, navigate}) {
       {state === 'error' ? (
         <View style={styles.center}>
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{t('player.playbackError')}</Text>
+            <Text style={styles.errorText}>{networkError ? t('player.networkError') : t('player.playbackError')}</Text>
             <Pressable
               hasTVPreferredFocus
               onPress={() => {

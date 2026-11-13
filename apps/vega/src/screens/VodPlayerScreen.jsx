@@ -6,6 +6,7 @@ import i18n from '@appvideo/core/locales/i18n';
 import {getActiveBrandConfig} from '@appvideo/core/config/brandConfig';
 import panaccessService from '@appvideo/core/services/panaccessService';
 import {VegaHlsPlayer} from '../player/VegaHlsPlayer';
+import {isNetworkPlaybackError} from '../player/playbackErrors';
 import {VideoSurface} from '../player/VideoSurface';
 import {StatsPanel, getStatsVisible, setStatsVisible} from '../player/StatsPanel';
 import {TracksPanel, hasTrackOptions} from '../player/TracksPanel';
@@ -68,6 +69,7 @@ export function VodPlayerScreen({params, navigate}) {
   const theme = getTheme();
   const hideMs = Math.max(500, Number(getActiveBrandConfig()?.player?.hudAutoHideMs) || 6000);
   const [state, setState] = useState('loading');
+  const [networkError, setNetworkError] = useState(false);
   const [hudVisible, setHudVisible] = useState(true);
   const [pos, setPos] = useState({current: 0, duration: 0, paused: false});
   const player = useRef(null);
@@ -178,7 +180,10 @@ export function VodPlayerScreen({params, navigate}) {
     const p = new VegaHlsPlayer({
       onState: (s, detail) => {
         if (cancelled) return;
-        if (s === 'error') devLog('vod: error', params?.vodId, detail);
+        if (s === 'error') {
+          setNetworkError(isNetworkPlaybackError(detail));
+          devLog('vod: error', params?.vodId, detail)
+        }
         setState(s);
       },
       onTracks: (next) => {
@@ -196,7 +201,9 @@ export function VodPlayerScreen({params, navigate}) {
     devLog('vod: cargando', params?.vodId, params?.title);
     p.load(url).catch((e) => {
       devLog('vod: load', e?.message);
-      if (!cancelled) setState('error');
+      if (cancelled) return;
+      setNetworkError(isNetworkPlaybackError(e));
+      setState('error');
     });
     return () => {
       cancelled = true;
@@ -226,7 +233,7 @@ export function VodPlayerScreen({params, navigate}) {
       {state === 'error' ? (
         <View style={styles.center}>
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{t('vod.errorPlay')}</Text>
+            <Text style={styles.errorText}>{networkError ? t('player.networkError') : t('vod.errorPlay')}</Text>
             <Pressable hasTVPreferredFocus onPress={() => navigate('back')} style={[styles.errorBtn, {backgroundColor: theme.primary}]}>
               <Text style={styles.errorBtnText}>{t('common.close')}</Text>
             </Pressable>
