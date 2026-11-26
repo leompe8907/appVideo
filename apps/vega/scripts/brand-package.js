@@ -25,6 +25,7 @@ const BASE_ID = 'com.bromteck.appvideo';
 const DEFAULT_BRAND = 'intv';
 const STORE_IDS = {
   bromteck: 'com.bromteck.bromtecktv.androidtv.streaming',
+  wind: 'com.wind.android.streaming',
 };
 
 function brandInfo(brand) {

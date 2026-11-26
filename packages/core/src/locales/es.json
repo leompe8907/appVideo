@@ -425,6 +425,7 @@
     "play": "Reproducir",
     "pause": "Pausar",
     "playbackError": "Error en reproducción",
+    "networkError": "Sin conexión a internet. Revisa tu red e intenta de nuevo.",
     "retry": "Reintentar",
     "now": "En este momento:",
     "next": "Siguiente:",

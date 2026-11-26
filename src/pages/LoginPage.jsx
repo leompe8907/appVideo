@@ -150,7 +150,7 @@ export function LoginPage() {
     setIsUdidModalOpen(false);
   }, [cancelUdidFlow]);
 
-  useLoginTvNavigation({ isTV, loginFormRef });
+  useLoginTvNavigation({ isTV, loginFormRef, exitHint: t('common.pressBackAgainToExit') });
 
   // Modal QR: zona de FocusManager — atrapa LEFT/RIGHT/UP/DOWN dentro del modal
   // (motor de geometría genérico) y BACK lo cierra; al cerrar, restaura el foco

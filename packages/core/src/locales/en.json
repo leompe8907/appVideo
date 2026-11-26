@@ -425,6 +425,7 @@
     "play": "Play",
     "pause": "Pause",
     "playbackError": "Playback error",
+    "networkError": "No internet connection. Check your network and try again.",
     "retry": "Retry",
     "now": "Now:",
     "next": "Next:",
